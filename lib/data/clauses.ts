@@ -248,3 +248,17 @@ export const CLAUSES: Clause[] = [
 export function clauseById(id: string) {
   return CLAUSES.find((c) => c.id === id)
 }
+
+/** Wording lama tersimpan sebagai plain text; bungkus jadi HTML untuk editor. */
+export function wordingHtml(wording: string) {
+  if (/<\/?[a-z][\s\S]*>/i.test(wording)) return wording
+  return wording
+    .split(/\n{2,}/)
+    .map((para) => `<p>${para.trim().replace(/\n/g, "<br>")}</p>`)
+    .join("")
+}
+
+/** Ringkasan plain-text untuk kartu list. */
+export function wordingText(wording: string) {
+  return wording.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+}

@@ -26,7 +26,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   claims: "Klaim",
   reports: "Report",
   "master-clauses": "Master Clauses",
-  new: "Buat Placing Slip",
+  new: "Baru",
   edit: "Edit",
   quotation: "Quotation Slip",
   "cover-note": "Cover Note",

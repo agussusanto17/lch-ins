@@ -13,6 +13,7 @@ belum ada database/API. Ditujukan untuk presentasi & validasi alur sebelum masuk
 | Komponen | shadcn/ui — style **Luma**, primitives **Base UI** (bukan Radix) |
 | Ikon | lucide-react |
 | Chart | Recharts (via `components/ui/chart`) |
+| Rich text | TipTap 3 (`@tiptap/react` + StarterKit) |
 | Font | Inter |
 
 > Base UI memakai prop `render={<X />}` untuk komposisi, **bukan** `asChild` ala Radix.
@@ -44,7 +45,9 @@ Perintah lain: `npm run build` · `npm run typecheck` · `npm run lint` · `npm 
 | `/underwriting/quotation/[id]` | Dokumen **Quotation Slip** — untuk klien, brokerage disembunyikan |
 | `/underwriting/cover-note/[id]` | Dokumen **Cover Note** |
 | `/underwriting/closing/[id]` | Dokumen **Closing Instruction** — satu-satunya yang menampilkan Net Premium after Brokerage |
-| `/underwriting/master-clauses` | Pustaka 30 klausula + filter + form tambah inline |
+| `/underwriting/master-clauses` | Pustaka 30 klausula + filter (list saja) |
+| `/underwriting/master-clauses/new` | Form clause baru — halaman penuh, rich text editor |
+| `/underwriting/master-clauses/[id]` | Edit clause |
 | `/policies` | Policy database, tab Semua/Baru/Renewal, kolom softcopy |
 | `/claims` | Klaim — tabel ringkas + detail drawer |
 | `/reports` | Report periodik, 3 tab breakdown |
@@ -61,7 +64,8 @@ Genre **modern-minimal** (Stripe / Linear school) diterapkan lewat token, bukan 
 | Radius | Permukaan 12px · kontrol 8px · tombol pill · badge 6px |
 | Aksen | Satu warna (biru LCH) dengan porsi < 3% layar — dipakai untuk state aktif, angka kunci, dan focus ring |
 | Tabel | Header micro-caps abu-abu, baris hairline, **kolom aksi di paling kiri** agar posisinya tetap saat tabel melebar |
-| Form entri | **Drawer samping**, bukan modal — konteks tabel tetap terlihat dan form panjang punya ruang |
+| Form entri | **Drawer samping** (klien, polis, klaim) — konteks tabel tetap terlihat. Form panjang (placing slip, clause) dapat halaman sendiri |
+| Wording clause | **Rich text editor** (TipTap) — output HTML, disanitasi allowlist sebelum dirender |
 | Status | Chip low-contrast + dot berwarna, bukan blok warna solid |
 | Chrome sticky | Topbar, toolbar slip, dan action bar menempel; offset diatur token `--topbar-h` / `--subbar-h` |
 | Form panjang | Tiap section bisa dilipat, dengan ringkasan yang tetap terbaca saat tertutup + tombol Buka/Tutup semua |
@@ -120,3 +124,7 @@ Data sekarang di-`import` langsung dari `lib/data/*`. Untuk beralih ke database,
 dengan query di Server Component — tipe di `lib/data/types.ts` sudah bisa dipakai langsung sebagai skema.
 Yang perlu diputuskan: database (Postgres/Supabase), auth & role, penyimpanan file softcopy polis,
 dan apakah generate PDF dilakukan di server atau tetap lewat print browser.
+
+**Catatan keamanan.** Wording clause disimpan sebagai HTML. [`lib/sanitize.ts`](lib/sanitize.ts) menyaring dengan
+allowlist saat render, tapi itu pertahanan lapis kedua — saat backend jadi, sanitasi wajib dilakukan di server
+dengan pustaka matang (DOMPurify / sanitize-html) sebelum wording disimpan.

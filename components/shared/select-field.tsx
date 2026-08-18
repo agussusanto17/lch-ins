@@ -1,6 +1,6 @@
 "use client"
 
-import { Field, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import {
   Select,
   SelectContent,
@@ -16,6 +16,7 @@ export function SelectField({
   defaultValue,
   value,
   onValueChange,
+  description,
   className,
 }: {
   label: string
@@ -23,6 +24,7 @@ export function SelectField({
   defaultValue?: string
   value?: string
   onValueChange?: (value: string) => void
+  description?: React.ReactNode
   className?: string
 }) {
   const options = items.map((i) => ({ label: i, value: i }))
@@ -50,6 +52,7 @@ export function SelectField({
           </SelectGroup>
         </SelectContent>
       </Select>
+      {description ? <FieldDescription>{description}</FieldDescription> : null}
     </Field>
   )
 }

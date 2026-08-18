@@ -1,5 +1,6 @@
 import { sumItems, totalPremium, totalSumInsured } from "@/lib/calc"
-import { CLAUSES, type PlacingSlip } from "@/lib/data"
+import { sanitizeHtml } from "@/lib/sanitize"
+import { CLAUSES, wordingHtml, type PlacingSlip } from "@/lib/data"
 import { dateEn, money, num } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -233,9 +234,12 @@ export function ClausesBlock({
               {slip.wordingForms.filter(Boolean).length + i + 1}. {c!.title}
             </p>
             {inline ? (
-              <p className="mt-0.5 ml-4 leading-relaxed text-muted-foreground">
-                {c!.wording}
-              </p>
+              <div
+                className="rte-prose mt-0.5 ml-4 text-[12px] text-muted-foreground"
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeHtml(wordingHtml(c!.wording)),
+                }}
+              />
             ) : null}
           </li>
         ))}
@@ -260,9 +264,12 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
             <p className="font-semibold">
               {i + 1}. {c!.title}
             </p>
-            <p className="mt-0.5 leading-relaxed text-muted-foreground">
-              {c!.wording}
-            </p>
+            <div
+              className="rte-prose mt-0.5 text-[12px] text-muted-foreground"
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHtml(wordingHtml(c!.wording)),
+              }}
+            />
           </div>
         ))}
       </div>

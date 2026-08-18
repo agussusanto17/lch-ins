@@ -14,6 +14,8 @@ const PAGES = [
   ["10-doc-cover-note", "/underwriting/cover-note/s-001"],
   ["11-doc-closing", "/underwriting/closing/s-001"],
   ["12-master-clauses", "/underwriting/master-clauses"],
+  ["12b-clause-new", "/underwriting/master-clauses/new"],
+  ["12c-clause-edit", "/underwriting/master-clauses/cl-17"],
   ["13-policies", "/policies"],
   ["14-claims", "/claims"],
   ["15-reports", "/reports"],
