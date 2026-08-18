@@ -23,17 +23,23 @@ export function SectionCard({
   contentClassName?: string
 }) {
   return (
-    <Card className={cn("gap-4 py-5", className)}>
+    <Card className={cn("gap-0", className)}>
       {title ? (
-        <CardHeader className="px-5">
-          <CardTitle className="text-[15px]">{title}</CardTitle>
-          {description ? (
-            <p className="text-sm text-muted-foreground">{description}</p>
+        <CardHeader className="flex-wrap items-center gap-x-4 gap-y-2 border-b pb-4">
+          <div className="min-w-0">
+            <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+            {description ? (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {description}
+              </p>
+            ) : null}
+          </div>
+          {action ? (
+            <CardAction className="self-center">{action}</CardAction>
           ) : null}
-          {action ? <CardAction>{action}</CardAction> : null}
         </CardHeader>
       ) : null}
-      <CardContent className={cn("px-5", contentClassName)}>
+      <CardContent className={cn("pt-5", contentClassName)}>
         {children}
       </CardContent>
     </Card>

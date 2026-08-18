@@ -150,7 +150,9 @@ export function TotalBar({
     <div
       className={cn(
         "flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold",
-        tone === "info" ? "bg-primary/8 text-primary" : "bg-muted"
+        tone === "info"
+          ? "bg-muted/60 text-foreground [&>span:last-child]:text-primary"
+          : "bg-muted/40"
       )}
     >
       <span>{label}</span>

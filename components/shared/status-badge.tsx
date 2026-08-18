@@ -1,14 +1,21 @@
-import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 type Tone = "neutral" | "info" | "success" | "warning" | "danger"
 
 const TONE_CLASS: Record<Tone, string> = {
   neutral: "bg-muted text-muted-foreground",
-  info: "bg-primary/10 text-primary",
-  success: "bg-success/12 text-success",
-  warning: "bg-warning/15 text-warning",
-  danger: "bg-destructive/10 text-destructive",
+  info: "bg-primary/8 text-primary",
+  success: "bg-success/10 text-success",
+  warning: "bg-warning/12 text-warning",
+  danger: "bg-destructive/8 text-destructive",
+}
+
+const DOT_CLASS: Record<Tone, string> = {
+  neutral: "bg-muted-foreground/50",
+  info: "bg-primary",
+  success: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-destructive",
 }
 
 const STATUS_TONE: Record<string, Tone> = {
@@ -36,6 +43,9 @@ const STATUS_TONE: Record<string, Tone> = {
   Rejected: "danger",
 }
 
+const BASE =
+  "inline-flex h-5.5 w-fit shrink-0 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium whitespace-nowrap"
+
 export function StatusBadge({
   status,
   className,
@@ -45,12 +55,10 @@ export function StatusBadge({
 }) {
   const tone = STATUS_TONE[status] ?? "neutral"
   return (
-    <Badge
-      variant="secondary"
-      className={cn("border-0", TONE_CLASS[tone], className)}
-    >
+    <span className={cn(BASE, TONE_CLASS[tone], className)}>
+      <span className={cn("size-1.5 shrink-0 rounded-full", DOT_CLASS[tone])} />
       {status}
-    </Badge>
+    </span>
   )
 }
 
@@ -64,11 +72,6 @@ export function ToneBadge({
   children: React.ReactNode
 }) {
   return (
-    <Badge
-      variant="secondary"
-      className={cn("border-0", TONE_CLASS[tone], className)}
-    >
-      {children}
-    </Badge>
+    <span className={cn(BASE, TONE_CLASS[tone], className)}>{children}</span>
   )
 }

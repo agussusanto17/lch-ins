@@ -1,31 +1,15 @@
 "use client"
 
 import * as React from "react"
-import {
-  CircleCheck,
-  Clock,
-  MoreHorizontal,
-  Pencil,
-  Receipt,
-  Trash2,
-  Eye,
-} from "lucide-react"
+import { CircleCheck, Clock, Eye, Pencil, Receipt, Trash2 } from "lucide-react"
 
+import { ACTION_COL_CLASS, RowActions } from "@/components/shared/row-actions"
 import { StatCard } from "@/components/shared/stat-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
 import { ClaimDetailSheet } from "@/components/claims/claim-detail-sheet"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
@@ -172,17 +156,19 @@ export function ClaimsView() {
         <ExportButtons className="ml-auto" />
       </div>
 
-      <Card className="overflow-hidden py-0">
+      <Card className="gap-0 overflow-hidden py-0">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
+              <TableHead className={ACTION_COL_CLASS}>
+                <span className="sr-only">Aksi</span>
+              </TableHead>
               <TableHead>No. Klaim</TableHead>
               <TableHead>Tertanggung</TableHead>
               <TableHead>COB</TableHead>
               <TableHead>Tgl Kejadian</TableHead>
               <TableHead className="text-right">Nilai Klaim</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-10" />
+              <TableHead className="pr-4">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -195,6 +181,26 @@ export function ClaimsView() {
                   className="cursor-pointer"
                   onClick={() => setSelected(c)}
                 >
+                  <TableCell
+                    className={ACTION_COL_CLASS}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <RowActions
+                      actions={[
+                        {
+                          label: "Lihat detail",
+                          icon: Eye,
+                          onSelect: () => setSelected(c),
+                        },
+                        { label: "Edit klaim", icon: Pencil },
+                        {
+                          label: "Hapus klaim",
+                          icon: Trash2,
+                          destructive: true,
+                        },
+                      ]}
+                    />
+                  </TableCell>
                   <TableCell className="tabular font-medium">
                     {c.claimNo}
                   </TableCell>
@@ -213,42 +219,8 @@ export function ClaimsView() {
                   <TableCell className="tabular text-right font-medium whitespace-nowrap">
                     {money(c.claimedAmount || c.estimatedLoss, c.currency)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="pr-4">
                     <StatusBadge status={c.status} />
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Aksi"
-                          />
-                        }
-                      >
-                        <MoreHorizontal />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuGroup>
-                          <DropdownMenuItem onClick={() => setSelected(c)}>
-                            <Eye />
-                            Lihat detail
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Pencil />
-                            Edit klaim
-                          </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuGroup>
-                          <DropdownMenuItem variant="destructive">
-                            <Trash2 />
-                            Hapus
-                          </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))

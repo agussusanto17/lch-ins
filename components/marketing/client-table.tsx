@@ -1,21 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react"
+import { Eye, Pencil, Trash2 } from "lucide-react"
 
+import { ACTION_COL_CLASS, RowActions } from "@/components/shared/row-actions"
 import { StatusBadge } from "@/components/shared/status-badge"
-import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
 import { TableEmpty } from "@/components/shared/table-empty"
-import { Button } from "@/components/ui/button"
+import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
 import { Card } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
@@ -63,7 +55,7 @@ export function ClientTable() {
   }, [query, cob, status])
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput
           value={query}
@@ -109,17 +101,19 @@ export function ClientTable() {
         <ExportButtons className="ml-auto" />
       </div>
 
-      <Card className="overflow-hidden py-0">
+      <Card className="gap-0 overflow-hidden py-0">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
+              <TableHead className={ACTION_COL_CLASS}>
+                <span className="sr-only">Aksi</span>
+              </TableHead>
               <TableHead>Nama Perusahaan</TableHead>
               <TableHead>Kontak</TableHead>
               <TableHead>Telepon</TableHead>
               <TableHead>NPWP</TableHead>
               <TableHead>COB</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-10" />
+              <TableHead className="pr-4">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -131,6 +125,15 @@ export function ClientTable() {
             ) : (
               rows.map((c) => (
                 <TableRow key={c.id}>
+                  <TableCell className={ACTION_COL_CLASS}>
+                    <RowActions
+                      actions={[
+                        { label: "Lihat detail", icon: Eye },
+                        { label: "Edit klien", icon: Pencil },
+                        { label: "Hapus", icon: Trash2, destructive: true },
+                      ]}
+                    />
+                  </TableCell>
                   <TableCell className="max-w-[260px]">
                     <p className="truncate font-medium">{c.name}</p>
                     <p className="truncate text-xs text-muted-foreground">
@@ -146,45 +149,9 @@ export function ClientTable() {
                   <TableCell className="tabular text-xs text-muted-foreground">
                     {c.npwp}
                   </TableCell>
-                  <TableCell>
-                    <span className="text-sm">{c.cob}</span>
-                  </TableCell>
-                  <TableCell>
+                  <TableCell>{c.cob}</TableCell>
+                  <TableCell className="pr-4">
                     <StatusBadge status={c.status} />
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Aksi"
-                          />
-                        }
-                      >
-                        <MoreHorizontal />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuGroup>
-                          <DropdownMenuItem>
-                            <Eye />
-                            Lihat detail
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Pencil />
-                            Edit
-                          </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuGroup>
-                          <DropdownMenuItem variant="destructive">
-                            <Trash2 />
-                            Hapus
-                          </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))

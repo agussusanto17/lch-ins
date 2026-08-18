@@ -78,7 +78,7 @@ export function ClausePicker({
         </p>
       ) : null}
 
-      <ScrollArea className="h-[280px] rounded-xl border">
+      <ScrollArea className="h-[280px] rounded-lg border">
         <div className="divide-y">
           {available.map((c) => {
             const active = selected.includes(c.id)
@@ -89,7 +89,7 @@ export function ClausePicker({
                 onClick={() => toggle(c.id)}
                 className={cn(
                   "flex w-full gap-3 p-3 text-left transition-colors hover:bg-muted/60",
-                  active && "bg-primary/5"
+                  active && "bg-muted/50"
                 )}
               >
                 <span
@@ -135,7 +135,7 @@ export function ClausePicker({
             {selectedClauses.map((c) => (
               <div
                 key={c!.id}
-                className="flex items-center gap-2 rounded-xl bg-primary/5 px-3 py-2 text-[13px]"
+                className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[13px]"
               >
                 <span className="min-w-0 flex-1 truncate">{c!.title}</span>
                 <Button

@@ -97,7 +97,7 @@ export function AppTopbar() {
         </Button>
         <ThemeToggle />
         <Separator orientation="vertical" className="mx-1 h-4" />
-        <Avatar className="size-8">
+        <Avatar className="size-7 rounded-md">
           <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
             AS
           </AvatarFallback>

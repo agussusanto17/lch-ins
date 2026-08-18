@@ -50,6 +50,20 @@ Perintah lain: `npm run build` · `npm run typecheck` · `npm run lint` · `npm 
 | `/reports` | Report periodik, 3 tab breakdown |
 | `*` | 404 |
 
+## Bahasa visual
+
+Genre **modern-minimal** (Stripe / Linear school) diterapkan lewat token, bukan utility ad-hoc:
+
+| Aspek | Keputusan |
+| --- | --- |
+| Kanvas | Konten **putih murni**, chrome (sidebar) **abu-abu muda** — hierarki dibentuk oleh permukaan, bukan bayangan |
+| Elevasi | **Tanpa shadow** pada card. Pemisah = border hairline `--border` + perbedaan permukaan |
+| Radius | Permukaan 12px · kontrol 8px · tombol pill · badge 6px |
+| Aksen | Satu warna (biru LCH) dengan porsi < 3% layar — dipakai untuk state aktif, angka kunci, dan focus ring |
+| Tabel | Header micro-caps abu-abu, baris hairline, **kolom aksi di paling kiri** agar posisinya tetap saat tabel melebar |
+| Form entri | **Drawer samping**, bukan modal — konteks tabel tetap terlihat dan form panjang punya ruang |
+| Status | Chip low-contrast + dot berwarna, bukan blok warna solid |
+
 ## Yang berubah dari versi base44
 
 1. **Tabel Klaim: 17 kolom → 6 kolom + detail drawer.** Sisanya (timeline, deskripsi kerugian,
@@ -65,6 +79,7 @@ Perintah lain: `npm run build` · `npm run typecheck` · `npm run lint` · `npm 
    Panel Referensi Tarif OJK bisa diklik untuk mengisi field rate.
 7. **Global search (⌘K)**, breakpoint responsif, dark mode, dan sidebar collapsible.
 8. **Data dummy realistis** (bukan nol) supaya chart dan tabel bisa dinilai secara visual.
+9. **Bahasa visual dirombak** — lihat tabel di atas.
 
 ## Aturan hitung (dipakai di form & dokumen)
 

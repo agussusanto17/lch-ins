@@ -619,7 +619,7 @@ export function PlacingSlipForm({
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-3 rounded-xl bg-primary/5 p-4">
+          <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
             <div className="flex items-center justify-between text-sm font-semibold">
               <span>Total Premium</span>
               <span className="tabular">{money(premium, slip.currency)}</span>
@@ -714,7 +714,7 @@ export function PlacingSlipForm({
               </FieldLabel>
             </Field>
           </div>
-          <div className="grid gap-3 rounded-xl bg-primary/5 p-4 sm:grid-cols-2">
+          <div className="grid gap-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Effective Brokerage</span>
               <span className="tabular font-semibold">

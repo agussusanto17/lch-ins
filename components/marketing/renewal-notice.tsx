@@ -101,7 +101,7 @@ export function RenewalNotice() {
         <ExportButtons className="ml-auto" />
       </div>
 
-      <Card className="flex-row items-center gap-3 border-primary/15 bg-primary/5 px-5 py-4">
+      <Card className="flex-row items-center gap-3 px-5 py-4">
         <CalendarClock className="size-5 shrink-0 text-primary" />
         <p className="text-sm">
           <span className="font-semibold">{rows.length} polis</span> jatuh tempo

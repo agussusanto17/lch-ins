@@ -33,35 +33,29 @@ export function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              render={<Link href="/" />}
-              className="hover:bg-sidebar-accent/60"
-            >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
-                L
-              </div>
-              <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-sm font-bold text-sidebar-accent-foreground">
-                  PT. LCH
-                </span>
-                <span className="truncate text-[10px] tracking-[0.14em]">
-                  INSURANCE BROKERS
-                </span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+    <Sidebar collapsible="icon" className="border-r">
+      <SidebarHeader className="h-14 justify-center border-b px-4 group-data-[collapsible=icon]:px-2">
+        <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-[13px] font-bold text-sidebar-primary-foreground">
+            L
+          </span>
+          <span className="grid leading-tight group-data-[collapsible=icon]:hidden">
+            <span className="truncate text-[13px] font-semibold text-sidebar-accent-foreground">
+              PT. LCH
+            </span>
+            <span className="truncate text-[10px] tracking-[0.12em]">
+              INSURANCE BROKERS
+            </span>
+          </span>
+        </Link>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="gap-0 px-2 py-3">
         {NAV_GROUPS.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+          <SidebarGroup key={group.label} className="gap-1 px-0 py-1.5">
+            <SidebarGroupLabel className="h-6 px-3 text-[10px] font-semibold tracking-[0.09em] uppercase">
+              {group.label}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => (
@@ -82,7 +76,7 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="border-t p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Logout">

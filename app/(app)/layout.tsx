@@ -9,7 +9,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AppSidebar />
       <SidebarInset className="overflow-hidden">
         <AppTopbar />
-        <div className="flex-1 overflow-x-hidden bg-muted/40">{children}</div>
+        <div className="flex-1 overflow-x-hidden bg-background">{children}</div>
       </SidebarInset>
       <Toaster position="top-center" />
     </SidebarProvider>

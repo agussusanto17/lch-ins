@@ -1,23 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { FileText, MoreHorizontal, Trash2, Upload } from "lucide-react"
+import { FileText, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 
+import { ACTION_COL_CLASS, RowActions } from "@/components/shared/row-actions"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
@@ -77,7 +69,7 @@ export function PolicyDatabase() {
   const totalPremium = rows.reduce((a, p) => a + premiumIdr(p), 0)
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput
           value={query}
@@ -126,7 +118,7 @@ export function PolicyDatabase() {
       <Tabs
         value={tab}
         onValueChange={(v) => setTab(v as string)}
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-4"
       >
         <TabsList>
           <TabsTrigger value="all">Semua ({counts.all})</TabsTrigger>
@@ -135,10 +127,13 @@ export function PolicyDatabase() {
         </TabsList>
 
         <TabsContent value={tab}>
-          <Card className="overflow-hidden py-0">
+          <Card className="gap-0 overflow-hidden py-0">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
+                  <TableHead className={ACTION_COL_CLASS}>
+                    <span className="sr-only">Aksi</span>
+                  </TableHead>
                   <TableHead>No. Polis</TableHead>
                   <TableHead>Tertanggung</TableHead>
                   <TableHead>COB</TableHead>
@@ -146,8 +141,7 @@ export function PolicyDatabase() {
                   <TableHead className="text-right">Premium</TableHead>
                   <TableHead>Tipe</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Softcopy</TableHead>
-                  <TableHead className="w-10" />
+                  <TableHead className="pr-4">Softcopy</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -159,6 +153,30 @@ export function PolicyDatabase() {
                 ) : (
                   rows.map((p) => (
                     <TableRow key={p.id}>
+                      <TableCell className={ACTION_COL_CLASS}>
+                        <RowActions
+                          actions={[
+                            {
+                              label: "Lihat softcopy",
+                              icon: FileText,
+                              onSelect: () => toast.info("Membuka file polis…"),
+                            },
+                            {
+                              label: "Upload ulang",
+                              icon: Upload,
+                              onSelect: () =>
+                                toast.success("Upload dimulai", {
+                                  description: "Demo statis.",
+                                }),
+                            },
+                            {
+                              label: "Hapus polis",
+                              icon: Trash2,
+                              destructive: true,
+                            },
+                          ]}
+                        />
+                      </TableCell>
                       <TableCell className="tabular font-medium">
                         {p.policyNo}
                       </TableCell>
@@ -168,16 +186,16 @@ export function PolicyDatabase() {
                           {p.insurer}
                         </p>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                      <TableCell className="text-muted-foreground">
                         {p.cob}
                       </TableCell>
-                      <TableCell className="tabular text-xs whitespace-nowrap">
+                      <TableCell className="tabular text-xs">
                         {dateShort(p.inceptionDate)}
                         <span className="block text-muted-foreground">
                           s/d {dateShort(p.expiryDate)}
                         </span>
                       </TableCell>
-                      <TableCell className="tabular text-right font-medium whitespace-nowrap">
+                      <TableCell className="tabular text-right font-medium">
                         {money(p.premium, p.currency)}
                       </TableCell>
                       <TableCell>
@@ -186,68 +204,21 @@ export function PolicyDatabase() {
                       <TableCell>
                         <StatusBadge status={p.status} />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="pr-4">
                         {p.softcopy ? (
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="-mx-2 text-primary"
+                            className="-mx-2 h-7 text-primary"
                           >
                             <FileText data-icon="inline-start" />
                             Lihat file
                           </Button>
                         ) : (
-                          <Badge
-                            variant="outline"
-                            className="text-muted-foreground"
-                          >
+                          <span className="text-xs text-muted-foreground">
                             Belum ada
-                          </Badge>
+                          </span>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label="Aksi"
-                              />
-                            }
-                          >
-                            <MoreHorizontal />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuGroup>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  toast.info("Membuka file polis…")
-                                }
-                              >
-                                <FileText />
-                                Lihat softcopy
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  toast.success("Upload dimulai", {
-                                    description: "Demo statis.",
-                                  })
-                                }
-                              >
-                                <Upload />
-                                Upload ulang
-                              </DropdownMenuItem>
-                            </DropdownMenuGroup>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuGroup>
-                              <DropdownMenuItem variant="destructive">
-                                <Trash2 />
-                                Hapus polis
-                              </DropdownMenuItem>
-                            </DropdownMenuGroup>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
