@@ -63,6 +63,8 @@ Genre **modern-minimal** (Stripe / Linear school) diterapkan lewat token, bukan 
 | Tabel | Header micro-caps abu-abu, baris hairline, **kolom aksi di paling kiri** agar posisinya tetap saat tabel melebar |
 | Form entri | **Drawer samping**, bukan modal — konteks tabel tetap terlihat dan form panjang punya ruang |
 | Status | Chip low-contrast + dot berwarna, bukan blok warna solid |
+| Chrome sticky | Topbar, toolbar slip, dan action bar menempel; offset diatur token `--topbar-h` / `--subbar-h` |
+| Form panjang | Tiap section bisa dilipat, dengan ringkasan yang tetap terbaca saat tertutup + tombol Buka/Tutup semua |
 
 ## Yang berubah dari versi base44
 

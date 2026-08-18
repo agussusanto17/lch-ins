@@ -13,8 +13,8 @@ export function DocumentShell({
   children: React.ReactNode
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4 p-4 md:p-6">
-      <div className="no-print flex items-center justify-between">
+    <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4 px-4 pb-4 md:px-6 md:pb-6">
+      <div className="no-print sticky top-0 z-10 -mx-4 flex items-center justify-between bg-muted/50 px-4 py-3 backdrop-blur-sm md:-mx-6 md:px-6">
         <Button
           variant="outline"
           size="sm"

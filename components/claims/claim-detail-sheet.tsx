@@ -41,7 +41,7 @@ export function ClaimDetailSheet({
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-lg">
+      <SheetContent className="w-full gap-0 overflow-y-auto data-[side=right]:sm:max-w-[34rem]">
         {claim ? (
           <>
             <SheetHeader>

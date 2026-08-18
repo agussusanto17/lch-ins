@@ -43,7 +43,10 @@ export function FormDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger render={trigger as React.ReactElement} />
       <SheetContent
-        className={cn("flex w-full flex-col gap-0 p-0 sm:max-w-xl", className)}
+        className={cn(
+          "flex w-full flex-col gap-0 p-0 data-[side=right]:sm:max-w-[46rem]",
+          className
+        )}
       >
         <SheetHeader className="border-b px-6 py-5">
           <SheetTitle className="text-base">{title}</SheetTitle>

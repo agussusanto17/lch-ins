@@ -204,3 +204,41 @@
     break-inside: avoid;
   }
 }
+
+@layer base {
+  /* Sticky chrome mengukur offset dari sini, bukan dari angka hardcoded. */
+  :root {
+    --topbar-h: 3.5rem;
+    --subbar-h: 3.5rem;
+  }
+  html {
+    overflow-x: clip;
+    scroll-padding-top: calc(var(--topbar-h) + var(--subbar-h));
+  }
+  body {
+    overflow-x: clip;
+  }
+}
+
+@keyframes collapse-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--collapsible-panel-height);
+  }
+}
+
+@keyframes collapse-up {
+  from {
+    height: var(--collapsible-panel-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@theme inline {
+  --animate-collapse-down: collapse-down 180ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+  --animate-collapse-up: collapse-up 150ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
