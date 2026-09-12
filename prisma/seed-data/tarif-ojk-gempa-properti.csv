@@ -1,0 +1,6 @@
+kategori_konstruksi,zona_1,zona_2,zona_3,zona_4,zona_5,satuan
+"Com: Steel, Wood, RC sampai 9 lantai",0.75,0.76,1.0,1.43,1.9,per mil
+"Com: Steel, Wood, RC di atas 9 lantai",1.12,1.15,1.22,1.53,2.0,per mil
+Com: Others,0.8,1.04,1.55,2.46,4.7,per mil
+"DW: Steel, Wood, RC",0.76,0.79,1.04,1.35,1.6,per mil
+DW: Others,0.8,1.0,1.55,2.24,4.5,per mil
