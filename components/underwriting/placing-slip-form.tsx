@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Save, Send, Trash2 } from "lucide-react"
+import { AlertTriangle, Save, Send, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { PageShell } from "@/components/layout/page-header"
@@ -19,8 +19,12 @@ import {
   StringList,
   TotalBar,
 } from "@/components/underwriting/line-items"
+import { InsuredPicker } from "@/components/underwriting/insured-picker"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
-import { OjkReference } from "@/components/underwriting/ojk-reference"
+import {
+  OjkReference,
+  type RateBounds,
+} from "@/components/underwriting/ojk-reference"
 import {
   CoverRateTable,
   LimitRateTable,
@@ -57,7 +61,9 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  BI_BASE_LABELS,
   brokerageAmount,
+  brokerageCapFor,
   discountAmount,
   effectiveBrokeragePct,
   sumItems,
@@ -114,6 +120,11 @@ export function PlacingSlipForm({
     onOpenChange: (v: boolean) => setOpenSections((o) => ({ ...o, [key]: v })),
   })
 
+  /** Batas tarif OJK per baris rate, terisi saat rate diambil dari panel referensi. */
+  const [rateBounds, setRateBounds] = React.useState<
+    Record<string, RateBounds>
+  >({})
+
   const isProperty = slip.cob === "Property"
   const isMotor = slip.cob === "Motor Vehicle"
   const coverItems = (TYPE_OF_COVER[slip.cob] ?? []).map((t) => ({
@@ -127,6 +138,41 @@ export function PlacingSlipForm({
   const premium = totalPremium(slip)
   const discount = discountAmount(slip)
   const payable = premium - discount + slip.adminCost + slip.stampDuty
+
+  /** Tarif dasar BI: jumlah FLEXAS, FWTWD, RSMDCC, dan Other Losses. */
+  const biBaseRate = slip.rateLines
+    .filter((l) => BI_BASE_LABELS.includes(l.label))
+    .reduce((a, l) => a + (l.rate ?? 0), 0)
+  const eqRate = slip.rateLines.find((l) => l.label === "EQVET")?.rate ?? null
+  const brokerageCap = brokerageCapFor(slip.cob)
+  const editedClauseCount = slip.clauseIds.filter(
+    (id) => slip.clauseOverrides?.[id]
+  ).length
+
+  /** Isi satu baris rate dari panel referensi OJK, sekaligus catat batasnya. */
+  function applyOjkRate(label: string, value: number, bounds?: RateBounds) {
+    const hits = slip.rateLines.filter((l) => l.label.startsWith(label))
+    if (!hits.length) return
+    // Satu klik BI mengisi dua baris sekaligus, jadi wajib pakai updater agar
+    // panggilan kedua tidak menimpa hasil panggilan pertama.
+    setSlip((s) =>
+      recalc({
+        ...s,
+        rateLines: s.rateLines.map((l) =>
+          l.label.startsWith(label) ? { ...l, rate: value } : l
+        ),
+      })
+    )
+    if (bounds) {
+      setRateBounds((b) => ({
+        ...b,
+        ...Object.fromEntries(hits.map((l) => [l.id, bounds])),
+      }))
+    }
+    toast.success(`Rate ${label} diisi ${num(value, 3)}`, {
+      description: bounds?.source,
+    })
+  }
 
   function handleRelease() {
     const now = new Date()
@@ -247,28 +293,12 @@ export function PlacingSlipForm({
               </Select>
             </Field>
 
-            <Field className="md:col-span-2">
-              <FieldLabel htmlFor="insured">
-                Nama Tertanggung / Insured Name *
-              </FieldLabel>
-              <Input
-                id="insured"
-                value={slip.insuredName}
-                placeholder="PT / Mr. / Mrs. …"
-                onChange={(e) => set({ insuredName: e.target.value })}
-              />
-            </Field>
-
-            <Field className="md:col-span-2">
-              <FieldLabel htmlFor="addr">Correspondence Address</FieldLabel>
-              <Textarea
-                id="addr"
-                rows={2}
-                value={slip.correspondenceAddress}
-                placeholder="Alamat korespondensi tertanggung"
-                onChange={(e) => set({ correspondenceAddress: e.target.value })}
-              />
-            </Field>
+            <InsuredPicker
+              clientId={slip.clientId}
+              insuredName={slip.insuredName}
+              correspondenceAddress={slip.correspondenceAddress}
+              onChange={set}
+            />
 
             <Field orientation="horizontal" className="md:col-span-2">
               <Switch
@@ -507,7 +537,9 @@ export function PlacingSlipForm({
         <SectionCard
           title="Deductible & Clauses"
           {...sectionProps("deductible")}
-          summary={`${slip.clauseIds.length} klausula`}
+          summary={`${slip.clauseIds.length} klausula${
+            editedClauseCount ? ` · ${editedClauseCount} diedit` : ""
+          }`}
         >
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
@@ -554,7 +586,9 @@ export function PlacingSlipForm({
                 cob={slip.cob}
                 typeOfCover={slip.typeOfCover}
                 selected={slip.clauseIds}
+                overrides={slip.clauseOverrides ?? {}}
                 onChange={(ids) => set({ clauseIds: ids })}
+                onOverridesChange={(o) => set({ clauseOverrides: o })}
               />
             </div>
           </div>
@@ -565,29 +599,30 @@ export function PlacingSlipForm({
           title="Rate & Premium"
           {...sectionProps("rate")}
           summary={money(payable, slip.currency)}
-          action={
-            isProperty || isMotor ? (
-              <OjkReference
-                occupation={slip.occupation}
-                onPickRate={(label, value) => {
-                  set({
-                    rateLines: slip.rateLines.map((l) =>
-                      l.label.startsWith(label) ? { ...l, rate: value } : l
-                    ),
-                  })
-                  toast.success(`Rate ${label} diisi ${num(value, 3)}`)
-                }}
-              />
-            ) : null
-          }
         >
           <div className="flex flex-col gap-4">
+            {isProperty || isMotor ? (
+              <OjkReference
+                mode={isMotor ? "motor" : "property"}
+                occupation={slip.occupation}
+                riskLocation={slip.riskLocation ?? ""}
+                sumInsured={tsi}
+                baseRate={biBaseRate}
+                eqRate={eqRate}
+                onPickRate={applyOjkRate}
+                onPickIndemnity={(months) =>
+                  set({ indemnityPeriod: `${months} months` })
+                }
+              />
+            ) : null}
+
             {isProperty ? (
               <>
                 <CoverRateTable
                   lines={slip.rateLines}
                   currency={slip.currency}
                   unit="‰"
+                  bounds={rateBounds}
                   onRateChange={(id, rate) =>
                     set({
                       rateLines: slip.rateLines.map((l) =>
@@ -609,6 +644,7 @@ export function PlacingSlipForm({
                   lines={slip.rateLines}
                   currency={slip.currency}
                   unit="%"
+                  bounds={rateBounds}
                   onRateChange={(id, rate) =>
                     set({
                       rateLines: slip.rateLines.map((l) =>
@@ -776,6 +812,15 @@ export function PlacingSlipForm({
                 </FieldLabel>
               </Field>
             </div>
+            {brokerageCap != null &&
+            effectiveBrokeragePct(slip) > brokerageCap ? (
+              <p className="flex items-start gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                Brokerage efektif {percent(effectiveBrokeragePct(slip), 2)}{" "}
+                melebihi batas biaya akuisisi OJK {brokerageCap}% untuk{" "}
+                {slip.cob}.
+              </p>
+            ) : null}
             <div className="grid gap-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">

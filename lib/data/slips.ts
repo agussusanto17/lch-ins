@@ -8,6 +8,7 @@ export const SLIPS: PlacingSlip[] = [
     cob: "Motor Vehicle",
     typeOfCover: "Comprehensive Casco + Perluasan",
     coverCode: null,
+    clientId: "c-005",
     insuredName: "Mr. HARRY MULYONO",
     correspondenceAddress: "Jl. Nanas No. 25, Jakarta Selatan 12440",
     currency: "IDR",
@@ -137,6 +138,7 @@ export const SLIPS: PlacingSlip[] = [
     cob: "Property",
     typeOfCover: "PAR + EQVET",
     coverCode: "PAREQ",
+    clientId: "c-001",
     insuredName: "PT GRAHA SENTOSA PROPERTI",
     correspondenceAddress:
       "Jl. Jenderal Sudirman Kav. 52-53, Jakarta Selatan 12190",
@@ -270,6 +272,7 @@ export const SLIPS: PlacingSlip[] = [
     cob: "Liability",
     typeOfCover: "Public Liability",
     coverCode: "PL",
+    clientId: "c-008",
     insuredName: "PT MEDIKA HUSADA PRIMA and/or Subsidiary Companies",
     correspondenceAddress: "Jl. Ir. H. Juanda No. 210, Bandung 40135",
     currency: "IDR",
@@ -319,6 +322,7 @@ export const SLIPS: PlacingSlip[] = [
     cob: "Marine Cargo",
     typeOfCover: "Marine Cargo — Institute Cargo Clauses (A)",
     coverCode: "MC",
+    clientId: "c-002",
     insuredName: "PT MITRA LOGISTIK NUSANTARA",
     correspondenceAddress:
       "Jl. Yos Sudarso No. 88, Tanjung Priok, Jakarta Utara 14320",
@@ -377,6 +381,7 @@ export const SLIPS: PlacingSlip[] = [
     cob: "Engineering",
     typeOfCover: "Contractor's All Risks (CAR)",
     coverCode: "CAR",
+    clientId: "c-003",
     insuredName:
       "PT KARYA BANGUN PERKASA and/or Employer and/or Sub-Contractors",
     correspondenceAddress:
@@ -455,6 +460,7 @@ export const SLIPS: PlacingSlip[] = [
     cob: "Motor Vehicle",
     typeOfCover: "Comprehensive Casco",
     coverCode: null,
+    clientId: "c-010",
     insuredName: "PT NUSANTARA FLEET SERVICES",
     correspondenceAddress:
       "Jl. Raya Bekasi Km. 22, Cakung, Jakarta Timur 13910",
@@ -568,6 +574,7 @@ export const SLIPS: PlacingSlip[] = [
     cob: "Property",
     typeOfCover: "Industrial All Risks (IAR)",
     coverCode: "IAR",
+    clientId: "c-006",
     insuredName: "PT SUMBER PANGAN SEJAHTERA",
     correspondenceAddress: "Kawasan Industri Rungkut Blok F-12, Surabaya 60293",
     currency: "IDR",
@@ -688,6 +695,7 @@ export const SLIPS: PlacingSlip[] = [
     cob: "Property",
     typeOfCover: "Property All Risks (PAR)",
     coverCode: "PAR",
+    clientId: "c-004",
     insuredName: "PT ANUGERAH RETAIL INDONESIA",
     correspondenceAddress:
       "Mall Grand Anugerah Lt. 5, Jl. Gatot Subroto, Jakarta Selatan 12930",

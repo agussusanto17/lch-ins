@@ -1,4 +1,4 @@
-import type { Clause } from "./types"
+import type { Clause, ClauseOverride } from "./types"
 
 export const CLAUSES: Clause[] = [
   {
@@ -249,6 +249,37 @@ export function clauseById(id: string) {
   return CLAUSES.find((c) => c.id === id)
 }
 
+export interface ResolvedClause {
+  id: string
+  title: string
+  /** HTML siap render, sudah memperhitungkan override slip. */
+  wording: string
+  overridden: boolean
+}
+
+/**
+ * Klausula satu slip: isi master, lalu ditimpa override slip bila ada.
+ * Dipakai form maupun dokumen cetak supaya hasilnya selalu sama.
+ */
+export function resolveSlipClauses(slip: {
+  clauseIds: string[]
+  clauseOverrides?: Record<string, ClauseOverride>
+}): ResolvedClause[] {
+  return slip.clauseIds.flatMap((id) => {
+    const master = CLAUSES.find((c) => c.id === id)
+    if (!master) return []
+    const override = slip.clauseOverrides?.[id]
+    return [
+      {
+        id,
+        title: override?.title ?? master.title,
+        wording: wordingHtml(override?.wording ?? master.wording),
+        overridden: Boolean(override),
+      },
+    ]
+  })
+}
+
 /** Wording lama tersimpan sebagai plain text; bungkus jadi HTML untuk editor. */
 export function wordingHtml(wording: string) {
   if (/<\/?[a-z][\s\S]*>/i.test(wording)) return wording
@@ -260,5 +291,8 @@ export function wordingHtml(wording: string) {
 
 /** Ringkasan plain-text untuk kartu list. */
 export function wordingText(wording: string) {
-  return wording.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+  return wording
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 }

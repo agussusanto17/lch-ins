@@ -11,7 +11,19 @@ export const CLIENTS: Client[] = [
     ktp: "3174012509780004",
     cob: "Property",
     status: "Active",
-    address: "Jl. Jenderal Sudirman Kav. 52-53, Jakarta Selatan 12190",
+    addresses: [
+      {
+        id: "c-001-a1",
+        label: "Alamat Perusahaan",
+        value: "Jl. Jenderal Sudirman Kav. 52-53, Jakarta Selatan 12190",
+      },
+      {
+        id: "c-001-a2",
+        label: "Alamat Korespondensi",
+        value:
+          "Graha Sentosa Tower Lt. 21, Jl. Jenderal Sudirman Kav. 52-53, Jakarta Selatan 12190 (u.p. Divisi Legal)",
+      },
+    ],
     notes: "Renewal PAR + EQVET tiap September. Butuh quotation H-45.",
     createdAt: "2024-03-11",
   },
@@ -25,7 +37,19 @@ export const CLIENTS: Client[] = [
     ktp: "3175064411850002",
     cob: "Marine Cargo",
     status: "Active",
-    address: "Jl. Yos Sudarso No. 88, Tanjung Priok, Jakarta Utara 14320",
+    addresses: [
+      {
+        id: "c-002-a1",
+        label: "Alamat Perusahaan",
+        value: "Jl. Yos Sudarso No. 88, Tanjung Priok, Jakarta Utara 14320",
+      },
+      {
+        id: "c-002-a2",
+        label: "Alamat Korespondensi",
+        value:
+          "Gedung Wisma Priok Lt. 5, Jl. Enggano No. 17, Tanjung Priok, Jakarta Utara 14310",
+      },
+    ],
     createdAt: "2024-06-02",
   },
   {
@@ -38,7 +62,13 @@ export const CLIENTS: Client[] = [
     ktp: "3172030307820006",
     cob: "Engineering",
     status: "Active",
-    address: "Springhill Office Tower Lt. 8, Kemayoran, Jakarta Pusat 10630",
+    addresses: [
+      {
+        id: "c-003-a1",
+        label: "Alamat Perusahaan",
+        value: "Springhill Office Tower Lt. 8, Kemayoran, Jakarta Pusat 10630",
+      },
+    ],
     notes: "Proyek CAR jalan tol seksi 3 — perpanjangan periode konstruksi.",
     createdAt: "2024-09-19",
   },
@@ -52,8 +82,20 @@ export const CLIENTS: Client[] = [
     ktp: "3173025508900001",
     cob: "Property",
     status: "Active",
-    address:
-      "Mall Grand Anugerah Lt. 5, Jl. Gatot Subroto, Jakarta Selatan 12930",
+    addresses: [
+      {
+        id: "c-004-a1",
+        label: "Alamat Perusahaan",
+        value:
+          "Mall Grand Anugerah Lt. 5, Jl. Gatot Subroto, Jakarta Selatan 12930",
+      },
+      {
+        id: "c-004-a2",
+        label: "Alamat Korespondensi",
+        value:
+          "Menara Batavia Lt. 12, Jl. K.H. Mas Mansyur Kav. 126, Jakarta Pusat 10220",
+      },
+    ],
     createdAt: "2025-01-08",
   },
   {
@@ -66,7 +108,13 @@ export const CLIENTS: Client[] = [
     ktp: "3174071208900003",
     cob: "Motor Vehicle",
     status: "Active",
-    address: "Jl. Nanas No. 25, Jakarta Selatan 12440",
+    addresses: [
+      {
+        id: "c-005-a1",
+        label: "Alamat Rumah",
+        value: "Jl. Nanas No. 25, Jakarta Selatan 12440",
+      },
+    ],
     notes: "Personal line — Toyota Innova Zenix 2023.",
     createdAt: "2025-02-14",
   },
@@ -80,7 +128,19 @@ export const CLIENTS: Client[] = [
     ktp: "3578011806810005",
     cob: "Property",
     status: "Active",
-    address: "Kawasan Industri Rungkut Blok F-12, Surabaya 60293",
+    addresses: [
+      {
+        id: "c-006-a1",
+        label: "Alamat Perusahaan",
+        value: "Kawasan Industri Rungkut Blok F-12, Surabaya 60293",
+      },
+      {
+        id: "c-006-a2",
+        label: "Alamat Korespondensi",
+        value:
+          "Graha Pacific Lt. 9, Jl. Basuki Rahmat No. 87-91, Surabaya 60271",
+      },
+    ],
     createdAt: "2025-03-27",
   },
   {
@@ -93,7 +153,13 @@ export const CLIENTS: Client[] = [
     ktp: "3171041002760008",
     cob: "Marine Cargo",
     status: "Active",
-    address: "Jl. Pluit Raya Selatan No. 3, Jakarta Utara 14440",
+    addresses: [
+      {
+        id: "c-007-a1",
+        label: "Alamat Perusahaan",
+        value: "Jl. Pluit Raya Selatan No. 3, Jakarta Utara 14440",
+      },
+    ],
     createdAt: "2025-05-16",
   },
   {
@@ -106,7 +172,18 @@ export const CLIENTS: Client[] = [
     ktp: "3273056009840002",
     cob: "Liability",
     status: "Active",
-    address: "Jl. Ir. H. Juanda No. 210, Bandung 40135",
+    addresses: [
+      {
+        id: "c-008-a1",
+        label: "Alamat Perusahaan",
+        value: "Jl. Ir. H. Juanda No. 210, Bandung 40135",
+      },
+      {
+        id: "c-008-a2",
+        label: "Alamat Korespondensi",
+        value: "Jl. Asia Afrika No. 8, Bandung 40111 (u.p. Bagian Keuangan)",
+      },
+    ],
     notes: "Professional indemnity untuk 42 tenaga medis.",
     createdAt: "2025-07-01",
   },
@@ -120,8 +197,14 @@ export const CLIENTS: Client[] = [
     ktp: "3174092811830007",
     cob: "Engineering",
     status: "Prospect",
-    address:
-      "Menara Global Lt. 17, Jl. Gatot Subroto Kav. 27, Jakarta Selatan 12950",
+    addresses: [
+      {
+        id: "c-009-a1",
+        label: "Alamat Perusahaan",
+        value:
+          "Menara Global Lt. 17, Jl. Gatot Subroto Kav. 27, Jakarta Selatan 12950",
+      },
+    ],
     notes: "Prospek EAR PLTS 45 MWp — menunggu financial close.",
     createdAt: "2025-11-20",
   },
@@ -135,7 +218,13 @@ export const CLIENTS: Client[] = [
     ktp: "3276031504870004",
     cob: "Motor Vehicle",
     status: "Active",
-    address: "Jl. Raya Bekasi Km. 22, Cakung, Jakarta Timur 13910",
+    addresses: [
+      {
+        id: "c-010-a1",
+        label: "Alamat Perusahaan",
+        value: "Jl. Raya Bekasi Km. 22, Cakung, Jakarta Timur 13910",
+      },
+    ],
     notes: "Armada 128 unit — fleet policy tahunan.",
     createdAt: "2026-01-12",
   },
@@ -149,7 +238,19 @@ export const CLIENTS: Client[] = [
     ktp: "3174066707890001",
     cob: "Surety Bond",
     status: "Prospect",
-    address: "Jl. TB Simatupang No. 41, Jakarta Selatan 12560",
+    addresses: [
+      {
+        id: "c-011-a1",
+        label: "Alamat Perusahaan",
+        value: "Jl. TB Simatupang No. 41, Jakarta Selatan 12560",
+      },
+      {
+        id: "c-011-a2",
+        label: "Alamat Korespondensi",
+        value:
+          "Plaza Simatupang Lt. 6, Jl. TB Simatupang Kav. 1S, Jakarta Selatan 12560",
+      },
+    ],
     createdAt: "2026-04-05",
   },
   {
@@ -162,7 +263,18 @@ export const CLIENTS: Client[] = [
     ktp: "3216041709800009",
     cob: "Property",
     status: "Inactive",
-    address: "Kawasan Industri MM2100 Blok C-9, Cikarang Barat, Bekasi 17520",
+    addresses: [
+      {
+        id: "c-012-a1",
+        label: "Alamat Perusahaan",
+        value: "Kawasan Industri MM2100 Blok C-9, Cikarang Barat, Bekasi 17520",
+      },
+      {
+        id: "c-012-a2",
+        label: "Alamat Korespondensi",
+        value: "Jl. Jababeka Raya Blok A No. 4, Cikarang Utara, Bekasi 17530",
+      },
+    ],
     notes: "Tidak renew 2025 — pindah ke broker lain. Follow-up Q4.",
     createdAt: "2023-08-30",
   },

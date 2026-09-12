@@ -1,6 +1,6 @@
 import { sumItems, totalPremium, totalSumInsured } from "@/lib/calc"
 import { sanitizeHtml } from "@/lib/sanitize"
-import { CLAUSES, wordingHtml, type PlacingSlip } from "@/lib/data"
+import { resolveSlipClauses, type PlacingSlip } from "@/lib/data"
 import { dateEn, money, num } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -43,7 +43,7 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
 
   const rows: [string, string][] = [
     ["Type of Cover", slip.typeOfCover || "—"],
-    ["Insured Name", slip.insuredName || "—"],
+    ["Insured Name", slip.insuredName.toUpperCase() || "—"],
     ["Correspondence Address", slip.correspondenceAddress || "—"],
     ["Period of Insurance", period],
   ]
@@ -211,9 +211,7 @@ export function ClausesBlock({
   slip: PlacingSlip
   inline?: boolean
 }) {
-  const clauses = slip.clauseIds
-    .map((id) => CLAUSES.find((c) => c.id === id))
-    .filter(Boolean)
+  const clauses = resolveSlipClauses(slip)
   if (!clauses.length) return null
 
   return (
@@ -229,16 +227,14 @@ export function ClausesBlock({
           </li>
         ))}
         {clauses.map((c, i) => (
-          <li key={c!.id} className="avoid-break">
+          <li key={c.id} className="avoid-break">
             <p className="font-semibold">
-              {slip.wordingForms.filter(Boolean).length + i + 1}. {c!.title}
+              {slip.wordingForms.filter(Boolean).length + i + 1}. {c.title}
             </p>
             {inline ? (
               <div
                 className="rte-prose mt-0.5 ml-4 text-[12px] text-muted-foreground"
-                dangerouslySetInnerHTML={{
-                  __html: sanitizeHtml(wordingHtml(c!.wording)),
-                }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
               />
             ) : null}
           </li>
@@ -250,9 +246,7 @@ export function ClausesBlock({
 
 /** Wording lengkap di akhir dokumen — dipakai Placing Slip. */
 export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
-  const clauses = slip.clauseIds
-    .map((id) => CLAUSES.find((c) => c.id === id))
-    .filter(Boolean)
+  const clauses = resolveSlipClauses(slip)
   if (!clauses.length) return null
 
   return (
@@ -260,15 +254,13 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
       <SectionHeading>CLAUSE WORDING</SectionHeading>
       <div className="flex flex-col gap-3 text-[12px]">
         {clauses.map((c, i) => (
-          <div key={c!.id} className="avoid-break">
+          <div key={c.id} className="avoid-break">
             <p className="font-semibold">
-              {i + 1}. {c!.title}
+              {i + 1}. {c.title}
             </p>
             <div
               className="rte-prose mt-0.5 text-[12px] text-muted-foreground"
-              dangerouslySetInnerHTML={{
-                __html: sanitizeHtml(wordingHtml(c!.wording)),
-              }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
             />
           </div>
         ))}

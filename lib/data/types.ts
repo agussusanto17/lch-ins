@@ -20,6 +20,13 @@ export type ClaimStatus =
   | "Rejected"
 export type ClientStatus = "Active" | "Prospect" | "Inactive"
 
+/** Satu klien bisa punya beberapa alamat, misalnya alamat perusahaan dan korespondensi. */
+export interface ClientAddress {
+  id: string
+  label: string
+  value: string
+}
+
 export interface Client {
   id: string
   name: string
@@ -30,7 +37,7 @@ export interface Client {
   ktp: string
   cob: ClassOfBusiness
   status: ClientStatus
-  address: string
+  addresses: ClientAddress[]
   notes?: string
   createdAt: string
 }
@@ -63,6 +70,9 @@ export interface PlacingSlip {
   cob: ClassOfBusiness
   typeOfCover: string
   coverCode: string | null
+  /** Klien asal tertanggung. Null bila nama diketik manual (data lama). */
+  clientId: string | null
+  /** Disalin dari klien saat dipilih, jadi perubahan data klien tidak mengubah slip. */
   insuredName: string
   correspondenceAddress: string
   currency: string
@@ -85,6 +95,11 @@ export interface PlacingSlip {
   deductiblesSection2: string[]
   specialConditions?: string
   clauseIds: string[]
+  /**
+   * Judul dan wording klausula yang diedit khusus slip ini, dikunci per id
+   * klausula. Master clause tidak ikut berubah.
+   */
+  clauseOverrides?: Record<string, ClauseOverride>
   rateLines: RateLine[]
   tplLines: RateLine[]
   paLines: RateLine[]
@@ -148,5 +163,12 @@ export interface Clause {
   title: string
   cob: ClassOfBusiness | "All"
   typeOfCover: string | null
+  wording: string
+}
+
+/** Isi klausula yang dipakai satu slip saja, menimpa master untuk slip itu. */
+export interface ClauseOverride {
+  title: string
+  /** HTML hasil rich text editor, disanitasi sebelum dirender. */
   wording: string
 }

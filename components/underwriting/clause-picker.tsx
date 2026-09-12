@@ -1,31 +1,46 @@
 "use client"
 
 import * as React from "react"
-import { BookOpenText, Check, Search, X } from "lucide-react"
+import { BookOpenText, Check, Pencil, RotateCcw, Search, X } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { CLAUSES, type ClassOfBusiness } from "@/lib/data"
+import {
+  CLAUSES,
+  resolveSlipClauses,
+  wordingHtml,
+  type ClassOfBusiness,
+  type ClauseOverride,
+} from "@/lib/data"
 import { cn } from "@/lib/utils"
 
 export function ClausePicker({
   cob,
   typeOfCover,
   selected,
+  overrides,
   onChange,
+  onOverridesChange,
 }: {
   cob: ClassOfBusiness
   typeOfCover: string
   selected: string[]
+  overrides: Record<string, ClauseOverride>
   onChange: (ids: string[]) => void
+  onOverridesChange: (overrides: Record<string, ClauseOverride>) => void
 }) {
   const [query, setQuery] = React.useState("")
+  const [editing, setEditing] = React.useState<string | null>(null)
+  /** Editor hanya membaca isi awalnya, jadi reset ke master perlu remount. */
+  const [resetTick, setResetTick] = React.useState(0)
 
   const available = React.useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -40,16 +55,41 @@ export function ClausePicker({
     })
   }, [cob, typeOfCover, query])
 
-  const selectedClauses = selected
-    .map((id) => CLAUSES.find((c) => c.id === id))
-    .filter(Boolean)
+  const selectedClauses = resolveSlipClauses({
+    clauseIds: selected,
+    clauseOverrides: overrides,
+  })
 
   function toggle(id: string) {
-    onChange(
-      selected.includes(id)
-        ? selected.filter((s) => s !== id)
-        : [...selected, id]
-    )
+    if (selected.includes(id)) {
+      onChange(selected.filter((s) => s !== id))
+      // Klausula yang dilepas tidak menyimpan override lagi.
+      if (overrides[id]) {
+        const next = { ...overrides }
+        delete next[id]
+        onOverridesChange(next)
+      }
+      if (editing === id) setEditing(null)
+      return
+    }
+    onChange([...selected, id])
+  }
+
+  function patchOverride(id: string, patch: Partial<ClauseOverride>) {
+    const master = CLAUSES.find((c) => c.id === id)
+    if (!master) return
+    const base = overrides[id] ?? {
+      title: master.title,
+      wording: wordingHtml(master.wording),
+    }
+    onOverridesChange({ ...overrides, [id]: { ...base, ...patch } })
+  }
+
+  function resetOverride(id: string) {
+    const next = { ...overrides }
+    delete next[id]
+    onOverridesChange(next)
+    setResetTick((t) => t + 1)
   }
 
   return (
@@ -128,27 +168,99 @@ export function ClausePicker({
 
       {selectedClauses.length > 0 ? (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-primary">
-            Klausula terpilih ({selectedClauses.length})
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-medium text-primary">
+              Klausula terpilih ({selectedClauses.length})
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Wording bisa diedit untuk slip ini saja. Master Clauses tidak
+              berubah.
+            </p>
+          </div>
+
           <div className="flex flex-col gap-1.5">
-            {selectedClauses.map((c) => (
-              <div
-                key={c!.id}
-                className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[13px]"
-              >
-                <span className="min-w-0 flex-1 truncate">{c!.title}</span>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label="Lepas klausula"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => toggle(c!.id)}
-                >
-                  <X />
-                </Button>
-              </div>
-            ))}
+            {selectedClauses.map((c) => {
+              const open = editing === c.id
+              return (
+                <div key={c.id} className="rounded-lg bg-muted/60">
+                  <div className="flex items-center gap-2 px-3 py-2 text-[13px]">
+                    <span className="min-w-0 flex-1 truncate">{c.title}</span>
+
+                    {c.overridden ? (
+                      <Badge variant="outline" className="shrink-0">
+                        Diedit
+                      </Badge>
+                    ) : null}
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-expanded={open}
+                      className="text-muted-foreground"
+                      onClick={() => setEditing(open ? null : c.id)}
+                    >
+                      <Pencil data-icon="inline-start" />
+                      {open ? "Tutup" : "Edit wording"}
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Lepas klausula"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => toggle(c.id)}
+                    >
+                      <X />
+                    </Button>
+                  </div>
+
+                  {open ? (
+                    <div className="flex flex-col gap-3 border-t px-3 py-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label
+                          htmlFor={`clause-title-${c.id}`}
+                          className="text-xs text-muted-foreground"
+                        >
+                          Judul klausula di slip ini
+                        </label>
+                        <Input
+                          id={`clause-title-${c.id}`}
+                          value={c.title}
+                          onChange={(e) =>
+                            patchOverride(c.id, { title: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <RichTextEditor
+                        key={`${c.id}-${resetTick}`}
+                        value={c.wording}
+                        minHeight="10rem"
+                        onChange={(html) =>
+                          patchOverride(c.id, { wording: html })
+                        }
+                      />
+
+                      {c.overridden ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[11px] text-muted-foreground">
+                            Versi slip ini berbeda dari master.
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => resetOverride(c.id)}
+                          >
+                            <RotateCcw data-icon="inline-start" />
+                            Kembalikan ke master
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              )
+            })}
           </div>
         </div>
       ) : null}
