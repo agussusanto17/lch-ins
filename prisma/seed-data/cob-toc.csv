@@ -1,0 +1,48 @@
+kode_cob,cob,kode_toc,toc,prioritas
+01,PROPERTY,0103,Business Interruption,1
+01,PROPERTY,0105,PSAGBI,C
+01,PROPERTY,0109,Property All Risk,A
+01,PROPERTY,0110,Industrial All Risk,B
+01,PROPERTY,0111,Pasar Consortium,
+01,PROPERTY,0116,PSATSI,
+01,PROPERTY,0121,PSAKI,
+01,PROPERTY,0127,Buy Back Deductible,
+01,PROPERTY,0128,Comprehensive all risk,
+02,MOTOR VEHICLE,0201,PSKBI,2
+02,MOTOR VEHICLE,0203,Heavy Equipment,
+02,MOTOR VEHICLE,0205,Motor Cycle / Scooter,
+03,MARINE CARGO,0308,Cash In Transit,3
+03,MARINE CARGO,0311,Marine Cargo Open Cover,A
+03,MARINE CARGO,0312,Marine Cargo Stock Throughput,
+03,MARINE CARGO,0323,Marine Cargo,
+04,MARINE HULL,0401,Marine Hull,
+04,MARINE HULL,0402,Marine Builder Risk,
+04,MARINE HULL,0403,Marine Hull Single Voyage,
+04,MARINE HULL,0405,Ship Repairers Legal Liability,
+04,MARINE HULL,0406,Mortgagees Interest Insurance,
+04,MARINE HULL,0407,Mortgagees Additional Perils (Pollution),
+08,ENGINEERING,0801,CAR (Contractor All Risk),
+08,ENGINEERING,0802,EAR (Erection All Risk),
+08,ENGINEERING,0803,Machinery Breakdown Insurance,
+08,ENGINEERING,0804,EEI (Electronic Equipment Insurance),
+08,ENGINEERING,0805,Contractors' Plant and Machinery,
+08,ENGINEERING,0808,Civil Engineering Completed Risk,
+09,LIABILITY,0901,Public Liability Insurance,4
+09,LIABILITY,0902,Employer's Liability,
+09,LIABILITY,0903,Workmen's Compensation Insurance,
+09,LIABILITY,0905,Product Liability Insurance,
+09,LIABILITY,0906,Professional Indemnity,
+09,LIABILITY,0908,Comprehensive General Liability,
+09,LIABILITY,0911,Automobile Liability,
+09,LIABILITY,0912,Error and Omission Insurance,
+09,LIABILITY,0913,Directors and Officer Liability,
+09,LIABILITY,0914,Terminal Operator Liability,
+10,GENERAL ACCIDENT,1004,Polis Standar Asuransi Kecelakaan Diri Indonesia,
+12,MISCELLANEOUS,1201,Burglary Insurance,
+12,MISCELLANEOUS,1202,Fidelity Guarantee,
+12,MISCELLANEOUS,1203,Cash In Safe,
+12,MISCELLANEOUS,1206,Neon Sign Insurance,
+12,MISCELLANEOUS,1208,Travel Insurance,
+12,MISCELLANEOUS,1209,Hole In One,
+12,MISCELLANEOUS,1213,Movable All Risk,
+13,HEALTH,1301,Health Insurance,
