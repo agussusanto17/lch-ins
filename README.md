@@ -52,7 +52,7 @@ ERD di Notion: 44 tabel, 9 enum, 94 foreign key.
 | -------------------- | ------------------------------------------------------------------------- |
 | `npm run db:deploy`  | Terapkan migrasi yang sudah ada. Dipakai di server dan saat setup pertama |
 | `npm run db:migrate` | Buat migrasi baru sesudah mengubah schema. Interaktif, hanya untuk dev    |
-| `npm run db:seed`    | Isi master data. Idempotent, aman diulang                                 |
+| `npm run db:seed`    | Isi master data. Idempotent, aman diulang. Bisa per bagian: `-- clauses` |
 | `npm run db:studio`  | Prisma Studio                                                             |
 | `npm run db:reset`   | Kosongkan database lalu migrate dan seed ulang                            |
 
@@ -74,6 +74,9 @@ Sumbernya ada di `prisma/seed-data`, semuanya data asli LCH dan SE OJK, bukan co
 | `clauses`                                           | 595        | pustaka wording LCH                                        |
 
 Seed tidak menimpa data yang sudah ada, termasuk wording clause yang diedit lewat Master Clauses.
+Bagian seed: `system`, `cob`, `occupations`, `tariffs`, `clauses`, misalnya `npm run db:seed -- clauses`.
+Seed penuh ke database cloud memakan beberapa menit karena sebagian besar tabel masih di-upsert per
+baris (satu perjalanan jaringan per baris); clause sudah dikirim sekaligus dan selesai dalam hitungan detik.
 Belum di-seed karena datanya masih ditunggu dari LCH: `insurers`, `adjusters`, `wording_forms`,
 `coa_accounts`, `bank_accounts`. `users` menyusul bersama modul autentikasi.
 
@@ -205,10 +208,17 @@ atau tetap lewat print browser.
 
 Database dan deployment dipegang Adi. Yang perlu disiapkan di akunnya:
 
-1. **Database.** Postgres mana pun. Jalankan `db:deploy` lalu `db:seed` ke sana.
-2. **Deployment.** Project Vercel baru dari repo ini, dengan `DATABASE_URL` diisi di Environment
-   Variables untuk Production, Preview, dan Development sekaligus. Tanpa itu build tetap lolos tapi
-   halaman Master Clauses error saat dibuka, karena tabelnya tidak ada.
+1. **Database.** Prisma Postgres dari integrasi Vercel (prefix `lch_`). Migrasi dan seed sudah
+   dijalankan ke sana: 44 tabel, master data, dan 595 clause. Untuk database lain, jalankan
+   `db:deploy` lalu `db:seed` dengan `DATABASE_URL` menunjuk ke database itu.
+2. **Deployment.** Project Vercel dari repo ini dengan integrasi Prisma Postgres tersambung untuk
+   Production, Preview, dan Development. Integrasi membuat `lch_POSTGRES_URL`, dan
+   [`lib/database-url.ts`](lib/database-url.ts) membacanya bila `DATABASE_URL` kosong, jadi
+   `DATABASE_URL` tidak wajib diisi di Vercel. Tanpa salah satunya build tetap lolos, tapi halaman
+   Master Clauses error saat dibuka.
+
+Connection string berisi password. Simpan hanya di `.env` lokal (di-ignore git) dan Environment
+Variables Vercel, jangan di kode atau chat. Bila sempat tersebar, rotate dari dashboard Prisma.
 
 Project Vercel lama di akun Agus dihapus, jadi URL demo akan berganti mengikuti project baru Adi.
 Perbarui tautannya di PRD Notion bagian Referensi setelah URL barunya ada, karena LCH memakai tautan

@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg"
 
+import { DATABASE_URL_CANDIDATES, databaseUrl } from "./database-url"
 import { PrismaClient } from "./generated/prisma/client"
 
 /**
@@ -16,9 +17,11 @@ import { PrismaClient } from "./generated/prisma/client"
  */
 
 function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL
+  const connectionString = databaseUrl()
   if (!connectionString) {
-    throw new Error("DATABASE_URL belum diisi. Lihat .env.example.")
+    throw new Error(
+      `Connection string Postgres belum diisi. Isi salah satu dari ${DATABASE_URL_CANDIDATES.join(", ")}. Lihat .env.example.`
+    )
   }
   return new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 }

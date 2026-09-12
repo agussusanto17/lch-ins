@@ -721,8 +721,8 @@ function toHtml(text: string) {
  */
 async function seedClauses() {
   const rows = readCsv("clause-wording-lch.csv")
-  let n = 0
   let skipped = 0
+  const data: { title: string; sourceGroup: string; wordingHtml: string }[] = []
 
   for (const r of rows) {
     const title = r.judul_klausul?.trim()
@@ -732,56 +732,94 @@ async function seedClauses() {
       skipped++
       continue
     }
-    const sourceGroup = r.produk?.trim() ?? ""
-    const wordingHtml = toHtml(r.wording.trim())
-    await prisma.clause.upsert({
-      where: { title_sourceGroup: { title, sourceGroup } },
-      create: { title, sourceGroup, wordingHtml },
-      // Wording yang sudah ada sengaja tidak ditimpa. Klausul bisa diedit LCH
-      // lewat Master Clauses, dan seed tidak boleh mengembalikannya ke isi file.
-      update: {},
+    data.push({
+      title,
+      sourceGroup: r.produk?.trim() ?? "",
+      wordingHtml: toHtml(r.wording.trim()),
     })
-    n++
   }
-  return { n, skipped }
+
+  // Satu INSERT ... ON CONFLICT DO NOTHING, bukan upsert per baris. Hasilnya
+  // sama: wording yang sudah ada sengaja tidak ditimpa, karena klausul bisa
+  // diedit LCH lewat Master Clauses. Upsert per baris butuh satu perjalanan
+  // ke database per klausul, dan ke database cloud itu memakan menit.
+  const { count } = await prisma.clause.createMany({
+    data,
+    skipDuplicates: true,
+  })
+  return { n: data.length, created: count, skipped }
 }
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Bagian seed yang bisa dipilih: `npm run db:seed -- clauses tariffs`.
+ * Tanpa argumen semua bagian dijalankan. Berguna untuk melanjutkan seed ke
+ * database cloud tanpa mengulang bagian yang sudah lengkap.
+ */
+const SECTIONS = ["system", "cob", "occupations", "tariffs", "clauses"] as const
+
 async function main() {
-  console.log("Seed master data LCH\n")
+  const args = process.argv.slice(2)
+  const unknown = args.filter(
+    (a) => !SECTIONS.includes(a as (typeof SECTIONS)[number])
+  )
+  if (unknown.length) {
+    throw new Error(
+      `Bagian seed tidak dikenal: ${unknown.join(", ")}. Pilihan: ${SECTIONS.join(", ")}`
+    )
+  }
+  const want = (section: (typeof SECTIONS)[number]) =>
+    args.length === 0 || args.includes(section)
 
-  console.log(`  lookup_values        ${await seedLookups()}`)
-  console.log(`  currencies           ${await seedCurrencies()}`)
-  console.log(`  document_types       ${await seedDocumentTypes()}`)
-  console.log(`  company_profile      ${await seedCompanyProfile()}`)
+  console.log(
+    `Seed master data LCH${args.length ? ` (${args.join(", ")})` : ""}\n`
+  )
 
-  const cob = await seedCobAndCoverTypes()
-  console.log(`  classes_of_business  ${cob.cobs}`)
-  console.log(`  cover_types          ${cob.coverTypes}`)
-  console.log(`  cob_rate_lines       ${await seedCobRateLines()}`)
+  if (want("system")) {
+    console.log(`  lookup_values        ${await seedLookups()}`)
+    console.log(`  currencies           ${await seedCurrencies()}`)
+    console.log(`  document_types       ${await seedDocumentTypes()}`)
+    console.log(`  company_profile      ${await seedCompanyProfile()}`)
+  }
 
-  const occ = await seedOccupations()
-  console.log(`  occupations          ${occ.occ}`)
-  console.log(`  tariff_occupation    ${occ.tariffs}`)
-  console.log(`  eq_zones             ${await seedEqZones()}`)
-  console.log(`  tariff_eq_property   ${await seedEqPropertyTariffs()}`)
-  console.log(`  tariff_flood         ${await seedFloodTariffs()}`)
-  console.log(`  tariff_motor         ${await seedMotorTariffs()}`)
-  console.log(`  tariff_motor_ext     ${await seedMotorExtensions()}`)
-  console.log(`  bi_scales            ${await seedBiScales()}`)
+  if (want("cob")) {
+    const cob = await seedCobAndCoverTypes()
+    console.log(`  classes_of_business  ${cob.cobs}`)
+    console.log(`  cover_types          ${cob.coverTypes}`)
+    console.log(`  cob_rate_lines       ${await seedCobRateLines()}`)
+  }
 
-  const clauses = await seedClauses()
-  console.log(`  clauses              ${clauses.n}`)
+  const occ = want("occupations") ? await seedOccupations() : null
+  if (occ) {
+    console.log(`  occupations          ${occ.occ}`)
+    console.log(`  tariff_occupation    ${occ.tariffs}`)
+  }
 
-  if (clauses.skipped || occ.conflicts.length) {
+  if (want("tariffs")) {
+    console.log(`  eq_zones             ${await seedEqZones()}`)
+    console.log(`  tariff_eq_property   ${await seedEqPropertyTariffs()}`)
+    console.log(`  tariff_flood         ${await seedFloodTariffs()}`)
+    console.log(`  tariff_motor         ${await seedMotorTariffs()}`)
+    console.log(`  tariff_motor_ext     ${await seedMotorExtensions()}`)
+    console.log(`  bi_scales            ${await seedBiScales()}`)
+  }
+
+  const clauses = want("clauses") ? await seedClauses() : null
+  if (clauses) {
+    console.log(
+      `  clauses              ${clauses.n} (${clauses.created} baru, sisanya sudah ada)`
+    )
+  }
+
+  if (clauses?.skipped || occ?.conflicts.length) {
     console.log("\nPerlu dicek ke LCH:")
-    if (clauses.skipped) {
+    if (clauses?.skipped) {
       console.log(
         `  ${clauses.skipped} klausul dilewat karena wordingnya kosong di file LCH`
       )
     }
-    for (const c of occ.conflicts) {
+    for (const c of occ?.conflicts ?? []) {
       console.log(`  kode okupasi dipakai dua okupasi berbeda, ${c}`)
     }
   }
