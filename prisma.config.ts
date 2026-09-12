@@ -1,4 +1,4 @@
-import { defineConfig, env } from "prisma/config"
+import { defineConfig } from "prisma/config"
 
 /**
  * Konfigurasi Prisma 7. Connection string tidak lagi ditulis di schema.prisma,
@@ -20,7 +20,10 @@ try {
 export default defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
-    url: env("DATABASE_URL"),
+    // Dibaca langsung, bukan lewat env(), supaya `prisma generate` tetap jalan
+    // di server build yang tidak punya DATABASE_URL. Perintah migrasi tetap
+    // gagal dengan pesan jelas kalau variabelnya belum diisi.
+    url: process.env.DATABASE_URL,
   },
   migrations: {
     path: "prisma/migrations",
