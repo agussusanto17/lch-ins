@@ -1,0 +1,1341 @@
+// Schema Sistem Back Office PT. LCH Insurance Brokers.
+//
+// Diturunkan dari ERD di Notion:
+// https://app.notion.com/p/3d84848a839381bbbf0deaab63eed08a
+//
+// Konvensi (lihat bagian Konvensi di ERD):
+// - Nama model PascalCase, nama tabel dan kolom tetap snake_case lewat @@map/@map.
+// - Primary key `uuid` di semua tabel, kecuali tabel referensi berkode
+//   (currencies, document_types, bi_scales) yang memakai kodenya sendiri.
+// - `money`  -> Decimal(18,2), dibaca sebagai Decimal.js. Jangan pernah diubah
+//   ke Number, karena nominal harus presisi sampai sen.
+// - `rate`   -> Decimal(12,6). Satuan per mil atau persen mengikuti COB.
+// - Kolom `*_id` yang menunjuk LookupValue adalah daftar pilihan pendek yang
+//   dikelola Admin di master data. Nama relasinya dipakai sebagai lookup_type.
+// - Status yang berubah lewat tombol aksi dikunci di kode, jadi ditulis sebagai
+//   enum, bukan teks bebas.
+// - Master data yang sudah dipakai cukup is_active = false. Dokumen bernomor
+//   tidak dihapus, statusnya Cancelled.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+// Mulai Prisma 7, connection string tidak lagi ditulis di sini.
+// URL-nya ada di prisma.config.ts di root project.
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enum
+// ---------------------------------------------------------------------------
+
+/// Status placing slip. Berubah lewat tombol aksi, bukan dropdown.
+enum SlipStatus {
+  Draft
+  Released
+  Quoted
+  Closed
+  Cancelled
+}
+
+/// Status SPPA.
+enum SppaStatus {
+  Draft
+  Submitted
+}
+
+/// Status dokumen finance: Debit Note dan Credit Note.
+enum NoteStatus {
+  Draft
+  Issued
+  Cancelled
+}
+
+/// Status jurnal.
+enum JournalStatus {
+  Draft
+  Posted
+  Void
+}
+
+/// Asal jurnal. Manual diisi Finance, sisanya dibuat sistem.
+enum JournalSource {
+  Manual
+  DebitNote
+  CreditNote
+  Payment
+}
+
+/// Jenis baris di slip_items, menentukan bagian mana yang diisi.
+enum SlipItemKind {
+  Interest
+  SumInsuredSection1
+  SumInsuredSection2
+  DeductibleSection1
+  DeductibleSection2
+}
+
+/// Aksi yang dicatat di audit trail.
+enum AuditAction {
+  Create
+  Update
+  Delete
+  Release
+  Cancel
+}
+
+/// Satuan tarif. Okupasi dan gempa properti per mil, banjir dan kendaraan
+/// bermotor persen. Karena itu setiap tabel tarif menyimpan satuannya.
+enum RateUnit {
+  PerMil
+  Percent
+}
+
+/// Jenis pertanggungan pada tarif kendaraan bermotor dan banjir.
+enum CoverageType {
+  Comprehensive
+  TotalLossOnly
+}
+
+// ---------------------------------------------------------------------------
+// 1. Sistem dan pengguna
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  email        String  @unique
+  passwordHash String  @map("password_hash")
+  /// lookup role
+  roleId       String  @map("role_id") @db.Uuid
+  isActive     Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  role LookupValue @relation("role", fields: [roleId], references: [id])
+
+  auditLogs         AuditLog[]
+  clientDocuments   ClientDocument[]
+  sppa              Sppa[]
+  slipsCreated      PlacingSlip[]    @relation("slipCreatedBy")
+  slipsReleased     PlacingSlip[]    @relation("slipReleasedBy")
+  policyFiles       PolicyFile[]
+  debitNotesIssued  DebitNote[]
+  creditNotesIssued CreditNote[]
+  payments          Payment[]
+  journalEntries    JournalEntry[]
+
+  @@index([roleId])
+  @@map("users")
+}
+
+/// Diisi di server setiap tambah, ubah, hapus, release, dan batal.
+model AuditLog {
+  id       String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId   String      @map("user_id") @db.Uuid
+  /// Nama tabel yang diubah.
+  entity   String
+  entityId String      @map("entity_id") @db.Uuid
+  action   AuditAction
+  /// Nilai sebelum dan sesudah.
+  changes  Json?       @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+/// Identitas LCH untuk kop surat dokumen cetak. Hanya berisi satu baris.
+model CompanyProfile {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  address     String
+  phone       String?
+  email       String?
+  skojkNo     String? @map("skojk_no")
+  apparindoNo String? @map("apparindo_no")
+  logoPath    String? @map("logo_path")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("company_profile")
+}
+
+/// Jenis dokumen bernomor: PS, QS, CVN, CI, DN, CN, CLM, JV.
+model DocumentType {
+  code          String @id
+  name          String
+  /// Token: {seq:4}, {MM}, {MMROMAN}, {YYYY}, {COVER}.
+  /// Debit Note LCH: {seq:4}/DNLCH/{MM}/{YYYY}.
+  numberPattern String @map("number_pattern")
+  /// lookup reset_period. Menunggu jawaban LCH: bulanan, tahunan, atau berlanjut.
+  resetPeriodId String @map("reset_period_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  resetPeriod LookupValue     @relation("reset_period", fields: [resetPeriodId], references: [id])
+  counters    NumberCounter[]
+
+  @@map("document_types")
+}
+
+/// Nomor urut terakhir per jenis dokumen per periode.
+///
+/// PENTING: ambil nomor dengan mengunci barisnya lebih dulu, di transaksi yang
+/// sama dengan penyimpanan dokumen. Prisma tidak punya API FOR UPDATE, jadi
+/// pakai $queryRaw di dalam $transaction:
+///
+///   await prisma.$transaction(async (tx) => {
+///     const [row] = await tx.$queryRaw`
+///       SELECT last_number FROM number_counters
+///       WHERE document_type_code = ${code} AND period = ${period}
+///       FOR UPDATE`
+///     ...
+///   })
+///
+/// findUnique lalu update TIDAK aman: dua request bersamaan bisa dapat nomor
+/// yang sama. Unique constraint di kolom nomor dokumen tetap jadi pengaman.
+model NumberCounter {
+  documentTypeCode String @map("document_type_code")
+  /// Contoh 2026-08 untuk reset bulanan, 2026 untuk tahunan.
+  period           String
+  lastNumber       Int    @default(0) @map("last_number")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  documentType DocumentType @relation(fields: [documentTypeCode], references: [code])
+
+  @@id([documentTypeCode, period])
+  @@map("number_counters")
+}
+
+// ---------------------------------------------------------------------------
+// 2. Master data
+// ---------------------------------------------------------------------------
+
+/// Semua daftar pilihan pendek. Admin mengelolanya dari satu halaman dengan
+/// filter per lookup_type. Nilai yang dipakai logika sistem ditandai is_system:
+/// labelnya boleh diubah, kodenya tidak, dan barisnya tidak bisa dihapus.
+model LookupValue {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Contoh: role, claim_status, payment_type.
+  lookupType String  @map("lookup_type")
+  /// Dipakai logika sistem.
+  code       String
+  /// Label yang tampil di dropdown.
+  name       String
+  sortOrder  Int     @default(0) @map("sort_order")
+  isSystem   Boolean @default(false) @map("is_system")
+  isActive   Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relasi balik, satu per lookup_type. Sengaja tidak digambar di ERD supaya
+  // diagramnya tetap terbaca.
+  usersWithRole         User[]              @relation("role")
+  documentTypes         DocumentType[]      @relation("reset_period")
+  cobRateMode           ClassOfBusiness[]   @relation("rate_mode")
+  cobFormVariant        ClassOfBusiness[]   @relation("form_variant")
+  cobRateLineKinds      CobRateLine[]       @relation("rate_line_kind_default")
+  slipRateLineKinds     SlipRateLine[]      @relation("rate_line_kind_slip")
+  slipConstructionClass PlacingSlip[]       @relation("construction_class")
+  clientTypes           Client[]            @relation("client_type")
+  clientIdTypes         Client[]            @relation("id_type")
+  clientIncomeSources   Client[]            @relation("income_source")
+  clientPurposes        Client[]            @relation("insurance_purpose")
+  clientStatuses        Client[]            @relation("client_status")
+  addressTypes          ClientAddress[]     @relation("address_type")
+  clientDocumentTypes   ClientDocument[]    @relation("client_document_type")
+  slipSecurityRoles     SlipSecurityPanel[] @relation("security_role_slip")
+  policySecurityRoles   PolicyInsurer[]     @relation("security_role_policy")
+  policyTypes           Policy[]            @relation("policy_type")
+  claimStatuses         Claim[]             @relation("claim_status")
+  paymentModels         DebitNote[]         @relation("payment_model")
+  paymentTypes          Payment[]           @relation("payment_type")
+  banks                 BankAccount[]       @relation("bank")
+  accountTypes          CoaAccount[]        @relation("account_type")
+  ojkReportLines        CoaAccount[]        @relation("ojk_report_line")
+
+  @@unique([lookupType, code])
+  @@index([lookupType, sortOrder])
+  @@map("lookup_values")
+}
+
+model ClassOfBusiness {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 2 digit, contoh 03 untuk Marine Cargo.
+  code          String  @unique
+  name          String
+  /// lookup rate_mode: per mil atau persen.
+  rateModeId    String  @map("rate_mode_id") @db.Uuid
+  /// lookup form_variant: property, motor, atau standard. Menentukan tampilan
+  /// bagian Rate dan Premium di placing slip.
+  formVariantId String  @map("form_variant_id") @db.Uuid
+  isActive      Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  rateMode    LookupValue @relation("rate_mode", fields: [rateModeId], references: [id])
+  formVariant LookupValue @relation("form_variant", fields: [formVariantId], references: [id])
+
+  coverTypes   CoverType[]
+  rateLines    CobRateLine[]
+  clauses      Clause[]
+  clients      Client[]
+  sppa         Sppa[]
+  placingSlips PlacingSlip[]
+  policies     Policy[]
+
+  @@map("classes_of_business")
+}
+
+model CoverType {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cobId    String  @map("cob_id") @db.Uuid
+  /// 4 digit, contoh 0311 Marine Cargo Open Cover. Dua digit pertama adalah
+  /// kode COB. Dipakai di nomor slip, jadi harus unik.
+  code     String  @unique
+  name     String
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cob ClassOfBusiness @relation(fields: [cobId], references: [id])
+
+  clauses      Clause[]
+  sppa         Sppa[]
+  placingSlips PlacingSlip[]
+  policies     Policy[]
+
+  @@index([cobId])
+  @@map("cover_types")
+}
+
+/// Baris rate bawaan per COB, contoh FLEXAS, FWTWD, dan RSMDCC untuk Property.
+model CobRateLine {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cobId     String @map("cob_id") @db.Uuid
+  /// lookup rate_line_kind: Rate, TPL, atau PA.
+  kindId    String @map("kind_id") @db.Uuid
+  label     String
+  sortOrder Int    @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cob  ClassOfBusiness @relation(fields: [cobId], references: [id])
+  kind LookupValue     @relation("rate_line_kind_default", fields: [kindId], references: [id])
+
+  @@index([cobId, sortOrder])
+  @@map("cob_rate_lines")
+}
+
+model Occupation {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Kode okupasi SE OJK.
+  code     String  @unique
+  name     String
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tariffs      TariffOccupation[]
+  sppa         Sppa[]
+  placingSlips PlacingSlip[]
+
+  @@map("occupations")
+}
+
+/// Tarif FLEXAS per okupasi dikali kelas konstruksi. Lampiran I SE OJK.
+model TariffOccupation {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  occupationId      String   @map("occupation_id") @db.Uuid
+  /// Kode kelas konstruksi: K1, K2, atau K3. Sama dengan code di
+  /// lookup_values lookup_type construction_class.
+  constructionClass String   @map("construction_class")
+  rateMin           Decimal  @map("rate_min") @db.Decimal(12, 6)
+  rateMax           Decimal  @map("rate_max") @db.Decimal(12, 6)
+  rateUnit          RateUnit @default(PerMil) @map("rate_unit")
+  isActive          Boolean  @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  occupation Occupation @relation(fields: [occupationId], references: [id])
+
+  @@unique([occupationId, constructionClass])
+  @@map("tariff_occupation")
+}
+
+/// Tarif gempa bumi harta benda: kategori konstruksi dikali zona.
+/// Lampiran III SE OJK. Nilainya tunggal, bukan rentang.
+model TariffEqProperty {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Contoh: Com: Steel, Wood, RC sampai 9 lantai.
+  constructionCategory String   @map("construction_category")
+  /// Zona 1 sampai Zona 5.
+  zone                 String
+  rate                 Decimal  @db.Decimal(12, 6)
+  rateUnit             RateUnit @default(PerMil) @map("rate_unit")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([constructionCategory, zone])
+  @@map("tariff_eq_property")
+}
+
+/// Tarif jaminan banjir: wilayah dikali zona. Satuannya persen.
+/// Baris tanpa angka, misalnya "Tarif Zona 1 ditambah faktor loading",
+/// mengisi note dan membiarkan rate_min serta rate_max kosong.
+model TariffFlood {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Harta benda atau kendaraan bermotor.
+  line         String
+  region       String
+  /// Zona 1 sampai Zona 4.
+  zone         String
+  coverageType CoverageType? @map("coverage_type")
+  rateMin      Decimal?      @map("rate_min") @db.Decimal(12, 6)
+  rateMax      Decimal?      @map("rate_max") @db.Decimal(12, 6)
+  note         String?
+  rateUnit     RateUnit      @default(Percent) @map("rate_unit")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([line, region, zone, coverageType])
+  @@map("tariff_flood")
+}
+
+/// Tarif kendaraan bermotor: kategori dikali wilayah dikali jenis
+/// pertanggungan. Lampiran II SE OJK. Satuannya persen.
+model TariffMotor {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Kategori 1 sampai 8.
+  category     String
+  vehicleType  String       @map("vehicle_type")
+  /// Batas uang pertanggungan. Kosong berarti tanpa batas bawah atau atas.
+  siMin        Decimal?     @map("si_min") @db.Decimal(18, 2)
+  siMax        Decimal?     @map("si_max") @db.Decimal(18, 2)
+  /// Wilayah 1 sampai Wilayah 3.
+  region       String
+  coverageType CoverageType @map("coverage_type")
+  rateMin      Decimal      @map("rate_min") @db.Decimal(12, 6)
+  rateMax      Decimal      @map("rate_max") @db.Decimal(12, 6)
+  rateUnit     RateUnit     @default(Percent) @map("rate_unit")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([category, region, coverageType])
+  @@map("tariff_motor")
+}
+
+/// Perluasan jaminan kendaraan bermotor, termasuk lapisan TJH.
+/// TJH dihitung progresif per lapisan limit, bukan satu rate dikali limit.
+model TariffMotorExtension {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// SRCC, terorisme, banjir, gempa, TJH, kecelakaan diri.
+  cover        String
+  /// Kosong berarti berlaku untuk Comprehensive maupun Total Loss Only.
+  coverageType CoverageType? @map("coverage_type")
+  /// Uang pertanggungan atau lapisan limit.
+  basis        String
+  limitMin     Decimal?      @map("limit_min") @db.Decimal(18, 2)
+  limitMax     Decimal?      @map("limit_max") @db.Decimal(18, 2)
+  /// Kosong berarti tarifnya ditentukan underwriter.
+  rateMin      Decimal?      @map("rate_min") @db.Decimal(12, 6)
+  rateMax      Decimal?      @map("rate_max") @db.Decimal(12, 6)
+  rateUnit     RateUnit      @default(Percent) @map("rate_unit")
+  note         String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("tariff_motor_extension")
+}
+
+/// 511 kabupaten dan kota beserta zona gempanya, Lampiran III Tabel III.D.
+/// Dipakai mengisi zona otomatis dari lokasi risiko di placing slip.
+model EqZone {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  province String
+  /// Kabupaten atau kota.
+  regency  String
+  /// Zona 1 sampai Zona 5.
+  zone     String
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([province, regency])
+  @@index([regency])
+  @@map("eq_zones")
+}
+
+/// Skala BI: persentase tarif dasar menurut lama indemnity period.
+model BiScale {
+  indemnityMonths Int     @id @map("indemnity_months")
+  percentage      Decimal @db.Decimal(12, 6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  placingSlips PlacingSlip[]
+
+  @@map("bi_scales")
+}
+
+model Insurer {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  address       String?
+  contactPerson String? @map("contact_person")
+  email         String?
+  phone         String?
+  isActive      Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slipSecurityPanel SlipSecurityPanel[]
+  policyInsurers    PolicyInsurer[]
+  creditNotes       CreditNote[]
+  journalLines      JournalLine[]
+
+  @@map("insurers")
+}
+
+model Adjuster {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  address       String?
+  contactPerson String? @map("contact_person")
+  email         String?
+  phone         String?
+  isActive      Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  claims Claim[]
+
+  @@map("adjusters")
+}
+
+model Currency {
+  /// IDR, USD, SGD, EUR.
+  code     String  @id
+  name     String
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sppa         Sppa[]
+  placingSlips PlacingSlip[]
+  policies     Policy[]
+  claims       Claim[]
+  bankAccounts BankAccount[]
+  debitNotes   DebitNote[]
+  creditNotes  CreditNote[]
+  payments     Payment[]
+
+  @@map("currencies")
+}
+
+model WordingForm {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Contoh: Polis Standar Asuransi Kebakaran Indonesia (PSAKI).
+  name     String
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slipWordingForms SlipWordingForm[]
+
+  @@map("wording_forms")
+}
+
+model Clause {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String
+  /// Kosong berarti berlaku untuk semua COB.
+  cobId       String? @map("cob_id") @db.Uuid
+  /// Kosong berarti berlaku untuk semua type of cover dalam COB itu.
+  coverTypeId String? @map("cover_type_id") @db.Uuid
+  /// HTML dari rich text editor, disanitasi sebelum disimpan.
+  wordingHtml String  @map("wording_html")
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cob       ClassOfBusiness? @relation(fields: [cobId], references: [id])
+  coverType CoverType?       @relation(fields: [coverTypeId], references: [id])
+
+  slipClauses SlipClause[]
+
+  @@index([cobId, coverTypeId])
+  @@map("clauses")
+}
+
+// ---------------------------------------------------------------------------
+// 3. Marketing dan underwriting
+// ---------------------------------------------------------------------------
+
+/// Data klien mengikuti form KYC LCH. Klien perorangan mengisi tempat dan
+/// tanggal lahir serta nomor identitas, klien korporasi mengisi NPWP, nama PIC,
+/// dan nomor KTP PIC. Keduanya mengisi tujuan menutup asuransi.
+model Client {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// lookup client_type: Perorangan atau Korporasi.
+  clientTypeId          String    @map("client_type_id") @db.Uuid
+  /// Nama lengkap atau nama perusahaan.
+  name                  String
+  npwp                  String?
+  /// lookup id_type: KTP, SIM, atau Paspor.
+  idTypeId              String?   @map("id_type_id") @db.Uuid
+  idNumber              String?   @map("id_number")
+  /// Klien perorangan.
+  birthPlace            String?   @map("birth_place")
+  birthDate             DateTime? @map("birth_date") @db.Date
+  /// PIC perusahaan.
+  contactPerson         String?   @map("contact_person")
+  contactPersonIdNumber String?   @map("contact_person_id_number")
+  email                 String?
+  phone                 String?
+  /// lookup income_source
+  incomeSourceId        String?   @map("income_source_id") @db.Uuid
+  /// lookup insurance_purpose
+  insurancePurposeId    String?   @map("insurance_purpose_id") @db.Uuid
+  /// Diisi bila tujuannya Lain-lain.
+  insurancePurposeNote  String?   @map("insurance_purpose_note")
+  kycDate               DateTime? @map("kyc_date") @db.Date
+  /// COB utama klien.
+  cobId                 String?   @map("cob_id") @db.Uuid
+  /// lookup client_status: Prospect, Active, Inactive.
+  statusId              String    @map("status_id") @db.Uuid
+  notes                 String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  clientType       LookupValue      @relation("client_type", fields: [clientTypeId], references: [id])
+  idType           LookupValue?     @relation("id_type", fields: [idTypeId], references: [id])
+  incomeSource     LookupValue?     @relation("income_source", fields: [incomeSourceId], references: [id])
+  insurancePurpose LookupValue?     @relation("insurance_purpose", fields: [insurancePurposeId], references: [id])
+  status           LookupValue      @relation("client_status", fields: [statusId], references: [id])
+  cob              ClassOfBusiness? @relation(fields: [cobId], references: [id])
+
+  addresses    ClientAddress[]
+  documents    ClientDocument[]
+  sppa         Sppa[]
+  placingSlips PlacingSlip[]
+  policies     Policy[]
+  debitNotes   DebitNote[]
+  journalLines JournalLine[]
+
+  @@index([name])
+  @@index([statusId])
+  @@map("clients")
+}
+
+/// Satu klien bisa punya beberapa alamat, karena form KYC korporasi memisahkan
+/// alamat perusahaan dan alamat korespondensi.
+model ClientAddress {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId      String  @map("client_id") @db.Uuid
+  /// lookup address_type: Alamat perusahaan, Korespondensi, Penagihan.
+  addressTypeId String  @map("address_type_id") @db.Uuid
+  address       String
+  phone         String?
+  isPrimary     Boolean @default(false) @map("is_primary")
+  isActive      Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  addressType LookupValue @relation("address_type", fields: [addressTypeId], references: [id])
+
+  placingSlips PlacingSlip[]
+
+  @@index([clientId])
+  @@map("client_addresses")
+}
+
+/// Berkas KYC: copy KTP, copy NPWP, form KYC, dan lainnya.
+model ClientDocument {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId       String   @map("client_id") @db.Uuid
+  /// lookup client_document_type
+  documentTypeId String   @map("document_type_id") @db.Uuid
+  fileName       String   @map("file_name")
+  filePath       String   @map("file_path")
+  uploadedBy     String   @map("uploaded_by") @db.Uuid
+  uploadedAt     DateTime @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  client       Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  documentType LookupValue @relation("client_document_type", fields: [documentTypeId], references: [id])
+  uploader     User        @relation(fields: [uploadedBy], references: [id])
+
+  @@index([clientId])
+  @@map("client_documents")
+}
+
+/// Surat Permintaan Penutupan Asuransi yang diisi Marketing.
+model Sppa {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId     String     @map("client_id") @db.Uuid
+  cobId        String     @map("cob_id") @db.Uuid
+  coverTypeId  String?    @map("cover_type_id") @db.Uuid
+  insuredName  String     @map("insured_name")
+  riskLocation String?    @map("risk_location")
+  occupationId String?    @map("occupation_id") @db.Uuid
+  currencyCode String     @map("currency_code")
+  sumInsured   Decimal?   @map("sum_insured") @db.Decimal(18, 2)
+  periodStart  DateTime?  @map("period_start") @db.Date
+  periodEnd    DateTime?  @map("period_end") @db.Date
+  /// Isian khusus per COB. Bentuknya jsonb sampai contoh form SPPA dari LCH
+  /// diterima, lalu dipecah jadi kolom kalau sudah jelas.
+  answers      Json?      @db.JsonB
+  status       SppaStatus @default(Draft)
+  createdBy    String     @map("created_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  client     Client          @relation(fields: [clientId], references: [id])
+  cob        ClassOfBusiness @relation(fields: [cobId], references: [id])
+  coverType  CoverType?      @relation(fields: [coverTypeId], references: [id])
+  occupation Occupation?     @relation(fields: [occupationId], references: [id])
+  currency   Currency        @relation(fields: [currencyCode], references: [code])
+  creator    User            @relation(fields: [createdBy], references: [id])
+
+  placingSlips PlacingSlip[]
+
+  @@index([clientId])
+  @@map("sppa")
+}
+
+/// Placing slip, sekaligus menyimpan nomor dan isi Quotation Slip, Cover Note,
+/// dan Closing Instruction yang terbit darinya.
+///
+/// Total premium, diskon, total payable, brokerage, dan net premium TIDAK
+/// disimpan di sini. Semuanya dihitung dari slip_rate_lines.
+model PlacingSlip {
+  id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Terisi saat release.
+  slipNo String? @unique @map("slip_no")
+
+  clientId    String  @map("client_id") @db.Uuid
+  sppaId      String? @map("sppa_id") @db.Uuid
+  cobId       String  @map("cob_id") @db.Uuid
+  coverTypeId String? @map("cover_type_id") @db.Uuid
+
+  /// Salinan dari klien. Bisa diedit di slip tanpa mengubah data klien.
+  insuredName             String  @map("insured_name")
+  /// Salinan alamat klien yang dipilih, juga bisa diedit.
+  correspondenceAddress   String? @map("correspondence_address")
+  /// Alamat klien asal salinan di atas, untuk jejak. Kosong bila diketik manual.
+  correspondenceAddressId String? @map("correspondence_address_id") @db.Uuid
+
+  currencyCode String     @map("currency_code")
+  status       SlipStatus @default(Draft)
+
+  periodTba     Boolean   @default(false) @map("period_tba")
+  inceptionDate DateTime? @map("inception_date") @db.Date
+  expiryDate    DateTime? @map("expiry_date") @db.Date
+
+  occupationId        String? @map("occupation_id") @db.Uuid
+  riskLocation        String? @map("risk_location")
+  coverage            String?
+  /// lookup construction_class: K1, K2, K3.
+  constructionClassId String? @map("construction_class_id") @db.Uuid
+  /// FK ke skala BI.
+  indemnityMonths     Int?    @map("indemnity_months")
+
+  interestSection1  String? @map("interest_section1")
+  interestSection2  String? @map("interest_section2")
+  specialConditions String? @map("special_conditions")
+
+  discountPct  Decimal @default(0) @map("discount_pct") @db.Decimal(12, 6)
+  adminCost    Decimal @default(0) @map("admin_cost") @db.Decimal(18, 2)
+  stampDuty    Decimal @default(0) @map("stamp_duty") @db.Decimal(18, 2)
+  /// Dibatasi biaya akuisisi OJK: maksimal 15% harta benda, 25% kendaraan
+  /// bermotor. Sistem memperingatkan bila dilewati.
+  brokeragePct Decimal @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
+  includeVat   Boolean @default(false) @map("include_vat")
+
+  subjectivity       String?
+  quotationNo        String? @unique @map("quotation_no")
+  coverNoteNo        String? @unique @map("cover_note_no")
+  coverNoteRemarks   String? @map("cover_note_remarks")
+  closingNo          String? @unique @map("closing_no")
+  closingInstruction String? @map("closing_instruction")
+
+  releasedAt DateTime? @map("released_at") @db.Timestamptz(6)
+  releasedBy String?   @map("released_by") @db.Uuid
+  createdBy  String    @map("created_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  client                      Client          @relation(fields: [clientId], references: [id])
+  sppa                        Sppa?           @relation(fields: [sppaId], references: [id])
+  cob                         ClassOfBusiness @relation(fields: [cobId], references: [id])
+  coverType                   CoverType?      @relation(fields: [coverTypeId], references: [id])
+  correspondenceAddressSource ClientAddress?  @relation(fields: [correspondenceAddressId], references: [id])
+  currency                    Currency        @relation(fields: [currencyCode], references: [code])
+  occupation                  Occupation?     @relation(fields: [occupationId], references: [id])
+  constructionClass           LookupValue?    @relation("construction_class", fields: [constructionClassId], references: [id])
+  biScale                     BiScale?        @relation(fields: [indemnityMonths], references: [indemnityMonths])
+  releaser                    User?           @relation("slipReleasedBy", fields: [releasedBy], references: [id])
+  creator                     User            @relation("slipCreatedBy", fields: [createdBy], references: [id])
+
+  items         SlipItem[]
+  rateLines     SlipRateLine[]
+  securityPanel SlipSecurityPanel[]
+  clauses       SlipClause[]
+  wordingForms  SlipWordingForm[]
+  policies      Policy[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("placing_slips")
+}
+
+/// Interest insured, sum insured, dan deductible. Dibedakan lewat kind.
+model SlipItem {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slipId      String       @map("slip_id") @db.Uuid
+  kind        SlipItemKind
+  description String
+  /// Kosong untuk baris deductible.
+  amount      Decimal?     @db.Decimal(18, 2)
+  sortOrder   Int          @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slip PlacingSlip @relation(fields: [slipId], references: [id], onDelete: Cascade)
+
+  @@index([slipId, kind, sortOrder])
+  @@map("slip_items")
+}
+
+/// Baris rate slip. Menyimpan salinan batas OJK yang berlaku saat input, lalu
+/// rate divalidasi terhadap batas itu.
+///
+/// Rate boleh di bawah batas bawah bila ada potongan sesuai nilai
+/// pertanggungan, dan di atas batas atas bila ada perluasan jaminan. Jadi
+/// validasinya menolak dengan pengecualian yang dicatat alasannya.
+model SlipRateLine {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slipId            String   @map("slip_id") @db.Uuid
+  /// lookup rate_line_kind: Rate, TPL, atau PA.
+  kindId            String   @map("kind_id") @db.Uuid
+  label             String
+  /// Basis perhitungan untuk TPL dan PA. Baris Rate memakai total sum insured.
+  limitAmount       Decimal? @map("limit_amount") @db.Decimal(18, 2)
+  rate              Decimal? @db.Decimal(12, 6)
+  premium           Decimal  @default(0) @db.Decimal(18, 2)
+  /// Batas bawah dan atas OJK saat rate diisi.
+  rateMin           Decimal? @map("rate_min") @db.Decimal(12, 6)
+  rateMax           Decimal? @map("rate_max") @db.Decimal(12, 6)
+  /// Alasan bila rate keluar dari batas OJK.
+  outOfBoundsReason String?  @map("out_of_bounds_reason")
+  sortOrder         Int      @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slip PlacingSlip @relation(fields: [slipId], references: [id], onDelete: Cascade)
+  kind LookupValue @relation("rate_line_kind_slip", fields: [kindId], references: [id])
+
+  @@index([slipId, sortOrder])
+  @@map("slip_rate_lines")
+}
+
+/// Asuransi yang ditawari beserta sharenya. Total share harus 100%.
+model SlipSecurityPanel {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slipId     String  @map("slip_id") @db.Uuid
+  insurerId  String  @map("insurer_id") @db.Uuid
+  sharePct   Decimal @map("share_pct") @db.Decimal(12, 6)
+  /// lookup security_role: As Leader atau As Member.
+  positionId String  @map("position_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slip     PlacingSlip @relation(fields: [slipId], references: [id], onDelete: Cascade)
+  insurer  Insurer     @relation(fields: [insurerId], references: [id])
+  position LookupValue @relation("security_role_slip", fields: [positionId], references: [id])
+
+  @@unique([slipId, insurerId])
+  @@map("slip_security_panel")
+}
+
+/// Klausula yang dipakai slip. Wording disalin dari master saat dipilih dan
+/// bisa diedit per slip. Master clause tidak berubah, dan slip lama tidak ikut
+/// berubah kalau master diperbarui.
+model SlipClause {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slipId      String  @map("slip_id") @db.Uuid
+  clauseId    String  @map("clause_id") @db.Uuid
+  title       String
+  /// Salinan, bisa diedit per slip.
+  wordingHtml String  @map("wording_html")
+  /// Menandai wording yang sudah diubah dari master, supaya kelihatan saat
+  /// review slip.
+  isEdited    Boolean @default(false) @map("is_edited")
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slip   PlacingSlip @relation(fields: [slipId], references: [id], onDelete: Cascade)
+  clause Clause      @relation(fields: [clauseId], references: [id])
+
+  @@unique([slipId, clauseId])
+  @@index([slipId, sortOrder])
+  @@map("slip_clauses")
+}
+
+model SlipWordingForm {
+  slipId        String @map("slip_id") @db.Uuid
+  wordingFormId String @map("wording_form_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slip        PlacingSlip @relation(fields: [slipId], references: [id], onDelete: Cascade)
+  wordingForm WordingForm @relation(fields: [wordingFormId], references: [id])
+
+  @@id([slipId, wordingFormId])
+  @@map("slip_wording_forms")
+}
+
+// ---------------------------------------------------------------------------
+// 4. Polis dan klaim
+// ---------------------------------------------------------------------------
+
+/// Status polis (aktif, akan berakhir, berakhir) dihitung dari expiry_date,
+/// tidak disimpan dan tidak ada di form.
+///
+/// Endorsement dan pembatalan dicatat sebagai baris polis tersendiri dengan
+/// policy_type Endorsement atau Cancellation dan parent_policy_id menunjuk
+/// polis induknya. Tambahan premi bernilai positif, pengembalian premi negatif.
+model Policy {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  policyNo       String   @unique @map("policy_no")
+  placingSlipId  String?  @map("placing_slip_id") @db.Uuid
+  clientId       String   @map("client_id") @db.Uuid
+  cobId          String   @map("cob_id") @db.Uuid
+  coverTypeId    String?  @map("cover_type_id") @db.Uuid
+  insuredName    String   @map("insured_name")
+  riskLocation   String?  @map("risk_location")
+  inceptionDate  DateTime @map("inception_date") @db.Date
+  expiryDate     DateTime @map("expiry_date") @db.Date
+  currencyCode   String   @map("currency_code")
+  sumInsured     Decimal  @default(0) @map("sum_insured") @db.Decimal(18, 2)
+  /// Negatif untuk pengembalian premi pada pembatalan.
+  premium        Decimal  @default(0) @db.Decimal(18, 2)
+  brokeragePct   Decimal  @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
+  /// lookup policy_type: Baru, Renewal, Endorsement, Cancellation.
+  policyTypeId   String   @map("policy_type_id") @db.Uuid
+  /// Polis induk untuk renewal, endorsement, dan pembatalan.
+  parentPolicyId String?  @map("parent_policy_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  placingSlip  PlacingSlip?    @relation(fields: [placingSlipId], references: [id])
+  client       Client          @relation(fields: [clientId], references: [id])
+  cob          ClassOfBusiness @relation(fields: [cobId], references: [id])
+  coverType    CoverType?      @relation(fields: [coverTypeId], references: [id])
+  currency     Currency        @relation(fields: [currencyCode], references: [code])
+  policyType   LookupValue     @relation("policy_type", fields: [policyTypeId], references: [id])
+  parentPolicy Policy?         @relation("policyParent", fields: [parentPolicyId], references: [id])
+
+  childPolicies Policy[]        @relation("policyParent")
+  insurers      PolicyInsurer[]
+  files         PolicyFile[]
+  claims        Claim[]
+  debitNotes    DebitNote[]
+
+  @@index([clientId])
+  @@index([expiryDate])
+  @@map("policies")
+}
+
+/// Disalin dari slip_security_panel saat polis dibuat dari slip. Jadi dasar
+/// pembagian Credit Note co-insurance.
+model PolicyInsurer {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  policyId   String  @map("policy_id") @db.Uuid
+  insurerId  String  @map("insurer_id") @db.Uuid
+  sharePct   Decimal @map("share_pct") @db.Decimal(12, 6)
+  /// lookup security_role
+  positionId String  @map("position_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  policy   Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  insurer  Insurer     @relation(fields: [insurerId], references: [id])
+  position LookupValue @relation("security_role_policy", fields: [positionId], references: [id])
+
+  @@unique([policyId, insurerId])
+  @@map("policy_insurers")
+}
+
+/// Softcopy polis. Version naik setiap upload, file lama tetap tersimpan.
+model PolicyFile {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  policyId   String   @map("policy_id") @db.Uuid
+  version    Int      @default(1)
+  fileName   String   @map("file_name")
+  filePath   String   @map("file_path")
+  uploadedBy String   @map("uploaded_by") @db.Uuid
+  uploadedAt DateTime @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  policy   Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  uploader User   @relation(fields: [uploadedBy], references: [id])
+
+  @@unique([policyId, version])
+  @@map("policy_files")
+}
+
+/// Asuransi dan COB klaim diambil dari polis, tidak dipilih ulang di form.
+/// paid_amount adalah nilai penyelesaian yang dicatat tim Klaim. Uang klaim
+/// yang lewat rekening LCH dicatat Finance di payments.
+model Claim {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  claimNo              String    @unique @map("claim_no")
+  policyId             String    @map("policy_id") @db.Uuid
+  adjusterId           String?   @map("adjuster_id") @db.Uuid
+  lossDate             DateTime  @map("loss_date") @db.Date
+  reportedDate         DateTime? @map("reported_date") @db.Date
+  documentCompleteDate DateTime? @map("document_complete_date") @db.Date
+  spkDate              DateTime? @map("spk_date") @db.Date
+  location             String?
+  lossDescription      String?   @map("loss_description")
+  assetDescription     String?   @map("asset_description")
+  currencyCode         String    @map("currency_code")
+  estimatedLoss        Decimal   @default(0) @map("estimated_loss") @db.Decimal(18, 2)
+  claimedAmount        Decimal   @default(0) @map("claimed_amount") @db.Decimal(18, 2)
+  paidAmount           Decimal   @default(0) @map("paid_amount") @db.Decimal(18, 2)
+  /// lookup claim_status
+  statusId             String    @map("status_id") @db.Uuid
+  notes                String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  policy   Policy      @relation(fields: [policyId], references: [id])
+  adjuster Adjuster?   @relation(fields: [adjusterId], references: [id])
+  currency Currency    @relation(fields: [currencyCode], references: [code])
+  status   LookupValue @relation("claim_status", fields: [statusId], references: [id])
+
+  payments Payment[]
+
+  @@index([policyId])
+  @@index([statusId])
+  @@map("claims")
+}
+
+// ---------------------------------------------------------------------------
+// 5. Finance
+// ---------------------------------------------------------------------------
+
+model BankAccount {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// lookup bank
+  bankId         String  @map("bank_id") @db.Uuid
+  accountNo      String  @map("account_no")
+  accountName    String  @map("account_name")
+  currencyCode   String  @map("currency_code")
+  /// Rekening dana premi titipan, dipisah dari rekening operasional di
+  /// pembukuan.
+  isPremiumTrust Boolean @default(false) @map("is_premium_trust")
+  coaAccountId   String? @map("coa_account_id") @db.Uuid
+  isActive       Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  bank       LookupValue @relation("bank", fields: [bankId], references: [id])
+  currency   Currency    @relation(fields: [currencyCode], references: [code])
+  coaAccount CoaAccount? @relation(fields: [coaAccountId], references: [id])
+
+  payments Payment[]
+
+  @@map("bank_accounts")
+}
+
+/// Debit Note atau Premium Note, tagihan premi ke tertanggung.
+/// Status lunas dan sisa tagihan dihitung dari payments, tidak disimpan.
+model DebitNote {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dnNo           String  @unique @map("dn_no")
+  policyId       String  @map("policy_id") @db.Uuid
+  clientId       String  @map("client_id") @db.Uuid
+  /// Salinan saat dokumen dibuat, jadi perubahan data klien tidak mengubah
+  /// dokumen yang sudah terbit.
+  insuredName    String  @map("insured_name")
+  billingAddress String? @map("billing_address")
+  /// lookup payment_model: via rekening LCH atau langsung ke asuransi.
+  paymentModelId String  @map("payment_model_id") @db.Uuid
+
+  issueDate    DateTime @map("issue_date") @db.Date
+  dueDate      DateTime @map("due_date") @db.Date
+  currencyCode String   @map("currency_code")
+  /// Kurs ke IDR saat dokumen terbit.
+  exchangeRate Decimal  @default(1) @map("exchange_rate") @db.Decimal(12, 6)
+
+  premium    Decimal @default(0) @db.Decimal(18, 2)
+  discount   Decimal @default(0) @db.Decimal(18, 2)
+  policyCost Decimal @default(0) @map("policy_cost") @db.Decimal(18, 2)
+  stampDuty  Decimal @default(0) @map("stamp_duty") @db.Decimal(18, 2)
+  /// Sudah termasuk baris penyesuaian di debit_note_lines.
+  total      Decimal @default(0) @db.Decimal(18, 2)
+
+  referenceNo String?   @map("reference_no")
+  lcNo        String?   @map("lc_no")
+  /// Khusus marine.
+  etd         DateTime? @db.Date
+
+  status   NoteStatus @default(Draft)
+  issuedBy String?    @map("issued_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  policy       Policy      @relation(fields: [policyId], references: [id])
+  client       Client      @relation(fields: [clientId], references: [id])
+  paymentModel LookupValue @relation("payment_model", fields: [paymentModelId], references: [id])
+  currency     Currency    @relation(fields: [currencyCode], references: [code])
+  issuer       User?       @relation(fields: [issuedBy], references: [id])
+
+  lines       DebitNoteLine[]
+  creditNotes CreditNote[]
+  payments    Payment[]
+
+  @@index([clientId])
+  @@index([dueDate])
+  @@map("debit_notes")
+}
+
+/// Baris penyesuaian pada Debit Note, boleh positif maupun negatif.
+model DebitNoteLine {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  debitNoteId String  @map("debit_note_id") @db.Uuid
+  description String
+  amount      Decimal @db.Decimal(18, 2)
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  debitNote DebitNote @relation(fields: [debitNoteId], references: [id], onDelete: Cascade)
+
+  @@index([debitNoteId, sortOrder])
+  @@map("debit_note_lines")
+}
+
+/// Satu Debit Note dipecah jadi Credit Note per asuransi sesuai share, lalu
+/// per cicilan. Contoh nomor 0581/CNLCH/08/2026-1.
+///
+/// Pembagian share dan cicilan dibulatkan ke sen, selisihnya masuk ke baris
+/// terakhir.
+model CreditNote {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cnNo            String  @unique @map("cn_no")
+  debitNoteId     String  @map("debit_note_id") @db.Uuid
+  insurerId       String  @map("insurer_id") @db.Uuid
+  sharePct        Decimal @map("share_pct") @db.Decimal(12, 6)
+  instalmentNo    Int     @default(1) @map("instalment_no")
+  instalmentCount Int     @default(1) @map("instalment_count")
+
+  dueDate      DateTime @map("due_date") @db.Date
+  currencyCode String   @map("currency_code")
+  exchangeRate Decimal  @default(1) @map("exchange_rate") @db.Decimal(12, 6)
+
+  grossPremium    Decimal @default(0) @map("gross_premium") @db.Decimal(18, 2)
+  brokerageAmount Decimal @default(0) @map("brokerage_amount") @db.Decimal(18, 2)
+  /// PPN 11% atas brokerage.
+  ppnAmount       Decimal @default(0) @map("ppn_amount") @db.Decimal(18, 2)
+  pph23Amount     Decimal @default(0) @map("pph23_amount") @db.Decimal(18, 2)
+  /// Yang disetor ke asuransi.
+  netAmount       Decimal @default(0) @map("net_amount") @db.Decimal(18, 2)
+
+  status   NoteStatus @default(Draft)
+  issuedBy String?    @map("issued_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  debitNote DebitNote @relation(fields: [debitNoteId], references: [id])
+  insurer   Insurer   @relation(fields: [insurerId], references: [id])
+  currency  Currency  @relation(fields: [currencyCode], references: [code])
+  issuer    User?     @relation(fields: [issuedBy], references: [id])
+
+  payments Payment[]
+
+  @@unique([debitNoteId, insurerId, instalmentNo])
+  @@index([dueDate])
+  @@map("credit_notes")
+}
+
+/// Penerimaan dan pengeluaran uang.
+///
+/// Jenis pembayaran menentukan dokumen yang wajib diisi: terima premi ke Debit
+/// Note, setor premi dan terima brokerage ke Credit Note, terima dan bayar
+/// klaim ke klaim. Divalidasi di server, bukan di database.
+///
+/// Satu transfer yang membayar beberapa dokumen dicatat sebagai beberapa baris
+/// dengan bank_reference yang sama.
+model Payment {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// lookup payment_type
+  paymentTypeId String  @map("payment_type_id") @db.Uuid
+  debitNoteId   String? @map("debit_note_id") @db.Uuid
+  creditNoteId  String? @map("credit_note_id") @db.Uuid
+  claimId       String? @map("claim_id") @db.Uuid
+  bankAccountId String  @map("bank_account_id") @db.Uuid
+
+  paymentDate   DateTime @map("payment_date") @db.Date
+  currencyCode  String   @map("currency_code")
+  exchangeRate  Decimal  @default(1) @map("exchange_rate") @db.Decimal(12, 6)
+  amount        Decimal  @db.Decimal(18, 2)
+  bankReference String?  @map("bank_reference")
+  notes         String?
+  createdBy     String   @map("created_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  paymentType LookupValue @relation("payment_type", fields: [paymentTypeId], references: [id])
+  debitNote   DebitNote?  @relation(fields: [debitNoteId], references: [id])
+  creditNote  CreditNote? @relation(fields: [creditNoteId], references: [id])
+  claim       Claim?      @relation(fields: [claimId], references: [id])
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id])
+  currency    Currency    @relation(fields: [currencyCode], references: [code])
+  creator     User        @relation(fields: [createdBy], references: [id])
+
+  @@index([paymentDate])
+  @@index([bankReference])
+  @@map("payments")
+}
+
+// ---------------------------------------------------------------------------
+// 6. Akuntansi
+// ---------------------------------------------------------------------------
+
+model CoaAccount {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code            String  @unique
+  name            String
+  /// lookup account_type: Asset, Liability, Equity, Revenue, Expense.
+  accountTypeId   String  @map("account_type_id") @db.Uuid
+  parentId        String? @map("parent_id") @db.Uuid
+  /// Akun kontrol sub ledger piutang klien dan hutang asuransi.
+  isControl       Boolean @default(false) @map("is_control")
+  /// lookup ojk_report_line. Menentukan baris laporan OJK.
+  ojkReportLineId String? @map("ojk_report_line_id") @db.Uuid
+  isActive        Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  accountType   LookupValue  @relation("account_type", fields: [accountTypeId], references: [id])
+  ojkReportLine LookupValue? @relation("ojk_report_line", fields: [ojkReportLineId], references: [id])
+  parent        CoaAccount?  @relation("coaParent", fields: [parentId], references: [id])
+
+  children     CoaAccount[]  @relation("coaParent")
+  bankAccounts BankAccount[]
+  journalLines JournalLine[]
+
+  @@map("coa_accounts")
+}
+
+/// Jurnal otomatis dibuat saat Debit Note atau Credit Note terbit dan saat
+/// pembayaran dicatat. source_type dan source_id menunjuk transaksi asalnya.
+/// Jurnal yang sudah Posted tidak diedit, koreksinya lewat jurnal manual.
+model JournalEntry {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journalNo   String        @unique @map("journal_no")
+  journalDate DateTime      @map("journal_date") @db.Date
+  description String?
+  sourceType  JournalSource @default(Manual) @map("source_type")
+  sourceId    String?       @map("source_id") @db.Uuid
+  status      JournalStatus @default(Draft)
+  createdBy   String        @map("created_by") @db.Uuid
+  postedAt    DateTime?     @map("posted_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  creator User @relation(fields: [createdBy], references: [id])
+
+  lines JournalLine[]
+
+  @@index([journalDate])
+  @@index([sourceType, sourceId])
+  @@map("journal_entries")
+}
+
+/// Total debit wajib sama dengan total kredit, divalidasi di server.
+/// client_id dan insurer_id membentuk sub ledger piutang dan hutang pada akun
+/// kontrol.
+model JournalLine {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journalEntryId String  @map("journal_entry_id") @db.Uuid
+  accountId      String  @map("account_id") @db.Uuid
+  clientId       String? @map("client_id") @db.Uuid
+  insurerId      String? @map("insurer_id") @db.Uuid
+  /// Dalam IDR.
+  debit          Decimal @default(0) @db.Decimal(18, 2)
+  credit         Decimal @default(0) @db.Decimal(18, 2)
+  memo           String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      CoaAccount   @relation(fields: [accountId], references: [id])
+  client       Client?      @relation(fields: [clientId], references: [id])
+  insurer      Insurer?     @relation(fields: [insurerId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_lines")
+}
