@@ -1,0 +1,15 @@
+lini,wilayah,zona,jenis_pertanggungan,batas_bawah,batas_atas,catatan,satuan
+Harta Benda,"Jakarta, Banten, Jawa Barat",Zona 1,,0.05,0.055,,persen
+Harta Benda,"Jakarta, Banten, Jawa Barat",Zona 2,,,,Tarif Zona 1 ditambah faktor loading,persen
+Harta Benda,"Jakarta, Banten, Jawa Barat",Zona 3,,,,Tarif Zona 1 ditambah faktor loading,persen
+Harta Benda,"Jakarta, Banten, Jawa Barat",Zona 4,,,,Tarif Zona 1 ditambah faktor loading,persen
+Harta Benda,"Luar Jakarta, Banten, Jawa Barat",Zona 1,,0.045,0.05,,persen
+Harta Benda,"Luar Jakarta, Banten, Jawa Barat",Zona 2,,0.05,0.055,,persen
+Harta Benda,"Luar Jakarta, Banten, Jawa Barat",Zona 3,,,,Tarif Zona 2 ditambah faktor loading,persen
+Harta Benda,"Luar Jakarta, Banten, Jawa Barat",Zona 4,,,,Tarif Zona 2 ditambah faktor loading,persen
+Kendaraan Bermotor,Wilayah 1: Sumatera dan kepulauannya,,Comprehensive,0.075,0.1,,persen
+Kendaraan Bermotor,Wilayah 1: Sumatera dan kepulauannya,,Total Loss Only,0.05,0.075,,persen
+Kendaraan Bermotor,"Wilayah 2: Jakarta, Banten, Jawa Barat",,Comprehensive,0.1,0.125,,persen
+Kendaraan Bermotor,"Wilayah 2: Jakarta, Banten, Jawa Barat",,Total Loss Only,0.075,0.1,,persen
+Kendaraan Bermotor,Wilayah 3: selain Wilayah 1 dan 2,,Comprehensive,0.075,0.1,,persen
+Kendaraan Bermotor,Wilayah 3: selain Wilayah 1 dan 2,,Total Loss Only,0.05,0.075,,persen
