@@ -193,20 +193,16 @@ model DocumentType {
 
 /// Nomor urut terakhir per jenis dokumen per periode.
 ///
-/// PENTING: ambil nomor dengan mengunci barisnya lebih dulu, di transaksi yang
-/// sama dengan penyimpanan dokumen. Prisma tidak punya API FOR UPDATE, jadi
-/// pakai $queryRaw di dalam $transaction:
+/// JANGAN menaikkan counter ini langsung. Pakai nextDocumentNumber() di
+/// server/services/number-generator.ts, dan panggil di transaksi yang sama
+/// dengan penyimpanan dokumen supaya nomor tidak bolong saat simpan gagal.
 ///
-///   await prisma.$transaction(async (tx) => {
-///     const [row] = await tx.$queryRaw`
-///       SELECT last_number FROM number_counters
-///       WHERE document_type_code = ${code} AND period = ${period}
-///       FOR UPDATE`
-///     ...
-///   })
-///
-/// findUnique lalu update TIDAK aman: dua request bersamaan bisa dapat nomor
-/// yang sama. Unique constraint di kolom nomor dokumen tetap jadi pengaman.
+/// findUnique lalu update TIDAK aman, dua request bersamaan bisa dapat nomor
+/// yang sama. Service itu memakai satu statement INSERT ... ON CONFLICT DO
+/// UPDATE ... RETURNING, yang mengunci baris counter sampai transaksi selesai
+/// seperti SELECT ... FOR UPDATE, sekaligus aman saat dua request membuat baris
+/// periode baru bersamaan. SELECT FOR UPDATE tidak bisa mengunci baris yang
+/// belum ada. Unique constraint di kolom nomor dokumen tetap jadi pengaman.
 model NumberCounter {
   documentTypeCode String @map("document_type_code")
   /// Contoh 2026-08 untuk reset bulanan, 2026 untuk tahunan.

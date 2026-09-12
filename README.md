@@ -93,10 +93,10 @@ Beda dari Prisma 6, mudah bikin bingung kalau belum tahu:
   `prisma generate`.
 - `prisma migrate dev` menolak jalan di lingkungan non-interaktif. Untuk server pakai `db:deploy`.
 
-Penomoran dokumen wajib mengunci baris `number_counters` dengan `$queryRaw ... FOR UPDATE` di dalam
-`$transaction`. Prisma tidak punya API `FOR UPDATE`, dan `findUnique` lalu `update` tidak aman karena
-dua request bersamaan bisa dapat nomor yang sama. Alasannya ditulis lengkap di komentar model
-`NumberCounter`.
+Penomoran dokumen jangan menaikkan `number_counters` langsung. Pakai `nextDocumentNumber()` di
+[`server/services/number-generator.ts`](server/services/number-generator.ts), dipanggil di transaksi
+yang sama dengan penyimpanan dokumen supaya nomor tidak bolong saat simpan gagal. `findUnique` lalu
+`update` tidak aman karena dua request bersamaan bisa dapat nomor yang sama.
 
 ## Peta Route
 
@@ -180,9 +180,20 @@ components/
   underwriting/   form placing slip + sub-komponennya
   documents/      blok penyusun dokumen cetak
 lib/
-  data/           mock data (types, clients, slips, policies, claims, clauses, analytics)
+  data/           data statis yang belum dipindah ke database
+  server/         query database per modul, dipakai Server Component
+  generated/      Prisma Client hasil generate, tidak di-commit
+  prisma.ts       instance PrismaClient
   calc.ts         rumus premium & brokerage
   format.ts       format angka, mata uang, tanggal, nomor slip
+server/
+  services/       logika yang dipanggil di dalam transaksi: penomoran dokumen,
+                  audit trail, perhitungan PPW
+prisma/
+  schema.prisma   44 tabel, diturunkan dari ERD
+  migrations/     riwayat migrasi
+  seed.ts         pengisi master data
+  seed-data/      CSV sumber seed
 ```
 
 ## Langkah berikutnya
