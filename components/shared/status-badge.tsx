@@ -19,11 +19,13 @@ const DOT_CLASS: Record<Tone, string> = {
 }
 
 const STATUS_TONE: Record<string, Tone> = {
-  /* slip */
+  /* slip & SPPA */
   Draft: "neutral",
   Released: "info",
   Quoted: "warning",
   Closed: "success",
+  Cancelled: "danger",
+  Submitted: "info",
   /* policy */
   Active: "success",
   Expiring: "warning",
@@ -34,13 +36,24 @@ const STATUS_TONE: Record<string, Tone> = {
   /* policy type */
   Baru: "info",
   Renewal: "success",
+  Endorsement: "warning",
+  Cancellation: "danger",
   /* claim */
   Open: "warning",
+  "Tunggu Dokumen": "warning",
+  "Dokumen Belum Lengkap": "warning",
   "Dokumen Lengkap": "info",
   "Proses Adjuster": "info",
-  Approved: "success",
+  "SPK/SPGR": "info",
+  Settled: "success",
   Paid: "success",
   Rejected: "danger",
+  Close: "neutral",
+}
+
+/** Label tampilan untuk status yang disimpan dalam bahasa Inggris. */
+const STATUS_LABEL: Record<string, string> = {
+  Cancelled: "Dibatalkan",
 }
 
 const BASE =
@@ -57,7 +70,7 @@ export function StatusBadge({
   return (
     <span className={cn(BASE, TONE_CLASS[tone], className)}>
       <span className={cn("size-1.5 shrink-0 rounded-full", DOT_CLASS[tone])} />
-      {status}
+      {STATUS_LABEL[status] ?? status}
     </span>
   )
 }

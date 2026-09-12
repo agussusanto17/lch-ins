@@ -13,9 +13,14 @@ export function num(value: number, fractionDigits = 0) {
   }).format(value ?? 0)
 }
 
-/** 13440000 -> "IDR 13.440.000" */
+/**
+ * 13440000 -> "IDR 13.440.000" · 185185.18 -> "IDR 185.185,18" · USD selalu 2 desimal.
+ * Rupiah tanpa sen ditampilkan bulat supaya tabel tetap ringkas.
+ */
 export function money(value: number, currency = "IDR") {
-  return `${CURRENCY_SYMBOL[currency] ?? currency} ${num(value)}`
+  const cents = Math.round(Math.abs(value ?? 0) * 100) % 100 !== 0
+  const digits = currency !== "IDR" || cents ? 2 : 0
+  return `${CURRENCY_SYMBOL[currency] ?? currency} ${num(value, digits)}`
 }
 
 /** 13440000 -> "Rp 13.440.000" */
@@ -153,7 +158,30 @@ export function slipNumber(
   return `${String(seq).padStart(3, "0")}/LCH-PLCMT/${code}/${romanMonth(date.getMonth())}/${date.getFullYear()}`
 }
 
-export function daysUntil(input: string | Date, from: Date) {
-  const d = parse(input)
-  return Math.ceil((d.getTime() - from.getTime()) / 86_400_000)
+/**
+ * Samarkan data pribadi di tabel (NPWP, telepon, nomor identitas). Digit awal
+ * dan akhir tetap terlihat supaya masih bisa dicocokkan saat bicara dengan
+ * klien; nilai lengkap hanya ada di halaman detail.
+ */
+export function maskMiddle(
+  value: string | null | undefined,
+  keepStart = 4,
+  keepEnd = 3
+) {
+  if (!value) return "—"
+  const chars = [...value]
+  const digitIdx = chars
+    .map((c, i) => (/[0-9A-Za-z]/.test(c) ? i : -1))
+    .filter((i) => i >= 0)
+  if (digitIdx.length <= keepStart + keepEnd) return value
+  const hide = new Set(digitIdx.slice(keepStart, digitIdx.length - keepEnd))
+  return chars.map((c, i) => (hide.has(i) ? "•" : c)).join("")
+}
+
+/** "andi.wijaya@grahasentosa.co.id" -> "an•••@grahasentosa.co.id" */
+export function maskEmail(value: string | null | undefined) {
+  if (!value) return "—"
+  const [user, domain] = value.split("@")
+  if (!domain) return maskMiddle(value)
+  return `${user.slice(0, 2)}•••@${domain}`
 }

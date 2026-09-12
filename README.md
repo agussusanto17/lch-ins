@@ -1,8 +1,10 @@
 # LCH Insurance Brokers — Revamp (Next.js)
 
 Rebuild aplikasi internal PT. LCH Insurance Brokers dari prototipe base44 ke stack production.
-**Status saat ini: static prototype** — semua layar sudah jalan penuh dengan data dummy realistis,
-belum ada database/API. Ditujukan untuk presentasi & validasi alur sebelum masuk fase backend.
+**Status saat ini: prototipe frontend** — semua layar jalan penuh dengan data contoh, belum tersambung
+ke database/API. Tambah, ubah, dan hapus data tersimpan di store sesi (`lib/store.ts`) sehingga
+tabel, halaman detail, dan dokumen cetak ikut berubah selama tab browser terbuka; data kembali ke
+contoh awal saat halaman dimuat ulang. Di fase backend, fungsi `store.*` diganti Server Action.
 
 ## Stack
 
@@ -36,10 +38,11 @@ Perintah lain: `npm run build` · `npm run typecheck` · `npm run lint` · `npm 
 | Route | Isi |
 | --- | --- |
 | `/` | Dashboard — 4 KPI, chart produksi bulanan, donut class of business, renewal 60 hari, akses cepat |
-| `/marketing` | Tab Database Klien + Renewal Notice, modal Tambah Klien |
-| `/underwriting` | List placing slip + filter COB/status |
-| `/underwriting/new` | Form placing slip baru (dinamis per COB) |
-| `/underwriting/edit/[id]` | Edit placing slip + tombol Release |
+| `/marketing` | Tab Database Klien (form KYC), SPPA, dan Renewal Notice |
+| `/marketing/clients/[id]` | Detail klien — KYC, alamat, berkas, SPPA, slip, polis, klaim |
+| `/underwriting` | List placing slip + filter COB/status, hapus draft, batalkan slip bernomor |
+| `/underwriting/new` | Form placing slip baru; `?sppa=` atau `?client=` untuk mengisi otomatis |
+| `/underwriting/edit/[id]` | Edit placing slip + validasi dan Release |
 | `/underwriting/quotation/edit/[id]` | Draft quotation slip — subjectivity, panel co-insurance, closing instruction |
 | `/underwriting/slip/[id]` | Dokumen **Placing Slip** (A4, print-ready) |
 | `/underwriting/quotation/[id]` | Dokumen **Quotation Slip** — untuk klien, brokerage disembunyikan |
@@ -99,6 +102,8 @@ Effective Brok. = brokerage% ÷ 1,11 bila Include VAT
 ```
 
 Basis rate: **Property & COB lain → per mil (‰)**, **Motor Vehicle → persen (%)**.
+Semua nominal dibulatkan ke sen (`roundCents`), dan input angka memakai `components/ui/number-input.tsx`
+(Base UI NumberField, format id-ID: titik ribuan, koma desimal; titik di field rate dianggap koma).
 Untuk Property, baris `BI PAR` dan `BI EQVET` dihitung dari Sum Insured Section 2, sisanya dari Section 1.
 
 ## Struktur

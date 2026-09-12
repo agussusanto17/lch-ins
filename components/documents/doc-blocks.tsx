@@ -1,6 +1,10 @@
 import { sumItems, totalPremium, totalSumInsured } from "@/lib/calc"
 import { sanitizeHtml } from "@/lib/sanitize"
-import { resolveSlipClauses, type PlacingSlip } from "@/lib/data"
+import {
+  constructionClassLabel,
+  resolveSlipClauses,
+  type PlacingSlip,
+} from "@/lib/data"
 import { dateEn, money, num } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -49,6 +53,13 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
   ]
   if (slip.occupation) rows.push(["Occupation", slip.occupation])
   if (slip.riskLocation) rows.push(["Risk Location", slip.riskLocation])
+  if (slip.cob === "Property" && slip.constructionClass)
+    rows.push([
+      "Construction Class",
+      constructionClassLabel(slip.constructionClass),
+    ])
+  if (slip.cob === "Property" && slip.indemnityPeriod)
+    rows.push(["Indemnity Period", slip.indemnityPeriod])
   if (slip.wordingForms.filter(Boolean).length)
     rows.push(["Wording Form", slip.wordingForms.filter(Boolean).join("; ")])
 
@@ -408,7 +419,7 @@ export function SignatureGrid({
   confirmationParty?: string
 }) {
   return (
-    <div className="avoid-break mt-10 grid gap-8 text-[13px] sm:grid-cols-2">
+    <div className="avoid-break mt-10 grid grid-cols-1 gap-8 text-[13px] sm:grid-cols-2">
       <div>
         <p className="mb-1">{place}</p>
         <p className="mb-14 text-muted-foreground">

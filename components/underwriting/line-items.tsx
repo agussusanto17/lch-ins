@@ -4,9 +4,9 @@ import { Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Textarea } from "@/components/ui/textarea"
 import type { LineItem } from "@/lib/data"
-import { num } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 let counter = 0
@@ -51,18 +51,17 @@ export function LineItemList({
               onChange={(e) => update(item.id, { description: e.target.value })}
             />
           )}
-          <Input
-            className="tabular w-44 text-right"
-            inputMode="numeric"
-            value={item.amount ? num(item.amount) : ""}
-            placeholder={amountPlaceholder}
-            onChange={(e) =>
-              update(item.id, {
-                amount: Number(e.target.value.replace(/\D/g, "")) || 0,
-              })
-            }
-          />
+          <div className="w-44 shrink-0">
+            <NumberInput
+              preset="money"
+              aria-label={`${amountPlaceholder} ${item.description || "baris"}`}
+              value={item.amount || null}
+              placeholder={amountPlaceholder}
+              onValueChange={(v) => update(item.id, { amount: v ?? 0 })}
+            />
+          </div>
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             aria-label="Hapus baris"

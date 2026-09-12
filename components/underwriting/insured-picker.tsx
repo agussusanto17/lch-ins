@@ -1,38 +1,22 @@
 "use client"
 
-import * as React from "react"
 import Link from "next/link"
 import { Check, ExternalLink, Pencil } from "lucide-react"
 
+import { SearchSelect } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox"
-import { Field, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { CLIENTS } from "@/lib/data"
-import type { ClientAddress } from "@/lib/data/types"
+import { correspondenceAddress as defaultAddress } from "@/lib/data"
+import { maskMiddle } from "@/lib/format"
+import { useCollection } from "@/lib/store"
 
-const ITEMS = CLIENTS.map((c) => c.name)
-
-export function clientById(id: string | null | undefined) {
-  return id ? (CLIENTS.find((c) => c.id === id) ?? null) : null
-}
-
-/** Alamat korespondensi klien, jatuh ke alamat pertama bila belum ada. */
-function defaultAddress(addresses: ClientAddress[]) {
-  return (
-    addresses.find((a) => a.label.toLowerCase().includes("korespondensi")) ??
-    addresses[0] ??
-    null
-  )
-}
-
+/**
+ * Tertanggung dipilih dari data klien (PRD A-08). Nama dan alamat disalin ke
+ * slip dan boleh diedit di sini tanpa mengubah data klien, misalnya ditambah
+ * "and/or Subsidiary Companies".
+ */
 export function InsuredPicker({
   clientId,
   insuredName,
@@ -48,83 +32,86 @@ export function InsuredPicker({
     correspondenceAddress?: string
   }) => void
 }) {
-  const client = clientById(clientId)
+  const clients = useCollection("clients")
+  const client = clientId
+    ? (clients.find((c) => c.id === clientId) ?? null)
+    : null
   const addresses = client?.addresses ?? []
   const activeAddress = addresses.find(
     (a) => a.value === correspondenceAddress.trim()
   )
+  const items = clients
+    .filter((c) => c.status !== "Inactive" || c.id === clientId)
+    .map((c) => ({ label: c.name, value: c.id }))
 
-  function pickClient(name: string) {
-    const next = CLIENTS.find((c) => c.name === name)
-    if (next) {
-      // Nama disalin apa adanya dari master klien; dokumen cetak yang mengatur
-      // huruf besarnya, jadi isi slip tetap sama dengan data Marketing.
-      onChange({
-        clientId: next.id,
-        insuredName: next.name,
-        correspondenceAddress: defaultAddress(next.addresses)?.value ?? "",
-      })
+  function pickClient(id: string | null) {
+    const next = clients.find((c) => c.id === id)
+    if (!next) {
+      onChange({ clientId: null })
       return
     }
-    // Nama boleh diketik bebas, misalnya ditambah "and/or Subsidiary Companies".
-    // Kaitan ke klien tetap dipegang sampai fieldnya dikosongkan.
-    onChange({ insuredName: name, ...(name ? {} : { clientId: null }) })
+    onChange({
+      clientId: next.id,
+      insuredName: next.name,
+      correspondenceAddress: defaultAddress(next)?.value ?? "",
+    })
   }
 
   return (
     <>
+      <SearchSelect
+        className="md:col-span-2"
+        label="Klien"
+        required
+        items={items}
+        value={clientId}
+        onValueChange={pickClient}
+        placeholder="Cari klien dari Marketing…"
+        emptyMessage="Klien belum terdaftar. Tambahkan dulu di menu Marketing."
+        description={
+          client ? (
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>
+                {client.clientType} · {client.contactPerson || "—"}
+              </span>
+              {client.npwp ? (
+                <span>NPWP {maskMiddle(client.npwp, 2, 3)}</span>
+              ) : null}
+              <Link
+                href={`/marketing/clients/${client.id}`}
+                className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
+              >
+                Lihat klien
+                <ExternalLink className="size-3" />
+              </Link>
+            </span>
+          ) : insuredName ? (
+            "Nama tertanggung belum terhubung ke data klien. Pilih klien supaya alamat dan KYC ikut terbawa."
+          ) : undefined
+        }
+      />
+
       <Field className="md:col-span-2">
         <FieldLabel htmlFor="insured">
           Nama Tertanggung / Insured Name *
         </FieldLabel>
-        <Combobox
-          items={ITEMS}
+        <Input
+          id="insured"
           value={insuredName}
-          onValueChange={(v) => pickClient(((v as string) ?? "").trim())}
-        >
-          <ComboboxInput
-            id="insured"
-            placeholder="Pilih klien dari Marketing…"
-            showClear
-          />
-          <ComboboxContent>
-            <ComboboxEmpty>
-              Klien belum terdaftar. Tambahkan dulu di menu Marketing.
-            </ComboboxEmpty>
-            <ComboboxList>
-              {(item: string) => (
-                <ComboboxItem key={item} value={item}>
-                  {item}
-                </ComboboxItem>
-              )}
-            </ComboboxList>
-          </ComboboxContent>
-        </Combobox>
-
-        {client ? (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span>
-              Klien {client.name} · {client.contactPerson} · {client.phone}
-            </span>
-            <span>NPWP {client.npwp}</span>
-            <Link
-              href="/marketing"
-              className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
-            >
-              Lihat di Marketing
-              <ExternalLink className="size-3" />
-            </Link>
-          </div>
-        ) : insuredName ? (
-          <p className="text-xs text-muted-foreground">
-            Nama ini belum terhubung ke data klien, jadi alamat tidak bisa
-            diambil otomatis.
-          </p>
+          disabled={!client && !insuredName}
+          placeholder={client ? client.name : "Pilih klien dulu"}
+          onChange={(e) => onChange({ insuredName: e.target.value })}
+        />
+        {client && insuredName.trim() !== client.name ? (
+          <FieldDescription className="flex items-center gap-1 text-xs">
+            <Pencil className="size-3" />
+            Diedit khusus slip ini, data klien tidak berubah.
+          </FieldDescription>
         ) : null}
       </Field>
 
       <Field className="md:col-span-2">
-        <FieldLabel htmlFor="addr">Correspondence Address</FieldLabel>
+        <FieldLabel htmlFor="addr">Correspondence Address *</FieldLabel>
 
         {addresses.length ? (
           <div className="flex flex-wrap items-center gap-1.5">
@@ -133,6 +120,7 @@ export function InsuredPicker({
               return (
                 <Button
                   key={a.id}
+                  type="button"
                   variant={active ? "secondary" : "outline"}
                   size="sm"
                   aria-pressed={active}

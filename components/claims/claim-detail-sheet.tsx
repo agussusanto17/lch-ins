@@ -1,8 +1,9 @@
 "use client"
 
-import { CalendarDays, MapPin } from "lucide-react"
+import { CalendarDays, MapPin, Pencil } from "lucide-react"
 
 import { StatusBadge } from "@/components/shared/status-badge"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
   Sheet,
@@ -34,10 +35,12 @@ export function ClaimDetailSheet({
   claim,
   open,
   onOpenChange,
+  onEdit,
 }: {
   claim: Claim | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onEdit?: (claim: Claim) => void
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -55,8 +58,19 @@ export function ClaimDetailSheet({
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={claim.status} />
                 <span className="text-xs text-muted-foreground">
-                  Adjuster: {claim.adjuster}
+                  Adjuster: {claim.adjuster || "belum ditunjuk"}
                 </span>
+                {onEdit ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={() => onEdit(claim)}
+                  >
+                    <Pencil data-icon="inline-start" />
+                    Edit
+                  </Button>
+                ) : null}
               </div>
 
               <section>

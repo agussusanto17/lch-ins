@@ -186,8 +186,17 @@
   body {
     background: #fff !important;
   }
-  .no-print {
+  .no-print,
+  [data-slot="sidebar"],
+  [data-slot="sidebar-gap"],
+  [data-sonner-toaster] {
     display: none !important;
+  }
+  /* Cetak tabel dari layar aplikasi: konten memakai lebar penuh kertas. */
+  [data-slot="sidebar-inset"] {
+    margin: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
   }
   .print-sheet {
     box-shadow: none !important;

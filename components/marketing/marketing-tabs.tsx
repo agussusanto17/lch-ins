@@ -1,24 +1,73 @@
 "use client"
 
 import * as React from "react"
+import { Plus } from "lucide-react"
 
+import { PageHeader } from "@/components/layout/page-header"
+import { ClientForm } from "@/components/marketing/client-form"
 import { ClientTable } from "@/components/marketing/client-table"
 import { RenewalNotice } from "@/components/marketing/renewal-notice"
+import { SppaTable } from "@/components/marketing/sppa-table"
+import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { Client } from "@/lib/data"
+import { useCollection } from "@/lib/store"
 
 export function MarketingTabs() {
+  const sppa = useCollection("sppa")
+  const [form, setForm] = React.useState<{
+    key: number
+    client: Client | null
+  } | null>(null)
+
   return (
-    <Tabs defaultValue="clients" className="flex flex-col gap-4">
-      <TabsList>
-        <TabsTrigger value="clients">Database Klien</TabsTrigger>
-        <TabsTrigger value="renewal">Renewal Notice</TabsTrigger>
-      </TabsList>
-      <TabsContent value="clients">
-        <ClientTable />
-      </TabsContent>
-      <TabsContent value="renewal">
-        <RenewalNotice />
-      </TabsContent>
-    </Tabs>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Marketing"
+        description="Database klien dan KYC, SPPA, serta renewal notice"
+        actions={
+          <Button
+            onClick={() =>
+              setForm((prev) => ({ key: (prev?.key ?? 0) + 1, client: null }))
+            }
+          >
+            <Plus data-icon="inline-start" />
+            Tambah Klien
+          </Button>
+        }
+      />
+
+      <Tabs defaultValue="clients" className="flex flex-col gap-4">
+        <TabsList className="no-print">
+          <TabsTrigger value="clients">Database Klien</TabsTrigger>
+          <TabsTrigger value="sppa">SPPA ({sppa.length})</TabsTrigger>
+          <TabsTrigger value="renewal">Renewal Notice</TabsTrigger>
+        </TabsList>
+        <TabsContent value="clients">
+          <ClientTable
+            onEdit={(client) =>
+              setForm((prev) => ({ key: (prev?.key ?? 0) + 1, client }))
+            }
+          />
+        </TabsContent>
+        <TabsContent value="sppa">
+          <SppaTable />
+        </TabsContent>
+        <TabsContent value="renewal">
+          <RenewalNotice />
+        </TabsContent>
+      </Tabs>
+
+      {form ? (
+        <ClientForm
+          key={form.key}
+          open
+          onOpenChange={(open) => {
+            if (!open) setForm(null)
+          }}
+          client={form.client}
+        />
+      ) : null}
+    </div>
   )
 }

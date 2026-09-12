@@ -81,7 +81,7 @@ export function ClauseForm({ clause, mode }: { clause?: Clause; mode: "new" | "e
               />
             </Field>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <SelectField
                 label="Class of Business"
                 items={COB_OPTIONS}

@@ -1,6 +1,111 @@
-import type { ClassOfBusiness } from "./types"
+import type {
+  ClaimStatus,
+  ClassOfBusiness,
+  ClientStatus,
+  ClientType,
+  PolicyType,
+  SlipStatus,
+} from "./types"
 
-export const TODAY = new Date("2026-08-18T00:00:00")
+/*
+ * Daftar pilihan pendek (lookup_values di ERD). Di fase backend semuanya
+ * diambil dari master data, bukan dari konstanta ini.
+ */
+
+export const CLIENT_TYPES: ClientType[] = ["Korporasi", "Perorangan"]
+export const CLIENT_STATUSES: ClientStatus[] = [
+  "Prospect",
+  "Active",
+  "Inactive",
+]
+export const ID_TYPES = ["KTP", "SIM", "Paspor"]
+export const INCOME_SOURCES = [
+  "Hasil usaha",
+  "Gaji bulanan",
+  "Wirausaha",
+  "Lain-lain",
+]
+export const INSURANCE_PURPOSES = [
+  "Perlindungan aset",
+  "Persyaratan pemberi kredit",
+  "Lain-lain",
+]
+export const ADDRESS_TYPES = [
+  "Alamat Perusahaan",
+  "Alamat Korespondensi",
+  "Alamat Penagihan",
+]
+export const CLIENT_DOCUMENT_TYPES = [
+  "Copy KTP, SIM, atau paspor",
+  "Copy NPWP",
+  "Form KYC",
+  "Lain-lain",
+]
+
+export const SLIP_STATUSES: SlipStatus[] = [
+  "Draft",
+  "Released",
+  "Quoted",
+  "Closed",
+  "Cancelled",
+]
+export const POLICY_TYPES: PolicyType[] = [
+  "Baru",
+  "Renewal",
+  "Endorsement",
+  "Cancellation",
+]
+/** Tipe polis yang wajib menunjuk polis induk. */
+export const POLICY_TYPES_WITH_PARENT: PolicyType[] = [
+  "Renewal",
+  "Endorsement",
+  "Cancellation",
+]
+export const CLAIM_STATUSES: ClaimStatus[] = [
+  "Open",
+  "Tunggu Dokumen",
+  "Dokumen Lengkap",
+  "Dokumen Belum Lengkap",
+  "Proses Adjuster",
+  "SPK/SPGR",
+  "Settled",
+  "Paid",
+  "Rejected",
+  "Close",
+]
+/** Klaim yang masih berjalan, dipakai untuk outstanding di dashboard. */
+export const OPEN_CLAIM_STATUSES: ClaimStatus[] = [
+  "Open",
+  "Tunggu Dokumen",
+  "Dokumen Lengkap",
+  "Dokumen Belum Lengkap",
+  "Proses Adjuster",
+  "SPK/SPGR",
+  "Settled",
+]
+
+/** Kelas konstruksi harta benda (lookup construction_class). */
+export const CONSTRUCTION_CLASSES = [
+  {
+    code: "K1",
+    label: "Kelas 1",
+    description: "Seluruhnya bahan tidak mudah terbakar",
+  },
+  {
+    code: "K2",
+    label: "Kelas 2",
+    description: "Bahan mudah terbakar paling banyak 20%",
+  },
+  { code: "K3", label: "Kelas 3", description: "Selain kelas 1 dan 2" },
+] as const
+export type ConstructionClassCode =
+  (typeof CONSTRUCTION_CLASSES)[number]["code"]
+
+/** Label kelas konstruksi yang tampil di slip dan dokumen cetak. */
+export function constructionClassLabel(code: string | undefined | null) {
+  const hit = CONSTRUCTION_CLASSES.find((c) => c.code === code)
+  return hit ? `${hit.label} (${hit.code})` : (code ?? "")
+}
 
 export const CLASSES_OF_BUSINESS: ClassOfBusiness[] = [
   "Property",
