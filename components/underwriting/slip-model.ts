@@ -1,17 +1,18 @@
+import { recalcSlip, totalSumInsured } from "@/lib/calc"
 import {
-  BI_RATE_LABELS,
-  premiumFromRate,
-  rateModeFor,
-  sumItems,
-} from "@/lib/calc"
-import {
+  correspondenceAddress,
   MOTOR_RATE_LINES,
   PROPERTY_RATE_LINES,
   TYPE_OF_COVER,
   type ClassOfBusiness,
+  type Client,
   type PlacingSlip,
   type RateLine,
+  type Sppa,
 } from "@/lib/data"
+import { OCCUPATION_TARIFFS } from "@/lib/data/ojk-tariff"
+import { todayIso, yearMonth } from "@/lib/date"
+import { romanMonth } from "@/lib/format"
 
 let seq = 0
 export const uid = (prefix: string) =>
@@ -104,41 +105,13 @@ export function emptySlip(): PlacingSlip {
     stampDuty: 0,
     brokeragePct: 0,
     includeVat: false,
-    createdAt: new Date().toISOString().slice(0, 10),
-    updatedAt: new Date().toISOString().slice(0, 10),
+    createdAt: todayIso(),
+    updatedAt: todayIso(),
   }
 }
 
 /** Hitung ulang seluruh premium dari rate + sum insured. */
-export function recalc(slip: PlacingSlip): PlacingSlip {
-  const mode = rateModeFor(slip.cob)
-  const mdBasis =
-    slip.cob === "Property"
-      ? sumItems(slip.sumInsuredSection1)
-      : sumItems(slip.interestItems)
-  const biBasis = sumItems(slip.sumInsuredSection2)
-
-  const rateLines = slip.rateLines.map((l) => {
-    const basis =
-      slip.cob === "Property" && BI_RATE_LABELS.includes(l.label)
-        ? biBasis
-        : mdBasis
-    return { ...l, premium: premiumFromRate(basis, l.rate, mode) }
-  })
-
-  const withBasis = (lines: RateLine[]) =>
-    lines.map((l) => ({
-      ...l,
-      premium: premiumFromRate(Number(l.basis ?? 0), l.rate, "percent"),
-    }))
-
-  return {
-    ...slip,
-    rateLines,
-    tplLines: withBasis(slip.tplLines),
-    paLines: withBasis(slip.paLines),
-  }
-}
+export const recalc = recalcSlip
 
 /** Ganti COB → reset struktur rate & type of cover. */
 export function switchCob(
@@ -168,4 +141,171 @@ export function usesPropertyBlocks(cob: ClassOfBusiness) {
 
 export function usesSectionSumInsured(cob: ClassOfBusiness) {
   return cob === "Property"
+}
+
+/* ---------------------------------------------------------------- */
+/* Batas tarif OJK dan validasi release                               */
+/* ---------------------------------------------------------------- */
+
+/** Batas FLEXAS dari tabel okupasi OJK untuk okupasi dan kelas konstruksi slip. */
+export function occupationBounds(
+  occupation: string | undefined,
+  constructionClass: string | undefined
+) {
+  const code = (occupation ?? "").trim().split(/[^0-9A-Za-z]/)[0]
+  const klas = (constructionClass ?? "").toLowerCase() as "k1" | "k2" | "k3"
+  if (!code || !["k1", "k2", "k3"].includes(klas)) return null
+  const tariff = OCCUPATION_TARIFFS.find((o) => o.code === code)
+  const range = tariff?.[klas]
+  if (!range) return null
+  return {
+    min: range[0],
+    max: range[1],
+    source: `FLEXAS okupasi ${code} ${klas.toUpperCase()}`,
+  }
+}
+
+/**
+ * Baris rate beserta batas OJK yang berlaku. Batas yang dipilih dari panel
+ * referensi dipakai lebih dulu; bila belum ada, FLEXAS memakai batas okupasi
+ * dan kelas konstruksi slip, jadi rate yang diketik manual tetap tervalidasi.
+ */
+export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
+  const auto =
+    slip.cob === "Property"
+      ? occupationBounds(slip.occupation, slip.constructionClass)
+      : null
+  return slip.rateLines.map((l) => {
+    if (l.min != null || l.max != null) return l
+    if (auto && l.label === "FLEXAS") {
+      return { ...l, min: auto.min, max: auto.max, boundSource: auto.source }
+    }
+    return l
+  })
+}
+
+export function isOutOfBounds(line: RateLine) {
+  if (line.rate == null) return false
+  return (
+    (line.min != null && line.rate < line.min) ||
+    (line.max != null && line.rate > line.max)
+  )
+}
+
+/** Hal yang harus dibereskan sebelum slip boleh di-release (PRD A-08 sampai A-12). */
+export function releaseIssues(slip: PlacingSlip) {
+  const issues: string[] = []
+  if (!slip.clientId) issues.push("Pilih nama tertanggung dari data klien.")
+  if (!slip.typeOfCover) issues.push("Pilih type of cover.")
+  if (!slip.correspondenceAddress.trim())
+    issues.push("Isi correspondence address.")
+  if (!slip.periodTba) {
+    if (!slip.inceptionDate || !slip.expiryDate) {
+      issues.push("Isi periode asuransi atau aktifkan Period TBA.")
+    } else if (slip.expiryDate <= slip.inceptionDate) {
+      issues.push("Expiry date harus setelah inception date.")
+    }
+  }
+  if (slip.cob === "Property") {
+    if (!slip.occupation) issues.push("Pilih okupasi OJK.")
+    if (!slip.constructionClass) issues.push("Pilih kelas konstruksi.")
+    if (!slip.riskLocation?.trim()) issues.push("Isi risk location.")
+  }
+  if (totalSumInsured(slip) <= 0) issues.push("Isi sum insured.")
+  if (!slip.rateLines.some((l) => (l.rate ?? 0) > 0)) {
+    issues.push("Isi minimal satu rate.")
+  }
+  for (const line of rateLinesWithBounds(slip)) {
+    if (isOutOfBounds(line) && !slip.rateExceptions?.[line.id]?.note.trim()) {
+      issues.push(
+        `Rate ${line.label} di luar batas OJK dan belum ada alasannya.`
+      )
+    }
+  }
+  return issues
+}
+
+/* ---------------------------------------------------------------- */
+/* Penomoran                                                          */
+/* ---------------------------------------------------------------- */
+
+/**
+ * Nomor urut slip berikutnya untuk bulan berjalan. Pola sekarang direset per
+ * bulan; di backend diambil dari number_counters dengan SELECT ... FOR UPDATE.
+ */
+export function nextSlipSeq(slips: PlacingSlip[], today: string) {
+  const { year, month } = yearMonth(today)
+  const suffix = `/${romanMonth(month - 1)}/${year}`
+  return (
+    slips
+      .filter((s) => s.slipNo?.endsWith(suffix))
+      .reduce((max, s) => Math.max(max, s.seq), 0) + 1
+  )
+}
+
+export function buildSlipNo(
+  seq: number,
+  coverCode: string | null,
+  today: string
+) {
+  const { year, month } = yearMonth(today)
+  const kind = coverCode ? `PS-${coverCode}` : "PS"
+  return `${String(seq).padStart(3, "0")}/LCH-PLCMT/${kind}/${romanMonth(month - 1)}/${year}`
+}
+
+/**
+ * Nomor Cover Note dan Closing Instruction diturunkan dari nomor slip supaya
+ * tetap sama walau slip diedit: 002/LCH-PLCMT/PS-PAREQ/VIII/2026 menjadi
+ * 002/LCH-PLCMT/CN-PAREQ/VIII/2026 dan 002/LCH-PLCMT/CI/VIII/2026. Format final
+ * menunggu contoh dokumen dari LCH.
+ */
+export function derivedDocNumber(slipNo: string | null, kind: "CN" | "CI") {
+  if (!slipNo) return null
+  const parts = slipNo.split("/")
+  if (parts.length < 5) return null
+  const code = parts[2].replace(/^PS-?/, "")
+  parts[2] = kind === "CN" && code ? `CN-${code}` : kind
+  return parts.join("/")
+}
+
+/* ---------------------------------------------------------------- */
+/* Slip baru dari klien atau SPPA                                     */
+/* ---------------------------------------------------------------- */
+
+export function slipForClient(client: Client): PlacingSlip {
+  const base = switchCob(emptySlip(), client.cob)
+  return {
+    ...base,
+    clientId: client.id,
+    insuredName: client.name,
+    correspondenceAddress: correspondenceAddress(client)?.value ?? "",
+  }
+}
+
+export function slipFromSppa(sppa: Sppa, client: Client | null): PlacingSlip {
+  const base = switchCob(emptySlip(), sppa.cob)
+  const property = sppa.cob === "Property"
+  const amount = {
+    id: uid("m"),
+    description: sppa.typeOfCover,
+    amount: sppa.sumInsured,
+  }
+  return recalc({
+    ...base,
+    sppaId: sppa.id,
+    clientId: sppa.clientId,
+    insuredName: sppa.insuredName,
+    correspondenceAddress: client
+      ? (correspondenceAddress(client)?.value ?? "")
+      : "",
+    typeOfCover: sppa.typeOfCover,
+    coverCode: coverCodeFor(sppa.cob, sppa.typeOfCover),
+    currency: sppa.currency,
+    inceptionDate: sppa.periodStart,
+    expiryDate: sppa.periodEnd,
+    occupation: sppa.occupation ?? "",
+    riskLocation: sppa.riskLocation,
+    sumInsuredSection1: property ? [amount] : base.sumInsuredSection1,
+    interestItems: property ? base.interestItems : [amount],
+  })
 }

@@ -1,10 +1,19 @@
 "use client"
 
-import { AlertTriangle, Plus, Trash2 } from "lucide-react"
+import * as React from "react"
+import { AlertTriangle, MessageSquareText, Plus, Trash2 } from "lucide-react"
 
-import type { RateBounds } from "@/components/underwriting/ojk-reference"
+import { SelectInput, TextField } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { NumberInput } from "@/components/ui/number-input"
 import {
   Table,
   TableBody,
@@ -13,67 +22,108 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { RateLine } from "@/lib/data"
+import {
+  RATE_EXCEPTION_REASONS,
+  type RateException,
+  type RateExceptionReason,
+  type RateLine,
+} from "@/lib/data"
 import { money, num } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-function RateInput({
+import { isOutOfBounds } from "./slip-model"
+
+function boundsLabel(line: RateLine) {
+  if (line.min == null && line.max == null) return "—"
+  if (line.min === line.max) return num(line.min ?? 0, 3)
+  return `${num(line.min ?? 0, 3)} – ${num(line.max ?? 0, 3)}`
+}
+
+/**
+ * Dialog alasan rate di luar batas OJK. Rate boleh di bawah batas bawah bila
+ * ada potongan sesuai nilai pertanggungan, dan di atas batas atas bila ada
+ * perluasan jaminan (SE OJK 6/2017), dengan alasan yang dicatat.
+ */
+function RateExceptionDialog({
+  line,
   value,
-  onChange,
-  invalid,
+  onSave,
+  onClose,
 }: {
-  value: number | null
-  onChange: (v: number | null) => void
-  invalid?: boolean
+  line: RateLine
+  value?: RateException
+  onSave: (exception: RateException | null) => void
+  onClose: () => void
 }) {
-  return (
-    <Input
-      className={cn(
-        "tabular ml-auto h-8 w-24 text-right",
-        invalid && "border-destructive text-destructive"
-      )}
-      inputMode="decimal"
-      value={value ?? ""}
-      placeholder="0"
-      onChange={(e) => {
-        const raw = e.target.value.replace(",", ".")
-        onChange(raw === "" ? null : Number(raw) || 0)
-      }}
-    />
+  const below = line.rate != null && line.min != null && line.rate < line.min
+  const [reason, setReason] = React.useState<RateExceptionReason>(
+    value?.reason ??
+      (below ? RATE_EXCEPTION_REASONS[0] : RATE_EXCEPTION_REASONS[1])
   )
-}
+  const [note, setNote] = React.useState(value?.note ?? "")
+  const [error, setError] = React.useState<string>()
 
-/** Cek rate terhadap batas bawah dan atas OJK yang sedang berlaku untuk baris itu. */
-function checkBounds(rate: number | null, bounds?: RateBounds) {
-  if (!bounds || rate == null) return null
-  const belowMin = bounds.min != null && rate < bounds.min
-  const aboveMax = bounds.max != null && rate > bounds.max
-  if (!belowMin && !aboveMax) return null
-  return {
-    belowMin,
-    message: belowMin
-      ? `Di bawah batas ${num(bounds.min ?? 0, 3)} · ${bounds.source}`
-      : `Di atas batas ${num(bounds.max ?? 0, 3)} · ${bounds.source}`,
-  }
-}
-
-function AmountInput({
-  value,
-  onChange,
-  className,
-}: {
-  value: number
-  onChange: (v: number) => void
-  className?: string
-}) {
   return (
-    <Input
-      className={`tabular h-8 text-right ${className ?? ""}`}
-      inputMode="numeric"
-      value={value ? num(value) : ""}
-      placeholder="0"
-      onChange={(e) => onChange(Number(e.target.value.replace(/\D/g, "")) || 0)}
-    />
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Alasan rate di luar batas OJK</DialogTitle>
+          <DialogDescription>
+            {line.label}: rate {num(line.rate ?? 0, 3)}, batas{" "}
+            {boundsLabel(line)}
+            {line.boundSource ? ` (${line.boundSource})` : ""}.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          className="flex flex-col gap-4"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!note.trim()) {
+              setError(
+                "Jelaskan dasar pengecualian, misalnya nilai potongan atau perluasan yang diberikan"
+              )
+              return
+            }
+            onSave({ reason, note: note.trim() })
+          }}
+        >
+          <SelectInput
+            label="Dasar pengecualian"
+            required
+            items={RATE_EXCEPTION_REASONS}
+            value={reason}
+            onValueChange={(v) => setReason(v as RateExceptionReason)}
+          />
+          <TextField
+            label="Keterangan"
+            required
+            multiline
+            rows={3}
+            value={note}
+            onChange={setNote}
+            placeholder="Contoh: potongan 10% karena TSI di atas IDR 100 miliar, disetujui underwriter asuransi"
+            error={error}
+          />
+          <DialogFooter>
+            {value ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="mr-auto text-destructive"
+                onClick={() => onSave(null)}
+              >
+                Hapus alasan
+              </Button>
+            ) : null}
+            <Button type="button" variant="outline" onClick={onClose}>
+              Batal
+            </Button>
+            <Button type="submit">Simpan alasan</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -81,61 +131,110 @@ export function CoverRateTable({
   lines,
   currency,
   unit,
-  bounds,
+  exceptions,
   onRateChange,
+  onExceptionChange,
+  readOnly,
 }: {
+  /** Baris rate yang sudah dilengkapi batas OJK (lihat rateLinesWithBounds). */
   lines: RateLine[]
   currency: string
   unit: string
-  /** Batas tarif OJK per id baris, diisi saat rate diambil dari panel referensi. */
-  bounds?: Record<string, RateBounds>
+  exceptions?: Record<string, RateException>
   onRateChange: (id: string, rate: number | null) => void
+  onExceptionChange: (id: string, exception: RateException | null) => void
+  readOnly?: boolean
 }) {
+  const [editing, setEditing] = React.useState<string | null>(null)
+  const editingLine = lines.find((l) => l.id === editing)
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow className="hover:bg-transparent">
-          <TableHead>Cover</TableHead>
-          <TableHead className="w-40 text-right">Batas OJK</TableHead>
-          <TableHead className="w-32 text-right">Rate ({unit})</TableHead>
-          <TableHead className="w-44 text-right">Premium</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {lines.map((l) => {
-          const b = bounds?.[l.id]
-          const warn = checkBounds(l.rate, b)
-          return (
-            <TableRow key={l.id}>
-              <TableCell className="text-sm">
-                {l.label}
-                {warn ? (
-                  <span className="mt-0.5 flex items-center gap-1 text-[11px] text-destructive">
-                    <AlertTriangle className="size-3" />
-                    {warn.message}
-                  </span>
-                ) : null}
-              </TableCell>
-              <TableCell className="tabular text-right text-xs text-muted-foreground">
-                {b && (b.min != null || b.max != null)
-                  ? `${num(b.min ?? 0, 3)} – ${num(b.max ?? 0, 3)}`
-                  : "—"}
-              </TableCell>
-              <TableCell>
-                <RateInput
-                  value={l.rate}
-                  invalid={Boolean(warn)}
-                  onChange={(v) => onRateChange(l.id, v)}
-                />
-              </TableCell>
-              <TableCell className="tabular text-right">
-                {money(l.premium, currency)}
-              </TableCell>
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead>Cover</TableHead>
+            <TableHead className="w-40 text-right">Batas OJK</TableHead>
+            <TableHead className="w-32 text-right">Rate ({unit})</TableHead>
+            <TableHead className="w-44 text-right">Premium</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {lines.map((l) => {
+            const out = isOutOfBounds(l)
+            const exception = exceptions?.[l.id]
+            return (
+              <TableRow key={l.id}>
+                <TableCell className="text-sm">
+                  {l.label}
+                  {out ? (
+                    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+                      <span
+                        className={cn(
+                          "flex items-center gap-1",
+                          exception ? "text-warning" : "text-destructive"
+                        )}
+                      >
+                        <AlertTriangle className="size-3" />
+                        {l.rate != null && l.min != null && l.rate < l.min
+                          ? "Di bawah batas OJK"
+                          : "Di atas batas OJK"}
+                        {exception
+                          ? ` · ${exception.reason}`
+                          : " · alasan wajib diisi"}
+                      </span>
+                      {!readOnly ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline"
+                          onClick={() => setEditing(l.id)}
+                        >
+                          <MessageSquareText className="size-3" />
+                          {exception ? "Ubah alasan" : "Isi alasan"}
+                        </button>
+                      ) : null}
+                    </span>
+                  ) : null}
+                </TableCell>
+                <TableCell
+                  className="tabular text-right text-xs text-muted-foreground"
+                  title={l.boundSource}
+                >
+                  {boundsLabel(l)}
+                </TableCell>
+                <TableCell>
+                  <NumberInput
+                    preset="rate"
+                    className="ml-auto h-8 w-24"
+                    aria-label={`Rate ${l.label}`}
+                    value={l.rate}
+                    invalid={out && !exception}
+                    readOnly={readOnly}
+                    onValueChange={(v) => onRateChange(l.id, v)}
+                  />
+                </TableCell>
+                <TableCell className="tabular text-right">
+                  {money(l.premium, currency)}
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+
+      {editingLine ? (
+        <RateExceptionDialog
+          key={editingLine.id}
+          line={editingLine}
+          value={exceptions?.[editingLine.id]}
+          onClose={() => setEditing(null)}
+          onSave={(exception) => {
+            onExceptionChange(editingLine.id, exception)
+            setEditing(null)
+          }}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -146,6 +245,7 @@ export function LimitRateTable({
   totalLabel,
   showCoverColumn,
   onChange,
+  readOnly,
 }: {
   title: string
   lines: RateLine[]
@@ -153,6 +253,7 @@ export function LimitRateTable({
   totalLabel: string
   showCoverColumn?: boolean
   onChange: (lines: RateLine[]) => void
+  readOnly?: boolean
 }) {
   const total = lines.reduce((a, l) => a + l.premium, 0)
 
@@ -182,16 +283,23 @@ export function LimitRateTable({
                 </TableCell>
               ) : null}
               <TableCell>
-                <AmountInput
-                  value={Number(l.basis ?? 0)}
-                  onChange={(v) => patch(l.id, { basis: String(v) })}
-                  className="w-full max-w-40"
+                <NumberInput
+                  preset="money"
+                  className="h-8 w-full max-w-40"
+                  aria-label={`Limit ${l.label}`}
+                  value={Number(l.basis ?? 0) || null}
+                  readOnly={readOnly}
+                  onValueChange={(v) => patch(l.id, { basis: String(v ?? 0) })}
                 />
               </TableCell>
               <TableCell>
-                <RateInput
+                <NumberInput
+                  preset="rate"
+                  className="ml-auto h-8 w-24"
+                  aria-label={`Rate ${l.label}`}
                   value={l.rate}
-                  onChange={(v) => patch(l.id, { rate: v })}
+                  readOnly={readOnly}
+                  onValueChange={(v) => patch(l.id, { rate: v })}
                 />
               </TableCell>
               <TableCell className="tabular text-right">
@@ -204,6 +312,7 @@ export function LimitRateTable({
                     size="icon-sm"
                     aria-label="Hapus baris"
                     className="text-muted-foreground hover:text-destructive"
+                    disabled={readOnly}
                     onClick={() => onChange(lines.filter((x) => x.id !== l.id))}
                   >
                     <Trash2 />
@@ -213,10 +322,7 @@ export function LimitRateTable({
             </TableRow>
           ))}
           <TableRow className="hover:bg-transparent">
-            <TableCell
-              colSpan={showCoverColumn ? 3 : 3}
-              className="font-semibold"
-            >
+            <TableCell colSpan={3} className="font-semibold">
               {totalLabel}
             </TableCell>
             <TableCell className="tabular text-right font-bold">
@@ -227,7 +333,7 @@ export function LimitRateTable({
         </TableBody>
       </Table>
 
-      {!showCoverColumn ? (
+      {!showCoverColumn && !readOnly ? (
         <Button
           variant="outline"
           size="sm"

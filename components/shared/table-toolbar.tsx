@@ -1,13 +1,29 @@
 "use client"
 
-import { FileSpreadsheet, Printer, Search } from "lucide-react"
+import * as React from "react"
+import {
+  ChevronDown,
+  FileSpreadsheet,
+  FileText,
+  Printer,
+  Search,
+} from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group"
+import { exportCsv, exportXlsx, type ExportSpec } from "@/lib/export"
 import { cn } from "@/lib/utils"
 
 export function SearchInput({
@@ -29,19 +45,72 @@ export function SearchInput({
       <InputGroupInput
         value={value}
         placeholder={placeholder}
+        aria-label={placeholder}
         onChange={(e) => onValueChange(e.target.value)}
       />
     </InputGroup>
   )
 }
 
-export function ExportButtons({ className }: { className?: string }) {
+/**
+ * Tombol export dan cetak di atas tabel. Export memakai baris yang sedang
+ * tampil (sudah terfilter), sama seperti yang dilihat pengguna.
+ */
+export function ExportButtons<T>({
+  className,
+  spec,
+}: {
+  className?: string
+  spec?: ExportSpec<T>
+}) {
+  const [busy, setBusy] = React.useState(false)
+
+  async function run(kind: "xlsx" | "csv") {
+    if (!spec) return
+    if (!spec.rows.length) {
+      toast.info("Tidak ada baris untuk diexport")
+      return
+    }
+    setBusy(true)
+    try {
+      if (kind === "xlsx") await exportXlsx(spec)
+      else exportCsv(spec)
+      toast.success(
+        `${spec.rows.length} baris diexport ke ${kind.toUpperCase()}`
+      )
+    } catch (error) {
+      console.error(error)
+      toast.error("Export gagal, coba lagi")
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Button variant="outline" size="sm">
-        <FileSpreadsheet data-icon="inline-start" />
-        Excel / CSV
-      </Button>
+    <div className={cn("no-print flex items-center gap-2", className)}>
+      {spec ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="outline" size="sm" disabled={busy} />}
+          >
+            <FileSpreadsheet data-icon="inline-start" />
+            {busy ? "Menyiapkan…" : "Export"}
+            <ChevronDown data-icon="inline-end" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => run("xlsx")}>
+                <FileSpreadsheet />
+                Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => run("csv")}>
+                <FileText />
+                CSV
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
       <Button variant="outline" size="sm" onClick={() => window.print()}>
         <Printer data-icon="inline-start" />
         Print

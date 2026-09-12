@@ -288,12 +288,16 @@ export function resolveSlipClauses(slip: {
   })
 }
 
+function escapeHtml(text: string) {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
 /** Wording lama tersimpan sebagai plain text; bungkus jadi HTML untuk editor. */
 export function wordingHtml(wording: string) {
   if (/<\/?[a-z][\s\S]*>/i.test(wording)) return wording
   return wording
     .split(/\n{2,}/)
-    .map((para) => `<p>${para.trim().replace(/\n/g, "<br>")}</p>`)
+    .map((para) => `<p>${escapeHtml(para.trim()).replace(/\n/g, "<br>")}</p>`)
     .join("")
 }
 

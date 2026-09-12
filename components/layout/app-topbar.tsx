@@ -43,17 +43,43 @@ const SEGMENT_LABELS: Record<string, string> = {
   "cover-note": "Cover Note",
   closing: "Closing Instruction",
   slip: "Placing Slip",
+  clients: "Detail Klien",
 }
+
+/**
+ * Rute yang punya halaman sendiri. Segmen perantara seperti
+ * `/underwriting/quotation` atau `/finance` tidak dijadikan link supaya
+ * breadcrumb tidak mengarah ke 404.
+ */
+const PAGES = new Set([
+  "/marketing",
+  "/underwriting",
+  "/underwriting/new",
+  "/underwriting/master-clauses",
+  "/underwriting/master-clauses/new",
+  "/policies",
+  "/claims",
+  "/reports",
+  "/finance/notes",
+  "/finance/payments",
+  "/finance/receivables",
+  "/accounting/journal",
+  "/accounting/statements",
+  "/master-data",
+  "/users",
+  "/audit-trail",
+  "/settings",
+])
 
 function buildCrumbs(pathname: string) {
   const segments = pathname.split("/").filter(Boolean)
-  const crumbs: { label: string; href: string }[] = []
+  const crumbs: { label: string; href: string; linkable: boolean }[] = []
   let href = ""
   for (const segment of segments) {
     href += `/${segment}`
     const label = SEGMENT_LABELS[segment]
     if (!label) continue
-    crumbs.push({ label, href })
+    crumbs.push({ label, href, linkable: PAGES.has(href) })
   }
   return crumbs
 }
@@ -63,7 +89,7 @@ export function AppTopbar() {
   const crumbs = buildCrumbs(pathname)
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-sm md:rounded-t-2xl">
+    <header className="no-print sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-sm md:rounded-t-2xl">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-1 h-4" />
 
@@ -84,6 +110,8 @@ export function AppTopbar() {
               <BreadcrumbItem className="max-md:hidden">
                 {i === crumbs.length - 1 ? (
                   <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                ) : !crumb.linkable ? (
+                  <span className="text-muted-foreground">{crumb.label}</span>
                 ) : (
                   <BreadcrumbLink render={<Link href={crumb.href} />}>
                     {crumb.label}

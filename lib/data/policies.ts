@@ -1,6 +1,17 @@
-import type { Policy } from "./types"
+import { CLIENTS } from "./clients"
+import type { Policy, PolicyFile } from "./types"
 
-export const POLICIES: Policy[] = [
+/** Bentuk data contoh sebelum dilengkapi relasi dan riwayat file. */
+type PolicySeed = Omit<
+  Policy,
+  "clientId" | "placingSlipId" | "parentPolicyId" | "insurers" | "files"
+> & {
+  softcopy: string | null
+  placingSlipId?: string | null
+  parentPolicyId?: string | null
+}
+
+const SEED: PolicySeed[] = [
   {
     id: "p-001",
     policyNo: "45020123015646",
@@ -14,7 +25,6 @@ export const POLICIES: Policy[] = [
     premium: 13_440_000,
     brokeragePct: 25,
     type: "Renewal",
-    status: "Expiring",
     riskLocation: "Jl. Kemang Raya No. 14, Jakarta Selatan 12730",
     softcopy: "polis-45020123015646.pdf",
   },
@@ -31,7 +41,6 @@ export const POLICIES: Policy[] = [
     premium: 438_418_000,
     brokeragePct: 12.5,
     type: "Renewal",
-    status: "Expiring",
     riskLocation:
       "Grand Sentosa Mall, Jl. Jenderal Sudirman Kav. 52-53, Jakarta Selatan",
     softcopy: "polis-par-graha-sentosa-2025.pdf",
@@ -49,7 +58,6 @@ export const POLICIES: Policy[] = [
     premium: 244_125_500,
     brokeragePct: 12.5,
     type: "Renewal",
-    status: "Expiring",
     riskLocation: "Kawasan Industri Rungkut Blok F-12, Surabaya 60293",
     softcopy: "polis-iar-sumber-pangan-2025.pdf",
   },
@@ -66,13 +74,13 @@ export const POLICIES: Policy[] = [
     premium: 5_670,
     brokeragePct: 12.5,
     type: "Renewal",
-    status: "Expiring",
     riskLocation: "Worldwide — open cover declaration",
     softcopy: "polis-marine-mitra-logistik-2025.pdf",
   },
   {
     id: "p-005",
     policyNo: "CAR/2026/JTG/0019",
+    placingSlipId: "s-005",
     insuredName: "PT Karya Bangun Perkasa",
     insurer: "PT Asuransi Jasa Indonesia",
     cob: "Engineering",
@@ -83,7 +91,6 @@ export const POLICIES: Policy[] = [
     premium: 999_750_000,
     brokeragePct: 10,
     type: "Baru",
-    status: "Active",
     riskLocation:
       "Proyek Jalan Tol Trans Jawa Seksi 3, Km 84 – Km 112, Jawa Tengah",
     softcopy: "polis-car-karya-bangun-2026.pdf",
@@ -101,7 +108,6 @@ export const POLICIES: Policy[] = [
     premium: 612_360_000,
     brokeragePct: 10,
     type: "Renewal",
-    status: "Active",
     riskLocation: "Jl. Raya Bekasi Km. 22, Cakung, Jakarta Timur 13910",
     softcopy: "polis-fleet-nusantara-2026.pdf",
   },
@@ -118,7 +124,6 @@ export const POLICIES: Policy[] = [
     premium: 187_500_000,
     brokeragePct: 15,
     type: "Baru",
-    status: "Active",
     riskLocation: "RS Medika Husada, Jl. Ir. H. Juanda No. 210, Bandung 40135",
     softcopy: "polis-pi-medika-husada-2026.pdf",
   },
@@ -135,7 +140,6 @@ export const POLICIES: Policy[] = [
     premium: 24_664_000,
     brokeragePct: 12.5,
     type: "Renewal",
-    status: "Active",
     riskLocation:
       "Mall Grand Anugerah, Jl. Gatot Subroto Kav. 34, Jakarta Selatan",
     softcopy: null,
@@ -153,7 +157,6 @@ export const POLICIES: Policy[] = [
     premium: 45_600,
     brokeragePct: 10,
     type: "Baru",
-    status: "Active",
     riskLocation: "Indonesian waters — 4 unit tug & barge",
     softcopy: "polis-marine-hull-bahtera-2026.pdf",
   },
@@ -170,7 +173,6 @@ export const POLICIES: Policy[] = [
     premium: 6_925_750,
     brokeragePct: 10,
     type: "Baru",
-    status: "Active",
     riskLocation: "Jl. Nanas No. 25, Jakarta Selatan 12440",
     softcopy: "polis-mv-harry-mulyono-2026.pdf",
   },
@@ -187,7 +189,6 @@ export const POLICIES: Policy[] = [
     premium: 42_000_000,
     brokeragePct: 10,
     type: "Baru",
-    status: "Active",
     riskLocation:
       "Menara Global Lt. 17, Jl. Gatot Subroto Kav. 27, Jakarta Selatan",
     softcopy: "polis-eei-cipta-energi-2026.pdf",
@@ -205,7 +206,6 @@ export const POLICIES: Policy[] = [
     premium: 33_750_000,
     brokeragePct: 15,
     type: "Renewal",
-    status: "Active",
     riskLocation: "Seluruh proyek PT Karya Bangun Perkasa di Indonesia",
     softcopy: "polis-pa-karya-bangun-2026.pdf",
   },
@@ -222,7 +222,6 @@ export const POLICIES: Policy[] = [
     premium: 132_000_000,
     brokeragePct: 12.5,
     type: "Renewal",
-    status: "Expired",
     riskLocation:
       "Kawasan Industri MM2100 Blok C-9, Cikarang Barat, Bekasi 17520",
     softcopy: "polis-par-delta-2024.pdf",
@@ -240,12 +239,63 @@ export const POLICIES: Policy[] = [
     premium: 90_000_000,
     brokeragePct: 8,
     type: "Baru",
-    status: "Active",
     riskLocation:
       "Proyek Gedung Perkantoran Jl. TB Simatupang, Jakarta Selatan",
     softcopy: null,
   },
+  {
+    id: "p-015",
+    policyNo: "PAR/2025/JKT/0871-END01",
+    parentPolicyId: "p-002",
+    insuredName: "PT Graha Sentosa Properti",
+    insurer: "PT Asuransi Sinar Mas",
+    cob: "Property",
+    inceptionDate: "2026-03-01",
+    expiryDate: "2026-09-01",
+    currency: "IDR",
+    sumInsured: 12_500_000_000,
+    premium: 7_350_000,
+    brokeragePct: 12.5,
+    type: "Endorsement",
+    riskLocation:
+      "Penambahan gedung parkir, Grand Sentosa Mall, Jakarta Selatan",
+    softcopy: "endorsemen-01-par-graha-sentosa.pdf",
+  },
 ]
+
+function toPolicy(seed: PolicySeed): Policy {
+  const { softcopy, ...rest } = seed
+  const client = CLIENTS.find(
+    (c) => c.name.toLowerCase() === seed.insuredName.toLowerCase()
+  )
+  const files: PolicyFile[] = softcopy
+    ? [
+        {
+          id: `${seed.id}-f1`,
+          version: 1,
+          fileName: softcopy,
+          uploadedAt: seed.inceptionDate,
+        },
+      ]
+    : []
+  return {
+    ...rest,
+    clientId: client?.id ?? null,
+    placingSlipId: seed.placingSlipId ?? null,
+    parentPolicyId: seed.parentPolicyId ?? null,
+    insurers: [
+      {
+        id: `${seed.id}-i1`,
+        insurer: seed.insurer,
+        share: 100,
+        role: "As Leader",
+      },
+    ],
+    files,
+  }
+}
+
+export const POLICIES: Policy[] = SEED.map(toPolicy)
 
 export function policyById(id: string) {
   return POLICIES.find((p) => p.id === id)

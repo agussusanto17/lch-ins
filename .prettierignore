@@ -4,4 +4,7 @@ node_modules/
 .turbo/
 coverage/
 pnpm-lock.yaml
-.pnpm-store/
+.pnpm-store/# Tabel tarif OJK hasil ekstraksi: satu baris per tarif supaya mudah dibandingkan dengan sumbernya.
+lib/data/ojk-tariff.ts
+lib/data/ojk-zones.ts
+lib/data/ojk-motor.ts

@@ -8,38 +8,96 @@ export type ClassOfBusiness =
   | "Surety Bond"
   | "Terrorism"
 
-export type SlipStatus = "Draft" | "Released" | "Quoted" | "Closed"
+/** Cancelled dipakai untuk slip bernomor yang dibatalkan, supaya nomor tidak bolong. */
+export type SlipStatus =
+  "Draft" | "Released" | "Quoted" | "Closed" | "Cancelled"
+/** Dihitung dari tanggal berakhir polis, tidak disimpan (PRD A-17). */
 export type PolicyStatus = "Active" | "Expiring" | "Expired"
-export type PolicyType = "Baru" | "Renewal"
+export type PolicyType = "Baru" | "Renewal" | "Endorsement" | "Cancellation"
+/** Sesuai daftar status klaim di ERD (lookup claim_status). */
 export type ClaimStatus =
   | "Open"
+  | "Tunggu Dokumen"
   | "Dokumen Lengkap"
+  | "Dokumen Belum Lengkap"
   | "Proses Adjuster"
-  | "Approved"
+  | "SPK/SPGR"
+  | "Settled"
   | "Paid"
   | "Rejected"
+  | "Close"
 export type ClientStatus = "Active" | "Prospect" | "Inactive"
+export type ClientType = "Korporasi" | "Perorangan"
 
 /** Satu klien bisa punya beberapa alamat, misalnya alamat perusahaan dan korespondensi. */
 export interface ClientAddress {
   id: string
+  /** Jenis alamat dari daftar pilihan address_type. */
   label: string
   value: string
+  phone?: string
+  isPrimary?: boolean
 }
 
+/** Berkas KYC yang diupload, misalnya copy KTP atau NPWP. */
+export interface ClientDocument {
+  id: string
+  type: string
+  fileName: string
+  uploadedAt: string
+  /** Object URL selama sesi prototipe. Di backend diganti path file di server. */
+  url?: string
+}
+
+/** Data klien mengikuti form KYC LCH (ERD tabel clients). */
 export interface Client {
   id: string
+  clientType: ClientType
+  /** Nama lengkap (perorangan) atau nama perusahaan (korporasi). */
   name: string
+  npwp: string
+  /** Perorangan: jenis dan nomor identitas tertanggung. */
+  idType?: string
+  idNumber?: string
+  birthPlace?: string
+  birthDate?: string
+  /** Korporasi: PIC perusahaan beserta nomor KTP-nya. */
   contactPerson: string
+  contactPersonIdNumber?: string
   email: string
   phone: string
-  npwp: string
-  ktp: string
+  incomeSource?: string
+  insurancePurpose?: string
+  insurancePurposeNote?: string
+  kycDate?: string
   cob: ClassOfBusiness
   status: ClientStatus
   addresses: ClientAddress[]
+  documents: ClientDocument[]
   notes?: string
   createdAt: string
+}
+
+export type SppaStatus = "Draft" | "Submitted"
+
+/** Surat Permintaan Penutupan Asuransi yang diisi Marketing per klien (PRD A-07). */
+export interface Sppa {
+  id: string
+  clientId: string
+  cob: ClassOfBusiness
+  typeOfCover: string
+  insuredName: string
+  riskLocation: string
+  occupation?: string
+  currency: string
+  sumInsured: number
+  periodStart: string | null
+  periodEnd: string | null
+  /** Isian khusus per COB, disimpan sebagai jsonb sampai form SPPA LCH final. */
+  answers: Record<string, string>
+  status: SppaStatus
+  createdAt: string
+  updatedAt: string
 }
 
 export interface LineItem {
@@ -54,6 +112,22 @@ export interface RateLine {
   rate: number | null
   premium: number
   basis?: string
+  /** Batas bawah dan atas tarif OJK yang berlaku saat rate diisi. */
+  min?: number | null
+  max?: number | null
+  boundSource?: string
+}
+
+export const RATE_EXCEPTION_REASONS = [
+  "Potongan sesuai nilai pertanggungan",
+  "Perluasan jaminan",
+] as const
+export type RateExceptionReason = (typeof RATE_EXCEPTION_REASONS)[number]
+
+/** Alasan rate di luar batas OJK, wajib dicatat sebelum release (PRD A-11). */
+export interface RateException {
+  reason: RateExceptionReason
+  note: string
 }
 
 export interface SecurityPanelRow {
@@ -72,6 +146,8 @@ export interface PlacingSlip {
   coverCode: string | null
   /** Klien asal tertanggung. Null bila nama diketik manual (data lama). */
   clientId: string | null
+  /** SPPA sumber data slip, bila slip dibuat dari SPPA. */
+  sppaId?: string | null
   /** Disalin dari klien saat dipilih, jadi perubahan data klien tidak mengubah slip. */
   insuredName: string
   correspondenceAddress: string
@@ -103,6 +179,8 @@ export interface PlacingSlip {
   rateLines: RateLine[]
   tplLines: RateLine[]
   paLines: RateLine[]
+  /** Alasan per id baris rate yang berada di luar batas OJK. */
+  rateExceptions?: Record<string, RateException>
   discountPct: number
   adminCost: number
   stampDuty: number
@@ -117,27 +195,45 @@ export interface PlacingSlip {
   coverNoteRemarks?: string
 }
 
+/** Softcopy polis. Versi naik setiap upload, file lama tetap tersimpan. */
+export interface PolicyFile {
+  id: string
+  version: number
+  fileName: string
+  uploadedAt: string
+  /** Object URL selama sesi prototipe. */
+  url?: string
+}
+
 export interface Policy {
   id: string
   policyNo: string
+  clientId: string | null
+  placingSlipId: string | null
+  /** Polis induk untuk renewal, endorsement, dan pembatalan. */
+  parentPolicyId: string | null
   insuredName: string
+  /** Asuransi leader. Pembagian share lengkap ada di `insurers`. */
   insurer: string
+  insurers: SecurityPanelRow[]
   cob: ClassOfBusiness
+  typeOfCover?: string
   inceptionDate: string
   expiryDate: string
   currency: string
   sumInsured: number
+  /** Tambahan premi positif, pengembalian premi negatif (endorsement dan pembatalan). */
   premium: number
   brokeragePct: number
   type: PolicyType
-  status: PolicyStatus
   riskLocation: string
-  softcopy: string | null
+  files: PolicyFile[]
 }
 
 export interface Claim {
   id: string
   claimNo: string
+  policyId: string | null
   policyNo: string
   insuredName: string
   insurer: string

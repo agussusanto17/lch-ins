@@ -165,7 +165,7 @@ export function ClauseForm({
               />
             </Field>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Field>
                 <FieldLabel>Kelompok Produk</FieldLabel>
                 <Select
