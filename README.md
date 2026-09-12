@@ -210,9 +210,10 @@ Database dan deployment dipegang Adi. Yang perlu disiapkan di akunnya:
    Variables untuk Production, Preview, dan Development sekaligus. Tanpa itu build tetap lolos tapi
    halaman Master Clauses error saat dibuka, karena tabelnya tidak ada.
 
-Project Vercel lama di akun Agus dihapus, jadi URL demo akan berganti mengikuti project baru Adi.
-Perbarui tautannya di PRD Notion bagian Referensi setelah URL barunya ada, karena LCH memakai tautan
-itu untuk melihat prototipe.
+URL demo tetap `lch-ins.vercel.app`, karena LCH memakai tautan itu dan sudah tertulis di PRD.
+Subdomain `*.vercel.app` dikunci per nama project, jadi urutannya tidak boleh terbalik: project lama
+di akun Agus dihapus dulu, baru Adi membuat project bernama `lch-ins` di akunnya. Di antara keduanya
+demo mati sebentar, jadi sebaiknya dikerjakan berurutan dalam satu waktu.
 
 `prisma.config.ts` belum mengatur `shadowDatabaseUrl`. Perlu diisi kalau `db:migrate` dijalankan ke
 database yang tidak boleh dibuat-hapus sembarangan.
