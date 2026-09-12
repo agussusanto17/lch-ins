@@ -66,7 +66,15 @@ export function AppSidebar() {
                       tooltip={item.title}
                     >
                       <item.icon />
-                      <span>{item.title}</span>
+                      <span className="truncate">{item.title}</span>
+                      {item.soon ? (
+                        <span
+                          title="Modul belum dikerjakan"
+                          className="ml-auto shrink-0 rounded-full border px-1.5 py-px text-[9px] font-medium tracking-wide text-muted-foreground"
+                        >
+                          SOON
+                        </span>
+                      ) : null}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
