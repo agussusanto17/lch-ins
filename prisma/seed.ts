@@ -737,7 +737,9 @@ async function seedClauses() {
     await prisma.clause.upsert({
       where: { title_sourceGroup: { title, sourceGroup } },
       create: { title, sourceGroup, wordingHtml },
-      update: { wordingHtml },
+      // Wording yang sudah ada sengaja tidak ditimpa. Klausul bisa diedit LCH
+      // lewat Master Clauses, dan seed tidak boleh mengembalikannya ke isi file.
+      update: {},
     })
     n++
   }
