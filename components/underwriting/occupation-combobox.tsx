@@ -8,9 +8,9 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
-import { OCCUPATIONS } from "@/lib/data"
+import { OCCUPATION_TARIFFS } from "@/lib/data/ojk-tariff"
 
-const ITEMS = OCCUPATIONS.map((o) => o.label)
+const ITEMS = OCCUPATION_TARIFFS.map((o) => `${o.code} - ${o.name}`)
 
 export function OccupationCombobox({
   value,
@@ -27,7 +27,7 @@ export function OccupationCombobox({
     >
       <ComboboxInput placeholder="Ketik atau pilih okupasi…" showClear />
       <ComboboxContent>
-        <ComboboxEmpty>Okupasi tidak ditemukan — ketik manual.</ComboboxEmpty>
+        <ComboboxEmpty>Okupasi tidak ada di daftar OJK.</ComboboxEmpty>
         <ComboboxList>
           {(item: string) => (
             <ComboboxItem key={item} value={item}>

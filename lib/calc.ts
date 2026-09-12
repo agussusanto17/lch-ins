@@ -91,3 +91,16 @@ export const BI_RATE_LABELS = [
   "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
   "BI EQVET",
 ]
+
+/** Baris rate yang menjadi tarif dasar perhitungan BI PAR menurut skala BI OJK. */
+export const BI_BASE_LABELS = ["FLEXAS", "FWTWD", "RSMDCC", "Other Losses"]
+
+/**
+ * Batas biaya akuisisi SE OJK No. 6/SEOJK.05/2017: harta benda dan jaminan
+ * tambahannya maksimal 15%, kendaraan bermotor maksimal 25%.
+ */
+export function brokerageCapFor(cob: string) {
+  if (cob === "Property") return 15
+  if (cob === "Motor Vehicle") return 25
+  return null
+}

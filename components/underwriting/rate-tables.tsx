@@ -1,7 +1,8 @@
 "use client"
 
-import { Plus, Trash2 } from "lucide-react"
+import { AlertTriangle, Plus, Trash2 } from "lucide-react"
 
+import type { RateBounds } from "@/components/underwriting/ojk-reference"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -14,17 +15,23 @@ import {
 } from "@/components/ui/table"
 import type { RateLine } from "@/lib/data"
 import { money, num } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 function RateInput({
   value,
   onChange,
+  invalid,
 }: {
   value: number | null
   onChange: (v: number | null) => void
+  invalid?: boolean
 }) {
   return (
     <Input
-      className="tabular ml-auto h-8 w-24 text-right"
+      className={cn(
+        "tabular ml-auto h-8 w-24 text-right",
+        invalid && "border-destructive text-destructive"
+      )}
       inputMode="decimal"
       value={value ?? ""}
       placeholder="0"
@@ -34,6 +41,20 @@ function RateInput({
       }}
     />
   )
+}
+
+/** Cek rate terhadap batas bawah dan atas OJK yang sedang berlaku untuk baris itu. */
+function checkBounds(rate: number | null, bounds?: RateBounds) {
+  if (!bounds || rate == null) return null
+  const belowMin = bounds.min != null && rate < bounds.min
+  const aboveMax = bounds.max != null && rate > bounds.max
+  if (!belowMin && !aboveMax) return null
+  return {
+    belowMin,
+    message: belowMin
+      ? `Di bawah batas ${num(bounds.min ?? 0, 3)} · ${bounds.source}`
+      : `Di atas batas ${num(bounds.max ?? 0, 3)} · ${bounds.source}`,
+  }
 }
 
 function AmountInput({
@@ -60,11 +81,14 @@ export function CoverRateTable({
   lines,
   currency,
   unit,
+  bounds,
   onRateChange,
 }: {
   lines: RateLine[]
   currency: string
   unit: string
+  /** Batas tarif OJK per id baris, diisi saat rate diambil dari panel referensi. */
+  bounds?: Record<string, RateBounds>
   onRateChange: (id: string, rate: number | null) => void
 }) {
   return (
@@ -72,25 +96,44 @@ export function CoverRateTable({
       <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead>Cover</TableHead>
+          <TableHead className="w-40 text-right">Batas OJK</TableHead>
           <TableHead className="w-32 text-right">Rate ({unit})</TableHead>
           <TableHead className="w-44 text-right">Premium</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {lines.map((l) => (
-          <TableRow key={l.id}>
-            <TableCell className="text-sm">{l.label}</TableCell>
-            <TableCell>
-              <RateInput
-                value={l.rate}
-                onChange={(v) => onRateChange(l.id, v)}
-              />
-            </TableCell>
-            <TableCell className="tabular text-right">
-              {money(l.premium, currency)}
-            </TableCell>
-          </TableRow>
-        ))}
+        {lines.map((l) => {
+          const b = bounds?.[l.id]
+          const warn = checkBounds(l.rate, b)
+          return (
+            <TableRow key={l.id}>
+              <TableCell className="text-sm">
+                {l.label}
+                {warn ? (
+                  <span className="mt-0.5 flex items-center gap-1 text-[11px] text-destructive">
+                    <AlertTriangle className="size-3" />
+                    {warn.message}
+                  </span>
+                ) : null}
+              </TableCell>
+              <TableCell className="tabular text-right text-xs text-muted-foreground">
+                {b && (b.min != null || b.max != null)
+                  ? `${num(b.min ?? 0, 3)} – ${num(b.max ?? 0, 3)}`
+                  : "—"}
+              </TableCell>
+              <TableCell>
+                <RateInput
+                  value={l.rate}
+                  invalid={Boolean(warn)}
+                  onChange={(v) => onRateChange(l.id, v)}
+                />
+              </TableCell>
+              <TableCell className="tabular text-right">
+                {money(l.premium, currency)}
+              </TableCell>
+            </TableRow>
+          )
+        })}
       </TableBody>
     </Table>
   )
