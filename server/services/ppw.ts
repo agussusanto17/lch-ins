@@ -7,15 +7,36 @@ export interface PpwAnalysis {
   color: "success" | "warning" | "destructive"
 }
 
-/**
- * Menghitung status Premium Payment Warranty (PPW) berdasarkan tanggal jatuh tempo
- */
-export function evaluatePpw(dueDateInput: string | Date, referenceDate = new Date()): PpwAnalysis {
-  const due = typeof dueDateInput === "string" ? new Date(`${dueDateInput}T00:00:00`) : dueDateInput
-  const ref = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate())
+/** Tanggal kalender "YYYY-MM-DD" menurut WIB. */
+function wibDate(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date)
+}
 
-  const diffTime = due.getTime() - ref.getTime()
-  const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+/** Nomor hari sejak epoch untuk tanggal "YYYY-MM-DD", bebas zona waktu server. */
+function dayNumber(iso: string) {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number)
+  return Date.UTC(y, m - 1, d) / 86_400_000
+}
+
+/**
+ * Menghitung status Premium Payment Warranty (PPW) berdasarkan tanggal jatuh tempo.
+ *
+ * Selisih hari dihitung dari tanggal kalender WIB, bukan jam server, supaya
+ * server yang berjalan di UTC tidak menggeser jatuh tempo satu hari. Batas
+ * 14 dan 30 hari masih usulan sampai LCH menentukan rentang aging.
+ */
+export function evaluatePpw(
+  dueDateInput: string | Date,
+  referenceDate = new Date()
+): PpwAnalysis {
+  const due =
+    typeof dueDateInput === "string" ? dueDateInput : wibDate(dueDateInput)
+  const daysLeft = dayNumber(due) - dayNumber(wibDate(referenceDate))
 
   if (daysLeft > 14) {
     return {
