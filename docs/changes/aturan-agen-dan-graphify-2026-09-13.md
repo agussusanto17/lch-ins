@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-09-13
 - **Branch:** `chore/aturan-agen-graphify`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #10
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
