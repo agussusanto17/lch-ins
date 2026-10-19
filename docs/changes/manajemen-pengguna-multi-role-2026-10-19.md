@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-19
 - **Branch:** `feat/user-management`
-- **PR:** # (diisi setelah PR dibuka)
+- **PR:** #2 (https://github.com/vourdev/lch-ins/pull/2)
 - **Dikerjakan oleh:** Antigravity dengan Claude Code
 
 ## Latar belakang
