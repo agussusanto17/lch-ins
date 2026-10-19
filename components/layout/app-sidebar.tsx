@@ -31,14 +31,23 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function AppSidebar({ roleCode }: { roleCode: string }) {
+export function AppSidebar({
+  roleCode,
+  roles,
+}: {
+  roleCode?: string
+  roles?: string[]
+}) {
   const router = useRouter()
+
+  const userRoles =
+    roles && roles.length > 0 ? roles : roleCode ? [roleCode] : []
 
   // Menu yang tidak boleh dibuka role ini tidak ditampilkan. Ini kenyamanan,
   // bukan pengaman: penjagaan yang sebenarnya ada di lib/server/session.ts.
   const groups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => canAccess(roleCode, item.href)),
+    items: group.items.filter((item) => canAccess(userRoles, item.href)),
   })).filter((group) => group.items.length > 0)
 
   const pathname = usePathname()

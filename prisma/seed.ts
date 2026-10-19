@@ -20,6 +20,7 @@ import { join } from "node:path"
 
 import { hashPassword } from "better-auth/crypto"
 
+import type { RoleCode } from "../lib/access"
 import { Prisma } from "../lib/generated/prisma/client"
 import { prisma } from "../lib/prisma"
 
@@ -110,6 +111,7 @@ const LOOKUPS: {
       ["marketing", "Marketing"],
       ["placement", "Placement/Teknik"],
       ["claim", "Klaim"],
+      ["accounting", "Accounting"],
       ["finance", "Finance"],
     ],
   },
@@ -786,12 +788,141 @@ async function seedClauses() {
  * menampilkannya sekali di akhir. Hash-nya dibuat memakai fungsi milik Better
  * Auth supaya cocok dengan yang dipakai saat login.
  */
-const SEED_USERS: [email: string, name: string, roleCode: string][] = [
-  ["admin@lch.example", "Admin LCH", "admin"],
-  ["marketing@lch.example", "Marketing LCH", "marketing"],
-  ["teknik@lch.example", "Placement LCH", "placement"],
-  ["klaim@lch.example", "Klaim LCH", "claim"],
-  ["finance@lch.example", "Finance LCH", "finance"],
+/**
+ * Definisi akun pengguna awal untuk pengujian dan operasional LCH.
+ */
+interface SeedUserRecord {
+  email: string
+  name: string
+  roles: RoleCode[]
+  jobTitle?: string
+  mustChangePassword?: boolean
+}
+
+/**
+ * 1. Akun contoh pengujian (dipertahankan agar alur pengujian tidak terputus).
+ */
+const PRESERVED_MOCK_USERS: SeedUserRecord[] = [
+  {
+    email: "admin@lch.example",
+    name: "Admin LCH",
+    roles: ["admin"],
+    jobTitle: "Administrator",
+    mustChangePassword: false,
+  },
+  {
+    email: "marketing@lch.example",
+    name: "Marketing LCH",
+    roles: ["marketing"],
+    jobTitle: "Staff Marketing",
+    mustChangePassword: false,
+  },
+  {
+    email: "teknik@lch.example",
+    name: "Placement LCH",
+    roles: ["placement"],
+    jobTitle: "Staff Placement/Teknik",
+    mustChangePassword: false,
+  },
+  {
+    email: "klaim@lch.example",
+    name: "Klaim LCH",
+    roles: ["claim"],
+    jobTitle: "Staff Klaim",
+    mustChangePassword: false,
+  },
+  {
+    email: "finance@lch.example",
+    name: "Finance LCH",
+    roles: ["finance"],
+    jobTitle: "Staff Finance",
+    mustChangePassword: false,
+  },
+]
+
+/**
+ * 2. Akun operasional LCH sesuai lembar referensi:
+ *    - Unifikasi akun multi-role untuk orang yang sama.
+ *    - Akun tanpa konflik identitas di-seed langsung.
+ */
+const OPERATIONAL_USERS: SeedUserRecord[] = [
+  // Unifikasi multi-role (Marketing & Placement)
+  {
+    email: "harry@lch.co.id",
+    name: "HARRY SETIAWAN",
+    roles: ["marketing", "placement"],
+    jobTitle: "SPV",
+    mustChangePassword: true,
+  },
+  {
+    email: "aziz@lch.co.id",
+    name: "AZIZ SURYA",
+    roles: ["marketing", "placement"],
+    jobTitle: "Marketing & Placement",
+    mustChangePassword: true,
+  },
+  // Klaim, Accounting, Finance
+  {
+    email: "claim@lch.co.id",
+    name: "CLAIM LCH",
+    roles: ["claim"],
+    jobTitle: "Staff Klaim",
+    mustChangePassword: true,
+  },
+  {
+    email: "sutejo@lch.co.id",
+    name: "SUTEJO",
+    roles: ["claim"],
+    jobTitle: "Klaim",
+    mustChangePassword: true,
+  },
+  {
+    email: "tresna@lch.co.id",
+    name: "TRESNA",
+    roles: ["claim"],
+    jobTitle: "Klaim",
+    mustChangePassword: true,
+  },
+  {
+    email: "accounting@lch.co.id",
+    name: "ACCOUNTING LCH",
+    roles: ["accounting"],
+    jobTitle: "Staff Accounting",
+    mustChangePassword: true,
+  },
+  {
+    email: "finance02@lch.co.id",
+    name: "FITRI",
+    roles: ["finance"],
+    jobTitle: "Finance",
+    mustChangePassword: true,
+  },
+]
+
+/**
+ * 3. Deteksi konflik identitas akun pada lembar referensi LCH:
+ *    Dilewati secara terencana demi keamanan agar tidak terjadi account takeover
+ *    atau duplikasi akun berbeda orang pada 1 alamat email.
+ */
+const IDENTITY_CONFLICTS = [
+  {
+    sharedEmail: "adminfin@lch.co.id",
+    candidates: [
+      { name: "Super Admin", role: "admin" },
+      { name: "YENIE YUSTIKA", role: "finance / admin" },
+    ],
+    resolution:
+      "Dilewati otomatis untuk mencegah account takeover / tumpang tindih hak akses antar individu berbeda. Administrator disarankan membuat akun terpisah individual di menu /users (misal: yenie@lch.co.id).",
+  },
+  {
+    sharedEmail: "policyadmin@lch.co.id",
+    candidates: [
+      { name: "MUHAMAD YAHYA MUHAIMIN", role: "placement" },
+      { name: "FARAH SABINA HADIYANI", role: "placement" },
+    ],
+    resolution:
+      "Dilewati otomatis untuk mencegah akun bersama antar staf teknik yang berbeda. Administrator disarankan membuat akun terpisah individual di menu /users (misal: muhaimin@lch.co.id dan farah@lch.co.id).",
+  },
 ]
 
 async function seedUsers() {
@@ -800,20 +931,56 @@ async function seedUsers() {
     randomBytes(12).toString("base64url").slice(0, 16)
   const passwordHash = await hashPassword(password)
   let created = 0
+  let updated = 0
 
-  for (const [email, name, roleCode] of SEED_USERS) {
-    const existing = await prisma.user.findUnique({ where: { email } })
-    if (existing) continue
+  const allToSeed = [...PRESERVED_MOCK_USERS, ...OPERATIONAL_USERS]
 
-    const roleId = await lookupId("role", roleCode)
-    const user = await prisma.user.create({
-      data: { email, name, roleId },
+  for (const item of allToSeed) {
+    const existing = await prisma.user.findUnique({
+      where: { email: item.email },
     })
+
+    if (existing) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          roles: item.roles,
+          jobTitle: item.jobTitle ?? existing.jobTitle,
+        },
+      })
+      const acc = await prisma.account.findFirst({
+        where: { userId: existing.id, providerId: "credential" },
+      })
+      if (!acc) {
+        await prisma.account.create({
+          data: {
+            userId: existing.id,
+            providerId: "credential",
+            accountId: existing.id,
+            password: passwordHash,
+          },
+        })
+      }
+      updated++
+      continue
+    }
+
+    const legacyRoleId = await lookupId("role", item.roles[0])
+    const user = await prisma.user.create({
+      data: {
+        email: item.email,
+        name: item.name,
+        roles: item.roles,
+        jobTitle: item.jobTitle || null,
+        roleId: legacyRoleId,
+        mustChangePassword: item.mustChangePassword ?? false,
+        emailVerified: true,
+      },
+    })
+
     await prisma.account.create({
       data: {
         userId: user.id,
-        // Better Auth memakai providerId "credential" untuk login email dan
-        // kata sandi, dan accountId diisi id penggunanya sendiri.
         providerId: "credential",
         accountId: user.id,
         password: passwordHash,
@@ -822,7 +989,7 @@ async function seedUsers() {
     created++
   }
 
-  return { created, password: created ? password : null }
+  return { created, updated, password: created ? password : null }
 }
 
 // ---------------------------------------------------------------------------
@@ -834,7 +1001,11 @@ async function seedUsers() {
  */
 const SECTIONS = ["system", "cob", "occupations", "tariffs", "clauses"] as const
 
-let seededUsers: { created: number; password: string | null } | null = null
+let seededUsers: {
+  created: number
+  updated: number
+  password: string | null
+} | null = null
 
 async function main() {
   const args = process.argv.slice(2)
@@ -862,7 +1033,10 @@ async function main() {
     console.log(`  currencies           ${await seedCurrencies()}`)
     console.log(`  document_types       ${await seedDocumentTypes()}`)
     seededUsers = await seedUsers()
-    console.log(`  users                ${seededUsers.created}`)
+    console.log(
+      `  users                ${seededUsers.created} baru` +
+        (seededUsers.updated ? `, ${seededUsers.updated} diperbarui` : "")
+    )
     console.log(`  company_profile      ${await seedCompanyProfile()}`)
   }
 
@@ -907,16 +1081,27 @@ async function main() {
     }
   }
 
+  if (IDENTITY_CONFLICTS.length) {
+    console.log("\n[Konflik Identitas Akun pada Referensi LCH (Dilewati Otomatis)]:")
+    for (const conf of IDENTITY_CONFLICTS) {
+      console.log(`  - Email bersama: ${conf.sharedEmail}`)
+      console.log(
+        `    Kandidat: ${conf.candidates.map((c) => `${c.name} (${c.role})`).join(" vs ")}`
+      )
+      console.log(`    Penanganan: ${conf.resolution}`)
+    }
+  }
+
   console.log("\nBelum di-seed, menunggu data dari LCH:")
   console.log(
     "  insurers, adjusters, wording_forms, coa_accounts, bank_accounts"
   )
-  console.log("  daftar pengguna sungguhan, menunggu Sheet Hak Akses dari LCH")
 
   if (seededUsers?.created) {
     console.log(
-      `\nDibuat ${seededUsers.created} akun contoh, satu per role.` +
-        `\nKata sandi untuk semuanya: ${seededUsers.password}` +
+      `\nDibuat ${seededUsers.created} akun pengguna baru.` +
+        `\nKata sandi awal untuk semua akun baru: ${seededUsers.password}` +
+        "\nPengguna operasional LCH diwajibkan mengganti kata sandi pada saat pertama kali login (mustChangePassword: true)." +
         "\nCatat sekarang, kata sandi ini tidak ditampilkan lagi. Ganti sebelum dipakai LCH."
     )
   }

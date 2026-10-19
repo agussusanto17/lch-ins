@@ -105,7 +105,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Sistem",
     items: [
-      { title: "Pengguna", href: "/users", icon: UserCog, soon: true },
+      { title: "Pengguna", href: "/users", icon: UserCog },
       { title: "Audit Trail", href: "/audit-trail", icon: History, soon: true },
       { title: "Pengaturan", href: "/settings", icon: Settings, soon: true },
     ],

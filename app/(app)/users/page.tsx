@@ -1,29 +1,26 @@
+import type { Metadata } from "next"
+
 import { PageHeader, PageShell } from "@/components/layout/page-header"
-import { ModulePlaceholder } from "@/components/shared/module-placeholder"
+import { UserTable } from "@/components/users/user-table"
+import { requireAdmin } from "@/lib/server/session"
+import { listUsers } from "@/lib/server/users"
 
-export const metadata = { title: "Pengguna — LCH Insurance Brokers" }
+export const metadata: Metadata = {
+  title: "Manajemen Pengguna — LCH Insurance Brokers",
+  description: "Kelola akun pengguna, penugasan hak akses multi-role, dan kredensial.",
+}
 
-export default function UsersPage() {
+export default async function UsersPage() {
+  const currentAdmin = await requireAdmin("/users")
+  const users = await listUsers()
+
   return (
     <PageShell>
       <PageHeader
-        title="Pengguna"
-        description="Daftar pengguna LCH dan role masing-masing"
+        title="Manajemen Pengguna"
+        description="Kelola akun pengguna, hak akses multi-role, dan kata sandi operasional sistem."
       />
-      <ModulePlaceholder
-        phase="Bagian A · Underwriting"
-        week="minggu 3 sampai 4"
-        features={[
-          "Tambah pengguna, atur role, aktifkan dan nonaktifkan",
-          "Reset password",
-          "Role: Admin, Marketing, Placement/Teknik, Klaim, Finance",
-          "Hak akses per menu diatur di config kode, tidak ada halaman permission",
-        ]}
-        pending={[
-          "Daftar nama, email, dan role tiap pengguna",
-          "Isian Google Sheet hak akses per role",
-        ]}
-      />
+      <UserTable initialUsers={users} currentUserId={currentAdmin.id} />
     </PageShell>
   )
 }
