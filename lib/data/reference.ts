@@ -1,4 +1,5 @@
 import type {
+  ClaimStage,
   ClaimStatus,
   ClassOfBusiness,
   ClientStatus,
@@ -62,27 +63,21 @@ export const POLICY_TYPES_WITH_PARENT: PolicyType[] = [
   "Cancellation",
 ]
 export const CLAIM_STATUSES: ClaimStatus[] = [
-  "Open",
-  "Tunggu Dokumen",
-  "Dokumen Lengkap",
-  "Dokumen Belum Lengkap",
-  "Proses Adjuster",
-  "SPK/SPGR",
+  "Outstanding",
   "Settled",
-  "Paid",
+  "Closed",
   "Rejected",
-  "Close",
+]
+/** Tahapan dokumen klaim, dipilih terpisah dari status. */
+export const CLAIM_STAGES: ClaimStage[] = [
+  "Tunggu Dokumen",
+  "Dokumen Belum Lengkap",
+  "Dokumen Lengkap",
+  "Proses Adjuster",
+  "SPK / SPGR terbit",
 ]
 /** Klaim yang masih berjalan, dipakai untuk outstanding di dashboard. */
-export const OPEN_CLAIM_STATUSES: ClaimStatus[] = [
-  "Open",
-  "Tunggu Dokumen",
-  "Dokumen Lengkap",
-  "Dokumen Belum Lengkap",
-  "Proses Adjuster",
-  "SPK/SPGR",
-  "Settled",
-]
+export const OPEN_CLAIM_STATUSES: ClaimStatus[] = ["Outstanding"]
 
 /** Kelas konstruksi harta benda (lookup construction_class). */
 export const CONSTRUCTION_CLASSES = [
@@ -336,7 +331,6 @@ export const PROPERTY_RATE_LINES = [
   "FWTWD",
   "RSMDCC",
   "Other Losses",
-  "Banjir (Flood)",
   "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
   "EQVET",
   "BI EQVET",

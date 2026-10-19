@@ -1039,7 +1039,7 @@ function SlipEditor({
                     onCheckedChange={(v) => set({ includeVat: Boolean(v) })}
                   />
                   <FieldLabel htmlFor="vat" className="font-normal">
-                    Include VAT (PPN 11%)
+                    Include VAT (PPN 2,2%)
                   </FieldLabel>
                 </Field>
               </div>

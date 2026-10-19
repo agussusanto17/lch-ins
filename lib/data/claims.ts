@@ -23,7 +23,8 @@ const SEED: Omit<Claim, "policyId">[] = [
     claimedAmount: 585_000_000,
     paidAmount: 0,
     adjuster: "PT Radita Hutama Internusa",
-    status: "Proses Adjuster",
+    status: "Outstanding",
+    stage: "Proses Adjuster",
     notes: "Adjuster sudah survei 08/08. Menunggu laporan preliminary.",
   },
   {
@@ -47,7 +48,8 @@ const SEED: Omit<Claim, "policyId">[] = [
     claimedAmount: 271_400_000,
     paidAmount: 264_900_000,
     adjuster: "Internal LCH",
-    status: "Paid",
+    status: "Settled",
+    stage: "SPK / SPGR terbit",
     notes:
       "Dibayar 12/08/2026 setelah dikurangi own risk 2 × IDR 500.000 dan penyesuaian harga part.",
   },
@@ -73,7 +75,8 @@ const SEED: Omit<Claim, "policyId">[] = [
     claimedAmount: 0,
     paidAmount: 0,
     adjuster: "PT Cunningham Lindsey Indonesia",
-    status: "Open",
+    status: "Outstanding",
+    stage: "Dokumen Belum Lengkap",
     notes:
       "Menunggu kelengkapan dokumen: berita acara, foto kerusakan, dan estimasi perbaikan dari vendor.",
   },
@@ -98,7 +101,8 @@ const SEED: Omit<Claim, "policyId">[] = [
     claimedAmount: 24_500,
     paidAmount: 23_500,
     adjuster: "PT McLarens Indonesia",
-    status: "Paid",
+    status: "Settled",
+    stage: "SPK / SPGR terbit",
     notes: "Dibayar 09/07/2026 setelah deductible USD 1.000.",
   },
   {
@@ -121,7 +125,8 @@ const SEED: Omit<Claim, "policyId">[] = [
     claimedAmount: 920_000_000,
     paidAmount: 0,
     adjuster: "PT Crawford Indonesia",
-    status: "Settled",
+    status: "Outstanding",
+    stage: "SPK / SPGR terbit",
     notes:
       "Disetujui IDR 845.000.000 setelah deductible. Pembayaran dijadwalkan akhir Agustus 2026.",
   },
@@ -145,7 +150,8 @@ const SEED: Omit<Claim, "policyId">[] = [
     claimedAmount: 12_400_000,
     paidAmount: 0,
     adjuster: "Internal LCH",
-    status: "Dokumen Lengkap",
+    status: "Outstanding",
+    stage: "Dokumen Lengkap",
     notes: "Menunggu penerbitan SPK ke bengkel resmi Auto2000 Fatmawati.",
   },
   {
@@ -169,6 +175,7 @@ const SEED: Omit<Claim, "policyId">[] = [
     paidAmount: 0,
     adjuster: "PT Radita Hutama Internusa",
     status: "Rejected",
+    stage: "Proses Adjuster",
     notes:
       "Ditolak — kejadian terjadi di area yang sudah diberi rambu peringatan dan masuk pengecualian polis.",
   },
@@ -192,7 +199,8 @@ const SEED: Omit<Claim, "policyId">[] = [
     claimedAmount: 118_500_000,
     paidAmount: 118_500_000,
     adjuster: "Internal LCH",
-    status: "Paid",
+    status: "Closed",
+    stage: "SPK / SPGR terbit",
     notes:
       "Dibayar penuh 04/06/2026 — santunan cacat tetap sebagian dan biaya perawatan.",
   },
@@ -216,7 +224,8 @@ const SEED: Omit<Claim, "policyId">[] = [
     claimedAmount: 0,
     paidAmount: 0,
     adjuster: "PT Cunningham Lindsey Indonesia",
-    status: "Open",
+    status: "Outstanding",
+    stage: "Tunggu Dokumen",
     notes:
       "Laporan kepolisian sudah terbit. Menunggu daftar stok hilang dari Tertanggung.",
   },

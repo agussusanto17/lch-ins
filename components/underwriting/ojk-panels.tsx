@@ -174,7 +174,10 @@ export function PropertyPanel({
       : null
 
   function pickFlood(percent: number) {
-    onPickRate?.("Banjir (Flood)", toPermil(percent), {
+    // FWTWD sudah mencakup flood, windstorm, dan water damage, jadi tarif
+    // banjir OJK mengisi baris itu. Baris "Banjir (Flood)" terpisah dihapus
+    // atas permintaan LCH karena isinya dobel.
+    onPickRate?.("FWTWD", toPermil(percent), {
       min: floodMin != null ? toPermil(floodMin) : null,
       max: floodMax != null ? toPermil(floodMax) : null,
       source: `Banjir ${region}, Zona ${floodZone}`,

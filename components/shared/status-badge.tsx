@@ -38,17 +38,16 @@ const STATUS_TONE: Record<string, Tone> = {
   Renewal: "success",
   Endorsement: "warning",
   Cancellation: "danger",
-  /* claim */
-  Open: "warning",
-  "Tunggu Dokumen": "warning",
+  /* claim status */
+  Outstanding: "warning",
+  Settled: "success",
+  Rejected: "danger",
+  /* claim stage */
+  "Tunggu Dokumen": "neutral",
   "Dokumen Belum Lengkap": "warning",
   "Dokumen Lengkap": "info",
   "Proses Adjuster": "info",
-  "SPK/SPGR": "info",
-  Settled: "success",
-  Paid: "success",
-  Rejected: "danger",
-  Close: "neutral",
+  "SPK / SPGR terbit": "info",
 }
 
 /** Label tampilan untuk status yang disimpan dalam bahasa Inggris. */

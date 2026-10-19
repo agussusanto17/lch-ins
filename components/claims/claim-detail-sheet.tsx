@@ -57,6 +57,7 @@ export function ClaimDetailSheet({
             <div className="flex flex-col gap-6 px-4 pb-8">
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={claim.status} />
+                <StatusBadge status={claim.stage} />
                 <span className="text-xs text-muted-foreground">
                   Adjuster: {claim.adjuster || "belum ditunjuk"}
                 </span>

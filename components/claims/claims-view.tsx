@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table"
 import { toIdr } from "@/lib/calc"
 import {
+  CLAIM_STAGES,
   CLAIM_STATUSES,
   CLASSES_OF_BUSINESS,
   isOpenClaim,
@@ -45,6 +46,11 @@ const STATUS_ITEMS = [
   { label: "Semua status", value: "all" },
   ...CLAIM_STATUSES.map((s) => ({ label: s, value: s })),
 ]
+/** Tahapan dokumen berjalan sendiri, jadi filternya terpisah dari status. */
+const STAGE_ITEMS = [
+  { label: "Semua tahapan", value: "all" },
+  ...CLAIM_STAGES.map((s) => ({ label: s, value: s })),
+]
 const COB_ITEMS = [
   { label: "Semua COB", value: "all" },
   ...CLASSES_OF_BUSINESS.map((c) => ({ label: c, value: c })),
@@ -55,6 +61,7 @@ export function ClaimsView() {
   const claims = useCollection("claims")
   const [query, setQuery] = React.useState("")
   const [status, setStatus] = React.useState("all")
+  const [stage, setStage] = React.useState("all")
   const [cob, setCob] = React.useState("all")
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [form, setForm] = React.useState<{
@@ -68,6 +75,7 @@ export function ClaimsView() {
     const q = query.trim().toLowerCase()
     return claims.filter((c) => {
       if (status !== "all" && c.status !== status) return false
+      if (stage !== "all" && c.stage !== stage) return false
       if (cob !== "all" && c.cob !== cob) return false
       if (!q) return true
       return [
@@ -78,7 +86,7 @@ export function ClaimsView() {
         c.lossDescription,
       ].some((v) => v.toLowerCase().includes(q))
     })
-  }, [claims, query, status, cob])
+  }, [claims, query, status, stage, cob])
 
   const openCount = claims.filter(isOpenClaim).length
   const paidValue = claims
@@ -209,6 +217,24 @@ export function ClaimsView() {
               </SelectGroup>
             </SelectContent>
           </Select>
+          <Select
+            items={STAGE_ITEMS}
+            value={stage}
+            onValueChange={(v) => setStage(v as string)}
+          >
+            <SelectTrigger size="sm" className="w-[196px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {STAGE_ITEMS.map((i) => (
+                  <SelectItem key={i.value} value={i.value}>
+                    {i.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
           <ExportButtons className="ml-auto" spec={exportSpec} />
         </div>
 
@@ -280,6 +306,9 @@ export function ClaimsView() {
                     </TableCell>
                     <TableCell className="pr-4">
                       <StatusBadge status={c.status} />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {c.stage}
+                      </p>
                     </TableCell>
                   </TableRow>
                 ))

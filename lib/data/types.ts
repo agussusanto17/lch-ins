@@ -15,17 +15,16 @@ export type SlipStatus =
 export type PolicyStatus = "Active" | "Expiring" | "Expired"
 export type PolicyType = "Baru" | "Renewal" | "Endorsement" | "Cancellation"
 /** Sesuai daftar status klaim di ERD (lookup claim_status). */
-export type ClaimStatus =
-  | "Open"
+/** Status siklus hidup klaim. Tahapan dokumennya dicatat terpisah di ClaimStage. */
+export type ClaimStatus = "Outstanding" | "Settled" | "Closed" | "Rejected"
+
+/** Tahapan dokumen dan proses klaim, berjalan sendiri di samping status. */
+export type ClaimStage =
   | "Tunggu Dokumen"
-  | "Dokumen Lengkap"
   | "Dokumen Belum Lengkap"
+  | "Dokumen Lengkap"
   | "Proses Adjuster"
-  | "SPK/SPGR"
-  | "Settled"
-  | "Paid"
-  | "Rejected"
-  | "Close"
+  | "SPK / SPGR terbit"
 export type ClientStatus = "Active" | "Prospect" | "Inactive"
 export type ClientType = "Korporasi" | "Perorangan"
 
@@ -251,6 +250,7 @@ export interface Claim {
   paidAmount: number
   adjuster: string
   status: ClaimStatus
+  stage: ClaimStage
   notes?: string
 }
 

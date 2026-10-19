@@ -15,8 +15,10 @@ import {
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
 import {
   ADJUSTERS,
+  CLAIM_STAGES,
   CLAIM_STATUSES,
   type Claim,
+  type ClaimStage,
   type ClaimStatus,
 } from "@/lib/data"
 import { todayIso, yearMonth } from "@/lib/date"
@@ -49,7 +51,8 @@ const EMPTY: Draft = {
   claimedAmount: 0,
   paidAmount: 0,
   adjuster: "",
-  status: "Open",
+  status: "Outstanding",
+  stage: "Tunggu Dokumen",
   notes: "",
 }
 
@@ -71,6 +74,7 @@ const schema = z
     claimedAmount: z.number().nonnegative("Tidak boleh negatif"),
     paidAmount: z.number().nonnegative("Tidak boleh negatif"),
     status: z.enum(CLAIM_STATUSES as [ClaimStatus, ...ClaimStatus[]]),
+    stage: z.enum(CLAIM_STAGES as [ClaimStage, ...ClaimStage[]]),
   })
   .superRefine((d, ctx) => {
     // Urutan tanggal mengikuti alur klaim: kejadian, lapor, dokumen, SPK.
@@ -92,18 +96,18 @@ const schema = z
       }
       previous = value
     }
-    if (d.status === "SPK/SPGR" && !d.spkDate) {
+    if (d.stage === "SPK / SPGR terbit" && !d.spkDate) {
       ctx.addIssue({
         code: "custom",
         path: ["spkDate"],
-        message: "Isi tanggal SPK/SPGR untuk status ini",
+        message: "Isi tanggal SPK/SPGR untuk tahapan ini",
       })
     }
-    if (d.status === "Paid" && d.paidAmount <= 0) {
+    if (d.status === "Settled" && d.paidAmount <= 0) {
       ctx.addIssue({
         code: "custom",
         path: ["paidAmount"],
-        message: "Status Paid butuh jumlah yang dibayar",
+        message: "Status Settled butuh jumlah yang dibayar",
       })
     }
   })
@@ -317,13 +321,20 @@ export function ClaimForm({
             placeholder="Belum ditunjuk"
           />
           <SelectInput
-            className="sm:col-span-2"
             label="Status"
             required
             items={CLAIM_STATUSES}
             value={draft.status}
             onValueChange={(v) => set({ status: v as ClaimStatus })}
             error={errors.status}
+          />
+          <SelectInput
+            label="Tahapan Dokumen"
+            required
+            items={CLAIM_STAGES}
+            value={draft.stage}
+            onValueChange={(v) => set({ stage: v as ClaimStage })}
+            error={errors.stage}
           />
         </div>
 

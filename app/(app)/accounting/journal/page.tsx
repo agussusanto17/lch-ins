@@ -23,7 +23,7 @@ export default function AccountingJournalPage() {
         pending={[
           "Chart of account yang sekarang dipakai di Excel",
           "Contoh jurnal untuk satu polis dari terbit sampai lunas",
-          "Perlakuan PPh 23 dan PPN 11% di jurnal",
+          "Perlakuan PPh 23 dan PPN brokerage 2,2% di jurnal",
         ]}
       />
     </PageShell>
