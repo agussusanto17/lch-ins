@@ -23,9 +23,10 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (hasSessionCookie && isPublic) {
-    return NextResponse.redirect(new URL("/", req.nextUrl))
-  }
+  // Catatan: jangan redirect otomatis dari rute publik (/login) ke / di sini
+  // hanya berdasarkan keberadaan cookie. Jika cookie tersebut stale/kedaluwarsa,
+  // layout aplikasi akan melempar kembali ke /login sehingga terjadi loop redirect tak terbatas.
+  // Pengecekan sesi yang valid untuk /login didelegasikan ke app/login/page.tsx via currentUser().
 
   // Layout aplikasi perlu tahu path yang diminta untuk memeriksa hak akses,
   // dan Next tidak memberikannya ke layout. Jadi path dititipkan lewat header.
