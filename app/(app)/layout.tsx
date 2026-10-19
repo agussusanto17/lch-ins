@@ -1,3 +1,4 @@
+import { headers } from "next/headers"
 import { connection } from "next/server"
 
 import { AppSidebar } from "@/components/layout/app-sidebar"
@@ -6,6 +7,7 @@ import { TodayProvider } from "@/components/layout/today-provider"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/sonner"
 import { todayIso } from "@/lib/date"
+import { requireAccess } from "@/lib/server/session"
 
 export default async function AppLayout({
   children,
@@ -17,10 +19,16 @@ export default async function AppLayout({
   await connection()
   const today = todayIso()
 
+  // Seluruh halaman di bawah grup ini wajib login, dan rolenya harus boleh
+  // membuka path yang diminta. Menyaring menu di sidebar saja tidak cukup:
+  // tanpa pemeriksaan di sini, URL-nya masih bisa diketik langsung.
+  const pathname = (await headers()).get("x-pathname") ?? "/"
+  const user = await requireAccess(pathname)
+
   return (
     <TodayProvider today={today}>
       <SidebarProvider>
-        <AppSidebar />
+        <AppSidebar roleCode={user.roleCode} />
         {/*
           Jangan pasang `overflow-hidden` di sini — itu membuat scroll container
           baru sehingga topbar `sticky top-0` menempel ke container yang tidak

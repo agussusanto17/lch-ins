@@ -1,10 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
 
 import { NAV_GROUPS } from "@/components/layout/nav-items"
+import { canAccess } from "@/lib/access"
+import { signOut } from "@/lib/auth-client"
 import {
   Sidebar,
   SidebarContent,
@@ -29,7 +31,16 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function AppSidebar() {
+export function AppSidebar({ roleCode }: { roleCode: string }) {
+  const router = useRouter()
+
+  // Menu yang tidak boleh dibuka role ini tidak ditampilkan. Ini kenyamanan,
+  // bukan pengaman: penjagaan yang sebenarnya ada di lib/server/session.ts.
+  const groups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => canAccess(roleCode, item.href)),
+  })).filter((group) => group.items.length > 0)
+
   const pathname = usePathname()
 
   return (
@@ -51,7 +62,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-0 px-2 py-3">
-        {NAV_GROUPS.map((group) => (
+        {groups.map((group) => (
           <SidebarGroup key={group.label} className="gap-1 px-0 py-1.5">
             <SidebarGroupLabel className="h-6 px-3 text-[10px] font-semibold tracking-[0.09em] uppercase">
               {group.label}
@@ -87,9 +98,16 @@ export function AppSidebar() {
       <SidebarFooter className="border-t p-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Logout">
+            <SidebarMenuButton
+              tooltip="Keluar"
+              onClick={async () => {
+                await signOut()
+                router.push("/login")
+                router.refresh()
+              }}
+            >
               <LogOut />
-              <span>Logout</span>
+              <span>Keluar</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
