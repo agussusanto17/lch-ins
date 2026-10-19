@@ -1,6 +1,10 @@
-import { LoginForm } from "@/components/auth/login-form"
+import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 
-export const metadata = { title: "Masuk — LCH Insurance Brokers" }
+import { LoginForm } from "@/components/auth/login-form"
+import { currentUser } from "@/lib/server/session"
+
+export const metadata: Metadata = { title: "Masuk — LCH Insurance Brokers" }
 
 export default async function LoginPage({
   searchParams,
@@ -11,6 +15,14 @@ export default async function LoginPage({
   // Hanya terima path internal, supaya parameter ini tidak bisa dipakai
   // mengarahkan pengguna ke situs lain setelah login.
   const target = next?.startsWith("/") && !next.startsWith("//") ? next : "/"
+
+  // Jika pengguna sudah memiliki sesi aktif yang valid di database,
+  // langsung arahkan ke tujuan (atau dashboard). Pemeriksaan dilakukan di sini
+  // dan bukan di proxy agar cookie kedaluwarsa/stale tidak memicu infinite redirect.
+  const user = await currentUser()
+  if (user) {
+    redirect(target)
+  }
 
   return (
     <main className="flex min-h-svh items-center justify-center bg-muted/40 px-4 py-10">

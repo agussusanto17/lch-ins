@@ -54,9 +54,13 @@ export const currentUser = cache(async (): Promise<CurrentUser | null> => {
 })
 
 /** Wajib login. Dipakai di layout aplikasi. */
-export async function requireUser(): Promise<CurrentUser> {
+export async function requireUser(path?: string): Promise<CurrentUser> {
   const user = await currentUser()
-  if (!user) redirect("/login")
+  if (!user) {
+    const target =
+      path && path !== "/" ? `/login?next=${encodeURIComponent(path)}` : "/login"
+    redirect(target)
+  }
   return user
 }
 
@@ -67,7 +71,7 @@ export async function requireUser(): Promise<CurrentUser> {
  * yang sebenarnya ada di sini, sedekat mungkin dengan datanya.
  */
 export async function requireAccess(path: string): Promise<CurrentUser> {
-  const user = await requireUser()
+  const user = await requireUser(path)
   if (!canAccess(user.roleCode, path)) redirect("/")
   return user
 }

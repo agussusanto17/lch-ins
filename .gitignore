@@ -45,3 +45,4 @@ next-env.d.ts
 
 # setting Claude Code pribadi
 /.claude/settings.local.json
+.vercel
