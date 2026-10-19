@@ -191,16 +191,19 @@ export function ClaimDialog() {
           />
           <SelectField
             label="Status"
+            items={["Outstanding", "Settled", "Closed", "Rejected"]}
+            defaultValue="Outstanding"
+          />
+          <SelectField
+            label="Tahapan Dokumen"
             items={[
-              "Open",
+              "Tunggu Dokumen",
+              "Dokumen Belum Lengkap",
               "Dokumen Lengkap",
               "Proses Adjuster",
-              "Approved",
-              "Paid",
-              "Rejected",
+              "SPK / SPGR terbit",
             ]}
-            defaultValue="Open"
-            className="sm:col-span-2"
+            defaultValue="Tunggu Dokumen"
           />
         </div>
 

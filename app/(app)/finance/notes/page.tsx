@@ -18,7 +18,7 @@ export default function FinanceNotesPage() {
         features={[
           "Buat Debit Note dari polis, nomor otomatis {urut}/DNLCH/{bulan}/{tahun}",
           "Credit Note per cicilan, nomor {urut}/CNLCH/{bulan}/{tahun}-{cicilan}",
-          "Rincian premi, diskon, biaya polis, materai, PPN 11%, dan PPh 23",
+          "Rincian premi, diskon, biaya polis, materai, PPN brokerage 2,2%, dan PPh 23",
           "Pembagian share co-insurance per asuransi",
           "Cetak PDF dengan kop surat LCH dan kirim ke tertanggung",
         ]}

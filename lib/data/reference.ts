@@ -231,7 +231,6 @@ export const PROPERTY_RATE_LINES = [
   "FWTWD",
   "RSMDCC",
   "Other Losses",
-  "Banjir (Flood)",
   "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
   "EQVET",
   "BI EQVET",

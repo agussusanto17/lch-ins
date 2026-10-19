@@ -11,13 +11,16 @@ export type ClassOfBusiness =
 export type SlipStatus = "Draft" | "Released" | "Quoted" | "Closed"
 export type PolicyStatus = "Active" | "Expiring" | "Expired"
 export type PolicyType = "Baru" | "Renewal"
-export type ClaimStatus =
-  | "Open"
+/** Status siklus hidup klaim. Tahapan dokumennya dicatat terpisah di ClaimStage. */
+export type ClaimStatus = "Outstanding" | "Settled" | "Closed" | "Rejected"
+
+/** Tahapan dokumen dan proses klaim, berjalan sendiri di samping status. */
+export type ClaimStage =
+  | "Tunggu Dokumen"
+  | "Dokumen Belum Lengkap"
   | "Dokumen Lengkap"
   | "Proses Adjuster"
-  | "Approved"
-  | "Paid"
-  | "Rejected"
+  | "SPK / SPGR terbit"
 export type ClientStatus = "Active" | "Prospect" | "Inactive"
 
 /** Satu klien bisa punya beberapa alamat, misalnya alamat perusahaan dan korespondensi. */
@@ -155,6 +158,7 @@ export interface Claim {
   paidAmount: number
   adjuster: string
   status: ClaimStatus
+  stage: ClaimStage
   notes?: string
 }
 

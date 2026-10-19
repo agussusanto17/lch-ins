@@ -5,12 +5,8 @@ import { POLICIES } from "./policies"
 import { TODAY } from "./reference"
 import { SLIPS } from "./slips"
 
-const OPEN_CLAIM_STATUSES = [
-  "Open",
-  "Dokumen Lengkap",
-  "Proses Adjuster",
-  "Approved",
-]
+/** Klaim yang masih berjalan. Settled, Closed, dan Rejected sudah selesai. */
+const isOpenClaim = (c: { status: string }) => c.status === "Outstanding"
 
 export function premiumIdr(p: { premium: number; currency: string }) {
   return toIdr(p.premium, p.currency)
@@ -28,8 +24,7 @@ export const TOTALS = {
   clients: CLIENTS.length,
   activeClients: CLIENTS.filter((c) => c.status === "Active").length,
   activePolicies: POLICIES.filter((p) => p.status !== "Expired").length,
-  openClaims: CLAIMS.filter((c) => OPEN_CLAIM_STATUSES.includes(c.status))
-    .length,
+  openClaims: CLAIMS.filter(isOpenClaim).length,
   draftSlips: SLIPS.filter((s) => s.status === "Draft").length,
   totalPremium: POLICIES.filter((p) => p.status !== "Expired").reduce(
     (a, p) => a + premiumIdr(p),
@@ -48,9 +43,7 @@ export const TOTALS = {
     0
   ),
   claimPaid: CLAIMS.reduce((a, c) => a + toIdr(c.paidAmount, c.currency), 0),
-  claimOutstanding: CLAIMS.filter((c) =>
-    OPEN_CLAIM_STATUSES.includes(c.status)
-  ).reduce(
+  claimOutstanding: CLAIMS.filter(isOpenClaim).reduce(
     (a, c) => a + toIdr(c.claimedAmount || c.estimatedLoss, c.currency),
     0
   ),

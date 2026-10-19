@@ -34,13 +34,16 @@ const STATUS_TONE: Record<string, Tone> = {
   /* policy type */
   Baru: "info",
   Renewal: "success",
-  /* claim */
-  Open: "warning",
+  /* claim status */
+  Outstanding: "warning",
+  Settled: "success",
+  Rejected: "danger",
+  /* claim stage */
+  "Tunggu Dokumen": "neutral",
+  "Dokumen Belum Lengkap": "warning",
   "Dokumen Lengkap": "info",
   "Proses Adjuster": "info",
-  Approved: "success",
-  Paid: "success",
-  Rejected: "danger",
+  "SPK / SPGR terbit": "info",
 }
 
 const BASE =

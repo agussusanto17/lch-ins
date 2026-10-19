@@ -260,6 +260,7 @@ model LookupValue {
   policySecurityRoles   PolicyInsurer[]     @relation("security_role_policy")
   policyTypes           Policy[]            @relation("policy_type")
   claimStatuses         Claim[]             @relation("claim_status")
+  claimStages           Claim[]             @relation("claim_stage")
   paymentModels         DebitNote[]         @relation("payment_model")
   paymentTypes          Payment[]           @relation("payment_type")
   banks                 BankAccount[]       @relation("bank")
@@ -1059,8 +1060,10 @@ model Claim {
   estimatedLoss        Decimal   @default(0) @map("estimated_loss") @db.Decimal(18, 2)
   claimedAmount        Decimal   @default(0) @map("claimed_amount") @db.Decimal(18, 2)
   paidAmount           Decimal   @default(0) @map("paid_amount") @db.Decimal(18, 2)
-  /// lookup claim_status
+  /// lookup claim_status: Outstanding, Settled, Closed, Rejected
   statusId             String    @map("status_id") @db.Uuid
+  /// lookup claim_stage: tahapan dokumen, berjalan sendiri di samping status
+  stageId              String?   @map("stage_id") @db.Uuid
   notes                String?
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1069,7 +1072,8 @@ model Claim {
   policy   Policy      @relation(fields: [policyId], references: [id])
   adjuster Adjuster?   @relation(fields: [adjusterId], references: [id])
   currency Currency    @relation(fields: [currencyCode], references: [code])
-  status   LookupValue @relation("claim_status", fields: [statusId], references: [id])
+  status   LookupValue  @relation("claim_status", fields: [statusId], references: [id])
+  stage    LookupValue? @relation("claim_stage", fields: [stageId], references: [id])
 
   payments Payment[]
 

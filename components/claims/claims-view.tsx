@@ -32,23 +32,29 @@ import { compactMoney, dateShort, money } from "@/lib/format"
 
 const STATUS_ITEMS = [
   { label: "Semua status", value: "all" },
-  { label: "Open", value: "Open" },
+  { label: "Outstanding", value: "Outstanding" },
+  { label: "Settled", value: "Settled" },
+  { label: "Closed", value: "Closed" },
+  { label: "Rejected", value: "Rejected" },
+]
+/** Tahapan dokumen berjalan sendiri, jadi filternya terpisah dari status. */
+const STAGE_ITEMS = [
+  { label: "Semua tahapan", value: "all" },
+  { label: "Tunggu Dokumen", value: "Tunggu Dokumen" },
+  { label: "Dokumen Belum Lengkap", value: "Dokumen Belum Lengkap" },
   { label: "Dokumen Lengkap", value: "Dokumen Lengkap" },
   { label: "Proses Adjuster", value: "Proses Adjuster" },
-  { label: "Approved", value: "Approved" },
-  { label: "Paid", value: "Paid" },
-  { label: "Rejected", value: "Rejected" },
+  { label: "SPK / SPGR terbit", value: "SPK / SPGR terbit" },
 ]
 const COB_ITEMS = [
   { label: "Semua COB", value: "all" },
   ...CLASSES_OF_BUSINESS.map((c) => ({ label: c, value: c })),
 ]
 
-const OPEN_STATUSES = ["Open", "Dokumen Lengkap", "Proses Adjuster", "Approved"]
-
 export function ClaimsView() {
   const [query, setQuery] = React.useState("")
   const [status, setStatus] = React.useState("all")
+  const [stage, setStage] = React.useState("all")
   const [cob, setCob] = React.useState("all")
   const [selected, setSelected] = React.useState<Claim | null>(null)
 
@@ -56,6 +62,7 @@ export function ClaimsView() {
     const q = query.trim().toLowerCase()
     return CLAIMS.filter((c) => {
       if (status !== "all" && c.status !== status) return false
+      if (stage !== "all" && c.stage !== stage) return false
       if (cob !== "all" && c.cob !== cob) return false
       if (!q) return true
       return [
@@ -66,18 +73,15 @@ export function ClaimsView() {
         c.lossDescription,
       ].some((v) => v.toLowerCase().includes(q))
     })
-  }, [query, status, cob])
+  }, [query, status, stage, cob])
 
-  const openCount = CLAIMS.filter((c) =>
-    OPEN_STATUSES.includes(c.status)
-  ).length
+  const isOpen = (c: Claim) => c.status === "Outstanding"
+  const openCount = CLAIMS.filter(isOpen).length
   const paidValue = CLAIMS.reduce(
     (a, c) => a + toIdr(c.paidAmount, c.currency),
     0
   )
-  const outstandingValue = CLAIMS.filter((c) =>
-    OPEN_STATUSES.includes(c.status)
-  ).reduce(
+  const outstandingValue = CLAIMS.filter(isOpen).reduce(
     (a, c) => a + toIdr(c.claimedAmount || c.estimatedLoss, c.currency),
     0
   )
@@ -153,6 +157,24 @@ export function ClaimsView() {
             </SelectGroup>
           </SelectContent>
         </Select>
+        <Select
+          items={STAGE_ITEMS}
+          value={stage}
+          onValueChange={(v) => setStage(v as string)}
+        >
+          <SelectTrigger size="sm" className="w-[196px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {STAGE_ITEMS.map((i) => (
+                <SelectItem key={i.value} value={i.value}>
+                  {i.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <ExportButtons className="ml-auto" />
       </div>
 
@@ -221,6 +243,9 @@ export function ClaimsView() {
                   </TableCell>
                   <TableCell className="pr-4">
                     <StatusBadge status={c.status} />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {c.stage}
+                    </p>
                   </TableCell>
                 </TableRow>
               ))

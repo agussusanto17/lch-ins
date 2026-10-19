@@ -237,20 +237,27 @@ const LOOKUPS: {
     ],
   },
   {
-    // Definisi tiap status masih menunggu konfirmasi tim Klaim LCH.
+    // Status siklus hidup klaim, sesuai koreksi Harry 5 Okt 2026. Tahapan
+    // dokumennya dipisah ke lookup claim_stage di bawah.
     type: "claim_status",
     system: true,
     values: [
-      ["open", "Open"],
-      ["waiting_document", "Tunggu Dokumen"],
-      ["document_complete", "Dokumen Lengkap"],
-      ["document_incomplete", "Dokumen Belum Lengkap"],
-      ["adjuster", "Proses Adjuster"],
-      ["spk", "SPK/SPGR"],
+      ["outstanding", "Outstanding"],
       ["settled", "Settled"],
-      ["paid", "Paid"],
+      ["closed", "Closed"],
       ["rejected", "Rejected"],
-      ["closed", "Close"],
+    ],
+  },
+  {
+    // Tahapan dokumen klaim, dipilih terpisah dari status.
+    type: "claim_stage",
+    system: true,
+    values: [
+      ["waiting_document", "Tunggu Dokumen"],
+      ["document_incomplete", "Dokumen Belum Lengkap"],
+      ["document_complete", "Dokumen Lengkap"],
+      ["adjuster", "Proses Adjuster"],
+      ["spk", "SPK / SPGR terbit"],
     ],
   },
   {
@@ -460,7 +467,6 @@ async function seedCobRateLines() {
       [rateKind, "FWTWD"],
       [rateKind, "RSMDCC"],
       [rateKind, "Other Losses"],
-      [rateKind, "Banjir (Flood)"],
       [rateKind, "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)"],
       [rateKind, "EQVET"],
       [rateKind, "BI EQVET"],

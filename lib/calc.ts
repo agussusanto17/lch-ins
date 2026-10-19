@@ -60,10 +60,17 @@ export function netPremium(slip: PlacingSlip) {
   return totalPremium(slip) - brokerageAmount(slip)
 }
 
-/** Brokerage efektif setelah PPN 11% bila include VAT. */
+/**
+ * PPN atas jasa pialang asuransi memakai DPP nilai lain 20% dari komisi
+ * (PMK 67/PMK.03/2022), jadi tarif efektifnya 11% x 20% = 2,2% dari brokerage,
+ * bukan 11% penuh.
+ */
+export const BROKERAGE_VAT_RATE = 0.022
+
+/** Brokerage efektif setelah PPN bila angka yang diisi sudah termasuk VAT. */
 export function effectiveBrokeragePct(slip: PlacingSlip) {
   const b = slip.brokeragePct || 0
-  return slip.includeVat ? b / 1.11 : b
+  return slip.includeVat ? b / (1 + BROKERAGE_VAT_RATE) : b
 }
 
 export function slipRateBasis(slip: PlacingSlip) {

@@ -213,7 +213,6 @@ export const SLIPS: PlacingSlip[] = [
       { id: "r2", label: "FWTWD", rate: 0.035, premium: 12_792_500 },
       { id: "r3", label: "RSMDCC", rate: 0.042, premium: 15_351_000 },
       { id: "r4", label: "Other Losses", rate: 0.028, premium: 10_234_000 },
-      { id: "r5", label: "Banjir (Flood)", rate: 0.055, premium: 20_102_500 },
       {
         id: "r6",
         label: "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
@@ -644,7 +643,6 @@ export const SLIPS: PlacingSlip[] = [
       { id: "r2", label: "FWTWD", rate: 0.048, premium: 7_992_000 },
       { id: "r3", label: "RSMDCC", rate: 0.042, premium: 6_993_000 },
       { id: "r4", label: "Other Losses", rate: 0.035, premium: 5_827_500 },
-      { id: "r5", label: "Banjir (Flood)", rate: 0.05, premium: 8_325_000 },
       {
         id: "r6",
         label: "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
@@ -749,7 +747,6 @@ export const SLIPS: PlacingSlip[] = [
       { id: "r2", label: "FWTWD", rate: 0.035, premium: 2_117_500 },
       { id: "r3", label: "RSMDCC", rate: 0.042, premium: 2_541_000 },
       { id: "r4", label: "Other Losses", rate: null, premium: 0 },
-      { id: "r5", label: "Banjir (Flood)", rate: 0.055, premium: 3_327_500 },
       {
         id: "r6",
         label: "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
