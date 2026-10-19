@@ -1,5 +1,3 @@
-import { notFound } from "next/navigation"
-
 import { QuotationDraftForm } from "@/components/underwriting/quotation-draft-form"
 import { SLIPS, slipById } from "@/lib/data"
 
@@ -13,7 +11,5 @@ export default async function QuotationDraftPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const slip = slipById(id)
-  if (!slip) notFound()
-  return <QuotationDraftForm slip={slip} />
+  return <QuotationDraftForm id={id} initial={slipById(id) ?? null} />
 }

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Copy, Eye, FileText, Pencil, Trash2 } from "lucide-react"
+import { Ban, Copy, Eye, FileText, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -30,23 +30,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { totalSumInsured } from "@/lib/calc"
-import { CLASSES_OF_BUSINESS, SLIPS, type PlacingSlip } from "@/lib/data"
+import { useToday } from "@/components/layout/today-provider"
+import { totalPremium, totalSumInsured } from "@/lib/calc"
+import {
+  CLASSES_OF_BUSINESS,
+  SLIP_STATUSES,
+  type PlacingSlip,
+} from "@/lib/data"
+import type { ExportSpec } from "@/lib/export"
 import { dateShort, money } from "@/lib/format"
+import { newId, store, useCollection } from "@/lib/store"
 
 const STATUS_ITEMS = [
   { label: "Semua status", value: "all" },
-  { label: "Draft", value: "Draft" },
-  { label: "Released", value: "Released" },
-  { label: "Quoted", value: "Quoted" },
-  { label: "Closed", value: "Closed" },
+  ...SLIP_STATUSES.map((s) => ({
+    label: s === "Cancelled" ? "Dibatalkan" : s,
+    value: s,
+  })),
 ]
 const COB_ITEMS = [
   { label: "Semua COB", value: "all" },
   ...CLASSES_OF_BUSINESS.map((c) => ({ label: c, value: c })),
 ]
 
-function actionsFor(slip: PlacingSlip): RowAction[] {
+function actionsFor(slip: PlacingSlip, today: string): RowAction[] {
   const actions: RowAction[] = [
     {
       label: "Lihat placing slip",
@@ -54,38 +61,100 @@ function actionsFor(slip: PlacingSlip): RowAction[] {
       render: <Link href={`/underwriting/slip/${slip.id}`} />,
     },
     {
-      label: "Edit slip",
+      label:
+        slip.status === "Closed" || slip.status === "Cancelled"
+          ? "Buka slip"
+          : "Edit slip",
       icon: Pencil,
       render: <Link href={`/underwriting/edit/${slip.id}`} />,
     },
   ]
-  if (slip.status !== "Draft") {
+  if (
+    slip.status === "Released" ||
+    slip.status === "Quoted" ||
+    slip.status === "Closed"
+  ) {
     actions.push({
       label: "Draft quotation slip",
       icon: FileText,
       render: <Link href={`/underwriting/quotation/edit/${slip.id}`} />,
     })
   }
-  actions.push(
-    {
-      label: "Duplikat",
-      icon: Copy,
-      onSelect: () =>
-        toast.success("Slip diduplikasi", { description: "Demo statis." }),
+  actions.push({
+    label: "Duplikat jadi draft baru",
+    icon: Copy,
+    onSelect: () => {
+      // Salinan selalu mulai dari draft tanpa nomor dan tanpa data pasca-release.
+      const copy: PlacingSlip = {
+        ...slip,
+        id: newId("s"),
+        slipNo: null,
+        seq: 0,
+        status: "Draft",
+        sppaId: null,
+        subjectivity: undefined,
+        securityPanel: undefined,
+        closingInstruction: undefined,
+        coverNoteRemarks: undefined,
+        createdAt: today,
+        updatedAt: today,
+      }
+      store.insert("slips", copy)
+      toast.success("Slip diduplikasi", {
+        description: `Draft baru untuk ${slip.insuredName}`,
+      })
     },
-    { label: "Hapus slip", icon: Trash2, destructive: true }
-  )
+  })
+  if (slip.status === "Draft") {
+    actions.push({
+      label: "Hapus draft",
+      icon: Trash2,
+      destructive: true,
+      confirm: {
+        title: "Hapus draft placing slip?",
+        description: `Draft untuk ${slip.insuredName || "tertanggung"} belum bernomor, jadi dihapus permanen.`,
+        actionLabel: "Hapus",
+      },
+      onSelect: () => {
+        store.remove("slips", slip.id)
+        toast.success("Draft slip dihapus")
+      },
+    })
+  } else if (slip.status === "Released" || slip.status === "Quoted") {
+    actions.push({
+      label: "Batalkan slip",
+      icon: Ban,
+      destructive: true,
+      confirm: {
+        title: `Batalkan slip ${slip.slipNo}?`,
+        description:
+          "Slip bernomor tidak dihapus supaya nomor tidak bolong. Statusnya menjadi Dibatalkan.",
+        actionLabel: "Batalkan slip",
+      },
+      onSelect: () => {
+        store.update("slips", slip.id, {
+          status: "Cancelled",
+          updatedAt: today,
+        })
+        toast.success("Slip dibatalkan", {
+          description: slip.slipNo ?? undefined,
+        })
+      },
+    })
+  }
   return actions
 }
 
 export function SlipTable() {
+  const today = useToday()
+  const slips = useCollection("slips")
   const [query, setQuery] = React.useState("")
   const [status, setStatus] = React.useState("all")
   const [cob, setCob] = React.useState("all")
 
   const rows = React.useMemo(() => {
     const q = query.trim().toLowerCase()
-    return SLIPS.filter((s) => {
+    return slips.filter((s) => {
       if (status !== "all" && s.status !== status) return false
       if (cob !== "all" && s.cob !== cob) return false
       if (!q) return true
@@ -96,11 +165,37 @@ export function SlipTable() {
         s.occupation ?? "",
       ].some((v) => v.toLowerCase().includes(q))
     })
-  }, [query, status, cob])
+  }, [slips, query, status, cob])
+
+  const exportSpec: ExportSpec<PlacingSlip> = {
+    filename: "placing-slip-lch",
+    sheet: "Placing Slip",
+    rows,
+    columns: [
+      { header: "No. Slip", value: (s) => s.slipNo ?? "Draft" },
+      { header: "Tertanggung", value: (s) => s.insuredName, width: 36 },
+      { header: "COB", value: (s) => s.cob },
+      { header: "Type of Cover", value: (s) => s.typeOfCover, width: 32 },
+      { header: "Mata Uang", value: (s) => s.currency },
+      {
+        header: "Total Sum Insured",
+        value: (s) => totalSumInsured(s),
+        type: "money",
+      },
+      { header: "Total Premium", value: (s) => totalPremium(s), type: "money" },
+      {
+        header: "Brokerage (%)",
+        value: (s) => s.brokeragePct,
+        type: "percent",
+      },
+      { header: "Status", value: (s) => s.status },
+      { header: "Diperbarui", value: (s) => s.updatedAt, type: "date" },
+    ],
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="no-print flex flex-wrap items-center gap-2">
         <SearchInput
           value={query}
           onValueChange={setQuery}
@@ -142,7 +237,7 @@ export function SlipTable() {
             </SelectGroup>
           </SelectContent>
         </Select>
-        <ExportButtons className="ml-auto" />
+        <ExportButtons className="ml-auto" spec={exportSpec} />
       </div>
 
       <Card className="gap-0 overflow-hidden py-0">
@@ -170,7 +265,7 @@ export function SlipTable() {
               rows.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className={ACTION_COL_CLASS}>
-                    <RowActions actions={actionsFor(s)} />
+                    <RowActions actions={actionsFor(s, today)} />
                   </TableCell>
                   <TableCell className="max-w-[230px]">
                     {s.slipNo ? (
@@ -214,7 +309,7 @@ export function SlipTable() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Menampilkan {rows.length} dari {SLIPS.length} placing slip · pola nomor{" "}
+        Menampilkan {rows.length} dari {slips.length} placing slip · pola nomor{" "}
         <span className="tabular">
           {"{seq}/LCH-PLCMT/PS[-{kode}]/{bulan romawi}/{tahun}"}
         </span>{" "}

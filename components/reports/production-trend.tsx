@@ -10,20 +10,17 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { MONTHLY_PRODUCTION } from "@/lib/data"
+import type { MonthlyProductionRow } from "@/lib/data"
 
 const config = {
   premium: { label: "Premium (jt)", color: "var(--chart-1)" },
   brokerage: { label: "Brokerage (jt)", color: "var(--chart-2)" },
 } satisfies ChartConfig
 
-export function ProductionTrend() {
+export function ProductionTrend({ data }: { data: MonthlyProductionRow[] }) {
   return (
     <ChartContainer config={config} className="h-[280px] w-full">
-      <BarChart
-        data={MONTHLY_PRODUCTION}
-        margin={{ left: -8, right: 8, top: 8 }}
-      >
+      <BarChart data={data} margin={{ left: -8, right: 8, top: 8 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis
           dataKey="month"

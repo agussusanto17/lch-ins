@@ -85,7 +85,7 @@ export function SectionCard({
       <Card className={cn("gap-0", className)}>
         <CardHeader
           className={cn(
-            "grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 transition-[padding]",
+            "grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 transition-[padding]",
             open ? "border-b pb-4" : "pb-0"
           )}
         >

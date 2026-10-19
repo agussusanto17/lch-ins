@@ -1,6 +1,7 @@
+import { POLICIES } from "./policies"
 import type { Claim } from "./types"
 
-export const CLAIMS: Claim[] = [
+const SEED: Omit<Claim, "policyId">[] = [
   {
     id: "k-001",
     claimNo: "CLM/2026/08/0031",
@@ -229,6 +230,12 @@ export const CLAIMS: Claim[] = [
       "Laporan kepolisian sudah terbit. Menunggu daftar stok hilang dari Tertanggung.",
   },
 ]
+
+/** Kaitan klaim ke polis diambil dari nomor polis pada data contoh. */
+export const CLAIMS: Claim[] = SEED.map((c) => ({
+  ...c,
+  policyId: POLICIES.find((p) => p.policyNo === c.policyNo)?.id ?? null,
+}))
 
 export function claimById(id: string) {
   return CLAIMS.find((c) => c.id === id)

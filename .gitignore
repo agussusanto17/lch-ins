@@ -39,3 +39,9 @@ next-env.d.ts
 
 # prisma client hasil generate
 /lib/generated
+
+# knowledge graph graphify, dibangun ulang per mesin
+/graphify-out/
+
+# setting Claude Code pribadi
+/.claude/settings.local.json

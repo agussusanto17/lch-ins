@@ -1,6 +1,7 @@
+import { recalcSlip } from "../calc"
 import type { PlacingSlip } from "./types"
 
-export const SLIPS: PlacingSlip[] = [
+const SEED: PlacingSlip[] = [
   {
     id: "s-001",
     slipNo: "001/LCH-PLCMT/PS/VIII/2026",
@@ -147,7 +148,7 @@ export const SLIPS: PlacingSlip[] = [
     periodTba: false,
     inceptionDate: "2026-09-01",
     expiryDate: "2027-09-01",
-    occupation: "Shopping Mall / Pusat Perbelanjaan Grade A",
+    occupation: "29313 - * Shopping mall/center Grade A",
     riskLocation:
       "Grand Sentosa Mall, Jl. Jenderal Sudirman Kav. 52-53, Jakarta Selatan 12190",
     wordingForms: [
@@ -156,7 +157,7 @@ export const SLIPS: PlacingSlip[] = [
     ],
     coverage:
       "All risks of physical loss or damage to the property insured, including Earthquake, Volcanic Eruption & Tsunami, and consequential Business Interruption following an insured peril.",
-    constructionClass: "Class 1 — Reinforced Concrete, fully sprinklered",
+    constructionClass: "K1",
     indemnityPeriod: "12 months",
     interestSection1:
       "Buildings, machinery & equipment, furniture, fixtures & fittings, tenant improvements, stock and all other contents belonging to the Insured or held in trust.",
@@ -209,7 +210,7 @@ export const SLIPS: PlacingSlip[] = [
       "cl-30",
     ],
     rateLines: [
-      { id: "r1", label: "FLEXAS", rate: 0.216, premium: 78_948_000 },
+      { id: "r1", label: "FLEXAS", rate: 0.893, premium: 0 },
       { id: "r2", label: "FWTWD", rate: 0.035, premium: 12_792_500 },
       { id: "r3", label: "RSMDCC", rate: 0.042, premium: 15_351_000 },
       { id: "r4", label: "Other Losses", rate: 0.028, premium: 10_234_000 },
@@ -279,7 +280,7 @@ export const SLIPS: PlacingSlip[] = [
     periodTba: false,
     inceptionDate: "2026-09-15",
     expiryDate: "2027-09-15",
-    occupation: "Rumah Sakit",
+    occupation: "2951 - Sanatorium, hospitals, doctor's consulting rooms, old people's and children's homes",
     riskLocation: "RS Medika Husada, Jl. Ir. H. Juanda No. 210, Bandung 40135",
     wordingForms: ["Munich Re Property All Risks Wording"],
     coverage:
@@ -581,13 +582,12 @@ export const SLIPS: PlacingSlip[] = [
     periodTba: false,
     inceptionDate: "2026-08-25",
     expiryDate: "2027-08-25",
-    occupation: "Pabrik Makanan & Minuman",
+    occupation: "2723 - Processed food factories (bihun, mie, lomie, kerupuk) and the like",
     riskLocation: "Kawasan Industri Rungkut Blok F-12, Surabaya 60293",
     wordingForms: ["Munich Re Property All Risks Wording"],
     coverage:
       "All risks of physical loss or damage including machinery breakdown and business interruption following an insured peril.",
-    constructionClass:
-      "Class 2 — Steel frame with masonry infill, partially sprinklered",
+    constructionClass: "K2",
     indemnityPeriod: "9 months",
     interestSection1:
       "Buildings, production machinery, cold storage, packaging lines, raw material and finished goods stock.",
@@ -639,7 +639,7 @@ export const SLIPS: PlacingSlip[] = [
       "cl-28",
     ],
     rateLines: [
-      { id: "r1", label: "FLEXAS", rate: 0.402, premium: 66_933_000 },
+      { id: "r1", label: "FLEXAS", rate: 2.018, premium: 0 },
       { id: "r2", label: "FWTWD", rate: 0.048, premium: 7_992_000 },
       { id: "r3", label: "RSMDCC", rate: 0.042, premium: 6_993_000 },
       { id: "r4", label: "Other Losses", rate: 0.035, premium: 5_827_500 },
@@ -702,13 +702,13 @@ export const SLIPS: PlacingSlip[] = [
     periodTba: false,
     inceptionDate: "2026-10-01",
     expiryDate: "2027-10-01",
-    occupation: "Shopping Mall / Pusat Perbelanjaan Grade A",
+    occupation: "29313 - * Shopping mall/center Grade A",
     riskLocation:
       "Mall Grand Anugerah, Jl. Gatot Subroto Kav. 34, Jakarta Selatan 12930",
     wordingForms: ["Munich Re Property All Risks Wording"],
     coverage:
       "All risks of physical loss or damage to the property insured excluding Earthquake.",
-    constructionClass: "Class 1 — Reinforced Concrete, fully sprinklered",
+    constructionClass: "K1",
     indemnityPeriod: "12 months",
     interestSection1:
       "Tenant improvements, furniture, fixtures, fittings, stock and equipment.",
@@ -743,7 +743,7 @@ export const SLIPS: PlacingSlip[] = [
       "cl-30",
     ],
     rateLines: [
-      { id: "r1", label: "FLEXAS", rate: 0.216, premium: 13_068_000 },
+      { id: "r1", label: "FLEXAS", rate: 0.893, premium: 0 },
       { id: "r2", label: "FWTWD", rate: 0.035, premium: 2_117_500 },
       { id: "r3", label: "RSMDCC", rate: 0.042, premium: 2_541_000 },
       { id: "r4", label: "Other Losses", rate: null, premium: 0 },
@@ -767,6 +767,9 @@ export const SLIPS: PlacingSlip[] = [
     updatedAt: "2026-08-18",
   },
 ]
+
+/** Premi selalu dihitung dari rate dan sum insured, tidak disalin manual. */
+export const SLIPS: PlacingSlip[] = SEED.map(recalcSlip)
 
 export function slipById(id: string) {
   return SLIPS.find((s) => s.id === id)

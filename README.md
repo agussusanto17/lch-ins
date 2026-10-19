@@ -4,7 +4,9 @@ Rebuild aplikasi internal PT. LCH Insurance Brokers dari prototipe base44 ke sta
 
 **Status saat ini: pindah bertahap ke database.** Skema Prisma lengkap (44 tabel) dan seed master data
 sudah jalan. Master Clauses sudah baca tulis ke Postgres. Layar lain masih memakai data statis di
-`lib/data/*` dan akan dipindah menyusul.
+`lib/data/*`; tambah, ubah, dan hapus di layar itu tersimpan di store sesi (`lib/store.ts`) sehingga
+tabel, halaman detail, dan dokumen cetak ikut berubah selama tab browser terbuka, dan kembali ke data
+contoh saat halaman dimuat ulang. Fungsi `store.*` diganti Server Action saat modulnya dipindah.
 
 ## Stack
 
@@ -52,7 +54,7 @@ ERD di Notion: 44 tabel, 9 enum, 94 foreign key.
 | -------------------- | ------------------------------------------------------------------------- |
 | `npm run db:deploy`  | Terapkan migrasi yang sudah ada. Dipakai di server dan saat setup pertama |
 | `npm run db:migrate` | Buat migrasi baru sesudah mengubah schema. Interaktif, hanya untuk dev    |
-| `npm run db:seed`    | Isi master data. Idempotent, aman diulang                                 |
+| `npm run db:seed`    | Isi master data. Idempotent, aman diulang. Bisa per bagian: `-- clauses` |
 | `npm run db:studio`  | Prisma Studio                                                             |
 | `npm run db:reset`   | Kosongkan database lalu migrate dan seed ulang                            |
 
@@ -74,6 +76,9 @@ Sumbernya ada di `prisma/seed-data`, semuanya data asli LCH dan SE OJK, bukan co
 | `clauses`                                           | 595        | pustaka wording LCH                                        |
 
 Seed tidak menimpa data yang sudah ada, termasuk wording clause yang diedit lewat Master Clauses.
+Bagian seed: `system`, `cob`, `occupations`, `tariffs`, `clauses`, misalnya `npm run db:seed -- clauses`.
+Seed penuh ke database cloud memakan beberapa menit karena sebagian besar tabel masih di-upsert per
+baris (satu perjalanan jaringan per baris); clause sudah dikirim sekaligus dan selesai dalam hitungan detik.
 Belum di-seed karena datanya masih ditunggu dari LCH: `insurers`, `adjusters`, `wording_forms`,
 `coa_accounts`, `bank_accounts`. `users` menyusul bersama modul autentikasi.
 
@@ -100,25 +105,26 @@ yang sama dengan penyimpanan dokumen supaya nomor tidak bolong saat simpan gagal
 
 ## Peta Route
 
-| Route                               | Isi                                                                                              |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `/`                                 | Dashboard — 4 KPI, chart produksi bulanan, donut class of business, renewal 60 hari, akses cepat |
-| `/marketing`                        | Tab Database Klien + Renewal Notice, modal Tambah Klien                                          |
-| `/underwriting`                     | List placing slip + filter COB/status                                                            |
-| `/underwriting/new`                 | Form placing slip baru (dinamis per COB)                                                         |
-| `/underwriting/edit/[id]`           | Edit placing slip + tombol Release                                                               |
-| `/underwriting/quotation/edit/[id]` | Draft quotation slip — subjectivity, panel co-insurance, closing instruction                     |
-| `/underwriting/slip/[id]`           | Dokumen **Placing Slip** (A4, print-ready)                                                       |
-| `/underwriting/quotation/[id]`      | Dokumen **Quotation Slip** — untuk klien, brokerage disembunyikan                                |
-| `/underwriting/cover-note/[id]`     | Dokumen **Cover Note**                                                                           |
-| `/underwriting/closing/[id]`        | Dokumen **Closing Instruction** — satu-satunya yang menampilkan Net Premium after Brokerage      |
-| `/underwriting/master-clauses`      | Pustaka 595 klausula LCH dari database — cari, filter kelompok produk dan COB, paginasi          |
-| `/underwriting/master-clauses/new`  | Form clause baru — halaman penuh, rich text editor, simpan ke database                           |
-| `/underwriting/master-clauses/[id]` | Edit dan hapus clause                                                                            |
-| `/policies`                         | Policy database, tab Semua/Baru/Renewal, kolom softcopy                                          |
-| `/claims`                           | Klaim — tabel ringkas + detail drawer                                                            |
-| `/reports`                          | Report periodik, 3 tab breakdown                                                                 |
-| `*`                                 | 404                                                                                              |
+| Route                               | Isi                                                                                |
+| ----------------------------------- | ---------------------------------------------------------------------------------- |
+| `/`                                 | Dashboard — 4 KPI, chart produksi bulanan, donut class of business, renewal 60 hari |
+| `/marketing`                        | Tab Database Klien (form KYC), SPPA, dan Renewal Notice                            |
+| `/marketing/clients/[id]`           | Detail klien — KYC, alamat, berkas, SPPA, slip, polis, klaim                       |
+| `/underwriting`                     | List placing slip + filter COB/status, hapus draft, batalkan slip bernomor         |
+| `/underwriting/new`                 | Form placing slip baru; `?sppa=` atau `?client=` untuk mengisi otomatis            |
+| `/underwriting/edit/[id]`           | Edit placing slip + validasi dan Release                                           |
+| `/underwriting/quotation/edit/[id]` | Draft quotation slip — subjectivity, panel co-insurance, closing instruction       |
+| `/underwriting/slip/[id]`           | Dokumen **Placing Slip** (A4, print-ready)                                         |
+| `/underwriting/quotation/[id]`      | Dokumen **Quotation Slip** — untuk klien, brokerage disembunyikan                  |
+| `/underwriting/cover-note/[id]`     | Dokumen **Cover Note**                                                             |
+| `/underwriting/closing/[id]`        | Dokumen **Closing Instruction** — satu-satunya yang menampilkan Net Premium        |
+| `/underwriting/master-clauses`      | Pustaka 595 klausula LCH dari database — cari, filter kelompok produk dan COB      |
+| `/underwriting/master-clauses/new`  | Form clause baru — halaman penuh, rich text editor, simpan ke database             |
+| `/underwriting/master-clauses/[id]` | Edit dan hapus clause                                                              |
+| `/policies`                         | Policy database — 4 tipe polis, polis induk, softcopy berversi                     |
+| `/claims`                           | Klaim — tabel ringkas + detail drawer, form dari polis                             |
+| `/reports`                          | Report periodik per bulan/kuartal/tahun, 3 tab breakdown                           |
+| `*`                                 | 404                                                                                |
 
 ## Bahasa visual
 
@@ -166,6 +172,8 @@ Effective Brok. = brokerage% ÷ 1,11 bila Include VAT
 ```
 
 Basis rate: **Property & COB lain → per mil (‰)**, **Motor Vehicle → persen (%)**.
+Semua nominal dibulatkan ke sen (`roundCents`), dan input angka memakai `components/ui/number-input.tsx`
+(Base UI NumberField, format id-ID: titik ribuan, koma desimal; titik di field rate dianggap koma).
 Untuk Property, baris `BI PAR` dan `BI EQVET` dihitung dari Sum Insured Section 2, sisanya dari Section 1.
 
 ## Struktur
@@ -216,10 +224,17 @@ atau tetap lewat print browser.
 
 Database dan deployment dipegang Adi. Yang perlu disiapkan di akunnya:
 
-1. **Database.** Postgres mana pun. Jalankan `db:deploy` lalu `db:seed` ke sana.
-2. **Deployment.** Project Vercel baru dari repo ini, dengan `DATABASE_URL` diisi di Environment
-   Variables untuk Production, Preview, dan Development sekaligus. Tanpa itu build tetap lolos tapi
-   halaman Master Clauses error saat dibuka, karena tabelnya tidak ada.
+1. **Database.** Prisma Postgres dari integrasi Vercel (prefix `lch_`). Migrasi dan seed sudah
+   dijalankan ke sana: 44 tabel, master data, dan 595 clause. Untuk database lain, jalankan
+   `db:deploy` lalu `db:seed` dengan `DATABASE_URL` menunjuk ke database itu.
+2. **Deployment.** Project Vercel dari repo ini dengan integrasi Prisma Postgres tersambung untuk
+   Production, Preview, dan Development. Integrasi membuat `lch_POSTGRES_URL`, dan
+   [`lib/database-url.ts`](lib/database-url.ts) membacanya bila `DATABASE_URL` kosong, jadi
+   `DATABASE_URL` tidak wajib diisi di Vercel. Tanpa salah satunya build tetap lolos, tapi halaman
+   Master Clauses error saat dibuka.
+
+Connection string berisi password. Simpan hanya di `.env` lokal (di-ignore git) dan Environment
+Variables Vercel, jangan di kode atau chat. Bila sempat tersebar, rotate dari dashboard Prisma.
 
 URL demo tetap `lch-ins.vercel.app`, karena LCH memakai tautan itu dan sudah tertulis di PRD.
 Subdomain `*.vercel.app` dikunci per nama project, jadi urutannya tidak boleh terbalik: project lama

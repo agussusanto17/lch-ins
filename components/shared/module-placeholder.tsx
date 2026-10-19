@@ -31,7 +31,7 @@ export function ModulePlaceholder({
         <span className="text-sm text-muted-foreground">Jadwal {week}</span>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-xl border p-4">
           <p className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
             Yang akan ada di halaman ini

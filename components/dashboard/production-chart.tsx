@@ -8,7 +8,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { MONTHLY_PRODUCTION } from "@/lib/data"
+import type { MonthlyProductionRow } from "@/lib/data"
 
 const config = {
   premium: { label: "Premium", color: "var(--chart-1)" },
@@ -16,16 +16,15 @@ const config = {
 } satisfies ChartConfig
 
 export function ProductionChart({
+  data,
   showBrokerage = true,
 }: {
+  data: MonthlyProductionRow[]
   showBrokerage?: boolean
 }) {
   return (
     <ChartContainer config={config} className="h-[330px] w-full">
-      <AreaChart
-        data={MONTHLY_PRODUCTION}
-        margin={{ left: -8, right: 8, top: 8 }}
-      >
+      <AreaChart data={data} margin={{ left: -8, right: 8, top: 8 }}>
         <defs>
           <linearGradient id="fillPremium" x1="0" y1="0" x2="0" y2="1">
             <stop

@@ -1,5 +1,7 @@
 import { defineConfig } from "prisma/config"
 
+import { databaseUrl } from "./lib/database-url"
+
 /**
  * Konfigurasi Prisma 7. Connection string tidak lagi ditulis di schema.prisma,
  * jadi tempatnya di sini.
@@ -21,9 +23,10 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
     // Dibaca langsung, bukan lewat env(), supaya `prisma generate` tetap jalan
-    // di server build yang tidak punya DATABASE_URL. Perintah migrasi tetap
-    // gagal dengan pesan jelas kalau variabelnya belum diisi.
-    url: process.env.DATABASE_URL,
+    // di server build yang tidak punya connection string. Perintah migrasi
+    // tetap gagal dengan pesan jelas kalau variabelnya belum diisi. Selain
+    // DATABASE_URL, variabel integrasi Prisma Postgres di Vercel juga dibaca.
+    url: databaseUrl(),
   },
   migrations: {
     path: "prisma/migrations",

@@ -3,6 +3,7 @@
 import * as React from "react"
 import { CalendarClock } from "lucide-react"
 
+import { useToday } from "@/components/layout/today-provider"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { ExportButtons } from "@/components/shared/table-toolbar"
@@ -24,8 +25,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CLASSES_OF_BUSINESS, POLICIES, TODAY, premiumIdr } from "@/lib/data"
-import { dateShort, daysUntil, rupiah } from "@/lib/format"
+import {
+  CLASSES_OF_BUSINESS,
+  policyStatus,
+  premiumIdr,
+  type Policy,
+} from "@/lib/data"
+import { daysBetween } from "@/lib/date"
+import type { ExportSpec } from "@/lib/export"
+import { dateShort, rupiah } from "@/lib/format"
+import { useCollection } from "@/lib/store"
 
 const PERIOD_ITEMS = [
   { label: "30 hari", value: "30" },
@@ -39,19 +48,45 @@ const COB_ITEMS = [
 ]
 
 export function RenewalNotice() {
+  const today = useToday()
+  const policies = useCollection("policies")
   const [period, setPeriod] = React.useState("90")
   const [cob, setCob] = React.useState("all")
 
   const rows = React.useMemo(() => {
     const limit = Number(period)
-    return POLICIES.filter((p) => {
-      if (cob !== "all" && p.cob !== cob) return false
-      const d = daysUntil(p.expiryDate, TODAY)
-      return d >= 0 && d <= limit
-    }).sort((a, b) => a.expiryDate.localeCompare(b.expiryDate))
-  }, [period, cob])
+    return policies
+      .filter((p) => {
+        // Endorsement dan pembatalan ikut polis induknya, tidak di-renew sendiri.
+        if (p.type === "Endorsement" || p.type === "Cancellation") return false
+        if (cob !== "all" && p.cob !== cob) return false
+        const d = daysBetween(today, p.expiryDate)
+        return d >= 0 && d <= limit
+      })
+      .sort((a, b) => a.expiryDate.localeCompare(b.expiryDate))
+  }, [policies, period, cob, today])
 
   const totalPremium = rows.reduce((a, p) => a + premiumIdr(p), 0)
+
+  const exportSpec: ExportSpec<Policy> = {
+    filename: "renewal-notice",
+    sheet: "Renewal",
+    rows,
+    columns: [
+      { header: "No. Polis", value: (p) => p.policyNo },
+      { header: "Tertanggung", value: (p) => p.insuredName, width: 36 },
+      { header: "COB", value: (p) => p.cob },
+      { header: "Asuransi", value: (p) => p.insurer, width: 36 },
+      { header: "Tanggal Berakhir", value: (p) => p.expiryDate, type: "date" },
+      {
+        header: "Sisa Hari",
+        value: (p) => daysBetween(today, p.expiryDate),
+        type: "number",
+      },
+      { header: "Mata Uang", value: (p) => p.currency },
+      { header: "Premium", value: (p) => p.premium, type: "money" },
+    ],
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -98,7 +133,7 @@ export function RenewalNotice() {
             </SelectContent>
           </Select>
         </Field>
-        <ExportButtons className="ml-auto" />
+        <ExportButtons className="ml-auto" spec={exportSpec} />
       </div>
 
       <Card className="flex-row items-center gap-3 px-5 py-4">
@@ -131,7 +166,7 @@ export function RenewalNotice() {
               />
             ) : (
               rows.map((p) => {
-                const days = daysUntil(p.expiryDate, TODAY)
+                const days = daysBetween(today, p.expiryDate)
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="tabular font-medium">
@@ -159,7 +194,7 @@ export function RenewalNotice() {
                       {rupiah(premiumIdr(p))}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={p.status} />
+                      <StatusBadge status={policyStatus(p.expiryDate, today)} />
                     </TableCell>
                   </TableRow>
                 )
@@ -170,7 +205,7 @@ export function RenewalNotice() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Menampilkan {rows.length} dari {POLICIES.length} polis
+        Menampilkan {rows.length} dari {policies.length} polis
       </p>
     </div>
   )

@@ -3,10 +3,22 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, Save, Send, Trash2 } from "lucide-react"
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Ban,
+  Check,
+  Eye,
+  Info,
+  Save,
+  Send,
+  Trash2,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { PageShell } from "@/components/layout/page-header"
+import { useToday } from "@/components/layout/today-provider"
+import { SelectInput } from "@/components/shared/form-fields"
 import { SectionCard } from "@/components/shared/section-card"
 import {
   SlipFormActions,
@@ -30,8 +42,13 @@ import {
   LimitRateTable,
 } from "@/components/underwriting/rate-tables"
 import {
+  buildSlipNo,
   coverCodeFor,
+  isOutOfBounds,
+  nextSlipSeq,
+  rateLinesWithBounds,
   recalc,
+  releaseIssues,
   switchCob,
   usesPropertyBlocks,
   usesSectionSumInsured,
@@ -45,11 +62,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import {
   Select,
   SelectContent,
@@ -67,18 +84,24 @@ import {
   discountAmount,
   effectiveBrokeragePct,
   sumItems,
+  totalPayable,
   totalPremium,
   totalSumInsured,
 } from "@/lib/calc"
 import {
   CLASSES_OF_BUSINESS,
+  CONSTRUCTION_CLASSES,
   CURRENCIES,
   TYPE_OF_COVER,
   WORDING_FORMS,
   type ClassOfBusiness,
   type PlacingSlip,
+  type RateException,
 } from "@/lib/data"
-import { money, num, percent, romanMonth } from "@/lib/format"
+import { BI_SCALE_OJK } from "@/lib/data/ojk-tariff"
+import { money, percent } from "@/lib/format"
+import { newId, store, useRecord } from "@/lib/store"
+import { cn } from "@/lib/utils"
 
 const SECTION_KEYS = [
   "basic",
@@ -94,8 +117,54 @@ type SectionKey = (typeof SECTION_KEYS)[number]
 
 const COB_ITEMS = CLASSES_OF_BUSINESS.map((c) => ({ label: c, value: c }))
 const CURRENCY_ITEMS = CURRENCIES.map((c) => ({ label: c, value: c }))
+const CONSTRUCTION_ITEMS = CONSTRUCTION_CLASSES.map((c) => ({
+  label: `${c.label} (${c.code}) — ${c.description}`,
+  value: c.code,
+}))
+const INDEMNITY_ITEMS = BI_SCALE_OJK.map((s) => ({
+  label: `${s.months} bulan · ${s.pct}% tarif dasar`,
+  value: `${s.months} months`,
+}))
 
+/**
+ * Form placing slip. Mengambil slip dari store sesi (termasuk slip yang baru
+ * dibuat) dan jatuh ke data server bila belum ada di store.
+ */
 export function PlacingSlipForm({
+  id,
+  initial,
+  mode,
+}: {
+  id?: string
+  initial: PlacingSlip | null
+  mode: "new" | "edit"
+}) {
+  const stored = useRecord("slips", id ?? null)
+  const source = stored ?? initial
+
+  if (!source) {
+    return (
+      <PageShell>
+        <div className="flex flex-col items-center gap-3 py-24 text-center">
+          <h1 className="text-lg font-semibold">
+            Placing slip tidak ditemukan
+          </h1>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            Slip mungkin sudah dihapus, atau dibuat di sesi lain dan belum
+            tersimpan ke server.
+          </p>
+          <Button render={<Link href="/underwriting" />} nativeButton={false}>
+            <ArrowLeft data-icon="inline-start" />
+            Kembali ke Underwriting
+          </Button>
+        </div>
+      </PageShell>
+    )
+  }
+  return <SlipEditor key={source.id} initial={source} mode={mode} />
+}
+
+function SlipEditor({
   initial,
   mode,
 }: {
@@ -103,7 +172,14 @@ export function PlacingSlipForm({
   mode: "new" | "edit"
 }) {
   const router = useRouter()
+  const today = useToday()
   const [slip, setSlip] = React.useState<PlacingSlip>(() => recalc(initial))
+  const [savedJson, setSavedJson] = React.useState(() =>
+    JSON.stringify(recalc(initial))
+  )
+  const dirty = JSON.stringify(slip) !== savedJson
+  // Slip baru (termasuk yang terisi dari SPPA) selalu bisa disimpan sebagai draft.
+  const canSave = dirty || mode === "new"
 
   const set = React.useCallback((patch: Partial<PlacingSlip>) => {
     setSlip((s) => recalc({ ...s, ...patch }))
@@ -113,18 +189,25 @@ export function PlacingSlipForm({
     Record<string, boolean>
   >(() => Object.fromEntries(SECTION_KEYS.map((k) => [k, true])))
   const allOpen = SECTION_KEYS.every((k) => openSections[k])
-
   const sectionProps = (key: SectionKey) => ({
     collapsible: true as const,
     open: openSections[key],
     onOpenChange: (v: boolean) => setOpenSections((o) => ({ ...o, [key]: v })),
   })
 
-  /** Batas tarif OJK per baris rate, terisi saat rate diambil dari panel referensi. */
-  const [rateBounds, setRateBounds] = React.useState<
-    Record<string, RateBounds>
-  >({})
+  const [issues, setIssues] = React.useState<string[] | null>(null)
+  const [confirmRelease, setConfirmRelease] = React.useState(false)
+  const [confirmDestroy, setConfirmDestroy] = React.useState(false)
 
+  // Peringatan saat menutup tab dengan perubahan yang belum disimpan.
+  React.useEffect(() => {
+    if (!dirty) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener("beforeunload", onBeforeUnload)
+    return () => window.removeEventListener("beforeunload", onBeforeUnload)
+  }, [dirty])
+
+  const locked = slip.status === "Cancelled" || slip.status === "Closed"
   const isProperty = slip.cob === "Property"
   const isMotor = slip.cob === "Motor Vehicle"
   const coverItems = (TYPE_OF_COVER[slip.cob] ?? []).map((t) => ({
@@ -132,12 +215,16 @@ export function PlacingSlipForm({
     value: t.label,
   }))
 
+  const lines = rateLinesWithBounds(slip)
   const md = sumItems(slip.sumInsuredSection1)
   const bi = sumItems(slip.sumInsuredSection2)
   const tsi = totalSumInsured(slip)
   const premium = totalPremium(slip)
   const discount = discountAmount(slip)
-  const payable = premium - discount + slip.adminCost + slip.stampDuty
+  const payable = totalPayable(slip)
+  const unresolved = lines.filter(
+    (l) => isOutOfBounds(l) && !slip.rateExceptions?.[l.id]
+  ).length
 
   /** Tarif dasar BI: jumlah FLEXAS, FWTWD, RSMDCC, dan Other Losses. */
   const biBaseRate = slip.rateLines
@@ -148,42 +235,115 @@ export function PlacingSlipForm({
   const editedClauseCount = slip.clauseIds.filter(
     (id) => slip.clauseOverrides?.[id]
   ).length
+  const customWording = slip.wordingForms.filter(
+    (w) => w && !WORDING_FORMS.includes(w)
+  )
 
   /** Isi satu baris rate dari panel referensi OJK, sekaligus catat batasnya. */
   function applyOjkRate(label: string, value: number, bounds?: RateBounds) {
-    const hits = slip.rateLines.filter((l) => l.label.startsWith(label))
-    if (!hits.length) return
+    if (!slip.rateLines.some((l) => l.label.startsWith(label))) return
     // Satu klik BI mengisi dua baris sekaligus, jadi wajib pakai updater agar
     // panggilan kedua tidak menimpa hasil panggilan pertama.
     setSlip((s) =>
       recalc({
         ...s,
         rateLines: s.rateLines.map((l) =>
-          l.label.startsWith(label) ? { ...l, rate: value } : l
+          l.label.startsWith(label)
+            ? {
+                ...l,
+                rate: value,
+                ...(bounds
+                  ? {
+                      min: bounds.min,
+                      max: bounds.max,
+                      boundSource: bounds.source,
+                    }
+                  : {}),
+              }
+            : l
         ),
       })
     )
-    if (bounds) {
-      setRateBounds((b) => ({
-        ...b,
-        ...Object.fromEntries(hits.map((l) => [l.id, bounds])),
-      }))
-    }
-    toast.success(`Rate ${label} diisi ${num(value, 3)}`, {
+    toast.success(`Rate ${label} diisi ${value.toLocaleString("id-ID")}`, {
       description: bounds?.source,
     })
   }
 
-  function handleRelease() {
-    const now = new Date()
-    const code = coverCodeFor(slip.cob, slip.typeOfCover)
-    const nextSeq = 6
-    const no = `${String(nextSeq).padStart(3, "0")}/LCH-PLCMT/${code ? `PS-${code}` : "PS"}/${romanMonth(now.getMonth())}/${now.getFullYear()}`
-    set({ status: "Released", slipNo: no, seq: nextSeq })
-    toast.success("Slip di-release", {
-      description: `No. slip ${no} berhasil digenerate.`,
+  function setException(lineId: string, exception: RateException | null) {
+    const next = { ...(slip.rateExceptions ?? {}) }
+    if (exception) next[lineId] = exception
+    else delete next[lineId]
+    set({ rateExceptions: next })
+  }
+
+  /** Simpan ke store. Batas OJK ikut disalin dan alasan yang tidak perlu dibuang. */
+  function persist(next: PlacingSlip = slip) {
+    const withBounds = rateLinesWithBounds(next)
+    const exceptions = Object.fromEntries(
+      Object.entries(next.rateExceptions ?? {}).filter(([lineId]) =>
+        withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
+      )
+    )
+    const record: PlacingSlip = {
+      ...next,
+      id: next.id === "new" ? newId("s") : next.id,
+      rateLines: withBounds,
+      rateExceptions: exceptions,
+      updatedAt: today,
+    }
+    store.upsert("slips", record)
+    setSlip(record)
+    setSavedJson(JSON.stringify(record))
+    return record
+  }
+
+  function handleSave() {
+    const record = persist()
+    toast.success("Draft tersimpan", {
+      description: record.slipNo ?? record.insuredName ?? undefined,
+    })
+    if (mode === "new") router.replace(`/underwriting/edit/${record.id}`)
+  }
+
+  function startRelease() {
+    const found = releaseIssues(slip)
+    if (found.length) setIssues(found)
+    else setConfirmRelease(true)
+  }
+
+  function doRelease() {
+    const seq = nextSlipSeq(store.all("slips"), today)
+    const slipNo = buildSlipNo(seq, slip.coverCode, today)
+    const record = persist({ ...slip, status: "Released", seq, slipNo })
+    setConfirmRelease(false)
+    toast.success("Slip di-release", { description: `No. slip ${slipNo}` })
+    if (mode === "new") router.replace(`/underwriting/edit/${record.id}`)
+  }
+
+  function doDestroy() {
+    setConfirmDestroy(false)
+    if (slip.status === "Draft") {
+      if (store.get("slips", slip.id)) store.remove("slips", slip.id)
+      setSavedJson(JSON.stringify(slip))
+      toast.success("Draft slip dihapus")
+      router.push("/underwriting")
+      return
+    }
+    persist({ ...slip, status: "Cancelled" })
+    toast.success("Slip dibatalkan", {
+      description: `Nomor ${slip.slipNo} tetap tercatat supaya penomoran tidak bolong.`,
     })
   }
+
+  /** Buka dokumen atau quotation; perubahan disimpan dulu supaya dokumen sama dengan form. */
+  function goTo(path: (id: string) => string) {
+    const record = dirty || mode === "new" ? persist() : slip
+    router.push(path(record.id))
+  }
+
+  const destroyLabel = slip.status === "Draft" ? "Hapus Draft" : "Batalkan Slip"
+  const canDestroy =
+    mode === "edit" && slip.status !== "Cancelled" && slip.status !== "Closed"
 
   return (
     <PageShell className="gap-0 p-0">
@@ -205,675 +365,727 @@ export function PlacingSlipForm({
             <span className="tabular font-semibold text-foreground">
               {money(tsi, slip.currency)}
             </span>
+            {dirty ? (
+              <span className="ml-3 text-warning">· belum disimpan</span>
+            ) : null}
           </>
         }
       />
 
       <SlipFormBody>
-        {/* ---------- Informasi Dasar ---------- */}
-        <SectionCard
-          title="Informasi Dasar"
-          {...sectionProps("basic")}
-          summary={slip.insuredName || "Belum ada tertanggung"}
-        >
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel>Class of Business *</FieldLabel>
-              <Select
-                items={COB_ITEMS}
-                value={slip.cob}
-                onValueChange={(v) =>
-                  setSlip((s) => switchCob(s, v as ClassOfBusiness))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {COB_ITEMS.map((i) => (
-                      <SelectItem key={i.value} value={i.value}>
-                        {i.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
+        {slip.sppaId ? (
+          <p className="flex items-center gap-2 rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+            <Info className="size-4 shrink-0" />
+            Dibuat dari SPPA {slip.insuredName}. Data dasar terisi dari SPPA dan
+            tetap bisa diubah.
+          </p>
+        ) : null}
+        {slip.status === "Released" || slip.status === "Quoted" ? (
+          <p className="flex items-start gap-2 rounded-xl bg-warning/10 px-4 py-3 text-sm text-warning">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            Slip sudah di-release dengan nomor {slip.slipNo}. Perubahan setelah
+            release tetap bisa disimpan, sementara aturan revisi menunggu
+            keputusan LCH.
+          </p>
+        ) : null}
+        {locked ? (
+          <p className="flex items-start gap-2 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
+            <Ban className="mt-0.5 size-4 shrink-0" />
+            Slip berstatus{" "}
+            {slip.status === "Cancelled" ? "dibatalkan" : "Closed"} dan tidak
+            bisa diubah lagi.
+          </p>
+        ) : null}
 
-            <Field>
-              <FieldLabel>Currency</FieldLabel>
-              <Select
-                items={CURRENCY_ITEMS}
-                value={slip.currency}
-                onValueChange={(v) => set({ currency: v as string })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {CURRENCY_ITEMS.map((i) => (
-                      <SelectItem key={i.value} value={i.value}>
-                        {i.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
+        <fieldset disabled={locked} className="contents">
+          {/* ---------- Informasi Dasar ---------- */}
+          <SectionCard
+            title="Informasi Dasar"
+            {...sectionProps("basic")}
+            summary={slip.insuredName || "Belum ada tertanggung"}
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel>Class of Business *</FieldLabel>
+                <Select
+                  items={COB_ITEMS}
+                  value={slip.cob}
+                  onValueChange={(v) =>
+                    setSlip((s) => switchCob(s, v as ClassOfBusiness))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {COB_ITEMS.map((i) => (
+                        <SelectItem key={i.value} value={i.value}>
+                          {i.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
 
-            <Field className="md:col-span-2">
-              <FieldLabel>Type of Cover *</FieldLabel>
-              <Select
-                items={[
-                  { label: "Pilih type of cover…", value: null },
-                  ...coverItems,
-                ]}
-                value={slip.typeOfCover || null}
-                onValueChange={(v) =>
-                  set({
-                    typeOfCover: (v as string) ?? "",
-                    coverCode: coverCodeFor(slip.cob, (v as string) ?? ""),
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {coverItems.map((i) => (
-                      <SelectItem key={i.value} value={i.value}>
-                        {i.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
+              <Field>
+                <FieldLabel>Currency</FieldLabel>
+                <Select
+                  items={CURRENCY_ITEMS}
+                  value={slip.currency}
+                  onValueChange={(v) => set({ currency: v as string })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {CURRENCY_ITEMS.map((i) => (
+                        <SelectItem key={i.value} value={i.value}>
+                          {i.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
 
-            <InsuredPicker
-              clientId={slip.clientId}
-              insuredName={slip.insuredName}
-              correspondenceAddress={slip.correspondenceAddress}
-              onChange={set}
-            />
+              <Field className="md:col-span-2">
+                <FieldLabel>Type of Cover *</FieldLabel>
+                <Select
+                  items={[
+                    { label: "Pilih type of cover…", value: null },
+                    ...coverItems,
+                  ]}
+                  value={slip.typeOfCover || null}
+                  onValueChange={(v) =>
+                    set({
+                      typeOfCover: (v as string) ?? "",
+                      coverCode: coverCodeFor(slip.cob, (v as string) ?? ""),
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {coverItems.map((i) => (
+                        <SelectItem key={i.value} value={i.value}>
+                          {i.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
 
-            <Field orientation="horizontal" className="md:col-span-2">
-              <Switch
-                id="tba"
-                checked={slip.periodTba}
-                onCheckedChange={(v) => set({ periodTba: Boolean(v) })}
+              <InsuredPicker
+                clientId={slip.clientId}
+                insuredName={slip.insuredName}
+                correspondenceAddress={slip.correspondenceAddress}
+                onChange={set}
               />
-              <FieldLabel htmlFor="tba" className="font-normal">
-                Period TBA (to be advised)
-              </FieldLabel>
-            </Field>
 
-            {!slip.periodTba ? (
-              <>
-                <Field>
-                  <FieldLabel htmlFor="inception">Inception Date</FieldLabel>
-                  <Input
-                    id="inception"
-                    type="date"
-                    value={slip.inceptionDate ?? ""}
-                    onChange={(e) =>
-                      set({ inceptionDate: e.target.value || null })
-                    }
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="expiry">Expiry Date</FieldLabel>
-                  <Input
-                    id="expiry"
-                    type="date"
-                    value={slip.expiryDate ?? ""}
-                    onChange={(e) =>
-                      set({ expiryDate: e.target.value || null })
-                    }
-                  />
-                </Field>
-              </>
-            ) : null}
+              <Field orientation="horizontal" className="md:col-span-2">
+                <Switch
+                  id="tba"
+                  checked={slip.periodTba}
+                  onCheckedChange={(v) => set({ periodTba: Boolean(v) })}
+                />
+                <FieldLabel htmlFor="tba" className="font-normal">
+                  Period TBA (to be advised)
+                </FieldLabel>
+              </Field>
 
-            {usesPropertyBlocks(slip.cob) ? (
-              <>
-                <Field className="md:col-span-2">
-                  <FieldLabel>Okupasi (OJK)</FieldLabel>
-                  <OccupationCombobox
-                    value={slip.occupation ?? ""}
-                    onValueChange={(v) => set({ occupation: v })}
-                  />
-                </Field>
-                <Field className="md:col-span-2">
-                  <FieldLabel htmlFor="risk">Risk Location</FieldLabel>
-                  <Textarea
-                    id="risk"
-                    rows={2}
-                    value={slip.riskLocation ?? ""}
-                    placeholder="Alamat lokasi risiko"
-                    onChange={(e) => set({ riskLocation: e.target.value })}
-                  />
-                </Field>
-              </>
-            ) : null}
-          </div>
-
-          {isMotor ? (
-            <p className="mt-4 rounded-xl bg-muted px-3 py-2 text-xs text-muted-foreground">
-              Okupasi (OJK), Risk Location, Wording Form, dan Detail Coverage
-              tidak dirender untuk COB Motor Vehicle.
-            </p>
-          ) : null}
-        </SectionCard>
-
-        {/* ---------- Wording Form + Detail Coverage ---------- */}
-        {usesPropertyBlocks(slip.cob) ? (
-          <>
-            <SectionCard
-              title="Wording Form"
-              {...sectionProps("wording")}
-              summary={`${slip.wordingForms.filter(Boolean).length} wording`}
-            >
-              <StringList
-                values={slip.wordingForms}
-                onChange={(v) => set({ wordingForms: v })}
-                placeholder={WORDING_FORMS[0]}
-                addLabel="Tambah wording"
-              />
-            </SectionCard>
-
-            <SectionCard
-              title="Detail Coverage & Ketentuan"
-              {...sectionProps("coverage")}
-              summary={slip.indemnityPeriod || undefined}
-            >
-              <div className="flex flex-col gap-4">
-                <Field>
-                  <FieldLabel htmlFor="coverage">Coverage</FieldLabel>
-                  <Textarea
-                    id="coverage"
-                    rows={3}
-                    value={slip.coverage ?? ""}
-                    placeholder="Uraian jaminan yang diberikan"
-                    onChange={(e) => set({ coverage: e.target.value })}
-                  />
-                </Field>
-                <div className="grid gap-4 md:grid-cols-2">
+              {!slip.periodTba ? (
+                <>
                   <Field>
-                    <FieldLabel htmlFor="construction">
-                      Construction Class
-                    </FieldLabel>
+                    <FieldLabel htmlFor="inception">Inception Date</FieldLabel>
                     <Input
-                      id="construction"
-                      value={slip.constructionClass ?? ""}
-                      placeholder="mis. Class 1 — Reinforced Concrete"
+                      id="inception"
+                      type="date"
+                      value={slip.inceptionDate ?? ""}
                       onChange={(e) =>
-                        set({ constructionClass: e.target.value })
+                        set({ inceptionDate: e.target.value || null })
                       }
                     />
                   </Field>
-                  <Field>
-                    <FieldLabel htmlFor="indemnity">
-                      Indemnity Period
-                    </FieldLabel>
+                  <Field
+                    data-invalid={
+                      slip.inceptionDate &&
+                      slip.expiryDate &&
+                      slip.expiryDate <= slip.inceptionDate
+                        ? true
+                        : undefined
+                    }
+                  >
+                    <FieldLabel htmlFor="expiry">Expiry Date</FieldLabel>
                     <Input
-                      id="indemnity"
-                      value={slip.indemnityPeriod ?? ""}
-                      placeholder="mis. 12 months"
-                      onChange={(e) => set({ indemnityPeriod: e.target.value })}
+                      id="expiry"
+                      type="date"
+                      min={slip.inceptionDate ?? undefined}
+                      value={slip.expiryDate ?? ""}
+                      onChange={(e) =>
+                        set({ expiryDate: e.target.value || null })
+                      }
                     />
                   </Field>
+                </>
+              ) : null}
+
+              {usesPropertyBlocks(slip.cob) ? (
+                <>
+                  <Field className="md:col-span-2">
+                    <FieldLabel>
+                      Okupasi (OJK){isProperty ? " *" : ""}
+                    </FieldLabel>
+                    <OccupationCombobox
+                      value={slip.occupation ?? ""}
+                      onValueChange={(v) => set({ occupation: v })}
+                    />
+                  </Field>
+                  <Field className="md:col-span-2">
+                    <FieldLabel htmlFor="risk">
+                      Risk Location{isProperty ? " *" : ""}
+                    </FieldLabel>
+                    <Textarea
+                      id="risk"
+                      rows={2}
+                      value={slip.riskLocation ?? ""}
+                      placeholder="Alamat lokasi risiko, sertakan kabupaten atau kota"
+                      onChange={(e) => set({ riskLocation: e.target.value })}
+                    />
+                  </Field>
+                </>
+              ) : (
+                <Field className="md:col-span-2">
+                  <FieldLabel htmlFor="domicile">Domisili Kendaraan</FieldLabel>
+                  <Textarea
+                    id="domicile"
+                    rows={2}
+                    value={slip.riskLocation ?? ""}
+                    placeholder="Alamat garasi atau kota domisili, dipakai menentukan wilayah tarif OJK"
+                    onChange={(e) => set({ riskLocation: e.target.value })}
+                  />
+                </Field>
+              )}
+            </div>
+          </SectionCard>
+
+          {/* ---------- Wording Form + Detail Coverage ---------- */}
+          {usesPropertyBlocks(slip.cob) ? (
+            <>
+              <SectionCard
+                title="Wording Form"
+                {...sectionProps("wording")}
+                summary={`${slip.wordingForms.filter(Boolean).length} wording`}
+              >
+                <div className="flex flex-wrap gap-2">
+                  {WORDING_FORMS.map((w) => {
+                    const active = slip.wordingForms.includes(w)
+                    return (
+                      <Button
+                        key={w}
+                        type="button"
+                        variant={active ? "secondary" : "outline"}
+                        size="sm"
+                        aria-pressed={active}
+                        // Nama wording bisa panjang; biarkan pindah baris daripada terpotong.
+                        className="h-auto min-h-8 max-w-full py-1.5 text-left whitespace-normal"
+                        onClick={() =>
+                          set({
+                            wordingForms: active
+                              ? slip.wordingForms.filter((x) => x !== w)
+                              : [...slip.wordingForms.filter(Boolean), w],
+                          })
+                        }
+                      >
+                        {active ? <Check data-icon="inline-start" /> : null}
+                        {w}
+                      </Button>
+                    )
+                  })}
                 </div>
+                {customWording.length ? (
+                  <div className="mt-3 flex flex-col gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      Wording di luar master (data lama). Tambahkan ke master
+                      data bila masih dipakai.
+                    </p>
+                    <StringList
+                      values={customWording}
+                      onChange={(v) =>
+                        set({
+                          wordingForms: [
+                            ...slip.wordingForms.filter((w) =>
+                              WORDING_FORMS.includes(w)
+                            ),
+                            ...v,
+                          ],
+                        })
+                      }
+                      addLabel="Tambah"
+                    />
+                  </div>
+                ) : null}
+              </SectionCard>
+
+              <SectionCard
+                title="Detail Coverage & Ketentuan"
+                {...sectionProps("coverage")}
+                summary={slip.indemnityPeriod || undefined}
+              >
+                <div className="flex flex-col gap-4">
+                  <Field>
+                    <FieldLabel htmlFor="coverage">Coverage</FieldLabel>
+                    <Textarea
+                      id="coverage"
+                      rows={3}
+                      value={slip.coverage ?? ""}
+                      placeholder="Uraian jaminan yang diberikan"
+                      onChange={(e) => set({ coverage: e.target.value })}
+                    />
+                  </Field>
+                  {isProperty ? (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <SelectInput
+                        label="Construction Class"
+                        required
+                        items={CONSTRUCTION_ITEMS}
+                        value={slip.constructionClass ?? ""}
+                        onValueChange={(v) => set({ constructionClass: v })}
+                        placeholder="Pilih kelas konstruksi"
+                        description="Dipakai menentukan batas tarif FLEXAS okupasi."
+                      />
+                      <SelectInput
+                        label="Indemnity Period"
+                        items={INDEMNITY_ITEMS}
+                        value={slip.indemnityPeriod ?? ""}
+                        onValueChange={(v) => set({ indemnityPeriod: v })}
+                        placeholder="Pilih periode (skala BI OJK)"
+                        description="Terisi juga saat memilih skala BI di panel tarif OJK."
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </SectionCard>
+            </>
+          ) : null}
+
+          {/* ---------- Interest Insured ---------- */}
+          <SectionCard
+            title="Interest Insured"
+            {...sectionProps("interest")}
+            summary={
+              usesSectionSumInsured(slip.cob)
+                ? undefined
+                : money(sumItems(slip.interestItems), slip.currency)
+            }
+          >
+            {usesSectionSumInsured(slip.cob) ? (
+              <div className="flex flex-col gap-4">
+                <Field>
+                  <FieldLabel htmlFor="int1">
+                    Section 1 — Material Damage
+                  </FieldLabel>
+                  <Textarea
+                    id="int1"
+                    rows={3}
+                    value={slip.interestSection1 ?? ""}
+                    onChange={(e) => set({ interestSection1: e.target.value })}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="int2">
+                    Section 2 — Business Interruption
+                  </FieldLabel>
+                  <Textarea
+                    id="int2"
+                    rows={3}
+                    value={slip.interestSection2 ?? ""}
+                    onChange={(e) => set({ interestSection2: e.target.value })}
+                  />
+                </Field>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <LineItemList
+                  items={slip.interestItems}
+                  onChange={(items) => set({ interestItems: items })}
+                  descPlaceholder="Deskripsi objek pertanggungan"
+                  amountPlaceholder="Nilai"
+                  multiline
+                  addLabel="Tambah interest"
+                />
+                <TotalBar
+                  label="Total Interest Insured"
+                  value={money(sumItems(slip.interestItems), slip.currency)}
+                />
+              </div>
+            )}
+          </SectionCard>
+
+          {/* ---------- Sum Insured (Property) ---------- */}
+          {usesSectionSumInsured(slip.cob) ? (
+            <SectionCard
+              title="Sum Insured"
+              {...sectionProps("sumInsured")}
+              summary={money(md + bi, slip.currency)}
+            >
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-medium">
+                    Section 1 — Material Damage
+                  </p>
+                  <LineItemList
+                    items={slip.sumInsuredSection1}
+                    onChange={(items) => set({ sumInsuredSection1: items })}
+                    descPlaceholder="Deskripsi"
+                    amountPlaceholder="Nilai"
+                  />
+                  <TotalBar
+                    label="Subtotal Material Damage"
+                    value={money(md, slip.currency)}
+                    tone="muted"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-medium">
+                    Section 2 — Business Interruption
+                  </p>
+                  <LineItemList
+                    items={slip.sumInsuredSection2}
+                    onChange={(items) => set({ sumInsuredSection2: items })}
+                    descPlaceholder="Deskripsi"
+                    amountPlaceholder="Nilai"
+                  />
+                  <TotalBar
+                    label="Subtotal Business Interruption"
+                    value={money(bi, slip.currency)}
+                    tone="muted"
+                  />
+                </div>
+                <TotalBar
+                  label="Total Sum Insured"
+                  value={money(md + bi, slip.currency)}
+                />
               </div>
             </SectionCard>
-          </>
-        ) : null}
+          ) : null}
 
-        {/* ---------- Interest Insured ---------- */}
-        <SectionCard
-          title="Interest Insured"
-          {...sectionProps("interest")}
-          summary={
-            usesSectionSumInsured(slip.cob)
-              ? undefined
-              : money(sumItems(slip.interestItems), slip.currency)
-          }
-        >
-          {usesSectionSumInsured(slip.cob) ? (
-            <div className="flex flex-col gap-4">
-              <Field>
-                <FieldLabel htmlFor="int1">
-                  Section 1 — Material Damage
-                </FieldLabel>
-                <Textarea
-                  id="int1"
-                  rows={3}
-                  value={slip.interestSection1 ?? ""}
-                  onChange={(e) => set({ interestSection1: e.target.value })}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="int2">
-                  Section 2 — Business Interruption
-                </FieldLabel>
-                <Textarea
-                  id="int2"
-                  rows={3}
-                  value={slip.interestSection2 ?? ""}
-                  onChange={(e) => set({ interestSection2: e.target.value })}
-                />
-              </Field>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <LineItemList
-                items={slip.interestItems}
-                onChange={(items) => set({ interestItems: items })}
-                descPlaceholder="Deskripsi objek pertanggungan"
-                amountPlaceholder="Nilai"
-                multiline
-                addLabel="Tambah interest"
-              />
-              <TotalBar
-                label="Total Interest Insured"
-                value={money(sumItems(slip.interestItems), slip.currency)}
-              />
-            </div>
-          )}
-        </SectionCard>
-
-        {/* ---------- Sum Insured (Property) ---------- */}
-        {usesSectionSumInsured(slip.cob) ? (
+          {/* ---------- Deductible & Clauses ---------- */}
           <SectionCard
-            title="Sum Insured"
-            {...sectionProps("sumInsured")}
-            summary={money(md + bi, slip.currency)}
+            title="Deductible & Clauses"
+            {...sectionProps("deductible")}
+            summary={`${slip.clauseIds.length} klausula${
+              editedClauseCount ? ` · ${editedClauseCount} diedit` : ""
+            }`}
           >
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <p className="text-sm font-medium">
-                  Section 1 — Material Damage
-                </p>
-                <LineItemList
-                  items={slip.sumInsuredSection1}
-                  onChange={(items) => set({ sumInsuredSection1: items })}
-                  descPlaceholder="Deskripsi"
-                  amountPlaceholder="Nilai"
-                />
-                <TotalBar
-                  label="Subtotal Material Damage"
-                  value={money(md, slip.currency)}
-                  tone="muted"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">
-                  Section 2 — Business Interruption
-                </p>
-                <LineItemList
-                  items={slip.sumInsuredSection2}
-                  onChange={(items) => set({ sumInsuredSection2: items })}
-                  descPlaceholder="Deskripsi"
-                  amountPlaceholder="Nilai"
-                />
-                <TotalBar
-                  label="Subtotal Business Interruption"
-                  value={money(bi, slip.currency)}
-                  tone="muted"
-                />
-              </div>
-              <TotalBar
-                label="Total Sum Insured"
-                value={money(md + bi, slip.currency)}
-              />
-            </div>
-          </SectionCard>
-        ) : null}
-
-        {/* ---------- Deductible & Clauses ---------- */}
-        <SectionCard
-          title="Deductible & Clauses"
-          {...sectionProps("deductible")}
-          summary={`${slip.clauseIds.length} klausula${
-            editedClauseCount ? ` · ${editedClauseCount} diedit` : ""
-          }`}
-        >
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">
-                {isProperty
-                  ? "Deductible — Section 1 (Material Damage)"
-                  : "Deductible"}
-              </p>
-              <StringList
-                values={slip.deductiblesSection1}
-                onChange={(v) => set({ deductiblesSection1: v })}
-                placeholder="Contoh: 10% of claim minimum IDR 10,000,000"
-                addLabel="Tambah deductible"
-              />
-            </div>
-
-            {isProperty ? (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">
-                  Deductible — Section 2 (Business Interruption)
+                  {isProperty
+                    ? "Deductible — Section 1 (Material Damage)"
+                    : "Deductible"}
                 </p>
                 <StringList
-                  values={slip.deductiblesSection2}
-                  onChange={(v) => set({ deductiblesSection2: v })}
-                  placeholder="Contoh: 14 days waiting period"
+                  values={slip.deductiblesSection1}
+                  onChange={(v) => set({ deductiblesSection1: v })}
+                  placeholder="Contoh: 10% of claim minimum IDR 10,000,000"
                   addLabel="Tambah deductible"
                 />
               </div>
-            ) : null}
 
-            <Field>
-              <FieldLabel htmlFor="special">Special Conditions</FieldLabel>
-              <Textarea
-                id="special"
-                rows={3}
-                value={slip.specialConditions ?? ""}
-                onChange={(e) => set({ specialConditions: e.target.value })}
-              />
-            </Field>
-
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">Clauses</p>
-              <ClausePicker
-                cob={slip.cob}
-                typeOfCover={slip.typeOfCover}
-                selected={slip.clauseIds}
-                overrides={slip.clauseOverrides ?? {}}
-                onChange={(ids) => set({ clauseIds: ids })}
-                onOverridesChange={(o) => set({ clauseOverrides: o })}
-              />
-            </div>
-          </div>
-        </SectionCard>
-
-        {/* ---------- Rate & Premium ---------- */}
-        <SectionCard
-          title="Rate & Premium"
-          {...sectionProps("rate")}
-          summary={money(payable, slip.currency)}
-        >
-          <div className="flex flex-col gap-4">
-            {isProperty || isMotor ? (
-              <OjkReference
-                mode={isMotor ? "motor" : "property"}
-                occupation={slip.occupation}
-                riskLocation={slip.riskLocation ?? ""}
-                sumInsured={tsi}
-                baseRate={biBaseRate}
-                eqRate={eqRate}
-                onPickRate={applyOjkRate}
-                onPickIndemnity={(months) =>
-                  set({ indemnityPeriod: `${months} months` })
-                }
-              />
-            ) : null}
-
-            {isProperty ? (
-              <>
-                <CoverRateTable
-                  lines={slip.rateLines}
-                  currency={slip.currency}
-                  unit="‰"
-                  bounds={rateBounds}
-                  onRateChange={(id, rate) =>
-                    set({
-                      rateLines: slip.rateLines.map((l) =>
-                        l.id === id ? { ...l, rate } : l
-                      ),
-                    })
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  Rate dalam per mil (‰). Baris BI dihitung dari sum insured
-                  Section 2, sisanya dari Section 1.
-                </p>
-              </>
-            ) : null}
-
-            {isMotor ? (
-              <>
-                <CoverRateTable
-                  lines={slip.rateLines}
-                  currency={slip.currency}
-                  unit="%"
-                  bounds={rateBounds}
-                  onRateChange={(id, rate) =>
-                    set({
-                      rateLines: slip.rateLines.map((l) =>
-                        l.id === id ? { ...l, rate } : l
-                      ),
-                    })
-                  }
-                />
-                <LimitRateTable
-                  title="Third Party Liability"
-                  lines={slip.tplLines}
-                  currency={slip.currency}
-                  totalLabel="Total TPL"
-                  onChange={(lines) => set({ tplLines: lines })}
-                />
-                <LimitRateTable
-                  title="Personal Accident"
-                  lines={slip.paLines}
-                  currency={slip.currency}
-                  totalLabel="Total PA"
-                  showCoverColumn
-                  onChange={(lines) => set({ paLines: lines })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Limit PA: IDR 5.000.000/orang, maks. 4 orang (selain truck
-                  &amp; motorcycle) · maks. 2 orang (truck).
-                </p>
-              </>
-            ) : null}
-
-            {!isProperty && !isMotor ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field>
-                  <FieldLabel>Rate (‰)</FieldLabel>
-                  <Input
-                    className="tabular"
-                    inputMode="decimal"
-                    value={slip.rateLines[0]?.rate ?? ""}
-                    placeholder="0.000"
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(",", ".")
-                      set({
-                        rateLines: slip.rateLines.map((l, i) =>
-                          i === 0
-                            ? {
-                                ...l,
-                                rate: raw === "" ? null : Number(raw) || 0,
-                              }
-                            : l
-                        ),
-                      })
-                    }}
+              {isProperty ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-medium">
+                    Deductible — Section 2 (Business Interruption)
+                  </p>
+                  <StringList
+                    values={slip.deductiblesSection2}
+                    onChange={(v) => set({ deductiblesSection2: v })}
+                    placeholder="Contoh: 14 days waiting period"
+                    addLabel="Tambah deductible"
                   />
-                </Field>
-                <Field>
-                  <FieldLabel>Basis perhitungan</FieldLabel>
-                  <Input
-                    readOnly
-                    className="tabular"
-                    value={money(tsi, slip.currency)}
-                  />
-                </Field>
-              </div>
-            ) : null}
-
-            <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
-              <div className="flex items-center justify-between text-sm font-semibold">
-                <span>Total Premium</span>
-                <span className="tabular">{money(premium, slip.currency)}</span>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Field>
-                  <FieldLabel htmlFor="disc">Discount (%)</FieldLabel>
-                  <Input
-                    id="disc"
-                    className="tabular bg-background"
-                    inputMode="decimal"
-                    value={slip.discountPct || ""}
-                    onChange={(e) =>
-                      set({
-                        discountPct:
-                          Number(e.target.value.replace(",", ".")) || 0,
-                      })
-                    }
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="admin">Admin Cost</FieldLabel>
-                  <Input
-                    id="admin"
-                    className="tabular bg-background"
-                    inputMode="numeric"
-                    value={slip.adminCost ? num(slip.adminCost) : ""}
-                    onChange={(e) =>
-                      set({
-                        adminCost:
-                          Number(e.target.value.replace(/\D/g, "")) || 0,
-                      })
-                    }
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="stamp">Stamp Duty</FieldLabel>
-                  <Input
-                    id="stamp"
-                    className="tabular bg-background"
-                    inputMode="numeric"
-                    value={slip.stampDuty ? num(slip.stampDuty) : ""}
-                    onChange={(e) =>
-                      set({
-                        stampDuty:
-                          Number(e.target.value.replace(/\D/g, "")) || 0,
-                      })
-                    }
-                  />
-                </Field>
-              </div>
-              {discount > 0 ? (
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Discount {percent(slip.discountPct)}</span>
-                  <span className="tabular">
-                    ({money(discount, slip.currency)})
-                  </span>
                 </div>
               ) : null}
-              <div className="flex items-center justify-between border-t pt-3 text-[15px] font-bold text-primary">
-                <span>Total Payable</span>
-                <span className="tabular">{money(payable, slip.currency)}</span>
+
+              <Field>
+                <FieldLabel htmlFor="special">Special Conditions</FieldLabel>
+                <Textarea
+                  id="special"
+                  rows={3}
+                  value={slip.specialConditions ?? ""}
+                  onChange={(e) => set({ specialConditions: e.target.value })}
+                />
+              </Field>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium">Clauses</p>
+                <ClausePicker
+                  cob={slip.cob}
+                  typeOfCover={slip.typeOfCover}
+                  selected={slip.clauseIds}
+                  overrides={slip.clauseOverrides ?? {}}
+                  onChange={(ids) => set({ clauseIds: ids })}
+                  onOverridesChange={(o) => set({ clauseOverrides: o })}
+                />
               </div>
             </div>
-          </div>
-        </SectionCard>
+          </SectionCard>
 
-        {/* ---------- Brokerage ---------- */}
-        <SectionCard
-          title="Brokerage"
-          {...sectionProps("brokerage")}
-          summary={percent(effectiveBrokeragePct(slip), 2)}
-        >
-          <div className="flex flex-col gap-4">
-            <div className="grid items-end gap-4 md:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="brokerage">Brokerage (%)</FieldLabel>
-                <Input
-                  id="brokerage"
-                  className="tabular"
-                  inputMode="decimal"
-                  value={slip.brokeragePct || ""}
-                  onChange={(e) =>
-                    set({
-                      brokeragePct:
-                        Number(e.target.value.replace(",", ".")) || 0,
-                    })
+          {/* ---------- Rate & Premium ---------- */}
+          <SectionCard
+            title="Rate & Premium"
+            {...sectionProps("rate")}
+            summary={money(payable, slip.currency)}
+            action={
+              unresolved ? (
+                <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+                  {unresolved} rate butuh alasan
+                </span>
+              ) : undefined
+            }
+          >
+            <div className="flex flex-col gap-4">
+              {(isProperty || isMotor) && !locked ? (
+                <OjkReference
+                  mode={isMotor ? "motor" : "property"}
+                  occupation={slip.occupation}
+                  riskLocation={slip.riskLocation ?? ""}
+                  constructionClass={slip.constructionClass}
+                  onConstructionClassChange={(code) =>
+                    set({ constructionClass: code })
+                  }
+                  sumInsured={tsi}
+                  baseRate={biBaseRate}
+                  eqRate={eqRate}
+                  onPickRate={applyOjkRate}
+                  onPickIndemnity={(months) =>
+                    set({ indemnityPeriod: `${months} months` })
                   }
                 />
-              </Field>
-              <Field orientation="horizontal" className="pb-2">
-                <Switch
-                  id="vat"
-                  checked={slip.includeVat}
-                  onCheckedChange={(v) => set({ includeVat: Boolean(v) })}
-                />
-                <FieldLabel htmlFor="vat" className="font-normal">
-                  Include VAT (PPN 2,2%)
-                </FieldLabel>
-              </Field>
-            </div>
-            {brokerageCap != null &&
-            effectiveBrokeragePct(slip) > brokerageCap ? (
-              <p className="flex items-start gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                Brokerage efektif {percent(effectiveBrokeragePct(slip), 2)}{" "}
-                melebihi batas biaya akuisisi OJK {brokerageCap}% untuk{" "}
-                {slip.cob}.
-              </p>
-            ) : null}
-            <div className="grid gap-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Effective Brokerage
-                </span>
-                <span className="tabular font-semibold">
-                  {percent(effectiveBrokeragePct(slip), 4)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Nilai Brokerage</span>
-                <span className="tabular font-semibold">
-                  {money(brokerageAmount(slip), slip.currency)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </SectionCard>
+              ) : null}
 
-        {/* ---------- Action bar ---------- */}
+              {isProperty || isMotor ? (
+                <>
+                  <CoverRateTable
+                    lines={lines}
+                    currency={slip.currency}
+                    unit={isMotor ? "%" : "‰"}
+                    exceptions={slip.rateExceptions}
+                    readOnly={locked}
+                    onRateChange={(id, rate) =>
+                      set({
+                        rateLines: slip.rateLines.map((l) =>
+                          l.id === id ? { ...l, rate } : l
+                        ),
+                      })
+                    }
+                    onExceptionChange={setException}
+                  />
+                  {isProperty ? (
+                    <p className="text-xs text-muted-foreground">
+                      Rate dalam per mil (‰). Baris BI dihitung dari sum insured
+                      Section 2, sisanya dari Section 1. Batas FLEXAS terisi
+                      otomatis dari okupasi dan kelas konstruksi.
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
+
+              {isMotor ? (
+                <>
+                  <LimitRateTable
+                    title="Third Party Liability"
+                    lines={slip.tplLines}
+                    currency={slip.currency}
+                    totalLabel="Total TPL"
+                    readOnly={locked}
+                    onChange={(l) => set({ tplLines: l })}
+                  />
+                  <LimitRateTable
+                    title="Personal Accident"
+                    lines={slip.paLines}
+                    currency={slip.currency}
+                    totalLabel="Total PA"
+                    showCoverColumn
+                    readOnly={locked}
+                    onChange={(l) => set({ paLines: l })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Limit PA: IDR 5.000.000/orang, maks. 4 orang (selain truck
+                    &amp; motorcycle) · maks. 2 orang (truck).
+                  </p>
+                </>
+              ) : null}
+
+              {!isProperty && !isMotor ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="rate-std">Rate (‰)</FieldLabel>
+                    <NumberInput
+                      id="rate-std"
+                      preset="rate"
+                      placeholder="0,000"
+                      value={slip.rateLines[0]?.rate ?? null}
+                      onValueChange={(v) =>
+                        set({
+                          rateLines: slip.rateLines.map((l, i) =>
+                            i === 0 ? { ...l, rate: v } : l
+                          ),
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="basis">Basis perhitungan</FieldLabel>
+                    <Input
+                      id="basis"
+                      readOnly
+                      className="tabular bg-muted/60"
+                      value={money(tsi, slip.currency)}
+                    />
+                  </Field>
+                </div>
+              ) : null}
+
+              <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
+                <div className="flex items-center justify-between text-sm font-semibold">
+                  <span>Total Premium</span>
+                  <span className="tabular">
+                    {money(premium, slip.currency)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <Field>
+                    <FieldLabel htmlFor="disc">Discount (%)</FieldLabel>
+                    <NumberInput
+                      id="disc"
+                      preset="percent"
+                      className="bg-background"
+                      min={0}
+                      max={100}
+                      invalid={slip.discountPct < 0 || slip.discountPct > 100}
+                      value={slip.discountPct || null}
+                      onValueChange={(v) => set({ discountPct: v ?? 0 })}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="admin">Admin Cost</FieldLabel>
+                    <NumberInput
+                      id="admin"
+                      preset="money"
+                      className="bg-background"
+                      value={slip.adminCost || null}
+                      onValueChange={(v) => set({ adminCost: v ?? 0 })}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="stamp">Stamp Duty</FieldLabel>
+                    <NumberInput
+                      id="stamp"
+                      preset="money"
+                      className="bg-background"
+                      value={slip.stampDuty || null}
+                      onValueChange={(v) => set({ stampDuty: v ?? 0 })}
+                    />
+                  </Field>
+                </div>
+                {discount > 0 ? (
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Discount {percent(slip.discountPct)}</span>
+                    <span className="tabular">
+                      ({money(discount, slip.currency)})
+                    </span>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between border-t pt-3 text-[15px] font-bold text-primary">
+                  <span>Total Payable</span>
+                  <span className="tabular">
+                    {money(payable, slip.currency)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* ---------- Brokerage ---------- */}
+          <SectionCard
+            title="Brokerage"
+            {...sectionProps("brokerage")}
+            summary={percent(effectiveBrokeragePct(slip), 2)}
+          >
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="brokerage">Brokerage (%)</FieldLabel>
+                  <NumberInput
+                    id="brokerage"
+                    preset="percent"
+                    min={0}
+                    max={100}
+                    invalid={slip.brokeragePct < 0 || slip.brokeragePct > 100}
+                    value={slip.brokeragePct || null}
+                    onValueChange={(v) => set({ brokeragePct: v ?? 0 })}
+                  />
+                </Field>
+                <Field orientation="horizontal" className="pb-2">
+                  <Switch
+                    id="vat"
+                    checked={slip.includeVat}
+                    onCheckedChange={(v) => set({ includeVat: Boolean(v) })}
+                  />
+                  <FieldLabel htmlFor="vat" className="font-normal">
+                    Include VAT (PPN 2,2%)
+                  </FieldLabel>
+                </Field>
+              </div>
+              {brokerageCap != null &&
+              effectiveBrokeragePct(slip) > brokerageCap ? (
+                <p className="flex items-start gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                  Brokerage efektif {percent(
+                    effectiveBrokeragePct(slip),
+                    2
+                  )}{" "}
+                  melebihi batas biaya akuisisi OJK {brokerageCap}% untuk{" "}
+                  {slip.cob}.
+                </p>
+              ) : null}
+              <div className="grid grid-cols-1 gap-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Effective Brokerage
+                  </span>
+                  <span className="tabular font-semibold">
+                    {percent(effectiveBrokeragePct(slip), 4)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Nilai Brokerage</span>
+                  <span className="tabular font-semibold">
+                    {money(brokerageAmount(slip), slip.currency)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        </fieldset>
       </SlipFormBody>
 
       <SlipFormActions>
-        {mode === "edit" ? (
-          <AlertDialog>
-            <AlertDialogTrigger render={<Button variant="destructive" />}>
+        {canDestroy ? (
+          <Button variant="destructive" onClick={() => setConfirmDestroy(true)}>
+            {slip.status === "Draft" ? (
               <Trash2 data-icon="inline-start" />
-              Hapus Slip
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Hapus placing slip ini?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Slip {slip.slipNo ?? "draft"} untuk{" "}
-                  {slip.insuredName || "tertanggung"} akan dihapus permanen.
-                  Tindakan ini tidak bisa dibatalkan.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Batal</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    toast.success("Slip dihapus", {
-                      description: "Demo statis.",
-                    })
-                    router.push("/underwriting")
-                  }}
-                >
-                  Hapus
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            ) : (
+              <Ban data-icon="inline-start" />
+            )}
+            {destroyLabel}
+          </Button>
         ) : null}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -882,33 +1094,116 @@ export function PlacingSlipForm({
             render={<Link href="/underwriting" />}
             nativeButton={false}
           >
-            Batal
+            {dirty ? "Batal" : "Tutup"}
           </Button>
-          <Button
-            variant="outline"
-            onClick={() =>
-              toast.success("Draft tersimpan", { description: "Demo statis." })
-            }
-          >
-            <Save data-icon="inline-start" />
-            Simpan Draft
-          </Button>
+          {mode === "edit" ? (
+            <Button
+              variant="outline"
+              onClick={() => goTo((id) => `/underwriting/slip/${id}`)}
+            >
+              <Eye data-icon="inline-start" />
+              Lihat Dokumen
+            </Button>
+          ) : null}
+          {!locked ? (
+            <Button variant="outline" onClick={handleSave} disabled={!canSave}>
+              <Save data-icon="inline-start" />
+              {canSave ? "Simpan Draft" : "Tersimpan"}
+            </Button>
+          ) : null}
           {slip.status === "Draft" ? (
-            <Button onClick={handleRelease}>
+            <Button onClick={startRelease}>
               <Send data-icon="inline-start" />
               Release & Generate No. Slip
             </Button>
-          ) : (
+          ) : slip.status === "Released" || slip.status === "Quoted" ? (
             <Button
-              render={<Link href={`/underwriting/quotation/edit/${slip.id}`} />}
-              nativeButton={false}
+              onClick={() => goTo((id) => `/underwriting/quotation/edit/${id}`)}
             >
               <Send data-icon="inline-start" />
               Lanjut ke Quotation Slip
             </Button>
-          )}
+          ) : null}
         </div>
       </SlipFormActions>
+
+      {/* Hal yang harus dilengkapi sebelum release */}
+      <AlertDialog
+        open={issues != null}
+        onOpenChange={(open) => !open && setIssues(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slip belum bisa di-release</AlertDialogTitle>
+            <AlertDialogDescription>
+              Lengkapi dulu hal berikut, lalu coba lagi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <ul className="flex flex-col gap-1.5 text-sm">
+            {issues?.map((issue) => (
+              <li key={issue} className="flex gap-2">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                {issue}
+              </li>
+            ))}
+          </ul>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Mengerti</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmRelease} onOpenChange={setConfirmRelease}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Release placing slip?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Nomor slip dibuat sekarang dan tidak bisa diubah:{" "}
+              <span className="tabular font-semibold text-foreground">
+                {buildSlipNo(
+                  nextSlipSeq(store.all("slips"), today),
+                  slip.coverCode,
+                  today
+                )}
+              </span>
+              . Setelah release, slip bisa dilanjutkan ke Quotation Slip.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={doRelease}>Release</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmDestroy} onOpenChange={setConfirmDestroy}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {slip.status === "Draft"
+                ? "Hapus draft placing slip ini?"
+                : `Batalkan slip ${slip.slipNo}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {slip.status === "Draft"
+                ? `Draft untuk ${slip.insuredName || "tertanggung"} dihapus permanen karena belum bernomor.`
+                : "Slip bernomor tidak dihapus supaya nomor tidak bolong. Statusnya menjadi Dibatalkan dan slip tidak bisa diubah lagi."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Kembali</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={doDestroy}>
+              {destroyLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <span className={cn("sr-only")} aria-live="polite">
+        {dirty
+          ? "Ada perubahan yang belum disimpan"
+          : "Semua perubahan tersimpan"}
+      </span>
     </PageShell>
   )
 }
