@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-19
 - **Branch:** `fix/proxy-redirect-loop`
-- **PR:** (belum dibuka)
+- **PR:** #1
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
