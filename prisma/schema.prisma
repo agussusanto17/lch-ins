@@ -106,18 +106,23 @@ enum CoverageType {
 
 model User {
   id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name         String
-  email        String  @unique
-  passwordHash String  @map("password_hash")
+  name          String
+  email         String  @unique
+  /// Diisi Better Auth. LCH tidak memverifikasi email, jadi selalu true.
+  emailVerified Boolean @default(true) @map("email_verified")
+  /// Foto profil, dipakai Better Auth. Belum dipakai LCH.
+  image         String?
   /// lookup role
-  roleId       String  @map("role_id") @db.Uuid
-  isActive     Boolean @default(true) @map("is_active")
+  roleId        String  @map("role_id") @db.Uuid
+  isActive      Boolean @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   role LookupValue @relation("role", fields: [roleId], references: [id])
 
+  sessions          Session[]
+  accounts          Account[]
   auditLogs         AuditLog[]
   clientDocuments   ClientDocument[]
   sppa              Sppa[]
@@ -131,6 +136,63 @@ model User {
 
   @@index([roleId])
   @@map("users")
+}
+
+/// Sesi login aktif. Dikelola Better Auth; cookie hanya membawa `token`.
+model Session {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token     String   @unique
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// Kredensial pengguna. Untuk LCH hanya ada satu baris per pengguna dengan
+/// provider "credential", dan `password` berisi hash-nya. Kolom token OAuth
+/// dibiarkan kosong karena login eksternal tidak dipakai.
+model Account {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id") @db.Uuid
+  password              String?
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz(6)
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz(6)
+  scope                 String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+/// Token sementara Better Auth, misalnya untuk reset kata sandi.
+model Verification {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([identifier])
+  @@map("verifications")
 }
 
 /// Diisi di server setiap tambah, ubah, hapus, release, dan batal.

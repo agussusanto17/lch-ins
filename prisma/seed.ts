@@ -14,8 +14,11 @@
  * Jalankan: npm run db:seed
  */
 
+import { randomBytes } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
+
+import { hashPassword } from "better-auth/crypto"
 
 import { Prisma } from "../lib/generated/prisma/client"
 import { prisma } from "../lib/prisma"
@@ -774,6 +777,54 @@ async function seedClauses() {
   return { n: data.length, created: count, skipped }
 }
 
+/**
+ * Akun awal, satu per role, supaya sistem bisa dicoba sebelum LCH mengirim
+ * daftar pengguna sungguhan. Ini data contoh dan harus diganti.
+ *
+ * Kata sandinya tidak ditulis di repo. Isi SEED_USER_PASSWORD kalau mau
+ * menentukan sendiri; kalau kosong, seed membuat kata sandi acak dan
+ * menampilkannya sekali di akhir. Hash-nya dibuat memakai fungsi milik Better
+ * Auth supaya cocok dengan yang dipakai saat login.
+ */
+const SEED_USERS: [email: string, name: string, roleCode: string][] = [
+  ["admin@lch.example", "Admin LCH", "admin"],
+  ["marketing@lch.example", "Marketing LCH", "marketing"],
+  ["teknik@lch.example", "Placement LCH", "placement"],
+  ["klaim@lch.example", "Klaim LCH", "claim"],
+  ["finance@lch.example", "Finance LCH", "finance"],
+]
+
+async function seedUsers() {
+  const password =
+    process.env.SEED_USER_PASSWORD ||
+    randomBytes(12).toString("base64url").slice(0, 16)
+  const passwordHash = await hashPassword(password)
+  let created = 0
+
+  for (const [email, name, roleCode] of SEED_USERS) {
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (existing) continue
+
+    const roleId = await lookupId("role", roleCode)
+    const user = await prisma.user.create({
+      data: { email, name, roleId },
+    })
+    await prisma.account.create({
+      data: {
+        userId: user.id,
+        // Better Auth memakai providerId "credential" untuk login email dan
+        // kata sandi, dan accountId diisi id penggunanya sendiri.
+        providerId: "credential",
+        accountId: user.id,
+        password: passwordHash,
+      },
+    })
+    created++
+  }
+
+  return { created, password: created ? password : null }
+}
+
 // ---------------------------------------------------------------------------
 
 /**
@@ -782,6 +833,8 @@ async function seedClauses() {
  * database cloud tanpa mengulang bagian yang sudah lengkap.
  */
 const SECTIONS = ["system", "cob", "occupations", "tariffs", "clauses"] as const
+
+let seededUsers: { created: number; password: string | null } | null = null
 
 async function main() {
   const args = process.argv.slice(2)
@@ -808,6 +861,8 @@ async function main() {
     )
     console.log(`  currencies           ${await seedCurrencies()}`)
     console.log(`  document_types       ${await seedDocumentTypes()}`)
+    seededUsers = await seedUsers()
+    console.log(`  users                ${seededUsers.created}`)
     console.log(`  company_profile      ${await seedCompanyProfile()}`)
   }
 
@@ -856,7 +911,15 @@ async function main() {
   console.log(
     "  insurers, adjusters, wording_forms, coa_accounts, bank_accounts"
   )
-  console.log("  users diisi saat modul autentikasi dikerjakan")
+  console.log("  daftar pengguna sungguhan, menunggu Sheet Hak Akses dari LCH")
+
+  if (seededUsers?.created) {
+    console.log(
+      `\nDibuat ${seededUsers.created} akun contoh, satu per role.` +
+        `\nKata sandi untuk semuanya: ${seededUsers.password}` +
+        "\nCatat sekarang, kata sandi ini tidak ditampilkan lagi. Ganti sebelum dipakai LCH."
+    )
+  }
 }
 
 main()
