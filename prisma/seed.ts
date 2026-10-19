@@ -305,6 +305,7 @@ const LOOKUPS: {
 
 async function seedLookups() {
   let n = 0
+  let retired = 0
   for (const group of LOOKUPS) {
     for (const [i, [code, name]] of group.values.entries()) {
       await prisma.lookupValue.upsert({
@@ -322,8 +323,25 @@ async function seedLookups() {
       })
       n++
     }
+
+    // Kode pada lookup is_system dimiliki program, bukan LCH. Kalau sebuah kode
+    // dihapus dari daftar di atas, barisnya tidak ikut dihapus supaya data lama
+    // yang menunjuk ke sana tetap bisa ditelusuri, tapi dinonaktifkan supaya
+    // berhenti muncul di dropdown. Tanpa ini, memecah claim_status menjadi
+    // claim_status dan claim_stage menyisakan sepuluh pilihan lama di database.
+    if (group.system) {
+      const { count } = await prisma.lookupValue.updateMany({
+        where: {
+          lookupType: group.type,
+          isActive: true,
+          code: { notIn: group.values.map(([code]) => code) },
+        },
+        data: { isActive: false },
+      })
+      retired += count
+    }
   }
-  return n
+  return { n, retired }
 }
 
 const lookupId = async (lookupType: string, code: string) => {
@@ -783,7 +801,11 @@ async function main() {
   )
 
   if (want("system")) {
-    console.log(`  lookup_values        ${await seedLookups()}`)
+    const lookups = await seedLookups()
+    console.log(
+      `  lookup_values        ${lookups.n}` +
+        (lookups.retired ? ` (${lookups.retired} kode lama dinonaktifkan)` : "")
+    )
     console.log(`  currencies           ${await seedCurrencies()}`)
     console.log(`  document_types       ${await seedDocumentTypes()}`)
     console.log(`  company_profile      ${await seedCompanyProfile()}`)
