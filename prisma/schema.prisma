@@ -112,14 +112,20 @@ model User {
   emailVerified Boolean @default(true) @map("email_verified")
   /// Foto profil, dipakai Better Auth. Belum dipakai LCH.
   image         String?
-  /// lookup role
-  roleId        String  @map("role_id") @db.Uuid
-  isActive      Boolean @default(true) @map("is_active")
+  /// lookup role primer (opsional / warisan untuk backward compatibility)
+  roleId        String?  @map("role_id") @db.Uuid
+  /// Daftar role yang diberikan ke pengguna (multi-role)
+  roles         String[] @default([]) @map("roles")
+  /// Jabatan pengguna (opsional)
+  jobTitle      String?  @map("job_title")
+  /// Menandai apakah pengguna wajib mengganti password pada saat login pertama
+  mustChangePassword Boolean @default(false) @map("must_change_password")
+  isActive      Boolean  @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  role LookupValue @relation("role", fields: [roleId], references: [id])
+  role LookupValue? @relation("role", fields: [roleId], references: [id])
 
   sessions          Session[]
   accounts          Account[]

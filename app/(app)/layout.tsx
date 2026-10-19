@@ -28,7 +28,7 @@ export default async function AppLayout({
   return (
     <TodayProvider today={today}>
       <SidebarProvider>
-        <AppSidebar roleCode={user.roleCode} />
+        <AppSidebar roleCode={user.roleCode} roles={user.roles} />
         {/*
           Jangan pasang `overflow-hidden` di sini — itu membuat scroll container
           baru sehingga topbar `sticky top-0` menempel ke container yang tidak

@@ -38,17 +38,30 @@ export const auth = betterAuth({
   },
 
   user: {
-    // Dua kolom ini sudah ada di tabel users dan dipakai logika aplikasi, bukan
-    // oleh Better Auth. `input: false` menutup kemungkinan keduanya diisi dari
-    // request, supaya pengguna tidak bisa mengangkat rolenya sendiri.
+    // Kolom ini dipakai logika aplikasi, bukan oleh Better Auth.
+    // `input: false` menutup kemungkinan diisi dari request klien, supaya pengguna
+    // tidak bisa mengangkat rolenya sendiri.
     additionalFields: {
-      roleId: { type: "string", required: true, input: false },
+      roles: {
+        type: "string[]",
+        required: false,
+        defaultValue: [],
+        input: false,
+      },
+      jobTitle: { type: "string", required: false, input: false },
+      mustChangePassword: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+        input: false,
+      },
       isActive: {
         type: "boolean",
         required: false,
         defaultValue: true,
         input: false,
       },
+      roleId: { type: "string", required: false, input: false },
     },
   },
 
