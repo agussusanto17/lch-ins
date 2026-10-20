@@ -280,8 +280,8 @@ export function UserTable({
       </div>
 
       {/* User data table */}
-      <Card className="overflow-x-auto border">
-        <Table>
+      <Card className="gap-0 overflow-hidden py-0 border">
+        <Table className="min-w-190">
           <TableHeader>
             <TableRow>
               <TableHead className={ACTION_COL_CLASS}>Aksi</TableHead>

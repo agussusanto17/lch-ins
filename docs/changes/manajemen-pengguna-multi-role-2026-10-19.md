@@ -24,6 +24,10 @@ Modul Manajemen Pengguna di `/users` sebelumnya berstatus placeholder. Diperluka
   - Form dilengkapi toggle visibilitas kata sandi (Eye/EyeOff) untuk meminimalisasi salah ketik pada kata sandi baru dan konfirmasi kata sandi.
   - Setelah kata sandi baru (minimal 10 karakter) disimpan, flag diubah ke `false` dan akses bisnis langsung terbuka.
 - **Penyelarasan Standar Frontend (`/frontend-code-review`)**:
+  - Standardisasi komponen `UserRoleBadge` menggunakan `class-variance-authority` (`cva()`) dengan ekspor `userRoleBadgeVariants` dan `UserRoleBadgeProps`.
+  - Penambahan lebar minimum eksplisit `min-w-190` pada `Table` di tabel pengguna untuk mencegah kolom menyusut pada layar sempit/mobile dan mengaktifkan scrolling horizontal yang mulus.
+  - Penambahan toggle visibilitas kata sandi (`Eye`/`EyeOff`) dan proteksi open redirect (`safeNext`) pada form masuk (`LoginForm`).
+  - Penambahan segmen dan rute `/change-password` pada konfigurasi breadcrumbs di `AppTopbar`.
   - Standardisasi komentar kode ke bahasa Inggris di seluruh komponen dan Server Actions.
   - Ekstraksi konstanta `CREDENTIAL_PROVIDER_ID` ke `lib/constants.ts`.
 - **Seeding Akun Operasional Idempoten**:
