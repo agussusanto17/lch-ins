@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-20
 - **Branch:** `fix/blank-change-password`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #5
 - **Dikerjakan oleh:** Antigravity
 
 ## Latar belakang
