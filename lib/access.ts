@@ -16,7 +16,7 @@ export const CANONICAL_ROLES = [
   },
   {
     code: "placement",
-    label: "Placement/Teknik",
+    label: "Teknik",
     description: "Placing slip, cover note, underwriting, dan referensi tarif",
   },
   {
@@ -45,7 +45,7 @@ export const ALLOWED_ROLE_CODES: readonly RoleCode[] = CANONICAL_ROLES.map(
 export const ROLE_LABELS: Record<RoleCode, string> = {
   admin: "Admin",
   marketing: "Marketing",
-  placement: "Placement/Teknik",
+  placement: "Teknik",
   claim: "Klaim",
   accounting: "Accounting",
   finance: "Finance",

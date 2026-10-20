@@ -21,6 +21,7 @@ import {
 } from "@/components/shared/row-actions"
 import { SearchInput } from "@/components/shared/table-toolbar"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -117,6 +118,15 @@ export function UserTable({
       return true
     })
   }, [users, search, roleFilter, statusFilter])
+
+  const {
+    page,
+    pageSize,
+    totalItems,
+    paginatedItems: paginatedUsers,
+    setPage,
+    setPageSize,
+  } = usePagination(filteredUsers, 10)
 
   function handleCreateClick() {
     setEditingUser(null)
@@ -304,7 +314,7 @@ export function UserTable({
                 }
               />
             ) : (
-              filteredUsers.map((u) => {
+              paginatedUsers.map((u) => {
                 const isSelf = u.id === currentUserId
                 return (
                   <TableRow key={u.id}>
@@ -387,6 +397,15 @@ export function UserTable({
           </TableBody>
         </Table>
       </Card>
+
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        itemName="pengguna"
+      />
 
       {/* Create / Edit modal dialog */}
       <UserFormDialog

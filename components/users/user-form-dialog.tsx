@@ -15,10 +15,9 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
-import { CANONICAL_ROLES, type RoleCode } from "@/lib/access"
-import { UserRoleBadge } from "./user-role-badge"
+import { type RoleCode } from "@/lib/access"
+import { RoleMultiSelect } from "./role-multi-select"
 import {
   createUserAction,
   updateUserAction,
@@ -69,14 +68,6 @@ export function UserFormDialog({
       setFormError(null)
     }
   }, [open, user])
-
-  function toggleRole(roleCode: RoleCode) {
-    setSelectedRoles((prev) =>
-      prev.includes(roleCode)
-        ? prev.filter((r) => r !== roleCode)
-        : [...prev, roleCode]
-    )
-  }
 
   function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -143,7 +134,7 @@ export function UserFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-125">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -211,33 +202,21 @@ export function UserFormDialog({
             />
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>
+              <Label htmlFor="user-roles">
                 Peran Pengguna (Multi-Role) <span className="text-destructive">*</span>
               </Label>
               <span className="text-xs text-muted-foreground">
                 {selectedRoles.length} dipilih
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
-              {CANONICAL_ROLES.map((role) => {
-                const checked = selectedRoles.includes(role.code)
-                return (
-                  <label
-                    key={role.code}
-                    className="flex cursor-pointer items-center gap-2 rounded-md p-1.5 transition-colors hover:bg-muted/60"
-                  >
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={() => toggleRole(role.code)}
-                      disabled={isPending}
-                    />
-                    <UserRoleBadge role={role.code} />
-                  </label>
-                )
-              })}
-            </div>
+            <RoleMultiSelect
+              id="user-roles"
+              value={selectedRoles}
+              onChange={setSelectedRoles}
+              disabled={isPending}
+            />
           </div>
 
           {isEditing && (
