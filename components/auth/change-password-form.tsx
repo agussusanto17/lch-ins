@@ -146,24 +146,21 @@ export function ChangePasswordForm() {
       </Button>
 
       {/* 9. Secondary logout action */}
-      <div className="text-center pt-0.5">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5 font-normal"
-          onClick={async () => {
-            try {
-              await signOut()
-            } finally {
-              window.location.replace("/login")
-            }
-          }}
-        >
-          <LogOut className="size-3.5" />
-          <span>Logout</span>
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-10 w-full rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground gap-2"
+        onClick={async () => {
+          try {
+            await signOut()
+          } finally {
+            window.location.replace("/login")
+          }
+        }}
+      >
+        <LogOut className="size-4" />
+        <span>Logout</span>
+      </Button>
     </form>
   )
 }
