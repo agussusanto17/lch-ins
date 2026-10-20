@@ -119,7 +119,7 @@ export function AppTopbar({ user }: { user?: CurrentUser | null }) {
   return (
     <header className="no-print sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-sm md:rounded-t-2xl">
       <SidebarTrigger className="-ml-1" />
-      <Separator orientation="vertical" className="mr-1 h-4" />
+      <Separator orientation="vertical" className="mr-1 h-8" />
 
       <Breadcrumb className="min-w-0">
         <BreadcrumbList>
