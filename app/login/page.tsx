@@ -21,6 +21,9 @@ export default async function LoginPage({
   // dan bukan di proxy agar cookie kedaluwarsa/stale tidak memicu infinite redirect.
   const user = await currentUser()
   if (user) {
+    if (user.mustChangePassword) {
+      redirect("/change-password")
+    }
     redirect(target)
   }
 
