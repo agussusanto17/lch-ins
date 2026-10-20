@@ -21,14 +21,13 @@ export interface CurrentUser {
 }
 
 /**
- * Pengguna yang sedang login, atau null.
+ * Currently authenticated user, or null.
  *
- * Dibungkus `cache` supaya satu render hanya sekali menanyakan sesi dan role,
- * meski dipanggil dari beberapa komponen.
+ * Wrapped in React `cache` so session and roles are queried once per render,
+ * even when called across multiple server components.
  *
- * Status aktif dicek di sini, bukan hanya saat login. Itu yang membuat
- * menonaktifkan pengguna langsung berlaku: permintaan berikutnya sudah ditolak
- * tanpa menunggu sesinya kedaluwarsa.
+ * Active status is verified here on each request, ensuring deactivated accounts
+ * lose access immediately without waiting for session expiration.
  */
 export const currentUser = cache(async (): Promise<CurrentUser | null> => {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -78,7 +77,7 @@ export const currentUser = cache(async (): Promise<CurrentUser | null> => {
   }
 })
 
-/** Wajib login. Dipakai di layout aplikasi. */
+/** Require authenticated session. Used in application layout. */
 export async function requireUser(path?: string): Promise<CurrentUser> {
   const user = await currentUser()
   if (!user) {
@@ -90,20 +89,20 @@ export async function requireUser(path?: string): Promise<CurrentUser> {
 }
 
 /**
- * Wajib login dan rolenya boleh membuka path ini.
- * Memeriksa juga kewajiban ganti password pertama kali secara server-side.
+ * Require authenticated session and verify role authorization for path.
+ * Enforces mandatory first-time password change on the server.
  */
 export async function requireAccess(path: string): Promise<CurrentUser> {
   const user = await requireUser(path)
 
-  // Jika akun diwajibkan mengganti password (misal akun seeder / baru dibuat admin),
-  // cegah akses ke modul bisnis dan kunci navigasi ke /change-password
+  // If user must change password (e.g. newly created or reset accounts),
+  // block business module access and enforce navigation to /change-password.
   if (user.mustChangePassword && path !== "/change-password") {
     redirect("/change-password")
   }
 
-  // Jika pengguna sudah selesai ganti password tetapi membuka /change-password,
-  // kembalikan ke dashboard
+  // If user has already changed password but navigates to /change-password,
+  // redirect to dashboard.
   if (!user.mustChangePassword && path === "/change-password") {
     redirect("/")
   }
@@ -120,9 +119,8 @@ export async function requireAccess(path: string): Promise<CurrentUser> {
 }
 
 /**
- * Khusus modul administratif (User Management dll).
- * Memvalidasi apakah user memiliki privilege Admin secara server-side dan
- * telah menyelesaikan kewajiban ganti password.
+ * Require Admin role privileges on the server (e.g. User Management)
+ * and ensure mandatory password change has been completed.
  */
 export async function requireAdmin(path = "/users"): Promise<CurrentUser> {
   const user = await requireAccess(path)

@@ -14,8 +14,8 @@ export function num(value: number, fractionDigits = 0) {
 }
 
 /**
- * 13440000 -> "IDR 13.440.000" · 185185.18 -> "IDR 185.185,18" · USD selalu 2 desimal.
- * Rupiah tanpa sen ditampilkan bulat supaya tabel tetap ringkas.
+ * 13440000 -> "IDR 13.440.000" · 185185.18 -> "IDR 185.185,18" · USD always 2 decimals.
+ * Whole rupiah amounts omit cents for compact table displays.
  */
 export function money(value: number, currency = "IDR") {
   const cents = Math.round(Math.abs(value ?? 0) * 100) % 100 !== 0
@@ -94,7 +94,7 @@ function parse(input: string | Date) {
   return typeof input === "string" ? new Date(`${input}T00:00:00`) : input
 }
 
-/** Format standar aplikasi: "10 Agu 2026" */
+/** Standard application date format: "10 Agu 2026" */
 export function dateShort(input?: string | Date | null) {
   if (!input) return "—"
   const d = parse(input)
@@ -108,14 +108,14 @@ export function dateLong(input?: string | Date | null) {
   return `${d.getDate()} ${MONTHS_ID[d.getMonth()]} ${d.getFullYear()}`
 }
 
-/** Dokumen berbahasa Inggris: "11 August 2026" */
+/** English document format: "11 August 2026" */
 export function dateEn(input?: string | Date | null) {
   if (!input) return "—"
   const d = parse(input)
   return `${d.getDate().toString().padStart(2, "0")} ${MONTHS_EN[d.getMonth()]} ${d.getFullYear()}`
 }
 
-/** Untuk input type="date" */
+/** For input type="date" */
 export function dateInput(input?: string | Date | null) {
   if (!input) return ""
   const d = parse(input)
@@ -159,9 +159,9 @@ export function slipNumber(
 }
 
 /**
- * Samarkan data pribadi di tabel (NPWP, telepon, nomor identitas). Digit awal
- * dan akhir tetap terlihat supaya masih bisa dicocokkan saat bicara dengan
- * klien; nilai lengkap hanya ada di halaman detail.
+ * Mask PII in table rows (NPWP, phone, ID numbers). Leading and trailing
+ * characters remain visible for client verification; full values are restricted
+ * to authorized detail views.
  */
 export function maskMiddle(
   value: string | null | undefined,

@@ -3,9 +3,9 @@ import * as z from "zod"
 export type FieldErrors = Record<string, string>
 
 /**
- * Validasi data form dengan schema zod dan kumpulkan pesan error per field
- * (path digabung titik, misalnya "addresses.0.value"). Schema yang sama nanti
- * dipakai ulang di Server Action, jadi validasi berjalan di dua lapis.
+ * Validate form data against a zod schema and collect field-level errors
+ * (dot-delimited path, e.g. "addresses.0.value"). Shared with Server Actions
+ * for defense-in-depth two-tier validation.
  */
 export function validate<T extends z.ZodType>(
   schema: T,
@@ -23,7 +23,7 @@ export function validate<T extends z.ZodType>(
   return { ok: false, data: null, errors }
 }
 
-/* Potongan schema yang dipakai berulang di form. */
+/* Reusable schema fragments across forms. */
 
 export const requiredText = (label: string) =>
   z.string().trim().min(1, `${label} wajib diisi`)
@@ -48,7 +48,7 @@ export const email = z
     "Format email tidak valid"
   )
 
-/** NPWP 15 digit (format lama) atau 16 digit (NIK/NPWP baru). */
+/** NPWP: 15 digits (legacy format) or 16 digits (NIK / new NPWP format). */
 export const npwp = z
   .string()
   .trim()
@@ -57,7 +57,7 @@ export const npwp = z
     "NPWP harus 15 atau 16 digit"
   )
 
-/** NIK KTP 16 digit. */
+/** Indonesian Citizen ID (NIK/KTP): 16 numeric digits. */
 export const nik = z
   .string()
   .trim()

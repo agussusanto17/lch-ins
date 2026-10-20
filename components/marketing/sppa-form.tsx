@@ -147,6 +147,7 @@ export function SppaForm({
             className="sm:col-span-2"
             label="Nama Tertanggung"
             required
+            placeholder="PT Nama Klien atau Nama Perorangan"
             value={draft.insuredName}
             onChange={(v) => set({ insuredName: v })}
             error={errors.insuredName}
@@ -189,6 +190,7 @@ export function SppaForm({
             required
             multiline
             rows={2}
+            placeholder="Alamat objek atau domisili kendaraan"
             value={draft.riskLocation}
             onChange={(v) => set({ riskLocation: v })}
             error={errors.riskLocation}

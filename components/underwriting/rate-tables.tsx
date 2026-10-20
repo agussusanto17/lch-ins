@@ -62,6 +62,7 @@ function RateExceptionDialog({
   )
   const [note, setNote] = React.useState(value?.note ?? "")
   const [error, setError] = React.useState<string>()
+  const [submitting, setSubmitting] = React.useState(false)
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -79,12 +80,14 @@ function RateExceptionDialog({
           noValidate
           onSubmit={(e) => {
             e.preventDefault()
+            if (submitting) return
             if (!note.trim()) {
               setError(
                 "Jelaskan dasar pengecualian, misalnya nilai potongan atau perluasan yang diberikan"
               )
               return
             }
+            setSubmitting(true)
             onSave({ reason, note: note.trim() })
           }}
         >
@@ -119,7 +122,9 @@ function RateExceptionDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               Batal
             </Button>
-            <Button type="submit">Simpan alasan</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Menyimpan…" : "Simpan alasan"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -136,7 +141,7 @@ export function CoverRateTable({
   onExceptionChange,
   readOnly,
 }: {
-  /** Baris rate yang sudah dilengkapi batas OJK (lihat rateLinesWithBounds). */
+  /** Rate line items augmented with OJK statutory boundaries (see rateLinesWithBounds). */
   lines: RateLine[]
   currency: string
   unit: string
@@ -150,7 +155,7 @@ export function CoverRateTable({
 
   return (
     <>
-      <Table>
+      <Table className="min-w-[620px]">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead>Cover</TableHead>

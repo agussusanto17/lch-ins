@@ -33,9 +33,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
 /*
- * Field form terkontrol dengan label, deskripsi, dan pesan error inline.
- * Field bertanda wajib memakai tanda bintang di label, dan field yang gagal
- * validasi diberi `aria-invalid` supaya pembaca layar ikut membacanya.
+ * Controlled form fields with labels, descriptions, and inline error messages.
+ * Required fields display an asterisk, and fields failing validation include
+ * `aria-invalid` for screen reader accessibility.
  */
 
 interface BaseProps {
@@ -94,6 +94,7 @@ export function TextField({
   value,
   onChange,
   placeholder,
+  prefix,
   type = "text",
   multiline,
   rows = 3,
@@ -106,6 +107,7 @@ export function TextField({
   value: string
   onChange: (value: string) => void
   placeholder?: string
+  prefix?: React.ReactNode
   type?: "text" | "email" | "tel" | "date"
   multiline?: boolean
   rows?: number
@@ -136,14 +138,21 @@ export function TextField({
           onChange={(e) => onChange(e.target.value)}
         />
       ) : (
-        <Input
-          {...common}
-          type={type}
-          autoFocus={autoFocus}
-          inputMode={inputMode}
-          className={cn(readOnly && "bg-muted/60")}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        <div className="relative flex items-center">
+          {prefix ? (
+            <span className="pointer-events-none absolute left-3 flex select-none items-center border-r pr-2 text-xs font-semibold text-muted-foreground">
+              {prefix}
+            </span>
+          ) : null}
+          <Input
+            {...common}
+            type={type}
+            autoFocus={autoFocus}
+            inputMode={inputMode}
+            className={cn(prefix && "pl-14", readOnly && "bg-muted/60")}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
       )}
     </Shell>
   )
@@ -246,8 +255,8 @@ export function SelectInput({
 }
 
 /**
- * Pilihan dengan pencarian untuk daftar panjang (klien, polis, okupasi).
- * Nilai yang disimpan adalah `value` opsi, bukan teks yang diketik.
+ * Searchable selection for long option lists (clients, policies, occupations).
+ * Stores the option `value`, not the user-typed input string.
  */
 export function SearchSelect({
   id,
