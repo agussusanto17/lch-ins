@@ -354,6 +354,7 @@ export function PolicyForm({
             className="sm:col-span-2"
             label="Nama Tertanggung"
             required
+            placeholder="PT Nama Klien / Perorangan"
             value={draft.insuredName}
             onChange={(v) => set({ insuredName: v })}
             description="Disalin dari klien, boleh ditambah misalnya “and/or Subsidiary Companies”."
@@ -461,6 +462,7 @@ export function PolicyForm({
             label="Risk Location"
             multiline
             rows={2}
+            placeholder="Alamat objek / lokasi pertanggungan"
             value={draft.riskLocation}
             onChange={(v) => set({ riskLocation: v })}
           />

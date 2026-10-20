@@ -251,7 +251,7 @@ export function SlipTable() {
       </div>
 
       <Card className="gap-0 overflow-hidden py-0">
-        <Table>
+        <Table className="min-w-[840px]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className={ACTION_COL_CLASS}>

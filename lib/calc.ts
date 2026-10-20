@@ -1,6 +1,6 @@
 import type { PlacingSlip, RateLine } from "./data/types"
 
-/** Kurs demo untuk agregasi laporan. */
+/** Demo exchange rates for report aggregation. */
 export const FX: Record<string, number> = {
   IDR: 1,
   USD: 16_200,
@@ -13,17 +13,17 @@ export function toIdr(amount: number, currency: string) {
 }
 
 /**
- * Bulatkan ke sen (2 desimal). Dipakai di setiap hasil hitung uang supaya
- * sisa floating point JavaScript tidak ikut terbawa ke total dan dokumen.
- * Di backend, nilai uang disimpan sebagai numeric(18,2).
+ * Round to cents (2 decimal places). Used on all financial calculations to prevent
+ * JavaScript floating-point errors from compounding into totals and documents.
+ * Stored as numeric(18,2) in the backend.
  */
 export function roundCents(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
 /**
- * Bagi nominal ke beberapa porsi persen. Setiap porsi dibulatkan ke sen dan
- * selisih pembulatan masuk ke porsi terakhir (PRD bagian 6).
+ * Divide an amount across multiple percentage shares. Each share is rounded to cents,
+ * with any rounding difference allocated to the final share (PRD section 6).
  */
 export function splitByShares(total: number, shares: number[]) {
   const parts = shares.map((s) => roundCents((total * s) / 100))
@@ -34,7 +34,7 @@ export function splitByShares(total: number, shares: number[]) {
   return parts
 }
 
-/** Total persen dihitung dalam basis poin supaya 33,33 + 33,33 + 33,34 tepat 100. */
+/** Total percentage computed in basis points so 33.33 + 33.33 + 33.34 equals exactly 100. */
 export function sumPercent(values: number[]) {
   return values.reduce((a, v) => a + Math.round((v || 0) * 10_000), 0) / 10_000
 }
@@ -47,7 +47,7 @@ export function sumPremium(lines: { premium: number }[]) {
   return roundCents(lines.reduce((acc, l) => acc + (l.premium || 0), 0))
 }
 
-/** Total sum insured — Property pakai section 1+2, COB lain pakai interest items. */
+/** Total sum insured — Property uses Sections 1 & 2; other COBs use interest items. */
 export function totalSumInsured(slip: PlacingSlip) {
   if (slip.sumInsuredSection1.length || slip.sumInsuredSection2.length) {
     return sumItems(slip.sumInsuredSection1) + sumItems(slip.sumInsuredSection2)
@@ -55,7 +55,7 @@ export function totalSumInsured(slip: PlacingSlip) {
   return sumItems(slip.interestItems)
 }
 
-/** Total premium sebelum diskon dan biaya. */
+/** Total gross premium before discounts and statutory charges. */
 export function totalPremium(slip: PlacingSlip) {
   return (
     sumPremium(slip.rateLines) +
@@ -68,7 +68,7 @@ export function discountAmount(slip: PlacingSlip) {
   return roundCents((totalPremium(slip) * (slip.discountPct || 0)) / 100)
 }
 
-/** Total payable = premium − diskon + admin + materai. */
+/** Total payable = gross premium - discount + admin fee + stamp duty. */
 export function totalPayable(slip: PlacingSlip) {
   return roundCents(
     totalPremium(slip) -
@@ -82,19 +82,19 @@ export function brokerageAmount(slip: PlacingSlip) {
   return roundCents((totalPremium(slip) * (slip.brokeragePct || 0)) / 100)
 }
 
-/** Net premium untuk insurer — hanya muncul di Closing Instruction. */
+/** Net premium payable to insurer — displayed on the Closing Instruction. */
 export function netPremium(slip: PlacingSlip) {
   return roundCents(totalPremium(slip) - brokerageAmount(slip))
 }
 
 /**
- * PPN atas jasa pialang asuransi memakai DPP nilai lain 20% dari komisi
- * (PMK 67/PMK.03/2022), jadi tarif efektifnya 11% x 20% = 2,2% dari brokerage,
- * bukan 11% penuh.
+ * VAT on insurance brokerage services applies a deemed tax base (DPP nilai lain)
+ * of 20% on commission (PMK 67/PMK.03/2022), resulting in an effective rate of
+ * 11% x 20% = 2.2% of brokerage, rather than the full 11%.
  */
 export const BROKERAGE_VAT_RATE = 0.022
 
-/** Brokerage efektif setelah PPN bila angka yang diisi sudah termasuk VAT. */
+/** Effective brokerage percentage after VAT when the input rate is VAT-inclusive. */
 export function effectiveBrokeragePct(slip: PlacingSlip) {
   const b = slip.brokeragePct || 0
   return slip.includeVat ? b / (1 + BROKERAGE_VAT_RATE) : b
@@ -104,7 +104,7 @@ export function slipRateBasis(slip: PlacingSlip) {
   return totalSumInsured(slip)
 }
 
-/** Basis rate: Property per mil (‰), Motor Vehicle persen (%). */
+/** Rate calculation basis: Property uses per mil (‰); Motor Vehicle uses percent (%). */
 export type RateMode = "permil" | "percent"
 
 export function rateModeFor(cob: string): RateMode {
@@ -122,18 +122,18 @@ export function premiumFromRate(
   )
 }
 
-/** Baris rate Property yang dihitung dari sum insured Business Interruption. */
+/** Property rate line items calculated against Business Interruption sum insured. */
 export const BI_RATE_LABELS = [
   "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
   "BI EQVET",
 ]
 
-/** Baris rate yang menjadi tarif dasar perhitungan BI PAR menurut skala BI OJK. */
+/** Base rate line items used for BI PAR tariff scaling per OJK guidelines. */
 export const BI_BASE_LABELS = ["FLEXAS", "FWTWD", "RSMDCC", "Other Losses"]
 
 /**
- * Batas biaya akuisisi SE OJK No. 6/SEOJK.05/2017: harta benda dan jaminan
- * tambahannya maksimal 15%, kendaraan bermotor maksimal 25%.
+ * Acquisition cost limits per Circular Letter SE OJK No. 6/SEOJK.05/2017:
+ * Property and ancillary perils max 15%; Motor Vehicle max 25%.
  */
 export function brokerageCapFor(cob: string) {
   if (cob === "Property") return 15
@@ -142,8 +142,8 @@ export function brokerageCapFor(cob: string) {
 }
 
 /**
- * Hitung ulang seluruh premium dari rate + sum insured. Baris BI Property
- * memakai sum insured Section 2, TPL dan PA memakai limit masing-masing.
+ * Recalculate all premiums from rate and sum insured. Property BI lines use
+ * Section 2 sum insured; TPL and PA lines use their respective liability limits.
  */
 export function recalcSlip(slip: PlacingSlip): PlacingSlip {
   const mode = rateModeFor(slip.cob)

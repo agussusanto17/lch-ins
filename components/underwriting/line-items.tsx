@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -73,6 +74,7 @@ export function LineItemList({
         </div>
       ))}
       <Button
+        type="button"
         variant="outline"
         size="sm"
         className="w-fit"
@@ -100,34 +102,57 @@ export function StringList({
   addLabel?: string
   className?: string
 }) {
+  const idsRef = React.useRef<string[]>([])
+  while (idsRef.current.length < values.length) {
+    idsRef.current.push(nextId())
+  }
+  if (idsRef.current.length > values.length) {
+    idsRef.current.length = values.length
+  }
+
+  const handleDelete = (index: number) => {
+    idsRef.current.splice(index, 1)
+    onChange(values.filter((_, i) => i !== index))
+  }
+
+  const handleAdd = () => {
+    idsRef.current.push(nextId())
+    onChange([...values, ""])
+  }
+
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      {values.map((value, index) => (
-        <div key={index} className="flex items-center gap-2">
-          <Input
-            className="flex-1"
-            value={value}
-            placeholder={placeholder}
-            onChange={(e) =>
-              onChange(values.map((v, i) => (i === index ? e.target.value : v)))
-            }
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Hapus"
-            className="shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => onChange(values.filter((_, i) => i !== index))}
-          >
-            <Trash2 />
-          </Button>
-        </div>
-      ))}
+      {values.map((value, index) => {
+        const key = idsRef.current[index] || `val-${index}`
+        return (
+          <div key={key} className="flex items-center gap-2">
+            <Input
+              className="flex-1"
+              value={value}
+              placeholder={placeholder}
+              onChange={(e) =>
+                onChange(values.map((v, i) => (i === index ? e.target.value : v)))
+              }
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Hapus"
+              className="shrink-0 text-muted-foreground hover:text-destructive"
+              onClick={() => handleDelete(index)}
+            >
+              <Trash2 />
+            </Button>
+          </div>
+        )
+      })}
       <Button
+        type="button"
         variant="outline"
         size="sm"
         className="w-fit"
-        onClick={() => onChange([...values, ""])}
+        onClick={handleAdd}
       >
         <Plus data-icon="inline-start" />
         {addLabel}

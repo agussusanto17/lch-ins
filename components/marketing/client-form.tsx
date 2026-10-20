@@ -194,7 +194,7 @@ export function ClientForm({
       ...draft,
       id: draft.id ?? newId("c"),
       name: draft.name.trim(),
-      // Field yang tidak relevan untuk tipe klien dikosongkan.
+      // Clear fields that are not applicable to the client type.
       ...(corporate
         ? { idNumber: "", birthPlace: "", birthDate: "", incomeSource: "" }
         : {
@@ -320,6 +320,7 @@ export function ClientForm({
               label="Tempat Lahir"
               value={draft.birthPlace ?? ""}
               onChange={(v) => set({ birthPlace: v })}
+              placeholder="Kota kelahiran"
             />
             <TextField
               label="Tanggal Lahir"
@@ -356,9 +357,10 @@ export function ClientForm({
           <TextField
             label="Telepon"
             type="tel"
+            prefix="+62"
             value={draft.phone}
             onChange={(v) => set({ phone: v })}
-            placeholder="+62 21 …"
+            placeholder="21 555 1234 atau 812 3456 7890"
             error={errors.phone}
           />
           <SelectInput
@@ -396,7 +398,7 @@ export function ClientForm({
               key={a.id}
               className="flex flex-col gap-3 rounded-xl border p-3"
             >
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start">
                 <SelectInput
                   label="Jenis Alamat"
                   required
@@ -408,7 +410,9 @@ export function ClientForm({
                 <TextField
                   label="Telepon"
                   type="tel"
+                  prefix="+62"
                   value={a.phone ?? ""}
+                  placeholder="21 555 1234"
                   onChange={(v) => patchAddress(a.id, { phone: v })}
                 />
                 <Button
@@ -416,7 +420,7 @@ export function ClientForm({
                   variant="ghost"
                   size="icon"
                   aria-label="Hapus alamat"
-                  className="text-muted-foreground hover:text-destructive"
+                  className="sm:mt-7 text-muted-foreground hover:text-destructive"
                   disabled={draft.addresses.length === 1}
                   onClick={() =>
                     set({
@@ -433,6 +437,7 @@ export function ClientForm({
                 multiline
                 rows={2}
                 value={a.value}
+                placeholder="Jl. Jend. Sudirman Kav. …, Gedung …, Lantai …"
                 onChange={(v) => patchAddress(a.id, { value: v })}
                 error={errors[`addresses.${i}.value`]}
               />

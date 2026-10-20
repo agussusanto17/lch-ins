@@ -1,6 +1,6 @@
 /**
- * Sumber tunggal kebenaran (single source of truth) untuk seluruh definisi role,
- * label tampilan, validasi server, dan matriks hak akses sistem LCH.
+ * Single source of truth for role definitions, display labels,
+ * server authorization validation, and access control matrices for LCH.
  */
 
 export const CANONICAL_ROLES = [
@@ -52,15 +52,15 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
 }
 
 /**
- * Validasi apakah kode merupakan salah satu dari 6 role resmi LCH.
+ * Validate whether a code is one of the 6 official LCH canonical roles.
  */
 export function isValidRoleCode(code: string): code is RoleCode {
   return (ALLOWED_ROLE_CODES as readonly string[]).includes(code)
 }
 
 /**
- * Validasi kumpulan role pada server untuk mencegah privilege escalation atau
- * nilai role liar dari payload klien.
+ * Validate roles collection on the server to prevent privilege escalation or
+ * invalid role codes from client payloads.
  */
 export function validateRoleCodes(
   roles: unknown
@@ -83,9 +83,9 @@ export function validateRoleCodes(
 }
 
 /**
- * Matriks hak akses per role.
- * Nilainya adalah awalan path. "/" hanya cocok persis dengan rute root dashboard.
- * Role Admin menggunakan "*" yang otomatis membuka seluruh sistem.
+ * Access control matrix by role.
+ * Values represent path prefixes. "/" only matches root dashboard.
+ * Admin role uses "*" granting full access.
  */
 export const ACCESS_BY_ROLE: Record<RoleCode, string[]> = {
   admin: ["*"],
@@ -103,12 +103,12 @@ export const ACCESS_BY_ROLE: Record<RoleCode, string[]> = {
   finance: ["/", "/finance", "/accounting", "/policies", "/reports"],
 }
 
-/** Halaman yang boleh dibuka tanpa login. */
+/** Public routes accessible without authentication. */
 export const PUBLIC_ROUTES = ["/login"]
 
 /**
- * Apakah pengguna dengan kumpulan role (atau single role) boleh membuka path ini.
- * Mendukung multi-role: jika salah satu role mengizinkan, akses dibuka.
+ * Check whether a user with given roles (or single role) is authorized for a path.
+ * Supports multi-role assignments: grants access if any assigned role permits it.
  */
 export function canAccess(
   roles: string | string[] | undefined,
@@ -118,7 +118,7 @@ export function canAccess(
   const roleList = Array.isArray(roles) ? roles : [roles]
   if (roleList.length === 0) return false
 
-  // Rute utilitas sistem yang dapat diakses oleh semua pengguna terautentikasi
+  // System utility routes accessible to all authenticated users
   if (path === "/change-password" || path.startsWith("/change-password/")) {
     return true
   }
