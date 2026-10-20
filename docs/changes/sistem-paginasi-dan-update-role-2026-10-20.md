@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-20
 - **Branch:** `feat/table-pagination-and-role-updates`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #3 (vourdev/lch-ins), #16 (agussusanto17/lch-ins)
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
