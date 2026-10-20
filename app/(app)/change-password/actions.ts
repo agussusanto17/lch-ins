@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation"
 import { hashPassword, verifyPassword } from "better-auth/crypto"
 
+import { CREDENTIAL_PROVIDER_ID } from "@/lib/constants"
 import { prisma } from "@/lib/prisma"
 import { currentUser } from "@/lib/server/session"
 
@@ -42,7 +43,7 @@ export async function changePasswordAction(
   }
 
   const account = await prisma.account.findFirst({
-    where: { userId: user.id, providerId: "credential" },
+    where: { userId: user.id, providerId: CREDENTIAL_PROVIDER_ID },
   })
 
   if (!account || !account.password) {

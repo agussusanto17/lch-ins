@@ -50,7 +50,7 @@ export function UserFormDialog({
   const [isActive, setIsActive] = React.useState(true)
   const [formError, setFormError] = React.useState<string | null>(null)
 
-  // Reset or fill form when open state or user changes
+  // Reset or populate form fields when dialog opens or user prop changes
   React.useEffect(() => {
     if (open) {
       if (user) {

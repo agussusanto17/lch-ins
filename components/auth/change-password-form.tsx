@@ -1,7 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { useActionState } from "react"
-import { AlertTriangle, KeyRound, LoaderCircle, ShieldAlert } from "lucide-react"
+import { AlertTriangle, Eye, EyeOff, KeyRound, LoaderCircle, ShieldAlert } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -13,6 +14,8 @@ export function ChangePasswordForm() {
     ChangePasswordResult | null,
     FormData
   >(changePasswordAction, null)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -39,28 +42,58 @@ export function ChangePasswordForm() {
 
       <Field>
         <FieldLabel htmlFor="newPassword">Kata sandi baru</FieldLabel>
-        <Input
-          id="newPassword"
-          name="newPassword"
-          type="password"
-          autoComplete="new-password"
-          required
-          placeholder="Minimal 10 karakter"
-        />
+        <div className="relative">
+          <Input
+            id="newPassword"
+            name="newPassword"
+            type={showNewPassword ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            placeholder="Minimal 10 karakter"
+            className="pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowNewPassword(!showNewPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label={showNewPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+          >
+            {showNewPassword ? (
+              <EyeOff className="size-4" />
+            ) : (
+              <Eye className="size-4" />
+            )}
+          </button>
+        </div>
       </Field>
 
       <Field>
         <FieldLabel htmlFor="confirmPassword">
           Konfirmasi kata sandi baru
         </FieldLabel>
-        <Input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          required
-          placeholder="Ulangi kata sandi baru"
-        />
+        <div className="relative">
+          <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            type={showConfirmPassword ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            placeholder="Ulangi kata sandi baru"
+            className="pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label={showConfirmPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+          >
+            {showConfirmPassword ? (
+              <EyeOff className="size-4" />
+            ) : (
+              <Eye className="size-4" />
+            )}
+          </button>
+        </div>
       </Field>
 
       {state?.error ? (

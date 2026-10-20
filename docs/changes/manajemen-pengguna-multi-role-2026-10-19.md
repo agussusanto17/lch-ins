@@ -14,14 +14,18 @@ Modul Manajemen Pengguna di `/users` sebelumnya berstatus placeholder. Diperluka
 - **Daftar Peran Kanonik Tunggal**: Menetapkan 6 peran resmi di `lib/access.ts` (`admin`, `marketing`, `placement`, `claim`, `accounting`, `finance`) sebagai satu-satunya sumber kebenaran (single source of truth) untuk UI dan server-side.
 - **Dukungan Multi-Role PostgreSQL & Prisma**: Menambahkan kolom `roles TEXT[]` (`roles String[] @default([])` di Prisma) dengan migrasi `20261019120000_multi_role_user_management` yang aman tanpa kehilangan data dan melakukan backfill data role lama.
 - **Halaman Manajemen Pengguna `/users`**:
-  - Tabel interaktif daftar pengguna dengan pencarian teks (nama, email, jabatan) dan filter peran serta status akun.
+  - Tabel interaktif daftar pengguna dengan pencarian teks (nama, email, jabatan), filter peran serta status akun, dan wrapper `overflow-x-auto` untuk mencegah tabel terpotong pada layar sempit.
   - Form dialog Tambah & Edit Pengguna dengan pemilihan multi-role melalui checkbox dan jabatan.
   - Dialog kredensial sekali lihat untuk kata sandi sementara yang aman dan copyable.
   - Aksi reset kata sandi mandiri oleh Admin yang mencabut seluruh sesi aktif pengguna dan mewajibkan ganti sandi pada login berikutnya.
   - Aksi aktifkan/nonaktifkan akun dengan proteksi terhadap akun sendiri dan pencegahan penonaktifan satu-satunya administrator aktif.
 - **Alur Wajib Ganti Kata Sandi (`/change-password`)**:
   - Pemeriksaan server-side di `requireAccess(path)` mengunci pengguna dengan `mustChangePassword = true` agar tidak dapat membuka modul operasional sampai mengganti kata sandi.
+  - Form dilengkapi toggle visibilitas kata sandi (Eye/EyeOff) untuk meminimalisasi salah ketik pada kata sandi baru dan konfirmasi kata sandi.
   - Setelah kata sandi baru (minimal 10 karakter) disimpan, flag diubah ke `false` dan akses bisnis langsung terbuka.
+- **Penyelarasan Standar Frontend (`/frontend-code-review`)**:
+  - Standardisasi komentar kode ke bahasa Inggris di seluruh komponen dan Server Actions.
+  - Ekstraksi konstanta `CREDENTIAL_PROVIDER_ID` ke `lib/constants.ts`.
 - **Seeding Akun Operasional Idempoten**:
   - Unifikasi multi-role untuk staf yang merangkap fungsi: `harry@lch.co.id` (`SPV`, Marketing & Placement) dan `aziz@lch.co.id` (Marketing & Placement).
   - Seeding akun operasional: `claim@lch.co.id`, `sutejo@lch.co.id`, `tresna@lch.co.id`, `accounting@lch.co.id`, dan `finance02@lch.co.id`.
