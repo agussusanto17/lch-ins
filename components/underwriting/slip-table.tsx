@@ -12,6 +12,7 @@ import {
 } from "@/components/shared/row-actions"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
 import { Card } from "@/components/ui/card"
 import {
@@ -167,6 +168,15 @@ export function SlipTable() {
     })
   }, [slips, query, status, cob])
 
+  const {
+    page,
+    pageSize,
+    totalItems,
+    paginatedItems: paginatedRows,
+    setPage,
+    setPageSize,
+  } = usePagination(rows, 10)
+
   const exportSpec: ExportSpec<PlacingSlip> = {
     filename: "placing-slip-lch",
     sheet: "Placing Slip",
@@ -206,7 +216,7 @@ export function SlipTable() {
           value={cob}
           onValueChange={(v) => setCob(v as string)}
         >
-          <SelectTrigger size="sm" className="w-[168px]">
+          <SelectTrigger size="sm" className="w-42">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -224,7 +234,7 @@ export function SlipTable() {
           value={status}
           onValueChange={(v) => setStatus(v as string)}
         >
-          <SelectTrigger size="sm" className="w-[150px]">
+          <SelectTrigger size="sm" className="w-37.5">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -262,12 +272,12 @@ export function SlipTable() {
                 message="Tidak ada placing slip yang cocok"
               />
             ) : (
-              rows.map((s) => (
+              paginatedRows.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className={ACTION_COL_CLASS}>
                     <RowActions actions={actionsFor(s, today)} />
                   </TableCell>
-                  <TableCell className="max-w-[230px]">
+                  <TableCell className="max-w-57.5">
                     {s.slipNo ? (
                       <span className="tabular text-xs font-semibold text-primary">
                         {s.slipNo}
@@ -278,13 +288,13 @@ export function SlipTable() {
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="max-w-[240px]">
+                  <TableCell className="max-w-60">
                     <p className="truncate font-medium">{s.insuredName}</p>
                     <p className="truncate text-xs text-muted-foreground">
                       {s.cob}
                     </p>
                   </TableCell>
-                  <TableCell className="max-w-[210px]">
+                  <TableCell className="max-w-52.5">
                     <p className="truncate">{s.typeOfCover}</p>
                     {s.occupation ? (
                       <p className="truncate text-xs text-muted-foreground">
@@ -308,8 +318,17 @@ export function SlipTable() {
         </Table>
       </Card>
 
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        itemName="placing slip"
+      />
+
       <p className="text-xs text-muted-foreground">
-        Menampilkan {rows.length} dari {slips.length} placing slip · pola nomor{" "}
+        Pola nomor{" "}
         <span className="tabular">
           {"{seq}/LCH-PLCMT/PS[-{kode}]/{bulan romawi}/{tahun}"}
         </span>{" "}

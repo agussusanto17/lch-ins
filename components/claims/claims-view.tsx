@@ -10,6 +10,7 @@ import { ACTION_COL_CLASS, RowActions } from "@/components/shared/row-actions"
 import { StatCard } from "@/components/shared/stat-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
 import { ClaimDetailSheet } from "@/components/claims/claim-detail-sheet"
 import { Button } from "@/components/ui/button"
@@ -87,6 +88,15 @@ export function ClaimsView() {
       ].some((v) => v.toLowerCase().includes(q))
     })
   }, [claims, query, status, stage, cob])
+
+  const {
+    page,
+    pageSize,
+    totalItems,
+    paginatedItems: paginatedRows,
+    setPage,
+    setPageSize,
+  } = usePagination(rows, 10)
 
   const openCount = claims.filter(isOpenClaim).length
   const paidValue = claims
@@ -186,7 +196,7 @@ export function ClaimsView() {
             value={cob}
             onValueChange={(v) => setCob(v as string)}
           >
-            <SelectTrigger size="sm" className="w-[168px]">
+            <SelectTrigger size="sm" className="w-42">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -204,7 +214,7 @@ export function ClaimsView() {
             value={status}
             onValueChange={(v) => setStatus(v as string)}
           >
-            <SelectTrigger size="sm" className="w-[170px]">
+            <SelectTrigger size="sm" className="w-42.5">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -222,7 +232,7 @@ export function ClaimsView() {
             value={stage}
             onValueChange={(v) => setStage(v as string)}
           >
-            <SelectTrigger size="sm" className="w-[196px]">
+            <SelectTrigger size="sm" className="w-49">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -257,7 +267,7 @@ export function ClaimsView() {
               {rows.length === 0 ? (
                 <TableEmpty colSpan={7} message="Tidak ada klaim yang cocok" />
               ) : (
-                rows.map((c) => (
+                paginatedRows.map((c) => (
                   <TableRow
                     key={c.id}
                     className="cursor-pointer"
@@ -289,7 +299,7 @@ export function ClaimsView() {
                     <TableCell className="tabular font-medium">
                       {c.claimNo}
                     </TableCell>
-                    <TableCell className="max-w-[220px]">
+                    <TableCell className="max-w-55">
                       <p className="truncate">{c.insuredName}</p>
                       <p className="tabular truncate text-xs text-muted-foreground">
                         {c.policyNo}
@@ -317,10 +327,18 @@ export function ClaimsView() {
           </Table>
         </Card>
 
+        <TablePagination
+          page={page}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          itemName="klaim"
+        />
+
         <p className="text-xs text-muted-foreground">
-          Menampilkan {rows.length} dari {claims.length} klaim · klik baris
-          untuk membuka detail lengkap. Klaim bernomor tidak dihapus, cukup
-          ditutup dengan status Close atau Rejected.
+          Klik baris untuk membuka detail lengkap. Klaim bernomor tidak dihapus,
+          cukup ditutup dengan status Close atau Rejected.
         </p>
 
         <ClaimDetailSheet

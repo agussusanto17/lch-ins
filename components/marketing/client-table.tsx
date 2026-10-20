@@ -12,6 +12,7 @@ import {
 } from "@/components/shared/row-actions"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
 import { Card } from "@/components/ui/card"
 import {
@@ -69,6 +70,15 @@ export function ClientTable({ onEdit }: { onEdit: (client: Client) => void }) {
       )
     })
   }, [clients, query, cob, status])
+
+  const {
+    page,
+    pageSize,
+    totalItems,
+    paginatedItems: paginatedRows,
+    setPage,
+    setPageSize,
+  } = usePagination(rows, 10)
 
   function actionsFor(c: Client): RowAction[] {
     // Klien yang sudah dipakai dokumen tidak dihapus, cukup dinonaktifkan (ERD).
@@ -158,7 +168,7 @@ export function ClientTable({ onEdit }: { onEdit: (client: Client) => void }) {
         >
           <SelectTrigger
             size="sm"
-            className="w-[168px]"
+            className="w-42"
             aria-label="Filter COB"
           >
             <SelectValue />
@@ -180,7 +190,7 @@ export function ClientTable({ onEdit }: { onEdit: (client: Client) => void }) {
         >
           <SelectTrigger
             size="sm"
-            className="w-[150px]"
+            className="w-37.5"
             aria-label="Filter status"
           >
             <SelectValue />
@@ -221,14 +231,14 @@ export function ClientTable({ onEdit }: { onEdit: (client: Client) => void }) {
                 message="Tidak ada klien yang cocok dengan filter"
               />
             ) : (
-              rows.map((c) => {
+              paginatedRows.map((c) => {
                 const missing = kycMissing(c)
                 return (
                   <TableRow key={c.id}>
                     <TableCell className={ACTION_COL_CLASS}>
                       <RowActions actions={actionsFor(c)} />
                     </TableCell>
-                    <TableCell className="max-w-[260px]">
+                    <TableCell className="max-w-65">
                       <Link
                         href={`/marketing/clients/${c.id}`}
                         className="block truncate font-medium hover:text-primary"
@@ -271,9 +281,17 @@ export function ClientTable({ onEdit }: { onEdit: (client: Client) => void }) {
         </Table>
       </Card>
 
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        itemName="klien"
+      />
+
       <p className="text-xs text-muted-foreground">
-        Menampilkan {rows.length} dari {clients.length} klien · telepon dan NPWP
-        disamarkan, data lengkap ada di halaman detail
+        Telepon dan NPWP disamarkan, data lengkap ada di halaman detail.
       </p>
     </div>
   )

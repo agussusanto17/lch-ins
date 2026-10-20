@@ -6,6 +6,7 @@ import { CalendarClock } from "lucide-react"
 import { useToday } from "@/components/layout/today-provider"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons } from "@/components/shared/table-toolbar"
 import { Card } from "@/components/ui/card"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -66,6 +67,15 @@ export function RenewalNotice() {
       .sort((a, b) => a.expiryDate.localeCompare(b.expiryDate))
   }, [policies, period, cob, today])
 
+  const {
+    page,
+    pageSize,
+    totalItems,
+    paginatedItems: paginatedRows,
+    setPage,
+    setPageSize,
+  } = usePagination(rows, 10)
+
   const totalPremium = rows.reduce((a, p) => a + premiumIdr(p), 0)
 
   const exportSpec: ExportSpec<Policy> = {
@@ -91,7 +101,7 @@ export function RenewalNotice() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-3">
-        <Field className="w-[140px]">
+        <Field className="w-35">
           <FieldLabel>Jatuh tempo dalam</FieldLabel>
           <Select
             items={PERIOD_ITEMS}
@@ -112,7 +122,7 @@ export function RenewalNotice() {
             </SelectContent>
           </Select>
         </Field>
-        <Field className="w-[180px]">
+        <Field className="w-45">
           <FieldLabel>Class of Business</FieldLabel>
           <Select
             items={COB_ITEMS}
@@ -165,20 +175,20 @@ export function RenewalNotice() {
                 message="Tidak ada polis jatuh tempo pada periode ini"
               />
             ) : (
-              rows.map((p) => {
+              paginatedRows.map((p) => {
                 const days = daysBetween(today, p.expiryDate)
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="tabular font-medium">
                       {p.policyNo}
                     </TableCell>
-                    <TableCell className="max-w-[220px] truncate">
+                    <TableCell className="max-w-55 truncate">
                       {p.insuredName}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {p.cob}
                     </TableCell>
-                    <TableCell className="max-w-[220px] truncate text-xs text-muted-foreground">
+                    <TableCell className="max-w-55 truncate text-xs text-muted-foreground">
                       {p.insurer}
                     </TableCell>
                     <TableCell>
@@ -204,9 +214,14 @@ export function RenewalNotice() {
         </Table>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Menampilkan {rows.length} dari {policies.length} polis
-      </p>
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        itemName="polis"
+      />
     </div>
   )
 }

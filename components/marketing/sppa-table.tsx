@@ -13,6 +13,7 @@ import {
 } from "@/components/shared/row-actions"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -55,6 +56,15 @@ export function SppaTable({
       )
     })
   }, [all, query, clientId])
+
+  const {
+    page,
+    pageSize,
+    totalItems,
+    paginatedItems: paginatedRows,
+    setPage,
+    setPageSize,
+  } = usePagination(rows, compact ? 5 : 10)
 
   function actionsFor(s: Sppa): RowAction[] {
     const slipCount = slips.filter((x) => x.sppaId === s.id).length
@@ -164,20 +174,20 @@ export function SppaTable({
             {rows.length === 0 ? (
               <TableEmpty colSpan={7} message="Belum ada SPPA" />
             ) : (
-              rows.map((s) => {
+              paginatedRows.map((s) => {
                 const linked = slips.filter((x) => x.sppaId === s.id)
                 return (
                   <TableRow key={s.id}>
                     <TableCell className={ACTION_COL_CLASS}>
                       <RowActions actions={actionsFor(s)} />
                     </TableCell>
-                    <TableCell className="max-w-[240px]">
+                    <TableCell className="max-w-60">
                       <p className="truncate font-medium">{s.insuredName}</p>
                       <p className="truncate text-xs text-muted-foreground">
                         Dibuat {dateShort(s.createdAt)}
                       </p>
                     </TableCell>
-                    <TableCell className="max-w-[220px]">
+                    <TableCell className="max-w-55">
                       <p className="truncate">{s.typeOfCover}</p>
                       <p className="truncate text-xs text-muted-foreground">
                         {s.cob}
@@ -214,6 +224,16 @@ export function SppaTable({
           </TableBody>
         </Table>
       </Card>
+
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        pageSizeOptions={compact ? [5, 10, 20] : [10, 25, 50, 100]}
+        itemName="SPPA"
+      />
 
       {form ? (
         <SppaForm
