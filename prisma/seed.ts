@@ -109,7 +109,7 @@ const LOOKUPS: {
     values: [
       ["admin", "Admin"],
       ["marketing", "Marketing"],
-      ["placement", "Placement/Teknik"],
+      ["placement", "Teknik"],
       ["claim", "Klaim"],
       ["accounting", "Accounting"],
       ["finance", "Finance"],
@@ -819,9 +819,9 @@ const PRESERVED_MOCK_USERS: SeedUserRecord[] = [
   },
   {
     email: "teknik@lch.example",
-    name: "Placement LCH",
+    name: "Teknik LCH",
     roles: ["placement"],
-    jobTitle: "Staff Placement/Teknik",
+    jobTitle: "Staff Teknik",
     mustChangePassword: false,
   },
   {
@@ -858,7 +858,7 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
     email: "aziz@lch.co.id",
     name: "AZIZ SURYA",
     roles: ["marketing", "placement"],
-    jobTitle: "Marketing & Placement",
+    jobTitle: "Marketing & Teknik",
     mustChangePassword: true,
   },
   // Klaim, Accounting, Finance
