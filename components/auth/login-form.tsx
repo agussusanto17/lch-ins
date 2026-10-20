@@ -22,7 +22,7 @@ export function LoginForm({ next }: { next: string }) {
     setError(null)
     setPending(true)
 
-    const { error } = await signIn.email({ email, password })
+    const { data, error } = await signIn.email({ email, password })
 
     if (error) {
       // Better Auth error messages are in English and distinguish between
@@ -35,8 +35,11 @@ export function LoginForm({ next }: { next: string }) {
 
     // Defensive validation against open redirect or protocol-relative redirect
     const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/"
-    router.push(safeNext)
-    router.refresh()
+    const userMustChange = (data?.user as { mustChangePassword?: boolean } | undefined)
+      ?.mustChangePassword
+    const target = userMustChange ? "/change-password" : safeNext
+
+    router.push(target)
   }
 
   return (
