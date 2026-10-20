@@ -1,5 +1,6 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { hashPassword, verifyPassword } from "better-auth/crypto"
 
@@ -72,5 +73,6 @@ export async function changePasswordAction(
     }),
   ])
 
-  redirect("/")
+  revalidatePath("/", "layout")
+  return { success: true }
 }

@@ -4,6 +4,7 @@ import { connection } from "next/server"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { AppTopbar } from "@/components/layout/app-topbar"
 import { TodayProvider } from "@/components/layout/today-provider"
+import { MandatoryPasswordDialog } from "@/components/auth/mandatory-password-dialog"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/sonner"
 import { todayIso } from "@/lib/date"
@@ -28,7 +29,10 @@ export default async function AppLayout({
   return (
     <TodayProvider today={today}>
       <SidebarProvider>
-        <AppSidebar roleCode={user.roleCode} roles={user.roles} />
+        <AppSidebar
+          roleCode={user.roleCode}
+          roles={user.roles}
+        />
         {/*
           Jangan pasang `overflow-hidden` di sini — itu membuat scroll container
           baru sehingga topbar `sticky top-0` menempel ke container yang tidak
@@ -40,9 +44,15 @@ export default async function AppLayout({
           `overflow-x-auto` di tabel tidak pernah aktif.
         */}
         <SidebarInset className="min-w-0">
-          <AppTopbar />
+          <AppTopbar user={user} />
           <div className="flex-1 bg-background">{children}</div>
         </SidebarInset>
+        {user.mustChangePassword ? (
+          <MandatoryPasswordDialog
+            userEmail={user.email}
+            userName={user.name}
+          />
+        ) : null}
         <Toaster position="top-center" />
       </SidebarProvider>
     </TodayProvider>

@@ -8,6 +8,7 @@ import {
   updateClause,
   type ClauseInput,
 } from "@/lib/server/clauses"
+import { requireAccess } from "@/lib/server/session"
 
 const LIST_PATH = "/underwriting/master-clauses"
 
@@ -25,6 +26,7 @@ export async function saveClauseAction(
   input: ClauseInput
 ): Promise<ActionResult> {
   try {
+    await requireAccess(LIST_PATH)
     if (id) await updateClause(id, input)
     else await createClause(input)
   } catch (e) {
@@ -39,6 +41,7 @@ export async function deleteClauseAction(
   id: string
 ): Promise<ActionResult & { deactivated?: boolean; used?: number }> {
   try {
+    await requireAccess(LIST_PATH)
     const result = await deleteClause(id)
     revalidatePath(LIST_PATH)
     return { ok: true, ...result }

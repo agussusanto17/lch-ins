@@ -110,9 +110,11 @@ export function AppSidebar({
             <SidebarMenuButton
               tooltip="Keluar"
               onClick={async () => {
-                await signOut()
-                router.push("/login")
-                router.refresh()
+                try {
+                  await signOut()
+                } finally {
+                  window.location.replace("/login")
+                }
               }}
             >
               <LogOut />
