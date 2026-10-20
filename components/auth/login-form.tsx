@@ -1,21 +1,60 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
 import { AlertTriangle, Eye, EyeOff, LoaderCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { signIn } from "@/lib/auth-client"
+import { authClient, signIn } from "@/lib/auth-client"
 
 export function LoginForm({ next }: { next: string }) {
-  const router = useRouter()
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [showPassword, setShowPassword] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
+  const [checkingSession, setCheckingSession] = React.useState(false)
+
+  // Tangani Back-Forward Cache (BFCache) dan verifikasi sesi client-side.
+  // Jika peramban kembali ke /login lewat tombol Back saat sesi masih aktif,
+  // segera alihkan pengguna ke rute yang sesuai tanpa menampilkan form login.
+  React.useEffect(() => {
+    let active = true
+
+    async function checkAuthAndRedirect() {
+      try {
+        const session = await authClient.getSession()
+        if (!active) return
+        if (session?.data?.user) {
+          setCheckingSession(true)
+          const userMustChange = (
+            session.data.user as { mustChangePassword?: boolean }
+          ).mustChangePassword
+          const safeNext =
+            next.startsWith("/") && !next.startsWith("//") ? next : "/"
+          const target = userMustChange ? "/change-password" : safeNext
+          window.location.replace(target)
+        }
+      } catch {
+        // Abaikan error saat pengecekan sesi offline/background
+      }
+    }
+
+    checkAuthAndRedirect()
+
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        checkAuthAndRedirect()
+      }
+    }
+
+    window.addEventListener("pageshow", onPageShow)
+    return () => {
+      active = false
+      window.removeEventListener("pageshow", onPageShow)
+    }
+  }, [next])
 
   async function onSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -39,7 +78,17 @@ export function LoginForm({ next }: { next: string }) {
       ?.mustChangePassword
     const target = userMustChange ? "/change-password" : safeNext
 
-    router.push(target)
+    // Gantikan riwayat browser agar tombol Back tidak mengembalikan ke /login
+    window.location.replace(target)
+  }
+
+  if (checkingSession) {
+    return (
+      <div className="flex flex-col items-center justify-center py-6 text-center text-sm text-muted-foreground">
+        <LoaderCircle className="mb-2 size-5 animate-spin text-primary" />
+        <p>Memverifikasi sesi…</p>
+      </div>
+    )
   }
 
   return (

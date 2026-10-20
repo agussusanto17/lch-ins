@@ -121,10 +121,11 @@ export async function requireAccess(path: string): Promise<CurrentUser> {
 
 /**
  * Khusus modul administratif (User Management dll).
- * Memvalidasi apakah user memiliki privilege Admin secara server-side.
+ * Memvalidasi apakah user memiliki privilege Admin secara server-side dan
+ * telah menyelesaikan kewajiban ganti password.
  */
-export async function requireAdmin(path?: string): Promise<CurrentUser> {
-  const user = await requireUser(path)
+export async function requireAdmin(path = "/users"): Promise<CurrentUser> {
+  const user = await requireAccess(path)
 
   const isAdmin = user.roles.includes("admin") || user.roleCode === "admin"
   if (!isAdmin) {
@@ -132,4 +133,14 @@ export async function requireAdmin(path?: string): Promise<CurrentUser> {
   }
 
   return user
+}
+
+/**
+ * Validasi tegas bahwa pengguna tidak dalam status wajib ganti kata sandi.
+ * Digunakan pada Server Actions dan operasi data sensitif.
+ */
+export function assertPasswordChanged(user: CurrentUser): void {
+  if (user.mustChangePassword) {
+    throw new Error("Wajib menyetel kata sandi baru sebelum dapat melakukan tindakan ini.")
+  }
 }

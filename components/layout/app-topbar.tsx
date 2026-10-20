@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bell } from "lucide-react"
+import { Bell, LogOut, User as UserIcon } from "lucide-react"
 
 import { CommandMenu } from "@/components/layout/command-menu"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
@@ -16,8 +16,19 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { ROLE_LABELS, type RoleCode } from "@/lib/access"
+import { signOut } from "@/lib/auth-client"
+import type { CurrentUser } from "@/lib/server/session"
 
 const SEGMENT_LABELS: Record<string, string> = {
   marketing: "Marketing",
@@ -86,9 +97,24 @@ function buildCrumbs(pathname: string) {
   return crumbs
 }
 
-export function AppTopbar() {
+function getInitials(name?: string | null): string {
+  if (!name) return "U"
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return "U"
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+export function AppTopbar({ user }: { user?: CurrentUser | null }) {
   const pathname = usePathname()
-  const crumbs = buildCrumbs(pathname)
+  const isChangePassword = pathname === "/change-password"
+  const crumbs = isChangePassword ? [] : buildCrumbs(pathname)
+
+  const initials = getInitials(user?.name)
+  const assignedRoles = user?.roles ?? (user?.roleCode ? [user.roleCode] : [])
+  const roleLabels = assignedRoles.map(
+    (code) => ROLE_LABELS[code as RoleCode] ?? code
+  )
 
   return (
     <header className="no-print sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-sm md:rounded-t-2xl">
@@ -100,6 +126,10 @@ export function AppTopbar() {
           <BreadcrumbItem>
             {crumbs.length === 0 ? (
               <BreadcrumbPage>Dashboard</BreadcrumbPage>
+            ) : isChangePassword ? (
+              <span className="text-muted-foreground text-xs sm:text-sm">
+                Dashboard
+              </span>
             ) : (
               <BreadcrumbLink render={<Link href="/" />}>
                 Dashboard
@@ -112,7 +142,7 @@ export function AppTopbar() {
               <BreadcrumbItem className="max-md:hidden">
                 {i === crumbs.length - 1 ? (
                   <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                ) : !crumb.linkable ? (
+                ) : !crumb.linkable || isChangePassword ? (
                   <span className="text-muted-foreground">{crumb.label}</span>
                 ) : (
                   <BreadcrumbLink render={<Link href={crumb.href} />}>
@@ -137,12 +167,83 @@ export function AppTopbar() {
           <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
         </Button>
         <ThemeToggle />
-        <Separator orientation="vertical" className="mx-1 h-4" />
-        <Avatar className="size-7 rounded-md">
-          <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-            AS
-          </AvatarFallback>
-        </Avatar>
+        <Separator orientation="vertical" className="mx-1 h-8" />
+
+        {/* User Identity & Avatar Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="flex items-center gap-2 rounded-md p-1 outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+            aria-label="Menu akun pengguna"
+          >
+            <Avatar className="size-7 rounded-md">
+              <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            {user?.name ? (
+              <span className="hidden max-w-[130px] truncate text-xs font-medium text-foreground sm:inline-block">
+                {user.name}
+              </span>
+            ) : null}
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" className="w-60 p-2">
+            <DropdownMenuGroup className="px-2 py-1.5">
+              <div className="flex items-center gap-2">
+                <Avatar className="size-8 rounded-md">
+                  <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col min-w-0">
+                  <p className="truncate text-xs font-semibold text-foreground">
+                    {user?.name || "Pengguna"}
+                  </p>
+                  {user?.email ? (
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {user.email}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Roles Badge List */}
+              <div className="mt-2.5 flex flex-wrap gap-1">
+                {roleLabels.length > 0 ? (
+                  roleLabels.map((role) => (
+                    <span
+                      key={role}
+                      className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground"
+                    >
+                      {role}
+                    </span>
+                  ))
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                    Belum ada peran
+                  </span>
+                )}
+              </div>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              variant="destructive"
+              className="cursor-pointer"
+              onClick={async () => {
+                try {
+                  await signOut()
+                } finally {
+                  window.location.replace("/login")
+                }
+              }}
+            >
+              <LogOut className="size-4" />
+              <span>Keluar</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

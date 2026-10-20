@@ -1,9 +1,11 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
+import { connection } from "next/server"
 
 import { LoginForm } from "@/components/auth/login-form"
 import { currentUser } from "@/lib/server/session"
 
+export const dynamic = "force-dynamic"
 export const metadata: Metadata = { title: "Masuk — LCH Insurance Brokers" }
 
 export default async function LoginPage({
@@ -11,6 +13,7 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ next?: string }>
 }) {
+  await connection()
   const { next } = await searchParams
   // Hanya terima path internal, supaya parameter ini tidak bisa dipakai
   // mengarahkan pengguna ke situs lain setelah login.
