@@ -22,6 +22,7 @@ import {
 } from "@/components/shared/row-actions"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -104,6 +105,15 @@ export function PolicyDatabase() {
   const rows = tab === "all" ? base : base.filter((p) => p.type === tab)
   const totalPremium = rows.reduce((a, p) => a + premiumIdr(p), 0)
   const policyNoById = new Map(policies.map((p) => [p.id, p.policyNo]))
+
+  const {
+    page,
+    pageSize,
+    totalItems,
+    paginatedItems: paginatedRows,
+    setPage,
+    setPageSize,
+  } = usePagination(rows, 10)
 
   function actionsFor(p: Policy): RowAction[] {
     const claimCount = claims.filter((c) => c.policyId === p.id).length
@@ -242,7 +252,7 @@ export function PolicyDatabase() {
           >
             <SelectTrigger
               size="sm"
-              className="w-[168px]"
+              className="w-42"
               aria-label="Filter COB"
             >
               <SelectValue />
@@ -264,7 +274,7 @@ export function PolicyDatabase() {
           >
             <SelectTrigger
               size="sm"
-              className="w-[150px]"
+              className="w-37.5"
               aria-label="Filter status"
             >
               <SelectValue />
@@ -321,7 +331,7 @@ export function PolicyDatabase() {
                       message="Tidak ada polis yang cocok"
                     />
                   ) : (
-                    rows.map((p) => {
+                    paginatedRows.map((p) => {
                       const latest = p.files[p.files.length - 1]
                       return (
                         <TableRow key={p.id}>
@@ -337,7 +347,7 @@ export function PolicyDatabase() {
                               </span>
                             ) : null}
                           </TableCell>
-                          <TableCell className="max-w-[200px]">
+                          <TableCell className="max-w-50">
                             <p className="truncate">{p.insuredName}</p>
                             <p className="truncate text-xs text-muted-foreground">
                               {p.insurer}
@@ -398,13 +408,23 @@ export function PolicyDatabase() {
                 </TableBody>
               </Table>
             </Card>
+
+            <div className="mt-3">
+              <TablePagination
+                page={page}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                itemName="polis"
+              />
+            </div>
           </TabsContent>
         </Tabs>
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>
-            Menampilkan {rows.length} dari {policies.length} polis · status
-            dihitung dari tanggal berakhir per {dateShort(today)}
+            Status dihitung dari tanggal berakhir per {dateShort(today)}
           </span>
           <span>
             Total premium (setara IDR):{" "}

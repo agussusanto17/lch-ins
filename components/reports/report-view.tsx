@@ -10,6 +10,7 @@ import { SectionCard } from "@/components/shared/section-card"
 import { StatCard } from "@/components/shared/stat-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons } from "@/components/shared/table-toolbar"
 import { Card } from "@/components/ui/card"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -151,7 +152,7 @@ function BreakdownTable<T extends BreakdownRow>({
         ) : (
           rows.map((r) => (
             <TableRow key={keyOf(r)}>
-              <TableCell className="max-w-[280px] truncate pl-5 font-medium">
+              <TableCell className="max-w-70 truncate pl-5 font-medium">
                 {keyOf(r)}
               </TableCell>
               <TableCell className="tabular text-right">{r.policies}</TableCell>
@@ -188,6 +189,24 @@ export function ReportView() {
   const policies = allPolicies.filter((p) => inRange(p.inceptionDate))
   const claims = allClaims.filter((c) => inRange(c.lossDate))
 
+  const {
+    page: policyPage,
+    pageSize: policyPageSize,
+    totalItems: totalPolicyItems,
+    paginatedItems: paginatedPolicies,
+    setPage: setPolicyPage,
+    setPageSize: setPolicyPageSize,
+  } = usePagination(policies, 10)
+
+  const {
+    page: claimPage,
+    pageSize: claimPageSize,
+    totalItems: totalClaimItems,
+    paginatedItems: paginatedClaims,
+    setPage: setClaimPage,
+    setPageSize: setClaimPageSize,
+  } = usePagination(claims, 10)
+
   const cob = breakdownByCob(policies)
   const insurers = breakdownByInsurer(policies)
   const totalPremium = policies.reduce((a, p) => a + premiumIdr(p), 0)
@@ -223,7 +242,7 @@ export function ReportView() {
   return (
     <div className="flex flex-col gap-5">
       <div className="no-print flex flex-wrap items-end gap-3">
-        <Field className="w-[150px]">
+        <Field className="w-37.5">
           <FieldLabel>Periode</FieldLabel>
           <Select
             items={PERIOD_ITEMS}
@@ -244,7 +263,7 @@ export function ReportView() {
             </SelectContent>
           </Select>
         </Field>
-        <Field className="w-[180px]">
+        <Field className="w-45">
           <FieldLabel>Bulan acuan</FieldLabel>
           <Select
             items={months}
@@ -452,12 +471,12 @@ export function ReportView() {
                     message="Tidak ada polis pada periode ini"
                   />
                 ) : (
-                  policies.map((p) => (
+                  paginatedPolicies.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell className="tabular font-medium">
                         {p.policyNo}
                       </TableCell>
-                      <TableCell className="max-w-[210px] truncate">
+                      <TableCell className="max-w-52.5 truncate">
                         {p.insuredName}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
@@ -483,6 +502,14 @@ export function ReportView() {
               </TableBody>
             </Table>
           </Card>
+          <TablePagination
+            page={policyPage}
+            pageSize={policyPageSize}
+            totalItems={totalPolicyItems}
+            onPageChange={setPolicyPage}
+            onPageSizeChange={setPolicyPageSize}
+            itemName="polis"
+          />
         </TabsContent>
 
         <TabsContent value="claims" className="flex flex-col gap-3">
@@ -541,12 +568,12 @@ export function ReportView() {
                     message="Tidak ada klaim pada periode ini"
                   />
                 ) : (
-                  claims.map((c) => (
+                  paginatedClaims.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="tabular font-medium">
                         {c.claimNo}
                       </TableCell>
-                      <TableCell className="max-w-[210px] truncate">
+                      <TableCell className="max-w-52.5 truncate">
                         {c.insuredName}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
@@ -570,6 +597,14 @@ export function ReportView() {
               </TableBody>
             </Table>
           </Card>
+          <TablePagination
+            page={claimPage}
+            pageSize={claimPageSize}
+            totalItems={totalClaimItems}
+            onPageChange={setClaimPage}
+            onPageSizeChange={setClaimPageSize}
+            itemName="klaim"
+          />
         </TabsContent>
       </Tabs>
     </div>
