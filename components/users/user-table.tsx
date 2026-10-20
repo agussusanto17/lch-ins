@@ -297,7 +297,7 @@ export function UserTable({
               <TableHead className={ACTION_COL_CLASS}>Aksi</TableHead>
               <TableHead>Pengguna</TableHead>
               <TableHead>Jabatan</TableHead>
-              <TableHead>Peran (Multi-Role)</TableHead>
+              <TableHead>Peran</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Keamanan</TableHead>
               <TableHead>Terdaftar</TableHead>

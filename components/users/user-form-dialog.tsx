@@ -151,7 +151,7 @@ export function UserFormDialog({
           <DialogDescription>
             {isEditing
               ? "Perbarui informasi akun, jabatan, dan hak akses pengguna."
-              : "Masukkan informasi akun dan pilih hak akses peran (multi-role)."}
+              : "Masukkan informasi akun dan pilih hak akses peran."}
           </DialogDescription>
         </DialogHeader>
 
