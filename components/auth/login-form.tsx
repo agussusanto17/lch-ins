@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, LoaderCircle } from "lucide-react"
+import { AlertTriangle, Eye, EyeOff, LoaderCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -13,10 +13,11 @@ export function LoginForm({ next }: { next: string }) {
   const router = useRouter()
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
+  const [showPassword, setShowPassword] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
     setPending(true)
@@ -24,15 +25,17 @@ export function LoginForm({ next }: { next: string }) {
     const { error } = await signIn.email({ email, password })
 
     if (error) {
-      // Pesan dari Better Auth berbahasa Inggris dan membedakan email tidak
-      // ditemukan dengan kata sandi salah. Keduanya disamakan di sini supaya
-      // tidak bisa dipakai menebak email mana yang terdaftar.
+      // Better Auth error messages are in English and distinguish between
+      // non-existent email and invalid password. Normalize to a single generic
+      // message to prevent user enumeration.
       setError("Email atau kata sandi salah.")
       setPending(false)
       return
     }
 
-    router.push(next)
+    // Defensive validation against open redirect or protocol-relative redirect
+    const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/"
+    router.push(safeNext)
     router.refresh()
   }
 
@@ -54,14 +57,25 @@ export function LoginForm({ next }: { next: string }) {
 
       <Field>
         <FieldLabel htmlFor="password">Kata sandi</FieldLabel>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+          >
+            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        </div>
       </Field>
 
       {error ? (

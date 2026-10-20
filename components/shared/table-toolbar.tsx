@@ -53,8 +53,8 @@ export function SearchInput({
 }
 
 /**
- * Tombol export dan cetak di atas tabel. Export memakai baris yang sedang
- * tampil (sudah terfilter), sama seperti yang dilihat pengguna.
+ * Export and print buttons above tables. Export uses the currently visible
+ * (filtered) rows, matching what the user sees.
  */
 export function ExportButtons<T>({
   className,

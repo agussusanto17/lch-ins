@@ -44,12 +44,13 @@ const SEGMENT_LABELS: Record<string, string> = {
   closing: "Closing Instruction",
   slip: "Placing Slip",
   clients: "Detail Klien",
+  "change-password": "Ganti Kata Sandi",
 }
 
 /**
- * Rute yang punya halaman sendiri. Segmen perantara seperti
- * `/underwriting/quotation` atau `/finance` tidak dijadikan link supaya
- * breadcrumb tidak mengarah ke 404.
+ * Routes that have their own page. Intermediate segments like
+ * `/underwriting/quotation` or `/finance` are not linked to prevent
+ * breadcrumbs from navigating to 404 pages.
  */
 const PAGES = new Set([
   "/marketing",
@@ -69,6 +70,7 @@ const PAGES = new Set([
   "/users",
   "/audit-trail",
   "/settings",
+  "/change-password",
 ])
 
 function buildCrumbs(pathname: string) {

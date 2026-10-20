@@ -74,7 +74,7 @@ export function UserTable({
   const [roleFilter, setRoleFilter] = React.useState("all")
   const [statusFilter, setStatusFilter] = React.useState("all")
 
-  // Sync state if initialUsers changes from server revalidation
+  // Sync state when initialUsers prop changes from server revalidation
   React.useEffect(() => {
     setUsers(initialUsers)
   }, [initialUsers])
@@ -94,7 +94,7 @@ export function UserTable({
     password: null,
   })
 
-  // Filter logic
+  // Client-side filter logic
   const filteredUsers = React.useMemo(() => {
     return users.filter((u) => {
       if (search.trim()) {
@@ -221,7 +221,7 @@ export function UserTable({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Toolbar Filter dan Pencarian */}
+      {/* Search and filter toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <SearchInput
@@ -279,9 +279,9 @@ export function UserTable({
         </Button>
       </div>
 
-      {/* Tabel Data Pengguna */}
-      <Card className="overflow-hidden border">
-        <Table>
+      {/* User data table */}
+      <Card className="gap-0 overflow-hidden py-0 border">
+        <Table className="min-w-190">
           <TableHeader>
             <TableRow>
               <TableHead className={ACTION_COL_CLASS}>Aksi</TableHead>
@@ -388,7 +388,7 @@ export function UserTable({
         </Table>
       </Card>
 
-      {/* Modal Dialog Form Tambah/Edit */}
+      {/* Create / Edit modal dialog */}
       <UserFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
@@ -407,7 +407,7 @@ export function UserTable({
         }}
       />
 
-      {/* Modal Dialog Kata Sandi Sementara */}
+      {/* Temporary password modal dialog */}
       <TemporaryPasswordDialog
         open={tempPasswordModal.open}
         onOpenChange={(open) =>
