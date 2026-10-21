@@ -1,7 +1,7 @@
 export const LCH_ADDRESS = {
   line1: "Springhill Office Tower 11th Floor Unit H",
   line2: "Jl. Benyamin Suaeb Block D6, Kemayoran, Jakarta Utara 14410",
-  phone: "Phone : +62 21 - 2605 1671, +62 21 - 2605 1672",
+  phone: "Phone : +62 21 - 2605 1071, +62 21 - 2605 1072",
   skojk: "SKOJK Nomor : KEP - 46/NB.1/2016",
 }
 
