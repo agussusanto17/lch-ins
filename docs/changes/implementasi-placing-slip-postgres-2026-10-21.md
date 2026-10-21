@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-21
 - **Branch:** `feat/placing-slip-db-persistence`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #24
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
