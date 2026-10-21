@@ -54,6 +54,12 @@ import {
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
 import {
+  deletePlacingSlipAction,
+  releasePlacingSlipAction,
+  savePlacingSlipAction,
+  togglePlacingSlipStatusAction,
+} from "@/app/(app)/underwriting/actions"
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -173,6 +179,7 @@ function SlipEditor({
 }) {
   const router = useRouter()
   const today = useToday()
+  const [isPending, startTransition] = React.useTransition()
   const [slip, setSlip] = React.useState<PlacingSlip>(() => recalc(initial))
   const [savedJson, setSavedJson] = React.useState(() =>
     JSON.stringify(recalc(initial))
@@ -276,8 +283,8 @@ function SlipEditor({
     set({ rateExceptions: next })
   }
 
-  /** Simpan ke store. Batas OJK ikut disalin dan alasan yang tidak perlu dibuang. */
-  function persist(next: PlacingSlip = slip) {
+  /** Simpan ke store lokal. Batas OJK ikut disalin dan alasan yang tidak perlu dibuang. */
+  function persistLocal(next: PlacingSlip = slip) {
     const withBounds = rateLinesWithBounds(next)
     const exceptions = Object.fromEntries(
       Object.entries(next.rateExceptions ?? {}).filter(([lineId]) =>
@@ -298,11 +305,35 @@ function SlipEditor({
   }
 
   function handleSave() {
-    const record = persist()
-    toast.success("Draft tersimpan", {
-      description: record.slipNo ?? record.insuredName ?? undefined,
+    startTransition(async () => {
+      const withBounds = rateLinesWithBounds(slip)
+      const exceptions = Object.fromEntries(
+        Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
+          withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
+        )
+      )
+      const toSend: PlacingSlip = {
+        ...slip,
+        rateLines: withBounds,
+        rateExceptions: exceptions,
+        updatedAt: today,
+      }
+      const res = await savePlacingSlipAction(toSend, mode)
+      if (!res.ok || !res.data) {
+        toast.error("Gagal menyimpan slip", { description: res.error })
+        return
+      }
+      const record = res.data
+      store.upsert("slips", record)
+      setSlip(record)
+      setSavedJson(JSON.stringify(record))
+      toast.success("Draft tersimpan", {
+        description: record.slipNo ?? record.insuredName ?? undefined,
+      })
+      if (mode === "new" || slip.id !== record.id) {
+        router.replace(`/underwriting/edit/${record.id}`)
+      }
     })
-    if (mode === "new") router.replace(`/underwriting/edit/${record.id}`)
   }
 
   function startRelease() {
@@ -312,33 +343,107 @@ function SlipEditor({
   }
 
   function doRelease() {
-    const seq = nextSlipSeq(store.all("slips"), today)
-    const slipNo = buildSlipNo(seq, slip.coverCode, today)
-    const record = persist({ ...slip, status: "Released", seq, slipNo })
-    setConfirmRelease(false)
-    toast.success("Slip di-release", { description: `No. slip ${slipNo}` })
-    if (mode === "new") router.replace(`/underwriting/edit/${record.id}`)
+    startTransition(async () => {
+      let targetId = slip.id
+      if (dirty || mode === "new" || targetId === "new" || targetId.startsWith("s-")) {
+        const withBounds = rateLinesWithBounds(slip)
+        const exceptions = Object.fromEntries(
+          Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
+            withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
+          )
+        )
+        const toSend: PlacingSlip = {
+          ...slip,
+          rateLines: withBounds,
+          rateExceptions: exceptions,
+          updatedAt: today,
+        }
+        const saveRes = await savePlacingSlipAction(toSend, mode)
+        if (!saveRes.ok || !saveRes.data) {
+          toast.error("Gagal menyimpan slip sebelum rilis", { description: saveRes.error })
+          return
+        }
+        targetId = saveRes.data.id
+        store.upsert("slips", saveRes.data)
+        setSlip(saveRes.data)
+      }
+
+      const relRes = await releasePlacingSlipAction(targetId)
+      if (!relRes.ok || !relRes.data) {
+        toast.error("Gagal merilis slip", { description: relRes.error })
+        return
+      }
+      const record = relRes.data
+      setConfirmRelease(false)
+      store.upsert("slips", record)
+      setSlip(record)
+      setSavedJson(JSON.stringify(record))
+      toast.success("Slip di-release", { description: `No. slip ${record.slipNo}` })
+      if (mode === "new" || slip.id !== record.id) {
+        router.replace(`/underwriting/edit/${record.id}`)
+      }
+    })
   }
 
   function doDestroy() {
     setConfirmDestroy(false)
-    if (slip.status === "Draft") {
-      if (store.get("slips", slip.id)) store.remove("slips", slip.id)
-      setSavedJson(JSON.stringify(slip))
-      toast.success("Draft slip dihapus")
-      router.push("/underwriting")
-      return
-    }
-    persist({ ...slip, status: "Cancelled" })
-    toast.success("Slip dibatalkan", {
-      description: `Nomor ${slip.slipNo} tetap tercatat supaya penomoran tidak bolong.`,
+    startTransition(async () => {
+      if (slip.status === "Draft") {
+        store.remove("slips", slip.id)
+        setSavedJson(JSON.stringify(slip))
+        const delRes = await deletePlacingSlipAction(slip.id)
+        if (!delRes.ok && delRes.error) {
+          toast.error("Gagal menghapus draft", { description: delRes.error })
+          return
+        }
+        toast.success("Draft slip dihapus")
+        router.push("/underwriting")
+        return
+      }
+      const cancelRes = await togglePlacingSlipStatusAction(slip.id, "Cancelled")
+      if (!cancelRes.ok && cancelRes.error) {
+        toast.error("Gagal membatalkan slip", { description: cancelRes.error })
+        return
+      }
+      if (cancelRes.data) {
+        store.upsert("slips", cancelRes.data)
+        setSlip(cancelRes.data)
+        setSavedJson(JSON.stringify(cancelRes.data))
+      }
+      toast.success("Slip dibatalkan", {
+        description: `Nomor ${slip.slipNo} tetap tercatat supaya penomoran tidak bolong.`,
+      })
     })
   }
 
   /** Buka dokumen atau quotation; perubahan disimpan dulu supaya dokumen sama dengan form. */
   function goTo(path: (id: string) => string) {
-    const record = dirty || mode === "new" ? persist() : slip
-    router.push(path(record.id))
+    if (dirty || mode === "new") {
+      startTransition(async () => {
+        const withBounds = rateLinesWithBounds(slip)
+        const exceptions = Object.fromEntries(
+          Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
+            withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
+          )
+        )
+        const toSend: PlacingSlip = {
+          ...slip,
+          rateLines: withBounds,
+          rateExceptions: exceptions,
+          updatedAt: today,
+        }
+        const res = await savePlacingSlipAction(toSend, mode)
+        if (res.ok && res.data) {
+          store.upsert("slips", res.data)
+          router.push(path(res.data.id))
+        } else {
+          const fallback = persistLocal()
+          router.push(path(fallback.id))
+        }
+      })
+    } else {
+      router.push(path(slip.id))
+    }
   }
 
   const destroyLabel = slip.status === "Draft" ? "Hapus Draft" : "Batalkan Slip"
@@ -1106,19 +1211,24 @@ function SlipEditor({
             </Button>
           ) : null}
           {!locked ? (
-            <Button variant="outline" onClick={handleSave} disabled={!canSave}>
+            <Button
+              variant="outline"
+              onClick={handleSave}
+              disabled={!canSave || isPending}
+            >
               <Save data-icon="inline-start" />
-              {canSave ? "Simpan Draft" : "Tersimpan"}
+              {isPending ? "Menyimpan…" : canSave ? "Simpan Draft" : "Tersimpan"}
             </Button>
           ) : null}
           {slip.status === "Draft" ? (
-            <Button onClick={startRelease}>
+            <Button onClick={startRelease} disabled={isPending}>
               <Send data-icon="inline-start" />
-              Release & Generate No. Slip
+              {isPending ? "Memproses…" : "Release & Generate No. Slip"}
             </Button>
           ) : slip.status === "Released" || slip.status === "Quoted" ? (
             <Button
               onClick={() => goTo((id) => `/underwriting/quotation/edit/${id}`)}
+              disabled={isPending}
             >
               <Send data-icon="inline-start" />
               Lanjut ke Quotation Slip

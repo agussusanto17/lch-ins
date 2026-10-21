@@ -1,13 +1,17 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { FilePlus2 } from "lucide-react"
 
 import { PageHeader, PageShell } from "@/components/layout/page-header"
 import { SlipTable } from "@/components/underwriting/slip-table"
 import { Button } from "@/components/ui/button"
+import { listPlacingSlips } from "@/lib/server/placing-slips"
 
-export const metadata = { title: "Underwriting — LCH Insurance Brokers" }
+export const metadata: Metadata = { title: "Underwriting — LCH Insurance Brokers" }
 
-export default function UnderwritingPage() {
+export default async function UnderwritingPage() {
+  const initialSlips = await listPlacingSlips()
+
   return (
     <PageShell>
       <PageHeader
@@ -23,7 +27,7 @@ export default function UnderwritingPage() {
           </Button>
         }
       />
-      <SlipTable />
+      <SlipTable initialSlips={initialSlips} />
     </PageShell>
   )
 }

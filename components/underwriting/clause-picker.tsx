@@ -21,6 +21,10 @@ import {
   type ClauseOverride,
 } from "@/lib/data"
 import { cn } from "@/lib/utils"
+import {
+  getClausesForPickerAction,
+  type ClausePickerItem,
+} from "@/app/(app)/underwriting/actions"
 
 export function ClausePicker({
   cob,
@@ -29,6 +33,7 @@ export function ClausePicker({
   overrides,
   onChange,
   onOverridesChange,
+  masterClauses: propMasterClauses,
 }: {
   cob: ClassOfBusiness
   typeOfCover: string
@@ -36,29 +41,69 @@ export function ClausePicker({
   overrides: Record<string, ClauseOverride>
   onChange: (ids: string[]) => void
   onOverridesChange: (overrides: Record<string, ClauseOverride>) => void
+  masterClauses?: ClausePickerItem[]
 }) {
   const [query, setQuery] = React.useState("")
   const [editing, setEditing] = React.useState<string | null>(null)
   /** Editor hanya membaca isi awalnya, jadi reset ke master perlu remount. */
   const [resetTick, setResetTick] = React.useState(0)
+  const [fetchedClauses, setFetchedClauses] = React.useState<ClausePickerItem[]>([])
+
+  React.useEffect(() => {
+    if (propMasterClauses && propMasterClauses.length > 0) return
+    let active = true
+    getClausesForPickerAction().then((res) => {
+      if (active && res.ok && res.data) {
+        setFetchedClauses(res.data)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [propMasterClauses])
+
+  const pool: ClausePickerItem[] = React.useMemo(() => {
+    const list = propMasterClauses ?? (fetchedClauses.length > 0 ? fetchedClauses : null)
+    if (list && list.length > 0) return list
+    return CLAUSES.map((c) => ({
+      id: c.id,
+      title: c.title,
+      wording: c.wording,
+      sourceGroup: c.typeOfCover || "",
+      cobName: c.cob === "All" ? null : c.cob,
+      coverTypeName: c.typeOfCover || null,
+    }))
+  }, [propMasterClauses, fetchedClauses])
 
   const available = React.useMemo(() => {
     const q = query.trim().toLowerCase()
-    return CLAUSES.filter((c) => {
-      if (c.cob !== "All" && c.cob !== cob) return false
-      if (c.typeOfCover && typeOfCover && c.typeOfCover !== typeOfCover)
+    return pool.filter((c) => {
+      if (c.cobName && c.cobName.toLowerCase() !== "all" && c.cobName.toLowerCase() !== cob.toLowerCase()) {
         return false
+      }
+      if (c.coverTypeName && typeOfCover) {
+        const coverNorm = typeOfCover.toLowerCase()
+        const cCoverNorm = c.coverTypeName.toLowerCase()
+        if (!coverNorm.includes(cCoverNorm) && !cCoverNorm.includes(coverNorm)) {
+          return false
+        }
+      }
       if (!q) return true
       return (
         c.title.toLowerCase().includes(q) || c.wording.toLowerCase().includes(q)
       )
     })
-  }, [cob, typeOfCover, query])
+  }, [pool, cob, typeOfCover, query])
 
-  const selectedClauses = resolveSlipClauses({
-    clauseIds: selected,
-    clauseOverrides: overrides,
-  })
+  const selectedClauses = React.useMemo(() => {
+    return resolveSlipClauses(
+      {
+        clauseIds: selected,
+        clauseOverrides: overrides,
+      },
+      pool
+    )
+  }, [selected, overrides, pool])
 
   function toggle(id: string) {
     if (selected.includes(id)) {
@@ -76,7 +121,7 @@ export function ClausePicker({
   }
 
   function patchOverride(id: string, patch: Partial<ClauseOverride>) {
-    const master = CLAUSES.find((c) => c.id === id)
+    const master = pool.find((c) => c.id === id) ?? CLAUSES.find((c) => c.id === id)
     if (!master) return
     const base = overrides[id] ?? {
       title: master.title,
@@ -148,7 +193,7 @@ export function ClausePicker({
                       {c.title}
                     </span>
                     <Badge variant="outline" className="shrink-0">
-                      {c.cob}
+                      {c.cobName ?? c.sourceGroup ?? "Umum"}
                     </Badge>
                   </span>
                   <span className="mt-1 line-clamp-2 block text-xs text-muted-foreground">
