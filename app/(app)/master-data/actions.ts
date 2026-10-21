@@ -1,0 +1,518 @@
+"use server"
+
+import { revalidatePath } from "next/cache"
+import { z } from "zod"
+
+import type {
+  Adjuster,
+  BankAccount,
+  ClassOfBusiness,
+  CoverType,
+  Insurer,
+  LookupValue,
+  WordingForm,
+} from "@/lib/generated/prisma/client"
+import {
+  createAdjuster,
+  createBankAccount,
+  createCob,
+  createCoverType,
+  createInsurer,
+  createLookupValue,
+  createWordingForm,
+  deleteCob,
+  deleteCoverType,
+  deleteLookupValue,
+  toggleAdjusterStatus,
+  toggleBankAccountStatus,
+  toggleCobStatus,
+  toggleCoverTypeStatus,
+  toggleInsurerStatus,
+  toggleLookupValueStatus,
+  toggleWordingFormStatus,
+  updateAdjuster,
+  updateBankAccount,
+  updateCob,
+  updateCoverType,
+  updateInsurer,
+  updateLookupValue,
+} from "@/lib/server/master-data"
+import { requireAccess } from "@/lib/server/session"
+
+export interface ActionResponse<T = unknown> {
+  ok: boolean
+  data?: T
+  error?: string
+}
+
+// ---------------------------------------------------------------------------
+// Zod Schemas
+// ---------------------------------------------------------------------------
+
+const cobSchema = z.object({
+  code: z.string().trim().min(2, "Kode COB minimal 2 karakter"),
+  name: z.string().trim().min(2, "Nama COB minimal 2 karakter"),
+  rateModeId: z.string().min(1, "Pilih satuan rate yang valid"),
+  formVariantId: z.string().min(1, "Pilih varian form yang valid"),
+  isActive: z.boolean().optional(),
+})
+
+const coverTypeSchema = z.object({
+  cobId: z.string().min(1, "Pilih COB yang valid"),
+  code: z.string().trim().min(3, "Kode Cover Type minimal 3 karakter"),
+  name: z.string().trim().min(2, "Nama Cover Type minimal 2 karakter"),
+  isActive: z.boolean().optional(),
+})
+
+const insurerSchema = z.object({
+  name: z.string().trim().min(2, "Nama Asuransi minimal 2 karakter"),
+  contactPerson: z.string().trim().nullish(),
+  email: z.string().trim().nullish(),
+  phone: z.string().trim().nullish(),
+  address: z.string().trim().nullish(),
+  isActive: z.boolean().optional(),
+})
+
+const adjusterSchema = z.object({
+  name: z.string().trim().min(2, "Nama Adjuster minimal 2 karakter"),
+  contactPerson: z.string().trim().nullish(),
+  email: z.string().trim().nullish(),
+  phone: z.string().trim().nullish(),
+  address: z.string().trim().nullish(),
+  isActive: z.boolean().optional(),
+})
+
+const bankAccountSchema = z.object({
+  bankId: z.string().min(1, "Pilih bank yang valid"),
+  accountNo: z.string().trim().min(3, "Nomor rekening minimal 3 karakter"),
+  accountName: z.string().trim().min(3, "Nama pemilik rekening minimal 3 karakter"),
+  currencyCode: z.string().trim().min(2, "Pilih mata uang"),
+  isPremiumTrust: z.boolean().optional(),
+  coaAccountId: z.string().nullish(),
+  isActive: z.boolean().optional(),
+})
+
+const wordingFormSchema = z.object({
+  name: z.string().trim().min(2, "Nama wording form minimal 2 karakter"),
+})
+
+const lookupValueSchema = z.object({
+  lookupType: z.string().trim().min(2, "Tipe lookup minimal 2 karakter"),
+  code: z.string().trim().min(1, "Kode nilai minimal 1 karakter"),
+  name: z.string().trim().min(1, "Label tampilan minimal 1 karakter"),
+  sortOrder: z.coerce.number().int().default(0),
+  isSystem: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+})
+
+// ---------------------------------------------------------------------------
+// 1. COB Actions
+// ---------------------------------------------------------------------------
+
+export async function createCobAction(
+  data: z.infer<typeof cobSchema>
+): Promise<ActionResponse<ClassOfBusiness>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = cobSchema.parse(data)
+    const res = await createCob(parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menambah COB",
+    }
+  }
+}
+
+export async function updateCobAction(
+  id: string,
+  data: z.infer<typeof cobSchema>
+): Promise<ActionResponse<ClassOfBusiness>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = cobSchema.parse(data)
+    const res = await updateCob(id, parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal memperbarui COB",
+    }
+  }
+}
+
+export async function toggleCobStatusAction(
+  id: string,
+  isActive: boolean
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireAccess("/master-data")
+    await toggleCobStatus(id, isActive, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal mengubah status COB",
+    }
+  }
+}
+
+export async function deleteCobAction(id: string): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireAccess("/master-data")
+    await deleteCob(id, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menghapus COB",
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 2. Cover Type Actions
+// ---------------------------------------------------------------------------
+
+export async function createCoverTypeAction(
+  data: z.infer<typeof coverTypeSchema>
+): Promise<ActionResponse<CoverType>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = coverTypeSchema.parse(data)
+    const res = await createCoverType(parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menambah Cover Type",
+    }
+  }
+}
+
+export async function updateCoverTypeAction(
+  id: string,
+  data: z.infer<typeof coverTypeSchema>
+): Promise<ActionResponse<CoverType>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = coverTypeSchema.parse(data)
+    const res = await updateCoverType(id, parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal memperbarui Cover Type",
+    }
+  }
+}
+
+export async function toggleCoverTypeStatusAction(
+  id: string,
+  isActive: boolean
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireAccess("/master-data")
+    await toggleCoverTypeStatus(id, isActive, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal mengubah status Cover Type",
+    }
+  }
+}
+
+export async function deleteCoverTypeAction(
+  id: string
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireAccess("/master-data")
+    await deleteCoverType(id, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menghapus Cover Type",
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3. Insurers & Adjusters Actions
+// ---------------------------------------------------------------------------
+
+export async function createInsurerAction(
+  data: z.infer<typeof insurerSchema>
+): Promise<ActionResponse<Insurer>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = insurerSchema.parse(data)
+    const res = await createInsurer(parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menambah data asuradur",
+    }
+  }
+}
+
+export async function updateInsurerAction(
+  id: string,
+  data: z.infer<typeof insurerSchema>
+): Promise<ActionResponse<Insurer>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = insurerSchema.parse(data)
+    const res = await updateInsurer(id, parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal memperbarui data asuradur",
+    }
+  }
+}
+
+export async function toggleInsurerStatusAction(
+  id: string,
+  isActive: boolean
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireAccess("/master-data")
+    await toggleInsurerStatus(id, isActive, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal mengubah status asuradur",
+    }
+  }
+}
+
+export async function createAdjusterAction(
+  data: z.infer<typeof adjusterSchema>
+): Promise<ActionResponse<Adjuster>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = adjusterSchema.parse(data)
+    const res = await createAdjuster(parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menambah data adjuster",
+    }
+  }
+}
+
+export async function updateAdjusterAction(
+  id: string,
+  data: z.infer<typeof adjusterSchema>
+): Promise<ActionResponse<Adjuster>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = adjusterSchema.parse(data)
+    const res = await updateAdjuster(id, parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal memperbarui data adjuster",
+    }
+  }
+}
+
+export async function toggleAdjusterStatusAction(
+  id: string,
+  isActive: boolean
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireAccess("/master-data")
+    await toggleAdjusterStatus(id, isActive, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal mengubah status adjuster",
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4. Bank Account & Wording Form Actions
+// ---------------------------------------------------------------------------
+
+export async function createBankAccountAction(
+  data: z.infer<typeof bankAccountSchema>
+): Promise<ActionResponse<BankAccount>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = bankAccountSchema.parse(data)
+    const res = await createBankAccount(parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menambah rekening bank",
+    }
+  }
+}
+
+export async function updateBankAccountAction(
+  id: string,
+  data: z.infer<typeof bankAccountSchema>
+): Promise<ActionResponse<BankAccount>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = bankAccountSchema.parse(data)
+    const res = await updateBankAccount(id, parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal memperbarui rekening bank",
+    }
+  }
+}
+
+export async function toggleBankAccountStatusAction(
+  id: string,
+  isActive: boolean
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireAccess("/master-data")
+    await toggleBankAccountStatus(id, isActive, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal mengubah status rekening bank",
+    }
+  }
+}
+
+export async function createWordingFormAction(
+  data: z.infer<typeof wordingFormSchema>
+): Promise<ActionResponse<WordingForm>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = wordingFormSchema.parse(data)
+    const res = await createWordingForm(parsed.name, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menambah wording form",
+    }
+  }
+}
+
+export async function toggleWordingFormStatusAction(
+  id: string,
+  isActive: boolean
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireAccess("/master-data")
+    await toggleWordingFormStatus(id, isActive, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal mengubah status wording form",
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. Lookup Values Actions
+// ---------------------------------------------------------------------------
+
+export async function createLookupValueAction(
+  data: z.infer<typeof lookupValueSchema>
+): Promise<ActionResponse<LookupValue>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = lookupValueSchema.parse(data)
+    const res = await createLookupValue(parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menambah nilai lookup",
+    }
+  }
+}
+
+export async function updateLookupValueAction(
+  id: string,
+  data: z.infer<typeof lookupValueSchema>
+): Promise<ActionResponse<LookupValue>> {
+  try {
+    const session = await requireAccess("/master-data")
+    const parsed = lookupValueSchema.parse(data)
+    const res = await updateLookupValue(id, parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal memperbarui nilai lookup",
+    }
+  }
+}
+
+export async function toggleLookupValueStatusAction(
+  id: string,
+  isActive: boolean
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireAccess("/master-data")
+    await toggleLookupValueStatus(id, isActive, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal mengubah status nilai lookup",
+    }
+  }
+}
+
+export async function deleteLookupValueAction(
+  id: string
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireAccess("/master-data")
+    await deleteLookupValue(id, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menghapus nilai lookup",
+    }
+  }
+}
