@@ -20,7 +20,7 @@ import {
   type SppaInput,
   type SppaRecord,
 } from "@/lib/server/sppa"
-import { requireAccess } from "@/lib/server/session"
+import { requireManage } from "@/lib/server/session"
 
 export interface ActionResponse<T = unknown> {
   ok: boolean
@@ -73,7 +73,7 @@ export async function createClientAction(
   input: ClientInput
 ): Promise<ActionResponse<ClientRecord>> {
   try {
-    const user = await requireAccess("/marketing")
+    const user = await requireManage("/marketing")
     const parsed = clientInputSchema.safeParse(input)
     if (!parsed.success) {
       const firstIssue = parsed.error.issues[0]
@@ -99,7 +99,7 @@ export async function updateClientAction(
   input: ClientInput
 ): Promise<ActionResponse<ClientRecord>> {
   try {
-    const user = await requireAccess("/marketing")
+    const user = await requireManage("/marketing")
     if (!id || !id.trim()) {
       return { ok: false, error: "ID klien tidak valid." }
     }
@@ -130,7 +130,7 @@ export async function toggleClientStatusAction(
   status: ClientStatus
 ): Promise<ActionResponse<void>> {
   try {
-    const user = await requireAccess("/marketing")
+    const user = await requireManage("/marketing")
     if (!id || !id.trim()) {
       return { ok: false, error: "ID klien tidak valid." }
     }
@@ -151,7 +151,7 @@ export async function deleteClientAction(
   id: string
 ): Promise<ActionResponse<void>> {
   try {
-    const user = await requireAccess("/marketing")
+    const user = await requireManage("/marketing")
     if (!id || !id.trim()) {
       return { ok: false, error: "ID klien tidak valid." }
     }
@@ -201,7 +201,7 @@ export async function createSppaAction(
   input: SppaInput
 ): Promise<ActionResponse<SppaRecord>> {
   try {
-    const user = await requireAccess("/marketing")
+    const user = await requireManage("/marketing")
     const parsed = sppaInputSchema.safeParse(input)
     if (!parsed.success) {
       const firstIssue = parsed.error.issues[0]
@@ -228,7 +228,7 @@ export async function updateSppaAction(
   input: SppaInput
 ): Promise<ActionResponse<SppaRecord>> {
   try {
-    const user = await requireAccess("/marketing")
+    const user = await requireManage("/marketing")
     if (!id || !id.trim()) {
       return { ok: false, error: "ID SPPA tidak valid." }
     }
@@ -259,7 +259,7 @@ export async function toggleSppaStatusAction(
   status: SppaStatus
 ): Promise<ActionResponse<void>> {
   try {
-    const user = await requireAccess("/marketing")
+    const user = await requireManage("/marketing")
     if (!id || !id.trim()) {
       return { ok: false, error: "ID SPPA tidak valid." }
     }
@@ -280,7 +280,7 @@ export async function deleteSppaAction(
   id: string
 ): Promise<ActionResponse<void>> {
   try {
-    const user = await requireAccess("/marketing")
+    const user = await requireManage("/marketing")
     if (!id || !id.trim()) {
       return { ok: false, error: "ID SPPA tidak valid." }
     }
