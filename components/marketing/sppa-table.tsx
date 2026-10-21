@@ -7,6 +7,10 @@ import { toast } from "sonner"
 
 import { SppaForm } from "@/components/marketing/sppa-form"
 import {
+  deleteSppaAction,
+  toggleSppaStatusAction,
+} from "@/app/(app)/marketing/actions"
+import {
   ACTION_COL_CLASS,
   RowActions,
   type RowAction,
@@ -26,21 +30,34 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { Sppa } from "@/lib/data"
+import type { SppaRecord } from "@/lib/server/sppa"
 import type { ExportSpec } from "@/lib/export"
 import { dateShort, money } from "@/lib/format"
 import { store, useCollection } from "@/lib/store"
 
-export function SppaTable({
-  clientId,
-  compact,
-}: {
+export interface SppaTableProps {
+  initialSppa?: SppaRecord[]
   /** Batasi ke satu klien (dipakai di halaman detail klien). */
   clientId?: string
   compact?: boolean
-}) {
+}
+
+export function SppaTable({
+  initialSppa,
+  clientId,
+  compact,
+}: SppaTableProps) {
   const all = useCollection("sppa")
   const slips = useCollection("slips")
   const [query, setQuery] = React.useState("")
+  const [isPending, startTransition] = React.useTransition()
+
+  React.useEffect(() => {
+    if (!initialSppa?.length) return
+    for (const item of initialSppa) {
+      store.upsert("sppa", item)
+    }
+  }, [initialSppa])
   const [form, setForm] = React.useState<{
     key: number
     sppa: Sppa | null
@@ -85,9 +102,17 @@ export function SppaTable({
       actions.push({
         label: "Tandai Submitted",
         icon: Send,
+        disabled: isPending,
         onSelect: () => {
-          store.update("sppa", s.id, { status: "Submitted" })
-          toast.success("SPPA ditandai Submitted")
+          startTransition(async () => {
+            const res = await toggleSppaStatusAction(s.id, "Submitted")
+            if (res.ok) {
+              store.update("sppa", s.id, { status: "Submitted" })
+              toast.success("SPPA ditandai Submitted")
+            } else {
+              toast.error(res.error || "Gagal mengubah status SPPA")
+            }
+          })
         },
       })
     }
@@ -95,15 +120,22 @@ export function SppaTable({
       label: slipCount ? "Hapus (sudah jadi slip)" : "Hapus SPPA",
       icon: Trash2,
       destructive: true,
-      disabled: slipCount > 0,
+      disabled: slipCount > 0 || isPending,
       confirm: {
         title: "Hapus SPPA ini?",
         description: `SPPA ${s.insuredName} (${s.cob}) dihapus permanen.`,
         actionLabel: "Hapus",
       },
       onSelect: () => {
-        store.remove("sppa", s.id)
-        toast.success("SPPA dihapus")
+        startTransition(async () => {
+          const res = await deleteSppaAction(s.id)
+          if (res.ok) {
+            store.remove("sppa", s.id)
+            toast.success("SPPA dihapus")
+          } else {
+            toast.error(res.error || "Gagal menghapus SPPA")
+          }
+        })
       },
     })
     return actions
@@ -156,7 +188,7 @@ export function SppaTable({
       </div>
 
       <Card className="gap-0 overflow-hidden py-0">
-        <Table className="min-w-[800px]">
+        <Table className="min-w-200">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className={ACTION_COL_CLASS}>
