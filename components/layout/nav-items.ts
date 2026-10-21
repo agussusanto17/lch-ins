@@ -97,7 +97,6 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Master Data",
         href: "/master-data",
         icon: Database,
-        soon: true,
       },
       { title: "Report", href: "/reports", icon: ChartColumn },
     ],
