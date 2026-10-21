@@ -21,6 +21,8 @@ import { join } from "node:path"
 import { hashPassword } from "better-auth/crypto"
 
 import type { RoleCode } from "../lib/access"
+import { CLIENTS } from "../lib/data/clients"
+import { SPPA } from "../lib/data/sppa"
 import { Prisma } from "../lib/generated/prisma/client"
 import { prisma } from "../lib/prisma"
 
@@ -992,6 +994,292 @@ async function seedUsers() {
   return { created, updated, password: created ? password : null }
 }
 
+/**
+ * Pembenihan data klien awal (12 klien mock LCH) ke tabel clients,
+ * client_addresses, dan client_documents di PostgreSQL.
+ */
+async function seedClients() {
+  const cache = await prisma.lookupValue.findMany({
+    where: {
+      lookupType: {
+        in: [
+          "client_type",
+          "client_status",
+          "id_type",
+          "income_source",
+          "insurance_purpose",
+          "address_type",
+          "client_document_type",
+        ],
+      },
+    },
+    select: { id: true, lookupType: true, code: true, name: true },
+  })
+
+  const lookupByName = new Map<string, string>()
+  const lookupByCode = new Map<string, string>()
+  for (const l of cache) {
+    lookupByName.set(`${l.lookupType}:${l.name.toLowerCase()}`, l.id)
+    lookupByCode.set(`${l.lookupType}:${l.code.toLowerCase()}`, l.id)
+  }
+
+  const cobs = await prisma.classOfBusiness.findMany({
+    select: { id: true, code: true, name: true },
+  })
+  const cobMap = new Map<string, string>()
+  for (const c of cobs) {
+    cobMap.set(c.name.toLowerCase(), c.id)
+    cobMap.set(c.code.toLowerCase(), c.id)
+  }
+
+  const user = await prisma.user.findFirst({ select: { id: true } })
+  const defaultUserId = user?.id
+
+  let created = 0
+  let updated = 0
+
+  for (const item of CLIENTS) {
+    const clientTypeId =
+      lookupByName.get(`client_type:${item.clientType.toLowerCase()}`) ||
+      lookupByCode.get("client_type:corporate")!
+    const statusId =
+      lookupByName.get(`client_status:${item.status.toLowerCase()}`) ||
+      lookupByCode.get("client_status:active")!
+    const idTypeId = item.idType
+      ? lookupByName.get(`id_type:${item.idType.toLowerCase()}`) ||
+        lookupByCode.get(`id_type:${item.idType.toLowerCase()}`)
+      : null
+    const incomeSourceId = item.incomeSource
+      ? lookupByName.get(`income_source:${item.incomeSource.toLowerCase()}`)
+      : null
+    const insurancePurposeId = item.insurancePurpose
+      ? lookupByName.get(`insurance_purpose:${item.insurancePurpose.toLowerCase()}`)
+      : null
+    const cobId = item.cob
+      ? cobMap.get(item.cob.toLowerCase()) ?? cobs[0]?.id
+      : null
+
+    const existing = await prisma.client.findFirst({
+      where: { name: { equals: item.name.trim(), mode: "insensitive" } },
+    })
+
+    let clientId: string
+
+    if (existing) {
+      clientId = existing.id
+      await prisma.client.update({
+        where: { id: existing.id },
+        data: {
+          clientTypeId,
+          npwp: item.npwp || null,
+          idTypeId,
+          idNumber: item.idNumber || null,
+          birthPlace: item.birthPlace || null,
+          birthDate: item.birthDate ? new Date(item.birthDate) : null,
+          contactPerson: item.contactPerson || null,
+          contactPersonIdNumber: item.contactPersonIdNumber || null,
+          email: item.email || null,
+          phone: item.phone || null,
+          incomeSourceId,
+          insurancePurposeId,
+          insurancePurposeNote: item.insurancePurposeNote || null,
+          kycDate: item.kycDate ? new Date(item.kycDate) : null,
+          cobId,
+          statusId,
+          notes: item.notes || null,
+        },
+      })
+      updated++
+    } else {
+      const rec = await prisma.client.create({
+        data: {
+          clientTypeId,
+          name: item.name.trim(),
+          npwp: item.npwp || null,
+          idTypeId,
+          idNumber: item.idNumber || null,
+          birthPlace: item.birthPlace || null,
+          birthDate: item.birthDate ? new Date(item.birthDate) : null,
+          contactPerson: item.contactPerson || null,
+          contactPersonIdNumber: item.contactPersonIdNumber || null,
+          email: item.email || null,
+          phone: item.phone || null,
+          incomeSourceId,
+          insurancePurposeId,
+          insurancePurposeNote: item.insurancePurposeNote || null,
+          kycDate: item.kycDate ? new Date(item.kycDate) : null,
+          cobId,
+          statusId,
+          notes: item.notes || null,
+        },
+      })
+      clientId = rec.id
+      created++
+    }
+
+    if (item.addresses && item.addresses.length > 0) {
+      await prisma.clientAddress.deleteMany({ where: { clientId } })
+      for (const [idx, addr] of item.addresses.entries()) {
+        const addressTypeId =
+          lookupByName.get(`address_type:${addr.label.toLowerCase()}`) ||
+          lookupByCode.get("address_type:correspondence")!
+        await prisma.clientAddress.create({
+          data: {
+            clientId,
+            addressTypeId,
+            address: addr.value,
+            isPrimary: addr.isPrimary ?? idx === 0,
+          },
+        })
+      }
+    }
+
+    if (defaultUserId && item.documents && item.documents.length > 0) {
+      for (const doc of item.documents) {
+        const docTypeId =
+          lookupByName.get(`client_document_type:${doc.type.toLowerCase()}`) ||
+          lookupByCode.get("client_document_type:other")!
+        const existingDoc = await prisma.clientDocument.findFirst({
+          where: { clientId, fileName: doc.fileName },
+        })
+        if (!existingDoc) {
+          await prisma.clientDocument.create({
+            data: {
+              clientId,
+              documentTypeId: docTypeId,
+              fileName: doc.fileName,
+              filePath: doc.url || `/mock/docs/${doc.fileName}`,
+              uploadedBy: defaultUserId,
+              uploadedAt: doc.uploadedAt ? new Date(doc.uploadedAt) : new Date(),
+            },
+          })
+        }
+      }
+    }
+  }
+
+  return { created, updated, total: CLIENTS.length }
+}
+
+/**
+ * Pembenihan data awal 3 mock SPPA LCH ke tabel sppa di PostgreSQL.
+ */
+async function seedSppa() {
+  const [cobs, coverTypes, occupations, currencies, clients, user] = await Promise.all([
+    prisma.classOfBusiness.findMany({ select: { id: true, code: true, name: true } }),
+    prisma.coverType.findMany({ select: { id: true, cobId: true, code: true, name: true } }),
+    prisma.occupation.findMany({ select: { id: true, code: true, name: true } }),
+    prisma.currency.findMany({ select: { code: true } }),
+    prisma.client.findMany({ select: { id: true, name: true } }),
+    prisma.user.findFirst({ select: { id: true } }),
+  ])
+
+  const cobMap = new Map<string, { id: string; name: string }>()
+  for (const c of cobs) {
+    cobMap.set(c.name.toLowerCase(), c)
+    cobMap.set(c.code.toLowerCase(), c)
+  }
+
+  const coverTypeMap = new Map<string, string>()
+  for (const ct of coverTypes) {
+    coverTypeMap.set(`${ct.cobId}:${ct.name.toLowerCase()}`, ct.id)
+    coverTypeMap.set(`${ct.cobId}:${ct.code.toLowerCase()}`, ct.id)
+    coverTypeMap.set(ct.name.toLowerCase(), ct.id)
+  }
+
+  const occMap = new Map<string, string>()
+  for (const o of occupations) {
+    occMap.set(o.code.toLowerCase(), o.id)
+  }
+
+  const currSet = new Set(currencies.map((c) => c.code.toUpperCase()))
+  const defaultUserId = user?.id
+
+  let created = 0
+  let updated = 0
+
+  for (const item of SPPA) {
+    const mockClient = CLIENTS.find((c) => c.id === item.clientId)
+    let clientId = clients[0]?.id
+    if (mockClient) {
+      const match = clients.find(
+        (c) => c.name.trim().toLowerCase() === mockClient.name.trim().toLowerCase()
+      )
+      if (match) clientId = match.id
+    }
+
+    const cob = cobMap.get(item.cob.toLowerCase()) || cobs[0]
+    if (!cob || !clientId || !defaultUserId) continue
+
+    const coverTypeId =
+      coverTypeMap.get(`${cob.id}:${item.typeOfCover.toLowerCase()}`) ||
+      coverTypeMap.get(item.typeOfCover.toLowerCase()) ||
+      null
+
+    const occMatch = item.occupation?.match(/^(\d+)/)
+    const occupationId = occMatch ? occMap.get(occMatch[1].toLowerCase()) ?? null : null
+
+    const currencyCode = currSet.has(item.currency.toUpperCase())
+      ? item.currency.toUpperCase()
+      : "IDR"
+
+    const answers = {
+      ...(item.answers ?? {}),
+      _typeOfCover: item.typeOfCover,
+      ...(item.occupation ? { _occupationText: item.occupation } : {}),
+    }
+
+    const existing = await prisma.sppa.findFirst({
+      where: {
+        insuredName: { equals: item.insuredName.trim(), mode: "insensitive" },
+      },
+    })
+
+    if (existing) {
+      await prisma.sppa.update({
+        where: { id: existing.id },
+        data: {
+          clientId,
+          cobId: cob.id,
+          coverTypeId,
+          riskLocation: item.riskLocation || null,
+          occupationId,
+          currencyCode,
+          sumInsured: new Prisma.Decimal(item.sumInsured || 0),
+          periodStart: item.periodStart ? new Date(item.periodStart) : null,
+          periodEnd: item.periodEnd ? new Date(item.periodEnd) : null,
+          answers,
+          status: item.status,
+        },
+      })
+      updated++
+    } else {
+      await prisma.sppa.create({
+        data: {
+          clientId,
+          cobId: cob.id,
+          coverTypeId,
+          insuredName: item.insuredName.trim(),
+          riskLocation: item.riskLocation || null,
+          occupationId,
+          currencyCode,
+          sumInsured: new Prisma.Decimal(item.sumInsured || 0),
+          periodStart: item.periodStart ? new Date(item.periodStart) : null,
+          periodEnd: item.periodEnd ? new Date(item.periodEnd) : null,
+          answers,
+          status: item.status,
+          createdBy: defaultUserId,
+          createdAt: item.createdAt ? new Date(item.createdAt) : undefined,
+          updatedAt: item.updatedAt ? new Date(item.updatedAt) : undefined,
+        },
+      })
+      created++
+    }
+  }
+
+  return { created, updated, total: SPPA.length }
+}
+
 // ---------------------------------------------------------------------------
 
 /**
@@ -999,7 +1287,15 @@ async function seedUsers() {
  * Tanpa argumen semua bagian dijalankan. Berguna untuk melanjutkan seed ke
  * database cloud tanpa mengulang bagian yang sudah lengkap.
  */
-const SECTIONS = ["system", "cob", "occupations", "tariffs", "clauses"] as const
+const SECTIONS = [
+  "system",
+  "cob",
+  "occupations",
+  "tariffs",
+  "clauses",
+  "clients",
+  "sppa",
+] as const
 
 let seededUsers: {
   created: number
@@ -1066,6 +1362,20 @@ async function main() {
   if (clauses) {
     console.log(
       `  clauses              ${clauses.n} (${clauses.created} baru, sisanya sudah ada)`
+    )
+  }
+
+  if (want("clients")) {
+    const clients = await seedClients()
+    console.log(
+      `  clients              ${clients.total} (${clients.created} baru, ${clients.updated} diperbarui)`
+    )
+  }
+
+  if (want("sppa")) {
+    const sppa = await seedSppa()
+    console.log(
+      `  sppa                 ${sppa.total} (${sppa.created} baru, ${sppa.updated} diperbarui)`
     )
   }
 

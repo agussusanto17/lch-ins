@@ -97,7 +97,6 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Master Data",
         href: "/master-data",
         icon: Database,
-        soon: true,
       },
       { title: "Report", href: "/reports", icon: ChartColumn },
     ],
@@ -106,7 +105,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Sistem",
     items: [
       { title: "Pengguna", href: "/users", icon: UserCog },
-      { title: "Audit Trail", href: "/audit-trail", icon: History, soon: true },
+      { title: "Audit Trail", href: "/audit-trail", icon: History },
       { title: "Pengaturan", href: "/settings", icon: Settings, soon: true },
     ],
   },
