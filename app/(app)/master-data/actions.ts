@@ -37,7 +37,7 @@ import {
   updateInsurer,
   updateLookupValue,
 } from "@/lib/server/master-data"
-import { requireAccess } from "@/lib/server/session"
+import { requireManage } from "@/lib/server/session"
 
 export interface ActionResponse<T = unknown> {
   ok: boolean
@@ -113,7 +113,7 @@ export async function createCobAction(
   data: z.infer<typeof cobSchema>
 ): Promise<ActionResponse<ClassOfBusiness>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = cobSchema.parse(data)
     const res = await createCob(parsed, session.id)
     revalidatePath("/master-data")
@@ -131,7 +131,7 @@ export async function updateCobAction(
   data: z.infer<typeof cobSchema>
 ): Promise<ActionResponse<ClassOfBusiness>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = cobSchema.parse(data)
     const res = await updateCob(id, parsed, session.id)
     revalidatePath("/master-data")
@@ -149,7 +149,7 @@ export async function toggleCobStatusAction(
   isActive: boolean
 ): Promise<ActionResponse<void>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     await toggleCobStatus(id, isActive, session.id)
     revalidatePath("/master-data")
     return { ok: true }
@@ -163,7 +163,7 @@ export async function toggleCobStatusAction(
 
 export async function deleteCobAction(id: string): Promise<ActionResponse<void>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     await deleteCob(id, session.id)
     revalidatePath("/master-data")
     return { ok: true }
@@ -183,7 +183,7 @@ export async function createCoverTypeAction(
   data: z.infer<typeof coverTypeSchema>
 ): Promise<ActionResponse<CoverType>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = coverTypeSchema.parse(data)
     const res = await createCoverType(parsed, session.id)
     revalidatePath("/master-data")
@@ -201,7 +201,7 @@ export async function updateCoverTypeAction(
   data: z.infer<typeof coverTypeSchema>
 ): Promise<ActionResponse<CoverType>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = coverTypeSchema.parse(data)
     const res = await updateCoverType(id, parsed, session.id)
     revalidatePath("/master-data")
@@ -219,7 +219,7 @@ export async function toggleCoverTypeStatusAction(
   isActive: boolean
 ): Promise<ActionResponse<void>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     await toggleCoverTypeStatus(id, isActive, session.id)
     revalidatePath("/master-data")
     return { ok: true }
@@ -235,7 +235,7 @@ export async function deleteCoverTypeAction(
   id: string
 ): Promise<ActionResponse<void>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     await deleteCoverType(id, session.id)
     revalidatePath("/master-data")
     return { ok: true }
@@ -255,7 +255,7 @@ export async function createInsurerAction(
   data: z.infer<typeof insurerSchema>
 ): Promise<ActionResponse<Insurer>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = insurerSchema.parse(data)
     const res = await createInsurer(parsed, session.id)
     revalidatePath("/master-data")
@@ -273,7 +273,7 @@ export async function updateInsurerAction(
   data: z.infer<typeof insurerSchema>
 ): Promise<ActionResponse<Insurer>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = insurerSchema.parse(data)
     const res = await updateInsurer(id, parsed, session.id)
     revalidatePath("/master-data")
@@ -291,7 +291,7 @@ export async function toggleInsurerStatusAction(
   isActive: boolean
 ): Promise<ActionResponse<void>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     await toggleInsurerStatus(id, isActive, session.id)
     revalidatePath("/master-data")
     return { ok: true }
@@ -307,7 +307,7 @@ export async function createAdjusterAction(
   data: z.infer<typeof adjusterSchema>
 ): Promise<ActionResponse<Adjuster>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = adjusterSchema.parse(data)
     const res = await createAdjuster(parsed, session.id)
     revalidatePath("/master-data")
@@ -325,7 +325,7 @@ export async function updateAdjusterAction(
   data: z.infer<typeof adjusterSchema>
 ): Promise<ActionResponse<Adjuster>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = adjusterSchema.parse(data)
     const res = await updateAdjuster(id, parsed, session.id)
     revalidatePath("/master-data")
@@ -343,7 +343,7 @@ export async function toggleAdjusterStatusAction(
   isActive: boolean
 ): Promise<ActionResponse<void>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     await toggleAdjusterStatus(id, isActive, session.id)
     revalidatePath("/master-data")
     return { ok: true }
@@ -363,7 +363,7 @@ export async function createBankAccountAction(
   data: z.infer<typeof bankAccountSchema>
 ): Promise<ActionResponse<BankAccount>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = bankAccountSchema.parse(data)
     const res = await createBankAccount(parsed, session.id)
     revalidatePath("/master-data")
@@ -381,7 +381,7 @@ export async function updateBankAccountAction(
   data: z.infer<typeof bankAccountSchema>
 ): Promise<ActionResponse<BankAccount>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = bankAccountSchema.parse(data)
     const res = await updateBankAccount(id, parsed, session.id)
     revalidatePath("/master-data")
@@ -399,7 +399,7 @@ export async function toggleBankAccountStatusAction(
   isActive: boolean
 ): Promise<ActionResponse<void>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     await toggleBankAccountStatus(id, isActive, session.id)
     revalidatePath("/master-data")
     return { ok: true }
@@ -415,7 +415,7 @@ export async function createWordingFormAction(
   data: z.infer<typeof wordingFormSchema>
 ): Promise<ActionResponse<WordingForm>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = wordingFormSchema.parse(data)
     const res = await createWordingForm(parsed.name, session.id)
     revalidatePath("/master-data")
@@ -433,7 +433,7 @@ export async function toggleWordingFormStatusAction(
   isActive: boolean
 ): Promise<ActionResponse<void>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     await toggleWordingFormStatus(id, isActive, session.id)
     revalidatePath("/master-data")
     return { ok: true }
@@ -453,7 +453,7 @@ export async function createLookupValueAction(
   data: z.infer<typeof lookupValueSchema>
 ): Promise<ActionResponse<LookupValue>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = lookupValueSchema.parse(data)
     const res = await createLookupValue(parsed, session.id)
     revalidatePath("/master-data")
@@ -471,7 +471,7 @@ export async function updateLookupValueAction(
   data: z.infer<typeof lookupValueSchema>
 ): Promise<ActionResponse<LookupValue>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     const parsed = lookupValueSchema.parse(data)
     const res = await updateLookupValue(id, parsed, session.id)
     revalidatePath("/master-data")
@@ -489,7 +489,7 @@ export async function toggleLookupValueStatusAction(
   isActive: boolean
 ): Promise<ActionResponse<void>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     await toggleLookupValueStatus(id, isActive, session.id)
     revalidatePath("/master-data")
     return { ok: true }
@@ -505,7 +505,7 @@ export async function deleteLookupValueAction(
   id: string
 ): Promise<ActionResponse<void>> {
   try {
-    const session = await requireAccess("/master-data")
+    const session = await requireManage("/master-data")
     await deleteLookupValue(id, session.id)
     revalidatePath("/master-data")
     return { ok: true }
