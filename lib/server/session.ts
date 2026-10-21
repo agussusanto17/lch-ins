@@ -4,7 +4,7 @@ import { cache } from "react"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
-import { canAccess, ROLE_LABELS, type RoleCode } from "@/lib/access"
+import { canAccess, canManage, ROLE_LABELS, type RoleCode } from "@/lib/access"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
@@ -113,6 +113,26 @@ export async function requireAccess(path: string): Promise<CurrentUser> {
 
   if (!canAccess(user.roles, path)) {
     redirect("/")
+  }
+
+  return user
+}
+
+/**
+ * Wajib login, boleh membuka path ini, dan rolenya bertingkat Kelola.
+ *
+ * Dipakai di Server Action yang mengubah data. `requireAccess` saja tidak
+ * cukup: banyak role diberi Lihat pada menu di luar bidangnya, jadi tanpa
+ * pemeriksaan ini mereka bisa membuka halaman sekaligus mengubah isinya.
+ */
+export async function requireManage(path: string): Promise<CurrentUser> {
+  const user = await requireAccess(path)
+  assertPasswordChanged(user)
+
+  if (!canManage(user.roles, path)) {
+    throw new Error(
+      "Akses ditolak: role Anda hanya dapat melihat halaman ini, tidak mengubahnya."
+    )
   }
 
   return user
