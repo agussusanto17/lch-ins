@@ -139,6 +139,7 @@ model User {
   creditNotesIssued CreditNote[]
   payments          Payment[]
   journalEntries    JournalEntry[]
+  claimFollowups    ClaimFollowup[]
 
   @@index([roleId])
   @@map("users")
@@ -359,13 +360,15 @@ model ClassOfBusiness {
   rateMode    LookupValue @relation("rate_mode", fields: [rateModeId], references: [id])
   formVariant LookupValue @relation("form_variant", fields: [formVariantId], references: [id])
 
-  coverTypes   CoverType[]
-  rateLines    CobRateLine[]
-  clauses      Clause[]
-  clients      Client[]
-  sppa         Sppa[]
-  placingSlips PlacingSlip[]
-  policies     Policy[]
+  coverTypes         CoverType[]
+  rateLines          CobRateLine[]
+  clauses            Clause[]
+  clients            Client[]
+  sppa               Sppa[]
+  placingSlips       PlacingSlip[]
+  policies           Policy[]
+  claimPics          InsurerClaimPic[]
+  claimDocumentTypes ClaimDocumentType[]
 
   @@map("classes_of_business")
 }
@@ -380,6 +383,8 @@ model CoverType {
   /// Singkatan untuk token {COVER} di nomor dokumen, contoh PAR, IAR, MC.
   /// Kosong berarti segmen cover dilewati.
   abbreviation String?
+  /// Urutan penggabungan singkatan bila slip mencakup lebih dari satu type of cover (A lebih dulu dari B).
+  priority     String?
   isActive     Boolean @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -537,6 +542,7 @@ model TariffMotorExtension {
   /// Kosong berarti tarifnya ditentukan underwriter.
   rateMin      Decimal?      @map("rate_min") @db.Decimal(12, 6)
   rateMax      Decimal?      @map("rate_max") @db.Decimal(12, 6)
+  rate         Decimal?      @map("rate") @db.Decimal(12, 6)
   rateUnit     RateUnit      @default(Percent) @map("rate_unit")
   note         String?
 
@@ -593,8 +599,33 @@ model Insurer {
   policyInsurers    PolicyInsurer[]
   creditNotes       CreditNote[]
   journalLines      JournalLine[]
+  claimPics         InsurerClaimPic[]
+  clientCodes       ClientInsurerCode[]
 
   @@map("insurers")
+}
+
+/// PIC klaim di perusahaan asuransi rekanan per COB (PRD A-04, ERD insurer_claim_pics).
+model InsurerClaimPic {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  insurerId   String  @map("insurer_id") @db.Uuid
+  cobId       String? @map("cob_id") @db.Uuid
+  name        String
+  mobile      String?
+  officePhone String? @map("office_phone")
+  email       String?
+  notes       String?
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  insurer Insurer          @relation(fields: [insurerId], references: [id], onDelete: Cascade)
+  cob     ClassOfBusiness? @relation(fields: [cobId], references: [id])
+
+  @@index([insurerId])
+  @@index([cobId])
+  @@map("insurer_claim_pics")
 }
 
 model Adjuster {
@@ -693,6 +724,42 @@ model Clause {
   @@map("clauses")
 }
 
+/// Sumber penempatan / bisnis (PRD A-04, ERD sources).
+/// Contoh "PT. LCH Insurance Brokers" atau "LCH Insurance Brokers Pte Ltd".
+model Source {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code     String? @unique
+  name     String
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  placingSlips PlacingSlip[]
+
+  @@map("sources")
+}
+
+/// Master jenis berkas klaim per COB (PRD A-04, ERD claim_document_types).
+/// Contoh BA Bongkar, Packing List, Bill of Lading.
+model ClaimDocumentType {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cobId      String? @map("cob_id") @db.Uuid
+  name       String
+  isRequired Boolean @default(false) @map("is_required")
+  sortOrder  Int     @default(0) @map("sort_order")
+  isActive   Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cob       ClassOfBusiness? @relation(fields: [cobId], references: [id])
+  documents ClaimDocument[]
+
+  @@index([cobId])
+  @@map("claim_document_types")
+}
+
 // ---------------------------------------------------------------------------
 // 3. Marketing dan underwriting
 // ---------------------------------------------------------------------------
@@ -743,6 +810,7 @@ model Client {
 
   addresses    ClientAddress[]
   documents    ClientDocument[]
+  insurerCodes ClientInsurerCode[]
   sppa         Sppa[]
   placingSlips PlacingSlip[]
   policies     Policy[]
@@ -800,6 +868,26 @@ model ClientDocument {
   @@map("client_documents")
 }
 
+/// Kode nasabah di sistem masing-masing asuransi (ERD client_insurer_codes).
+/// Contoh D45BL00001 di Asuransi Sinar Mas.
+model ClientInsurerCode {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId  String @map("client_id") @db.Uuid
+  insurerId String @map("insurer_id") @db.Uuid
+  code      String
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  client  Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  insurer Insurer @relation(fields: [insurerId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, insurerId])
+  @@index([clientId])
+  @@index([insurerId])
+  @@map("client_insurer_codes")
+}
+
 /// Surat Permintaan Penutupan Asuransi yang diisi Marketing.
 model Sppa {
   id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -849,6 +937,8 @@ model PlacingSlip {
   sppaId      String? @map("sppa_id") @db.Uuid
   cobId       String  @map("cob_id") @db.Uuid
   coverTypeId String? @map("cover_type_id") @db.Uuid
+  /// Sumber penempatan / bisnis (ERD sources).
+  sourceId    String? @map("source_id") @db.Uuid
   /// Label pilihan form, misal "PAR + EQVET". Tidak semua label punya padanan di cover_types.
   typeOfCover String? @map("type_of_cover")
 
@@ -904,6 +994,7 @@ model PlacingSlip {
   sppa                        Sppa?           @relation(fields: [sppaId], references: [id])
   cob                         ClassOfBusiness @relation(fields: [cobId], references: [id])
   coverType                   CoverType?      @relation(fields: [coverTypeId], references: [id])
+  source                      Source?         @relation(fields: [sourceId], references: [id])
   correspondenceAddressSource ClientAddress?  @relation(fields: [correspondenceAddressId], references: [id])
   currency                    Currency        @relation(fields: [currencyCode], references: [code])
   occupation                  Occupation?     @relation(fields: [occupationId], references: [id])
@@ -1176,11 +1267,53 @@ model Claim {
   status   LookupValue  @relation("claim_status", fields: [statusId], references: [id])
   stage    LookupValue? @relation("claim_stage", fields: [stageId], references: [id])
 
-  payments Payment[]
+  payments  Payment[]
+  documents ClaimDocument[]
+  followups ClaimFollowup[]
 
   @@index([policyId])
   @@index([statusId])
   @@map("claims")
+}
+
+/// Berkas dan dokumen kelengkapan klaim (PRD A-18, ERD claim_documents).
+model ClaimDocument {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  claimId        String    @map("claim_id") @db.Uuid
+  documentTypeId String?   @map("document_type_id") @db.Uuid
+  isReceived     Boolean   @default(false) @map("is_received")
+  receivedDate   DateTime? @map("received_date") @db.Date
+  filePath       String?   @map("file_path")
+  notes          String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  claim        Claim              @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  documentType ClaimDocumentType? @relation(fields: [documentTypeId], references: [id])
+
+  @@index([claimId])
+  @@index([documentTypeId])
+  @@map("claim_documents")
+}
+
+/// Riwayat tindak lanjut penanganan klaim bertanggal (PRD A-18, ERD claim_followups).
+/// Contoh: "Menunggu invoice penjualan, reminder ketiga".
+model ClaimFollowup {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  claimId      String   @map("claim_id") @db.Uuid
+  followupDate DateTime @map("followup_date") @db.Date
+  note         String
+  createdById  String?  @map("created_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  claim     Claim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  createdBy User? @relation(fields: [createdById], references: [id])
+
+  @@index([claimId])
+  @@map("claim_followups")
 }
 
 // ---------------------------------------------------------------------------

@@ -434,6 +434,25 @@ async function seedCompanyProfile() {
 }
 
 /**
+ * Sumber penempatan / bisnis awal (PRD A-04, ERD sources).
+ */
+async function seedSources() {
+  const sources = [
+    { code: "LCH-ID", name: "PT. LCH Insurance Brokers" },
+    { code: "LCH-SG", name: "LCH Insurance Brokers Pte Ltd" },
+    { code: "DIRECT", name: "Direct Client / Nasabah Langsung" },
+  ]
+  for (const s of sources) {
+    await prisma.source.upsert({
+      where: { code: s.code },
+      create: { code: s.code, name: s.name },
+      update: { name: s.name },
+    })
+  }
+  return sources.length
+}
+
+/**
  * COB dan type of cover dari sheet FIX milik LCH. Kode COB adalah dua digit
  * pertama kode type of cover.
  *
@@ -500,6 +519,7 @@ async function seedCobAndCoverTypes() {
 
   for (const r of rows) {
     const abbreviation = COVER_ABBREVIATIONS[r.kode_toc]
+    const priority = r.prioritas?.trim() || null
     await prisma.coverType.upsert({
       where: { code: r.kode_toc },
       create: {
@@ -507,16 +527,79 @@ async function seedCobAndCoverTypes() {
         name: r.toc,
         cobId: cobs.get(r.kode_cob)!,
         abbreviation,
+        priority,
       },
-      // Leave abbreviations set from master data alone when the seed has none.
+      // Leave abbreviations/priorities set from master data alone when the seed has none.
       update: {
         name: r.toc,
         cobId: cobs.get(r.kode_cob)!,
         ...(abbreviation ? { abbreviation } : {}),
+        ...(priority ? { priority } : {}),
       },
     })
   }
   return { cobs: cobs.size, coverTypes: rows.length }
+}
+
+/**
+ * Master jenis berkas klaim awal per COB (PRD A-04, A-18, ERD claim_document_types).
+ */
+async function seedClaimDocumentTypes() {
+  const cobs = await prisma.classOfBusiness.findMany({
+    select: { id: true, code: true },
+  })
+  const cobMap = new Map(cobs.map((c) => [c.code, c.id]))
+
+  const list: {
+    cobCode: string
+    name: string
+    isRequired: boolean
+    sortOrder: number
+  }[] = [
+    // Property (01)
+    { cobCode: "01", name: "Surat Laporan Klaim Tertulis", isRequired: true, sortOrder: 1 },
+    { cobCode: "01", name: "Kronologi Kejadian Kerugian", isRequired: true, sortOrder: 2 },
+    { cobCode: "01", name: "Foto Kerusakan Objek Pertanggungan", isRequired: true, sortOrder: 3 },
+    { cobCode: "01", name: "Rincian Estimasi Biaya Perbaikan (RAB)", isRequired: true, sortOrder: 4 },
+    { cobCode: "01", name: "Salinan Polis Asuransi & Bukti Bayar Premi", isRequired: false, sortOrder: 5 },
+    // Motor Vehicle (02)
+    { cobCode: "02", name: "Formulir Klaim Bermaterai", isRequired: true, sortOrder: 1 },
+    { cobCode: "02", name: "Salinan SIM Pengemudi", isRequired: true, sortOrder: 2 },
+    { cobCode: "02", name: "Salinan STNK Kendaraan", isRequired: true, sortOrder: 3 },
+    { cobCode: "02", name: "Foto Kerusakan Fisik Kendaraan", isRequired: true, sortOrder: 4 },
+    { cobCode: "02", name: "Surat Keterangan Polisi (jika ada pihak ketiga / hilang)", isRequired: false, sortOrder: 5 },
+    // Marine Cargo (03)
+    { cobCode: "03", name: "Bill of Lading / Airway Bill", isRequired: true, sortOrder: 1 },
+    { cobCode: "03", name: "Commercial Invoice & Packing List", isRequired: true, sortOrder: 2 },
+    { cobCode: "03", name: "Berita Acara Kerusakan / BA Bongkar", isRequired: true, sortOrder: 3 },
+    { cobCode: "03", name: "Delivery Order (DO)", isRequired: true, sortOrder: 4 },
+    { cobCode: "03", name: "Surat Tuntutan ke Pihak Pengangkut (Carrier Claim)", isRequired: false, sortOrder: 5 },
+    // Engineering (08)
+    { cobCode: "08", name: "Laporan Kerusakan & Kronologi Teknis", isRequired: true, sortOrder: 1 },
+    { cobCode: "08", name: "Penawaran Perbaikan / Suku Cadang Mesin", isRequired: true, sortOrder: 2 },
+    { cobCode: "08", name: "Foto Kerusakan Mesin / Proyek", isRequired: true, sortOrder: 3 },
+  ]
+
+  let count = 0
+  for (const item of list) {
+    const cobId = cobMap.get(item.cobCode)
+    if (!cobId) continue
+    const existing = await prisma.claimDocumentType.findFirst({
+      where: { cobId, name: item.name },
+    })
+    if (!existing) {
+      await prisma.claimDocumentType.create({
+        data: {
+          cobId,
+          name: item.name,
+          isRequired: item.isRequired,
+          sortOrder: item.sortOrder,
+        },
+      })
+      count++
+    }
+  }
+  return count
 }
 
 /**
@@ -1376,6 +1459,7 @@ async function main() {
         (seededUsers.updated ? `, ${seededUsers.updated} diperbarui` : "")
     )
     console.log(`  company_profile      ${await seedCompanyProfile()}`)
+    console.log(`  sources              ${await seedSources()}`)
   }
 
   if (want("cob")) {
@@ -1383,6 +1467,7 @@ async function main() {
     console.log(`  classes_of_business  ${cob.cobs}`)
     console.log(`  cover_types          ${cob.coverTypes}`)
     console.log(`  cob_rate_lines       ${await seedCobRateLines()}`)
+    console.log(`  claim_doc_types      ${await seedClaimDocumentTypes()}`)
   }
 
   const occ = want("occupations") ? await seedOccupations() : null
