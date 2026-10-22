@@ -17,6 +17,7 @@ import { CLIENTS } from "@/lib/data/clients"
 import { coverCodeFor } from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
+import { getSppaById } from "@/lib/server/sppa"
 import { nextDocumentNumber } from "@/server/services/number-generator"
 import { recordAudit } from "@/server/services/audit"
 
@@ -252,6 +253,24 @@ function parseIndemnityMonths(val?: string | null): number | null {
   if (!val) return null
   const m = val.match(/\d+/)
   return m ? parseInt(m[0], 10) : null
+}
+
+/**
+ * Resolusi UUID SPPA. Mendukung UUID database langsung maupun legacy mock ID (misal sp-001).
+ */
+async function resolveSppaId(sppaId?: string | null): Promise<string | null> {
+  if (!sppaId || !sppaId.trim()) return null
+  const trimmed = sppaId.trim()
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+    const exists = await prisma.sppa.findUnique({
+      where: { id: trimmed },
+      select: { id: true },
+    })
+    if (exists) return exists.id
+  }
+
+  const sppa = await getSppaById(trimmed)
+  return sppa?.dbId ?? null
 }
 
 type PrismaPlacingSlipWithRelations = Prisma.PlacingSlipGetPayload<{
@@ -681,13 +700,14 @@ export async function createPlacingSlip(
   // Inception & expiry dates
   const inceptionDate = input.inceptionDate ? new Date(input.inceptionDate) : null
   const expiryDate = input.expiryDate ? new Date(input.expiryDate) : null
+  const resolvedSppaId = await resolveSppaId(input.sppaId)
 
   const record = await prisma.$transaction(async (tx) => {
     // 1. Buat master slip
     const slip = await tx.placingSlip.create({
       data: {
         clientId: resolvedClientId,
-        sppaId: input.sppaId || null,
+        sppaId: resolvedSppaId,
         cobId: resolvedCob.id,
         coverTypeId: resolvedCoverType?.id || null,
         typeOfCover: input.typeOfCover?.trim() || null,
@@ -1034,6 +1054,8 @@ export async function updatePlacingSlip(
   const indemnityMonths = parseIndemnityMonths(input.indemnityPeriod)
   const inceptionDate = input.inceptionDate ? new Date(input.inceptionDate) : null
   const expiryDate = input.expiryDate ? new Date(input.expiryDate) : null
+  const resolvedSppaId =
+    input.sppaId !== undefined ? await resolveSppaId(input.sppaId) : existing.sppaId
 
   await prisma.$transaction(async (tx) => {
     // 1. Update master slip
@@ -1041,7 +1063,7 @@ export async function updatePlacingSlip(
       where: { id },
       data: {
         clientId: resolvedClientId,
-        sppaId: input.sppaId !== undefined ? input.sppaId : existing.sppaId,
+        sppaId: resolvedSppaId,
         cobId: resolvedCob.id,
         coverTypeId: resolvedCoverType?.id || null,
         typeOfCover: input.typeOfCover?.trim() || null,

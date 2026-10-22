@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Client } from "@/lib/data"
 import type { ClientRecord } from "@/lib/server/clients"
 import type { SppaRecord } from "@/lib/server/sppa"
-import { useCollection } from "@/lib/store"
+import { store, useCollection } from "@/lib/store"
 
 interface MarketingTabsProps {
   initialClients?: ClientRecord[]
@@ -24,8 +24,15 @@ export function MarketingTabs({
   initialClients,
   initialSppa,
 }: MarketingTabsProps) {
+  React.useEffect(() => {
+    if (!initialSppa?.length) return
+    for (const item of initialSppa) {
+      store.upsert("sppa", item)
+    }
+  }, [initialSppa])
+
   const sppa = useCollection("sppa")
-  const sppaCount = initialSppa?.length ?? sppa.length
+  const sppaCount = sppa.length > 0 ? sppa.length : (initialSppa?.length ?? 0)
   const [form, setForm] = React.useState<{
     key: number
     client: Client | null

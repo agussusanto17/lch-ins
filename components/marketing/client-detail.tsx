@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table"
 import { kycMissing, policyStatus, type Client } from "@/lib/data"
 import { dateShort, money } from "@/lib/format"
+import type { SppaRecord } from "@/lib/server/sppa"
 import { store, useCollection, useRecord } from "@/lib/store"
 
 function Item({ label, value }: { label: string; value?: React.ReactNode }) {
@@ -43,9 +44,14 @@ function Item({ label, value }: { label: string; value?: React.ReactNode }) {
 interface ClientDetailProps {
   id: string
   initialClient?: Client | null
+  initialSppa?: SppaRecord[]
 }
 
-export function ClientDetail({ id, initialClient }: ClientDetailProps) {
+export function ClientDetail({
+  id,
+  initialClient,
+  initialSppa,
+}: ClientDetailProps) {
   const today = useToday()
 
   React.useEffect(() => {
@@ -248,7 +254,7 @@ export function ClientDetail({ id, initialClient }: ClientDetailProps) {
       </div>
 
       <SectionCard title="SPPA" contentClassName="pt-4">
-        <SppaTable clientId={client.id} compact />
+        <SppaTable clientId={client.id} initialSppa={initialSppa} compact />
       </SectionCard>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
