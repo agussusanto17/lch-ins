@@ -14,6 +14,7 @@ import type {
 } from "@/lib/data/types"
 import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
 import { CLIENTS } from "@/lib/data/clients"
+import { coverCodeFor } from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 import { nextDocumentNumber } from "@/server/services/number-generator"
@@ -412,8 +413,8 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     slipNo: raw.slipNo,
     seq,
     cob: normCob,
-    typeOfCover: raw.coverType?.name || "",
-    coverCode: raw.coverType?.code || null,
+    typeOfCover: raw.typeOfCover || raw.coverType?.name || "",
+    coverCode: coverCodeFor(normCob, raw.typeOfCover || raw.coverType?.name || ""),
     clientId: raw.clientId,
     sppaId: raw.sppaId,
     insuredName: raw.insuredName,
@@ -689,6 +690,7 @@ export async function createPlacingSlip(
         sppaId: input.sppaId || null,
         cobId: resolvedCob.id,
         coverTypeId: resolvedCoverType?.id || null,
+        typeOfCover: input.typeOfCover?.trim() || null,
         insuredName: input.insuredName.trim(),
         correspondenceAddress: input.correspondenceAddress?.trim() || null,
         currencyCode,
@@ -1042,6 +1044,7 @@ export async function updatePlacingSlip(
         sppaId: input.sppaId !== undefined ? input.sppaId : existing.sppaId,
         cobId: resolvedCob.id,
         coverTypeId: resolvedCoverType?.id || null,
+        typeOfCover: input.typeOfCover?.trim() || null,
         insuredName: input.insuredName.trim(),
         correspondenceAddress: input.correspondenceAddress?.trim() || null,
         currencyCode,
@@ -1349,6 +1352,7 @@ export async function releasePlacingSlip(
   const existing = await prisma.placingSlip.findUnique({
     where: { id },
     include: {
+      cob: true,
       coverType: true,
       items: true,
       rateLines: true,
@@ -1374,7 +1378,10 @@ export async function releasePlacingSlip(
     // Generate nomor slip dokumen jika belum ada
     let slipNo = existing.slipNo
     if (!slipNo) {
-      const coverCode = existing.coverType?.code || null
+      const coverCode = coverCodeFor(
+        normalizeCob(existing.cob.name as CobType),
+        existing.typeOfCover || existing.coverType?.name || ""
+      )
       slipNo = await nextDocumentNumber(tx, { code: "PS", coverCode })
     }
 
@@ -1551,6 +1558,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             clientId: resolvedClientId,
             cobId: resolvedCob.id,
             coverTypeId: resolvedCoverType?.id || null,
+            typeOfCover: mock.typeOfCover?.trim() || null,
             insuredName: mock.insuredName,
             correspondenceAddress: mock.correspondenceAddress || null,
             currencyCode: mock.currency || "IDR",

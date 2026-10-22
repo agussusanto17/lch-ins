@@ -830,6 +830,8 @@ model PlacingSlip {
   sppaId      String? @map("sppa_id") @db.Uuid
   cobId       String  @map("cob_id") @db.Uuid
   coverTypeId String? @map("cover_type_id") @db.Uuid
+  /// Label pilihan form, misal "PAR + EQVET". Tidak semua label punya padanan di cover_types.
+  typeOfCover String? @map("type_of_cover")
 
   /// Salinan dari klien. Bisa diedit di slip tanpa mengubah data klien.
   insuredName             String  @map("insured_name")

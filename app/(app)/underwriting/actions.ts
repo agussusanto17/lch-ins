@@ -15,6 +15,7 @@ import {
   type PlacingSlipInput,
   type PlacingSlipRecord,
 } from "@/lib/server/placing-slips"
+import { releaseIssues } from "@/components/underwriting/slip-model"
 import { prisma } from "@/lib/prisma"
 import { requireManage } from "@/lib/server/session"
 
@@ -192,6 +193,12 @@ export async function releasePlacingSlipAction(
     const target = await getPlacingSlipById(id.trim())
     if (!target) {
       return { ok: false, error: "Placing Slip tidak ditemukan." }
+    }
+
+    // Same check the form runs, repeated here so a crafted request cannot skip it.
+    const issues = releaseIssues(target)
+    if (issues.length > 0) {
+      return { ok: false, error: issues.join(" ") }
     }
 
     const released = await releasePlacingSlip(target.dbId, user.id)
