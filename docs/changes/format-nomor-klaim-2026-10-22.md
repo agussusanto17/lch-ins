@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-22
 - **Branch:** `fix/format-nomor-klaim`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #34
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
