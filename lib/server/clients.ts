@@ -375,6 +375,20 @@ export async function seedInitialClientsIfEmpty(): Promise<number> {
   return seeded
 }
 
+export interface ClientOption {
+  id: string
+  name: string
+}
+
+/** Id and name only, for pickers on pages that must not receive KYC data. */
+export async function listClientOptions(): Promise<ClientOption[]> {
+  await seedInitialClientsIfEmpty()
+  return prisma.client.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  })
+}
+
 /**
  * Retrieve all clients from PostgreSQL with relational fields and filters.
  */

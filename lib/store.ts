@@ -103,6 +103,9 @@ export const store = {
     else store.insert(key, row)
     return row
   },
+  replace<K extends Key>(key: K, rows: Collections[K]) {
+    commit(key, rows)
+  },
   remove<K extends Key>(key: K, id: string) {
     commit(
       key,

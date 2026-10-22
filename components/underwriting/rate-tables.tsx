@@ -155,7 +155,7 @@ export function CoverRateTable({
 
   return (
     <>
-      <Table className="min-w-[620px]">
+      <Table className="min-w-155">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead>Cover</TableHead>
