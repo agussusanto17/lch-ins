@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-22
 - **Branch:** `feat/policies-ui-postgres`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #31
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
