@@ -5,6 +5,7 @@ import { unstable_rethrow } from "next/navigation"
 import { z } from "zod"
 
 import { CLASSES_OF_BUSINESS, POLICY_TYPES } from "@/lib/data/reference"
+import { Prisma } from "@/lib/generated/prisma/client"
 import {
   createPolicy,
   deletePolicy,
@@ -48,6 +49,9 @@ const policyInputSchema = z
     brokeragePct: z.number().min(0).max(100),
     type: z.enum(POLICY_TYPES),
     riskLocation: z.string(),
+    cobOjkClassId: z.uuid("Klasifikasi OJK tidak valid").nullable().optional(),
+    placementLocationId: z.uuid("Lokasi penempatan tidak valid").nullable().optional(),
+    groupingInsured: z.string().trim().max(200, "Grouping insured maksimal 200 karakter").optional(),
   })
   .refine((d) => d.expiryDate > d.inceptionDate, {
     path: ["expiryDate"],
@@ -61,6 +65,10 @@ const policyInputSchema = z
 function fail(err: unknown, fallback: string): ActionResponse<never> {
   // Let redirects from requireManage through; view-only access still returns a message.
   unstable_rethrow(err)
+  // Two endorsements saved at once on the same parent collide on the endorsement_seq unique key.
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+    return { ok: false, error: "Polis bentrok dengan penyimpanan lain. Muat ulang halaman lalu simpan lagi." }
+  }
   return { ok: false, error: err instanceof Error ? err.message : fallback }
 }
 

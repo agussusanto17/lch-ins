@@ -56,6 +56,7 @@ import { addMonths } from "@/lib/date"
 import type { ExportSpec } from "@/lib/export"
 import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
+import type { PolicyFormOptions } from "@/lib/server/policies"
 import { store, useCollection } from "@/lib/store"
 
 const COB_ITEMS = [
@@ -89,9 +90,11 @@ function withSessionFiles(server: Policy[], session: Policy[]): Policy[] {
 export function PolicyDatabase({
   initialPolicies,
   clientOptions,
+  formOptions,
 }: {
   initialPolicies: Policy[]
   clientOptions: ClientOption[]
+  formOptions: PolicyFormOptions
 }) {
   const today = useToday()
   const sessionPolicies = useCollection("policies")
@@ -176,6 +179,9 @@ export function PolicyDatabase({
               currency: p.currency,
               riskLocation: p.riskLocation,
               brokeragePct: p.brokeragePct,
+              cobOjkClassId: p.cobOjkClassId,
+              placementLocationId: p.placementLocationId,
+              groupingInsured: p.groupingInsured,
               sumInsured: p.sumInsured,
               inceptionDate: p.expiryDate,
               expiryDate: addMonths(p.expiryDate, 12),
@@ -197,6 +203,9 @@ export function PolicyDatabase({
               currency: p.currency,
               riskLocation: p.riskLocation,
               brokeragePct: p.brokeragePct,
+              cobOjkClassId: p.cobOjkClassId,
+              placementLocationId: p.placementLocationId,
+              groupingInsured: p.groupingInsured,
               expiryDate: p.expiryDate,
             }),
         }
@@ -234,6 +243,7 @@ export function PolicyDatabase({
     columns: [
       { header: "No. Polis", value: (p) => p.policyNo },
       { header: "Tipe", value: (p) => p.type },
+      { header: "Endorsement Ke", value: (p) => p.endorsementSeq ?? "" },
       {
         header: "Polis Induk",
         value: (p) =>
@@ -409,6 +419,11 @@ export function PolicyDatabase({
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={p.type} />
+                            {p.endorsementSeq ? (
+                              <span className="tabular ml-1.5 text-xs text-muted-foreground">
+                                ke-{p.endorsementSeq}
+                              </span>
+                            ) : null}
                           </TableCell>
                           <TableCell>
                             <StatusBadge
@@ -481,6 +496,7 @@ export function PolicyDatabase({
           policy={form.policy}
           preset={form.preset}
           clientOptions={clientOptions}
+          formOptions={formOptions}
         />
       ) : null}
       <PolicyFilesSheet

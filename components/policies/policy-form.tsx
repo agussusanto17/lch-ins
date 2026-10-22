@@ -12,6 +12,7 @@ import {
   SearchSelect,
   SelectInput,
   TextField,
+  type Option,
 } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
@@ -23,8 +24,6 @@ import {
 } from "@/lib/calc"
 import {
   CLASSES_OF_BUSINESS,
-  CURRENCIES,
-  INSURERS,
   POLICY_TYPES,
   POLICY_TYPES_WITH_PARENT,
   TYPE_OF_COVER,
@@ -36,7 +35,7 @@ import {
 import { addMonths, todayIso } from "@/lib/date"
 import { dateShort, money } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
-import type { PolicyInput } from "@/lib/server/policies"
+import type { PolicyFormOptions, PolicyInput } from "@/lib/server/policies"
 import { newId, store, useCollection } from "@/lib/store"
 import { requiredText, validate, type FieldErrors } from "@/lib/validation"
 
@@ -62,7 +61,17 @@ function emptyDraft(): Draft {
     brokeragePct: 0,
     type: "Baru",
     riskLocation: "",
+    cobOjkClassId: null,
+    placementLocationId: null,
+    groupingInsured: "",
   }
+}
+
+// Keeps a saved value selectable after it is deactivated or renamed in master data.
+function withCurrent(items: Option[], value: string | null | undefined): Option[] {
+  return value && !items.some((i) => i.value === value)
+    ? [...items, { label: value, value }]
+    : items
 }
 
 const schema = z
@@ -128,6 +137,7 @@ export function PolicyForm({
   policy,
   preset,
   clientOptions,
+  formOptions,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -136,6 +146,7 @@ export function PolicyForm({
   /** Isian awal, misalnya endorsement dari polis induk. */
   preset?: Partial<Draft>
   clientOptions: ClientOption[]
+  formOptions: PolicyFormOptions
 }) {
   const clients = useCollection("clients")
   const policies = useCollection("policies")
@@ -168,6 +179,19 @@ export function PolicyForm({
   const needsParent = POLICY_TYPES_WITH_PARENT.includes(draft.type)
   const coverItems = (TYPE_OF_COVER[draft.cob] ?? []).map((t) => t.label)
   const brokerageCap = brokerageCapFor(draft.cob)
+  const insurerItems = withCurrent(
+    formOptions.insurers.map((name) => ({ label: name, value: name })),
+    draft.insurer
+  )
+  const currencyItems = withCurrent(
+    formOptions.currencies.map((c) => ({ label: `${c.code} — ${c.name}`, value: c.code })),
+    draft.currency
+  )
+  const placementItems = formOptions.placementLocations.map((l) => ({
+    label: l.name,
+    value: l.id,
+  }))
+  const ojkClassItems = formOptions.cobOjkClasses.map((c) => ({ label: c.name, value: c.id }))
 
   function fromSlip(slipId: string | null) {
     const slip = slipId ? slips.find((s) => s.id === slipId) : null
@@ -214,6 +238,9 @@ export function PolicyForm({
       currency: parent.currency,
       riskLocation: parent.riskLocation,
       brokeragePct: parent.brokeragePct,
+      cobOjkClassId: parent.cobOjkClassId,
+      placementLocationId: parent.placementLocationId,
+      groupingInsured: parent.groupingInsured,
       sumInsured: renewal ? parent.sumInsured : draft.sumInsured,
       // Renewal melanjutkan periode; endorsement dan pembatalan ikut sisa periode induk.
       inceptionDate: renewal ? parent.expiryDate : draft.inceptionDate,
@@ -328,6 +355,13 @@ export function PolicyForm({
             value={draft.type}
             onValueChange={(v) => set({ type: v as PolicyType })}
             error={errors.type}
+            description={
+              draft.type !== "Endorsement"
+                ? undefined
+                : policy?.endorsementSeq && policy.parentPolicyId === draft.parentPolicyId
+                  ? `Endorsement ke-${policy.endorsementSeq} pada polis induk.`
+                  : "Nomor urut endorsement diisi otomatis saat disimpan."
+            }
           />
           {needsParent ? (
             <SearchSelect
@@ -382,7 +416,7 @@ export function PolicyForm({
             className="sm:col-span-2"
             label="Asuransi (Leader)"
             required
-            items={INSURERS}
+            items={insurerItems}
             value={draft.insurer}
             onValueChange={(v) => set({ insurer: v })}
             error={errors.insurer}
@@ -441,7 +475,7 @@ export function PolicyForm({
           <SelectInput
             label="Mata Uang"
             required
-            items={CURRENCIES}
+            items={currencyItems}
             value={draft.currency}
             onValueChange={(v) => set({ currency: v })}
           />
@@ -483,6 +517,37 @@ export function PolicyForm({
             placeholder="Alamat objek / lokasi pertanggungan"
             value={draft.riskLocation}
             onChange={(v) => set({ riskLocation: v })}
+          />
+        </div>
+
+        <FieldSeparator />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <SelectInput
+            label="Klasifikasi OJK"
+            items={ojkClassItems}
+            value={draft.cobOjkClassId}
+            onValueChange={(v) => set({ cobOjkClassId: v || null })}
+            placeholder={ojkClassItems.length ? "Pilih klasifikasi" : "Belum ada data"}
+            description={
+              ojkClassItems.length
+                ? "Untuk laporan produksi OJK, terpisah dari COB internal."
+                : "Isi daftarnya di Master Data, tab Klasifikasi OJK."
+            }
+          />
+          <SelectInput
+            label="Lokasi Penempatan"
+            items={placementItems}
+            value={draft.placementLocationId}
+            onValueChange={(v) => set({ placementLocationId: v || null })}
+          />
+          <TextField
+            className="sm:col-span-2"
+            label="Grouping Insured"
+            placeholder="Contoh: Grup Sinar Mas"
+            value={draft.groupingInsured ?? ""}
+            onChange={(v) => set({ groupingInsured: v })}
+            description="Pengelompokan klien untuk laporan produksi."
           />
         </div>
 

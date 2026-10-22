@@ -7,9 +7,11 @@ import {
   Layers,
   ListFilter,
   ShieldAlert,
+  Tags,
 } from "lucide-react"
 
 import { CobCoverTab } from "@/components/master-data/cob-cover-tab"
+import { CobOjkClassesTab } from "@/components/master-data/cob-ojk-classes-tab"
 import { FinanceDocsTab } from "@/components/master-data/finance-docs-tab"
 import { InsurersAdjustersTab } from "@/components/master-data/insurers-adjusters-tab"
 import { LookupValuesTab } from "@/components/master-data/lookup-values-tab"
@@ -30,6 +32,7 @@ import type {
   MasterCobRecord,
   OccupationRecord,
 } from "@/lib/server/master-data"
+import type { CobOjkClassRecord } from "@/lib/server/cob-ojk-classes"
 
 export interface MasterDataTabsProps {
   initialCobs: MasterCobRecord[]
@@ -44,6 +47,7 @@ export interface MasterDataTabsProps {
   initialBankAccounts: BankAccountRecord[]
   initialCurrencies: Currency[]
   initialWordingForms: WordingForm[]
+  initialCobOjkClasses: CobOjkClassRecord[]
   banks: LookupValue[]
   initialLookups: LookupValue[]
   availableLookupTypes: string[]
@@ -62,6 +66,7 @@ export function MasterDataTabs({
   initialBankAccounts,
   initialCurrencies,
   initialWordingForms,
+  initialCobOjkClasses,
   banks,
   initialLookups,
   availableLookupTypes,
@@ -80,6 +85,11 @@ export function MasterDataTabs({
           <TabsTrigger value="tariff-ojk" className="gap-1.5 px-3 text-xs">
             <ShieldAlert className="size-3.5" />
             Tarif Baku OJK
+          </TabsTrigger>
+
+          <TabsTrigger value="cob-ojk" className="gap-1.5 px-3 text-xs">
+            <Tags className="size-3.5" />
+            Klasifikasi OJK ({initialCobOjkClasses.length})
           </TabsTrigger>
 
           <TabsTrigger value="partners" className="gap-1.5 px-3 text-xs">
@@ -114,6 +124,10 @@ export function MasterDataTabs({
           tariffFlood={tariffFlood}
           biScales={biScales}
         />
+      </TabsContent>
+
+      <TabsContent value="cob-ojk" className="space-y-4">
+        <CobOjkClassesTab initialCobOjkClasses={initialCobOjkClasses} />
       </TabsContent>
 
       <TabsContent value="partners" className="space-y-4">
