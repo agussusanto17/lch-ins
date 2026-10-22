@@ -5,10 +5,13 @@ import {
   listClaims,
   updateClaim,
   updateClaimStatus,
+  type ClaimInput,
 } from "../lib/server/claims"
+import { formatDocumentNumber } from "../server/services/number-generator"
 
 async function main() {
   console.log("=== VERIFY CLAIMS POSTGRES INTEGRATION ===")
+  verifyFormat()
 
   const user = await prisma.user.findFirst({
     where: { isActive: true },
@@ -59,8 +62,8 @@ async function main() {
     createdId = created.dbId
     console.log(`Created claim: ${created.claimNo} (dbId: ${created.dbId})`)
 
-    if (!created.claimNo.includes("CLM")) {
-      throw new Error(`Expected claimNo to contain CLM, got: ${created.claimNo}`)
+    if (!CLAIM_NO.test(created.claimNo)) {
+      throw new Error(`Unexpected claimNo format: ${created.claimNo}`)
     }
 
     const createAudit = await prisma.auditLog.findFirst({
@@ -123,7 +126,71 @@ async function main() {
     }
   }
 
+  await verifyCoverSegment(policy.id, policy.coverTypeId, testClaimInput, user.id)
+
   console.log("=== ALL CLAIMS TESTS PASSED ===")
+}
+
+const CLAIM_NO = /^CLM-LCH\d{3}(\/[A-Z]+)?\/[IVX]+\/\d{4}$/
+
+function verifyFormat() {
+  const pattern = "CLM-LCH{seq:3}/{COVER}/{MMROMAN}/{YYYY}"
+  const cases: [string, string][] = [
+    [
+      formatDocumentNumber(pattern, { seq: 75, year: 2026, month: 3, coverCode: "MC" }),
+      "CLM-LCH075/MC/III/2026",
+    ],
+    [
+      formatDocumentNumber(pattern, { seq: 75, year: 2026, month: 3, coverCode: null }),
+      "CLM-LCH075/III/2026",
+    ],
+    [
+      formatDocumentNumber("{seq:3}/LCH-PLCMT/PS-{COVER}/{MMROMAN}/{YYYY}", {
+        seq: 1,
+        year: 2026,
+        month: 8,
+      }),
+      "001/LCH-PLCMT/PS/VIII/2026",
+    ],
+  ]
+  for (const [actual, expected] of cases) {
+    if (actual !== expected) {
+      throw new Error(`formatDocumentNumber: expected ${expected}, got ${actual}`)
+    }
+  }
+  console.log("Number format verified")
+}
+
+// Attaches a cover type to the policy for one claim, then restores it.
+async function verifyCoverSegment(
+  policyId: string,
+  originalCoverTypeId: string | null,
+  input: ClaimInput,
+  userId: string
+) {
+  const cover = await prisma.coverType.findUniqueOrThrow({
+    where: { code: "0323" },
+    select: { id: true, abbreviation: true },
+  })
+  let claimId: string | null = null
+  try {
+    await prisma.policy.update({
+      where: { id: policyId },
+      data: { coverTypeId: cover.id },
+    })
+    const created = await createClaim(input, userId)
+    claimId = created.dbId
+    console.log(`Created claim with cover: ${created.claimNo}`)
+    if (!created.claimNo.includes(`/${cover.abbreviation}/`)) {
+      throw new Error(`Expected /${cover.abbreviation}/ in ${created.claimNo}`)
+    }
+  } finally {
+    if (claimId) await prisma.claim.delete({ where: { id: claimId } })
+    await prisma.policy.update({
+      where: { id: policyId },
+      data: { coverTypeId: originalCoverTypeId },
+    })
+  }
 }
 
 main()

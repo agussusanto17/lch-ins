@@ -68,8 +68,9 @@ export function counterPeriod(
  * Susun nomor dari pola jenis dokumen. Token yang didukung:
  * {seq:N} atau {seq} (4 digit), {MM}, {MMROMAN}, {YYYY}, dan {COVER}.
  *
- * Bila slip tidak punya kode cover, `{COVER}` beserta tanda hubung di
- * depannya dihapus: pola `PS-{COVER}` menjadi `PS`, bukan `PS-`.
+ * Bila dokumen tidak punya kode cover, `{COVER}` beserta pemisah di depannya
+ * dihapus: `PS-{COVER}` menjadi `PS`, dan `CLM-LCH001/{COVER}/III/2026`
+ * menjadi `CLM-LCH001/III/2026`.
  */
 export function formatDocumentNumber(
   pattern: string,
@@ -83,7 +84,7 @@ export function formatDocumentNumber(
   const cover = coverCode?.trim()
   const withCover = cover
     ? pattern.replace(/\{COVER\}/g, cover)
-    : pattern.replace(/-?\{COVER\}/g, "")
+    : pattern.replace(/[-/]?\{COVER\}/g, "")
   return withCover
     .replace(/\{seq(?::(\d+))?\}/g, (_, digits?: string) =>
       String(seq).padStart(Number(digits ?? 4), "0")

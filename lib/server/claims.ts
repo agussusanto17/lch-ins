@@ -1,5 +1,6 @@
 import "server-only"
 
+import { coverCodeFor } from "@/components/underwriting/slip-model"
 import type { Claim, ClaimStage, ClaimStatus } from "@/lib/data/types"
 import { normalizeCob } from "@/lib/format"
 import { Prisma } from "@/lib/generated/prisma/client"
@@ -249,6 +250,26 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
   }
 }
 
+/**
+ * Singkatan {COVER} untuk nomor klaim. Polis lama belum punya cover type,
+ * jadi label type of cover di form polis dipakai sebagai cadangan.
+ */
+async function policyCoverCode(tx: Prisma.TransactionClient, policyId: string) {
+  const policy = await tx.policy.findUnique({
+    where: { id: policyId },
+    select: {
+      typeOfCover: true,
+      cob: { select: { name: true } },
+      coverType: { select: { abbreviation: true } },
+    },
+  })
+  if (!policy) throw new Error("Polis tidak ditemukan.")
+  return (
+    policy.coverType?.abbreviation ??
+    coverCodeFor(normalizeCob(policy.cob.name), policy.typeOfCover ?? "")
+  )
+}
+
 export async function createClaim(
   input: ClaimInput,
   userId: string
@@ -256,7 +277,10 @@ export async function createClaim(
   return prisma.$transaction(async (tx) => {
     let claimNo = input.claimNo?.trim()
     if (!claimNo) {
-      claimNo = await nextDocumentNumber(tx, { code: "CLM" })
+      claimNo = await nextDocumentNumber(tx, {
+        code: "CLM",
+        coverCode: await policyCoverCode(tx, input.policyId),
+      })
     }
 
     const [statusId, stageId, adjusterId] = await Promise.all([
