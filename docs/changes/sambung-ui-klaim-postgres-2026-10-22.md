@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-22
 - **Branch:** `feat/claims-ui-postgres`
-- **PR:** # (diisi setelah PR dibuka)
+- **PR:** #33
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
