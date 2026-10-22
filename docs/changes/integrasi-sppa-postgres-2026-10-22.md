@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-22
 - **Branch:** `feat/sppa-postgres-sync`
-- **PR:** # (isi setelah PR dibuka)
+- **PR:** #36
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
