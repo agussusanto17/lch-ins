@@ -1,20 +1,9 @@
-/**
- * Policy Database Layer
- *
- * Provides PostgreSQL persistence for Policy entities with full CRUD operations,
- * insurer management, and audit logging.
- */
-
 import "server-only"
 
+import { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { recordAudit } from "@/server/services/audit"
-
-import type { Policy, PolicyFile, SecurityPanelRow } from "@/lib/data/types"
-
-// ---------------------------------------------------------------------------
-// Type Definitions
-// ---------------------------------------------------------------------------
+import type { PolicyFile, SecurityPanelRow } from "@/lib/data/types"
 
 export interface PolicyRecord {
   dbId: string
@@ -62,9 +51,23 @@ export interface PolicyInput {
   riskLocation: string
 }
 
-// ---------------------------------------------------------------------------
-// Lookup Resolution
-// ---------------------------------------------------------------------------
+const policyIncludeRelations = {
+  client: { select: { name: true } },
+  cob: { select: { name: true } },
+  coverType: { select: { name: true } },
+  policyType: { select: { code: true } },
+  insurers: {
+    include: {
+      insurer: { select: { name: true } },
+      position: { select: { code: true } },
+    },
+  },
+  files: true,
+} as const
+
+type PrismaPolicyWithRelations = Prisma.PolicyGetPayload<{
+  include: typeof policyIncludeRelations
+}>
 
 const cobCache = new Map<string, string>()
 const policyTypeCache = new Map<string, string>()
@@ -118,66 +121,47 @@ async function resolveCoverTypeId(coverType: string): Promise<string | null> {
   return null
 }
 
-// ---------------------------------------------------------------------------
-// Mapping Functions
-// ---------------------------------------------------------------------------
-
-function toPolicyRecord(record: any): PolicyRecord {
+function toPolicyRecord(record: PrismaPolicyWithRelations): PolicyRecord {
+  const primaryInsurer = record.insurers?.[0]?.insurer?.name || ""
   return {
     dbId: record.id,
     id: record.id,
     policyNo: record.policyNo,
     clientId: record.clientId,
     clientName: record.client?.name,
-    cob: record.cob?.name || record.cob,
+    cob: record.cob?.name || "",
     coverTypeId: record.coverTypeId,
     coverType: record.coverType?.name,
-    inceptionDate: record.inceptionDate,
-    expiryDate: record.expiryDate,
+    inceptionDate: record.inceptionDate.toISOString().slice(0, 10),
+    expiryDate: record.expiryDate.toISOString().slice(0, 10),
     currency: record.currencyCode,
     sumInsured: Number(record.sumInsured),
     premium: Number(record.premium),
     brokeragePct: Number(record.brokeragePct),
     type: record.policyType?.code || "Baru",
-    riskLocation: record.riskLocation,
-    insurers: record.insurers?.map((i: any) => ({
-      id: i.id,
+    riskLocation: record.riskLocation ?? undefined,
+    insurers: record.insurers?.map((i) => ({
+      id: i.insurerId,
       insurer: i.insurer?.name || "",
       share: Number(i.sharePct),
-      role: i.position?.code as string,
+      role: (i.position?.code === "leader" ? "As Leader" : "Member") as SecurityPanelRow["role"],
     })) || [],
-    files: record.files?.map((f: any) => ({
+    files: record.files?.map((f) => ({
       id: f.id,
       version: f.version,
       fileName: f.fileName,
-      uploadedAt: f.uploadedAt,
+      uploadedAt: f.uploadedAt.toISOString(),
     })) || [],
     placingSlipId: record.placingSlipId,
     parentPolicyId: record.parentPolicyId,
     insuredName: record.insuredName,
-    insurer: "",
+    insurer: primaryInsurer,
   }
 }
 
-// ---------------------------------------------------------------------------
-// Query Operations
-// ---------------------------------------------------------------------------
-
 export async function listPolicies(): Promise<PolicyRecord[]> {
   const records = await prisma.policy.findMany({
-    include: {
-      client: { select: { name: true } },
-      cob: { select: { name: true } },
-      coverType: { select: { name: true } },
-      policyType: { select: { code: true } },
-      insurers: {
-        include: {
-          insurer: { select: { name: true } },
-          position: { select: { code: true } },
-        },
-      },
-      files: true,
-    },
+    include: policyIncludeRelations,
     orderBy: { expiryDate: "desc" },
   })
 
@@ -187,19 +171,7 @@ export async function listPolicies(): Promise<PolicyRecord[]> {
 export async function getPolicyById(id: string): Promise<PolicyRecord | null> {
   const record = await prisma.policy.findUnique({
     where: { id },
-    include: {
-      client: { select: { name: true } },
-      cob: { select: { name: true } },
-      coverType: { select: { name: true } },
-      policyType: { select: { code: true } },
-      insurers: {
-        include: {
-          insurer: { select: { name: true } },
-          position: { select: { code: true } },
-        },
-      },
-      files: true,
-    },
+    include: policyIncludeRelations,
   })
 
   return record ? toPolicyRecord(record) : null
@@ -208,27 +180,11 @@ export async function getPolicyById(id: string): Promise<PolicyRecord | null> {
 export async function getPolicyByNo(policyNo: string): Promise<PolicyRecord | null> {
   const record = await prisma.policy.findUnique({
     where: { policyNo },
-    include: {
-      client: { select: { name: true } },
-      cob: { select: { name: true } },
-      coverType: { select: { name: true } },
-      policyType: { select: { code: true } },
-      insurers: {
-        include: {
-          insurer: { select: { name: true } },
-          position: { select: { code: true } },
-        },
-      },
-      files: true,
-    },
+    include: policyIncludeRelations,
   })
 
   return record ? toPolicyRecord(record) : null
 }
-
-// ---------------------------------------------------------------------------
-// Mutation Operations
-// ---------------------------------------------------------------------------
 
 export async function createPolicy(
   input: PolicyInput,
@@ -256,19 +212,7 @@ export async function createPolicy(
       policyTypeId,
       riskLocation: input.riskLocation ?? undefined,
     },
-    include: {
-      client: { select: { name: true } },
-      cob: { select: { name: true } },
-      coverType: { select: { name: true } },
-      policyType: { select: { code: true } },
-      insurers: {
-        include: {
-          insurer: { select: { name: true } },
-          position: { select: { code: true } },
-        },
-      },
-      files: true,
-    },
+    include: policyIncludeRelations,
   })
 
   await recordAudit(prisma, {
@@ -319,19 +263,7 @@ export async function updatePolicy(
       policyTypeId,
       riskLocation: input.riskLocation ?? undefined,
     },
-    include: {
-      client: { select: { name: true } },
-      cob: { select: { name: true } },
-      coverType: { select: { name: true } },
-      policyType: { select: { code: true } },
-      insurers: {
-        include: {
-          insurer: { select: { name: true } },
-          position: { select: { code: true } },
-        },
-      },
-      files: true,
-    },
+    include: policyIncludeRelations,
   })
 
   await recordAudit(prisma, {
@@ -380,19 +312,7 @@ export async function updatePolicyInsurers(
 
   const record = await prisma.policy.findUnique({
     where: { id },
-    include: {
-      client: { select: { name: true } },
-      cob: { select: { name: true } },
-      coverType: { select: { name: true } },
-      policyType: { select: { code: true } },
-      insurers: {
-        include: {
-          insurer: { select: { name: true } },
-          position: { select: { code: true } },
-        },
-      },
-      files: true,
-    },
+    include: policyIncludeRelations,
   })
 
   if (!record) {
@@ -441,10 +361,6 @@ export async function deletePolicy(id: string, userId: string): Promise<void> {
     after: null,
   })
 }
-
-// ---------------------------------------------------------------------------
-// Auto-seeding
-// ---------------------------------------------------------------------------
 
 export async function seedInitialPoliciesIfEmpty(): Promise<number> {
   const count = await prisma.policy.count()
