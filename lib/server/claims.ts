@@ -1,20 +1,22 @@
 import "server-only"
 
+import type { Claim, ClaimStage, ClaimStatus } from "@/lib/data/types"
+import { normalizeCob } from "@/lib/format"
 import { Prisma } from "@/lib/generated/prisma/client"
-import type { Claim, ClaimStatus, ClaimStage } from "@/lib/data/types"
 import { prisma } from "@/lib/prisma"
 import { recordAudit } from "@/server/services/audit"
+import { nextDocumentNumber } from "@/server/services/number-generator"
 
-export interface ClaimRecord extends Omit<Claim, "policyNo"> {
+export interface ClaimRecord extends Claim {
   dbId: string
-  policyNo?: string
   clientName?: string
 }
 
 export interface ClaimInput {
   policyId: string
-  claimNo: string
+  claimNo?: string
   adjusterId?: string | null
+  adjuster?: string
   lossDate: string
   reportedDate?: string | null
   documentCompleteDate?: string | null
@@ -26,27 +28,48 @@ export interface ClaimInput {
   estimatedLoss: number
   claimedAmount: number
   paidAmount: number
-  statusId: string
-  stageId: string
+  statusId?: string
+  stageId?: string
+  status?: ClaimStatus
+  stage?: ClaimStage
+  notes?: string | null
+}
+
+export interface ClaimFormOptions {
+  policies: Array<{
+    id: string
+    policyNo: string
+    insuredName: string
+    insurer: string
+    cob: Claim["cob"]
+    currency: string
+  }>
+  adjusters: Array<{
+    id: string
+    name: string
+  }>
 }
 
 const claimIncludeRelations = {
   policy: {
     select: {
+      id: true,
       policyNo: true,
       insuredName: true,
       cob: { select: { name: true } },
       insurers: {
         include: {
           insurer: { select: { name: true } },
+          position: { select: { code: true } },
         },
+        orderBy: { sharePct: "desc" },
       },
     },
   },
-  status: { select: { code: true } },
-  stage: { select: { code: true } },
-  adjuster: { select: { name: true } },
-} as const
+  status: { select: { code: true, name: true } },
+  stage: { select: { code: true, name: true } },
+  adjuster: { select: { id: true, name: true } },
+} satisfies Prisma.ClaimInclude
 
 type PrismaClaimWithRelations = Prisma.ClaimGetPayload<{
   include: typeof claimIncludeRelations
@@ -59,8 +82,15 @@ async function resolveStatusId(status: ClaimStatus): Promise<string> {
   const cached = statusCache.get(status)
   if (cached) return cached
 
+  const searchNames = status === "Closed" ? ["Closed", "Close"] : [status]
   const record = await prisma.lookupValue.findFirst({
-    where: { lookupType: "claim_status", code: status },
+    where: {
+      lookupType: "claim_status",
+      OR: [
+        { name: { in: searchNames, mode: "insensitive" } },
+        { code: { in: [status.toLowerCase(), ...searchNames.map((s) => s.toLowerCase())], mode: "insensitive" } },
+      ],
+    },
   })
 
   if (record) {
@@ -68,7 +98,7 @@ async function resolveStatusId(status: ClaimStatus): Promise<string> {
     return record.id
   }
 
-  throw new Error(`Claim status "${status}" not found in database`)
+  throw new Error(`Status klaim "${status}" tidak ditemukan di database.`)
 }
 
 async function resolveStageId(stage: ClaimStage): Promise<string> {
@@ -76,7 +106,13 @@ async function resolveStageId(stage: ClaimStage): Promise<string> {
   if (cached) return cached
 
   const record = await prisma.lookupValue.findFirst({
-    where: { lookupType: "claim_stage", code: stage },
+    where: {
+      lookupType: "claim_stage",
+      OR: [
+        { name: { equals: stage, mode: "insensitive" } },
+        { code: { equals: stage.toLowerCase(), mode: "insensitive" } },
+      ],
+    },
   })
 
   if (record) {
@@ -84,21 +120,52 @@ async function resolveStageId(stage: ClaimStage): Promise<string> {
     return record.id
   }
 
-  throw new Error(`Claim stage "${stage}" not found in database`)
+  throw new Error(`Tahapan klaim "${stage}" tidak ditemukan di database.`)
+}
+
+async function resolveAdjusterId(adjusterIdOrName?: string | null): Promise<string | null> {
+  if (!adjusterIdOrName?.trim()) return null
+  const trimmed = adjusterIdOrName.trim()
+
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+    const existing = await prisma.adjuster.findUnique({ where: { id: trimmed } })
+    if (existing) return existing.id
+  }
+
+  const existingByName = await prisma.adjuster.findFirst({
+    where: { name: { equals: trimmed, mode: "insensitive" } },
+  })
+  if (existingByName) return existingByName.id
+
+  const created = await prisma.adjuster.create({
+    data: { name: trimmed },
+  })
+  return created.id
 }
 
 function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
-  const primaryInsurer = record.policy?.insurers?.[0]?.insurer?.name || ""
+  const leaderInsurer = record.policy?.insurers?.find((i) => i.position.code === "leader")?.insurer?.name
+  const firstInsurer = record.policy?.insurers?.[0]?.insurer?.name || ""
+  const primaryInsurer = leaderInsurer || firstInsurer
+
+  const rawStatus = record.status?.name || record.status?.code || "Outstanding"
+  const status: ClaimStatus =
+    rawStatus.toLowerCase() === "close" || rawStatus.toLowerCase() === "closed"
+      ? "Closed"
+      : (rawStatus as ClaimStatus)
+
+  const rawStage = (record.stage?.name || record.stage?.code || "Tunggu Dokumen") as ClaimStage
+
   return {
     dbId: record.id,
-    id: record.claimNo,
+    id: record.id,
     claimNo: record.claimNo,
     policyId: record.policyId,
     policyNo: record.policy?.policyNo || "",
     insuredName: record.policy?.insuredName || "",
     insurer: primaryInsurer,
-    cob: record.policy?.cob?.name as Claim["cob"],
-    currency: record.currencyCode,
+    cob: normalizeCob(record.policy?.cob?.name),
+    currency: record.currencyCode as Claim["currency"],
     lossDate: record.lossDate.toISOString().slice(0, 10),
     reportedDate: record.reportedDate ? record.reportedDate.toISOString().slice(0, 10) : null,
     documentCompleteDate: record.documentCompleteDate ? record.documentCompleteDate.toISOString().slice(0, 10) : null,
@@ -110,8 +177,8 @@ function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
     claimedAmount: Number(record.claimedAmount),
     paidAmount: Number(record.paidAmount),
     adjuster: record.adjuster?.name || "",
-    status: (record.status?.code as ClaimStatus) || "Outstanding",
-    stage: (record.stage?.code as ClaimStage) || "Tunggu Dokumen",
+    status,
+    stage: rawStage,
     notes: record.notes || "",
   }
 }
@@ -143,50 +210,100 @@ export async function getClaimByNo(claimNo: string): Promise<ClaimRecord | null>
   return record ? toClaimRecord(record) : null
 }
 
+export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
+  const [policies, adjusters] = await Promise.all([
+    prisma.policy.findMany({
+      include: {
+        cob: { select: { name: true } },
+        insurers: {
+          include: {
+            insurer: { select: { name: true } },
+            position: { select: { code: true } },
+          },
+          orderBy: { sharePct: "desc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.adjuster.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ])
+
+  return {
+    policies: policies.map((p) => {
+      const leader = p.insurers.find((i) => i.position.code === "leader")?.insurer.name
+      const first = p.insurers[0]?.insurer.name || ""
+      return {
+        id: p.id,
+        policyNo: p.policyNo,
+        insuredName: p.insuredName,
+        insurer: leader || first,
+        cob: normalizeCob(p.cob.name),
+        currency: p.currencyCode,
+      }
+    }),
+    adjusters,
+  }
+}
+
 export async function createClaim(
   input: ClaimInput,
   userId: string
 ): Promise<ClaimRecord> {
-  const [statusId, stageId] = await Promise.all([
-    resolveStatusId("Outstanding"),
-    resolveStageId("Tunggu Dokumen"),
-  ])
+  return prisma.$transaction(async (tx) => {
+    let claimNo = input.claimNo?.trim()
+    if (!claimNo) {
+      claimNo = await nextDocumentNumber(tx, { code: "CLM" })
+    }
 
-  const record = await prisma.claim.create({
-    data: {
-      claimNo: input.claimNo,
-      policyId: input.policyId,
-      adjusterId: input.adjusterId,
-      lossDate: new Date(input.lossDate),
-      reportedDate: input.reportedDate ? new Date(input.reportedDate) : null,
-      documentCompleteDate: input.documentCompleteDate ? new Date(input.documentCompleteDate) : null,
-      spkDate: input.spkDate ? new Date(input.spkDate) : null,
-      location: input.location ?? undefined,
-      lossDescription: input.lossDescription ?? undefined,
-      assetDescription: input.assetDescription ?? undefined,
-      currencyCode: input.currencyCode,
-      estimatedLoss: input.estimatedLoss,
-      claimedAmount: input.claimedAmount,
-      paidAmount: input.paidAmount,
-      statusId,
-      stageId,
-    },
-    include: claimIncludeRelations,
+    const [statusId, stageId, adjusterId] = await Promise.all([
+      input.status ? resolveStatusId(input.status) : (input.statusId ? Promise.resolve(input.statusId) : resolveStatusId("Outstanding")),
+      input.stage ? resolveStageId(input.stage) : (input.stageId ? Promise.resolve(input.stageId) : resolveStageId("Tunggu Dokumen")),
+      resolveAdjusterId(input.adjusterId || input.adjuster),
+    ])
+
+    const record = await tx.claim.create({
+      data: {
+        claimNo,
+        policyId: input.policyId,
+        adjusterId,
+        lossDate: new Date(input.lossDate),
+        reportedDate: input.reportedDate ? new Date(input.reportedDate) : null,
+        documentCompleteDate: input.documentCompleteDate ? new Date(input.documentCompleteDate) : null,
+        spkDate: input.spkDate ? new Date(input.spkDate) : null,
+        location: input.location?.trim() || null,
+        lossDescription: input.lossDescription?.trim() || null,
+        assetDescription: input.assetDescription?.trim() || null,
+        currencyCode: input.currencyCode,
+        estimatedLoss: input.estimatedLoss,
+        claimedAmount: input.claimedAmount,
+        paidAmount: input.paidAmount,
+        statusId,
+        stageId,
+        notes: input.notes?.trim() || null,
+      },
+      include: claimIncludeRelations,
+    })
+
+    await recordAudit(tx, {
+      userId,
+      entity: "claims",
+      entityId: record.id,
+      action: "Create",
+      before: null,
+      after: {
+        claimNo: record.claimNo,
+        policyId: record.policyId,
+        statusId: record.statusId,
+        stageId: record.stageId,
+      },
+    })
+
+    return toClaimRecord(record)
   })
-
-  await recordAudit(prisma, {
-    userId,
-    entity: "claims",
-    entityId: record.id,
-    action: "Create",
-    before: null,
-    after: {
-      claimNo: record.claimNo,
-      policyId: record.policyId,
-    },
-  })
-
-  return toClaimRecord(record)
 }
 
 export async function updateClaim(
@@ -194,46 +311,72 @@ export async function updateClaim(
   input: ClaimInput,
   userId: string
 ): Promise<ClaimRecord> {
-  const existing = await prisma.claim.findUnique({ where: { id } })
-  if (!existing) {
-    throw new Error(`Claim dengan ID ${id} tidak ditemukan.`)
-  }
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.claim.findUnique({
+      where: { id },
+      include: claimIncludeRelations,
+    })
+    if (!existing) {
+      throw new Error(`Klaim dengan ID "${id}" tidak ditemukan.`)
+    }
 
-  const record = await prisma.claim.update({
-    where: { id },
-    data: {
-      claimNo: input.claimNo,
-      policyId: input.policyId,
-      adjusterId: input.adjusterId,
-      lossDate: new Date(input.lossDate),
-      reportedDate: input.reportedDate ? new Date(input.reportedDate) : null,
-      documentCompleteDate: input.documentCompleteDate ? new Date(input.documentCompleteDate) : null,
-      spkDate: input.spkDate ? new Date(input.spkDate) : null,
-      location: input.location ?? undefined,
-      lossDescription: input.lossDescription ?? undefined,
-      assetDescription: input.assetDescription ?? undefined,
-      currencyCode: input.currencyCode,
-      estimatedLoss: input.estimatedLoss,
-      claimedAmount: input.claimedAmount,
-      paidAmount: input.paidAmount,
-    },
-    include: claimIncludeRelations,
+    const [statusId, stageId, adjusterId] = await Promise.all([
+      input.status ? resolveStatusId(input.status) : (input.statusId ? Promise.resolve(input.statusId) : Promise.resolve(existing.statusId)),
+      input.stage ? resolveStageId(input.stage) : (input.stageId ? Promise.resolve(input.stageId) : Promise.resolve(existing.stageId)),
+      resolveAdjusterId(input.adjusterId || input.adjuster),
+    ])
+
+    const record = await tx.claim.update({
+      where: { id },
+      data: {
+        claimNo: input.claimNo?.trim() || existing.claimNo,
+        policyId: input.policyId,
+        adjusterId,
+        lossDate: new Date(input.lossDate),
+        reportedDate: input.reportedDate ? new Date(input.reportedDate) : null,
+        documentCompleteDate: input.documentCompleteDate ? new Date(input.documentCompleteDate) : null,
+        spkDate: input.spkDate ? new Date(input.spkDate) : null,
+        location: input.location?.trim() || null,
+        lossDescription: input.lossDescription?.trim() || null,
+        assetDescription: input.assetDescription?.trim() || null,
+        currencyCode: input.currencyCode,
+        estimatedLoss: input.estimatedLoss,
+        claimedAmount: input.claimedAmount,
+        paidAmount: input.paidAmount,
+        statusId,
+        stageId,
+        notes: input.notes !== undefined ? (input.notes?.trim() || null) : existing.notes,
+      },
+      include: claimIncludeRelations,
+    })
+
+    await recordAudit(tx, {
+      userId,
+      entity: "claims",
+      entityId: id,
+      action: "Update",
+      before: {
+        claimNo: existing.claimNo,
+        policyId: existing.policyId,
+        statusId: existing.statusId,
+        stageId: existing.stageId,
+        estimatedLoss: Number(existing.estimatedLoss),
+        claimedAmount: Number(existing.claimedAmount),
+        paidAmount: Number(existing.paidAmount),
+      },
+      after: {
+        claimNo: record.claimNo,
+        policyId: record.policyId,
+        statusId: record.statusId,
+        stageId: record.stageId,
+        estimatedLoss: Number(record.estimatedLoss),
+        claimedAmount: Number(record.claimedAmount),
+        paidAmount: Number(record.paidAmount),
+      },
+    })
+
+    return toClaimRecord(record)
   })
-
-  await recordAudit(prisma, {
-    userId,
-    entity: "claims",
-    entityId: id,
-    action: "Update",
-    before: {
-      claimNo: existing.claimNo,
-    },
-    after: {
-      claimNo: record.claimNo,
-    },
-  })
-
-  return toClaimRecord(record)
 }
 
 export async function updateClaimStatus(
@@ -243,7 +386,7 @@ export async function updateClaimStatus(
 ): Promise<ClaimRecord> {
   const existing = await prisma.claim.findUnique({ where: { id } })
   if (!existing) {
-    throw new Error(`Claim dengan ID ${id} tidak ditemukan.`)
+    throw new Error(`Klaim dengan ID "${id}" tidak ditemukan.`)
   }
 
   const statusId = await resolveStatusId(status)
@@ -271,12 +414,12 @@ export async function updateClaimStatus(
 export async function deleteClaim(id: string, userId: string): Promise<void> {
   const existing = await prisma.claim.findUnique({ where: { id } })
   if (!existing) {
-    throw new Error(`Claim dengan ID ${id} tidak ditemukan.`)
+    throw new Error(`Klaim dengan ID "${id}" tidak ditemukan.`)
   }
 
   const paymentCount = await prisma.payment.count({ where: { claimId: id } })
   if (paymentCount > 0) {
-    throw new Error("Claim sudah memiliki pembayaran dan tidak dapat dihapus.")
+    throw new Error("Klaim sudah memiliki catatan pembayaran dan tidak dapat dihapus.")
   }
 
   await prisma.claim.delete({ where: { id } })
@@ -297,26 +440,37 @@ export async function seedInitialClaimsIfEmpty(): Promise<number> {
   const count = await prisma.claim.count()
   if (count > 0) return 0
 
-  const statuses = await prisma.lookupValue.findMany({
-    where: { lookupType: "claim_status" },
-    select: { id: true, code: true },
+  const standardAdjusters = [
+    "Internal LCH",
+    "PT Radita Hutama Internusa",
+    "PT Cunningham Lindsey Indonesia",
+    "PT McLarens Indonesia",
+    "PT Crawford & Company Indonesia",
+  ]
+  for (const name of standardAdjusters) {
+    const existing = await prisma.adjuster.findFirst({
+      where: { name: { equals: name, mode: "insensitive" } },
+    })
+    if (!existing) {
+      await prisma.adjuster.create({ data: { name } })
+    }
+  }
+
+  const adjusters = await prisma.adjuster.findMany()
+  const adjusterMap = new Map(adjusters.map((a) => [a.name.toLowerCase(), a.id]))
+
+  const policies = await prisma.policy.findMany({
+    select: { id: true, policyNo: true, currencyCode: true },
   })
+  if (policies.length === 0) return 0
 
-  const statusMap = Object.fromEntries(statuses.map((s) => [s.code, s.id]))
+  const policyMap = new Map(policies.map((p) => [p.policyNo, p]))
+  const fallbackPolicy = policies[0]
 
-  const stages = await prisma.lookupValue.findMany({
-    where: { lookupType: "claim_stage" },
-    select: { id: true, code: true },
-  })
-
-  const stageMap = Object.fromEntries(stages.map((s) => [s.code, s.id]))
-
-  const policy = await prisma.policy.findFirst()
-  if (!policy) return 0
-
-  const seedData = [
+  const seedItems = [
     {
       claimNo: "CLM/2026/08/0031",
+      policyNo: "PAR/2025/JKT/0871",
       lossDate: "2026-08-04",
       reportedDate: "2026-08-05",
       documentCompleteDate: "2026-08-12",
@@ -329,11 +483,14 @@ export async function seedInitialClaimsIfEmpty(): Promise<number> {
       estimatedLoss: 620_000_000,
       claimedAmount: 585_000_000,
       paidAmount: 0,
-      statusId: statusMap["Outstanding"],
-      stageId: stageMap["Proses Adjuster"],
+      adjuster: "PT Radita Hutama Internusa",
+      status: "Outstanding" as ClaimStatus,
+      stage: "Proses Adjuster" as ClaimStage,
+      notes: "Adjuster sudah survei 08/08. Menunggu laporan preliminary.",
     },
     {
       claimNo: "CLM/2026/07/0028",
+      policyNo: "MV/FLT/2026/0088",
       lossDate: "2026-07-19",
       reportedDate: "2026-07-19",
       documentCompleteDate: "2026-07-24",
@@ -346,34 +503,111 @@ export async function seedInitialClaimsIfEmpty(): Promise<number> {
       estimatedLoss: 285_000_000,
       claimedAmount: 271_400_000,
       paidAmount: 264_900_000,
-      statusId: statusMap["Settled"],
-      stageId: stageMap["SPK / SPGR terbit"],
+      adjuster: "Internal LCH",
+      status: "Settled" as ClaimStatus,
+      stage: "SPK / SPGR terbit" as ClaimStage,
+      notes:
+        "Dibayar 12/08/2026 setelah dikurangi own risk 2 × IDR 500.000 dan penyesuaian harga part.",
+    },
+    {
+      claimNo: "CLM/2026/08/0033",
+      policyNo: "IAR/2025/SBY/0233",
+      lossDate: "2026-08-11",
+      reportedDate: "2026-08-12",
+      documentCompleteDate: null,
+      spkDate: null,
+      location:
+        "Kawasan Industri Rungkut Blok F-12, Surabaya — ruang panel produksi line 2",
+      lossDescription:
+        "Korsleting pada panel distribusi utama line 2 menyebabkan kebakaran terbatas dan kerusakan pada motor listrik serta conveyor.",
+      assetDescription:
+        "Panel distribusi 400A, 6 unit motor listrik, conveyor belt 24 m",
+      estimatedLoss: 480_000_000,
+      claimedAmount: 0,
+      paidAmount: 0,
+      adjuster: "PT Cunningham Lindsey Indonesia",
+      status: "Outstanding" as ClaimStatus,
+      stage: "Dokumen Belum Lengkap" as ClaimStage,
+      notes:
+        "Menunggu kelengkapan dokumen: berita acara, foto kerusakan, dan estimasi perbaikan dari vendor.",
+    },
+    {
+      claimNo: "CLM/2026/06/0022",
+      policyNo: "MC/OC/2025/0142",
+      lossDate: "2026-06-08",
+      reportedDate: "2026-06-10",
+      documentCompleteDate: "2026-06-21",
+      spkDate: "2026-06-27",
+      location: "Pelabuhan Tanjung Priok — container yard blok C",
+      lossDescription:
+        "Container terjatuh saat proses bongkar. 3 pallet komponen elektronik mengalami kerusakan fisik total.",
+      assetDescription:
+        "3 pallet komponen elektronik — invoice INV/MLN/2026/0431",
+      estimatedLoss: 38_500,
+      claimedAmount: 38_500,
+      paidAmount: 36_200,
+      adjuster: "PT McLarens Indonesia",
+      status: "Settled" as ClaimStatus,
+      stage: "SPK / SPGR terbit" as ClaimStage,
+      notes:
+        "Pembayaran final disetujui setelah dipotong deductible USD 2.300. Settlement letter sudah dikirim ke klien.",
+    },
+    {
+      claimNo: "CLM/2026/07/0030",
+      policyNo: "CAR/2026/JTG/0019",
+      lossDate: "2026-07-28",
+      reportedDate: "2026-07-30",
+      documentCompleteDate: "2026-08-08",
+      spkDate: null,
+      location:
+        "Proyek Tol Semarang–Demak Seksi 2, Sta 14+200 — area pekerjaan abutment jembatan",
+      lossDescription:
+        "Hujan deras berkepanjangan memicu longsor lereng galian abutment jembatan. Scaffolding dan bekisting roboh tertimbun tanah.",
+      assetDescription:
+        "Pekerjaan tanah galian, perancah scaffolding 120 set, bekisting beton pier head",
+      estimatedLoss: 350_000_000,
+      claimedAmount: 312_000_000,
+      paidAmount: 0,
+      adjuster: "PT Radita Hutama Internusa",
+      status: "Outstanding" as ClaimStatus,
+      stage: "Proses Adjuster" as ClaimStage,
+      notes:
+        "Interim report adjuster diterima 10/08. Menunggu verifikasi kuantitas material dari konsultan pengawas proyek.",
     },
   ]
 
-  let created = 0
-  for (const item of seedData) {
+  let createdCount = 0
+  for (const item of seedItems) {
+    const matchedPolicy = policyMap.get(item.policyNo) || fallbackPolicy
+    const [statusId, stageId] = await Promise.all([
+      resolveStatusId(item.status),
+      resolveStageId(item.stage),
+    ])
+    const adjusterId = adjusterMap.get(item.adjuster.toLowerCase()) || null
+
     await prisma.claim.create({
       data: {
         claimNo: item.claimNo,
-        policyId: policy.id,
+        policyId: matchedPolicy.id,
+        adjusterId,
         lossDate: new Date(item.lossDate),
         reportedDate: item.reportedDate ? new Date(item.reportedDate) : null,
         documentCompleteDate: item.documentCompleteDate ? new Date(item.documentCompleteDate) : null,
         spkDate: item.spkDate ? new Date(item.spkDate) : null,
-        location: item.location ?? undefined,
-        lossDescription: item.lossDescription ?? undefined,
-        assetDescription: item.assetDescription ?? undefined,
-        currencyCode: "IDR",
+        location: item.location,
+        lossDescription: item.lossDescription,
+        assetDescription: item.assetDescription,
+        currencyCode: matchedPolicy.currencyCode || "IDR",
         estimatedLoss: item.estimatedLoss,
         claimedAmount: item.claimedAmount,
         paidAmount: item.paidAmount,
-        statusId: item.statusId,
-        stageId: item.stageId,
+        statusId,
+        stageId,
+        notes: item.notes,
       },
     })
-    created++
+    createdCount++
   }
 
-  return created
+  return createdCount
 }
