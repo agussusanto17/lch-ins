@@ -1029,7 +1029,7 @@ model Policy {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   policyNo       String   @unique @map("policy_no")
   placingSlipId  String?  @map("placing_slip_id") @db.Uuid
-  clientId       String   @map("client_id") @db.Uuid
+  clientId       String?  @map("client_id") @db.Uuid
   cobId          String   @map("cob_id") @db.Uuid
   coverTypeId    String?  @map("cover_type_id") @db.Uuid
   insuredName    String   @map("insured_name")
@@ -1050,7 +1050,7 @@ model Policy {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   placingSlip  PlacingSlip?    @relation(fields: [placingSlipId], references: [id])
-  client       Client          @relation(fields: [clientId], references: [id])
+  client       Client?         @relation(fields: [clientId], references: [id])
   cob          ClassOfBusiness @relation(fields: [cobId], references: [id])
   coverType    CoverType?      @relation(fields: [coverTypeId], references: [id])
   currency     Currency        @relation(fields: [currencyCode], references: [code])
