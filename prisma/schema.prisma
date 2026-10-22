@@ -1034,6 +1034,8 @@ model Policy {
   clientId       String?  @map("client_id") @db.Uuid
   cobId          String   @map("cob_id") @db.Uuid
   coverTypeId    String?  @map("cover_type_id") @db.Uuid
+  /// Label pilihan form, misal "PAR + EQVET". Tidak semua label punya padanan di cover_types.
+  typeOfCover    String?  @map("type_of_cover")
   insuredName    String   @map("insured_name")
   riskLocation   String?  @map("risk_location")
   inceptionDate  DateTime @map("inception_date") @db.Date

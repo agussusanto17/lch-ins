@@ -195,6 +195,7 @@ const COB_CANONICAL_MAP: Record<string, ClassOfBusiness> = {
   engineering: "Engineering",
   liability: "Liability",
   "personal accident": "Personal Accident",
+  "general accident": "Personal Accident",
   "surety bond": "Surety Bond",
   terrorism: "Terrorism",
 }

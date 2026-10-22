@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
+import { deletePolicyAction } from "@/app/(app)/policies/actions"
 import { useToday } from "@/components/layout/today-provider"
 import { PageHeader } from "@/components/layout/page-header"
 import { PolicyFilesSheet } from "@/components/policies/policy-files-sheet"
@@ -54,6 +55,7 @@ import {
 import { addMonths } from "@/lib/date"
 import type { ExportSpec } from "@/lib/export"
 import { dateShort, money, rupiah } from "@/lib/format"
+import type { ClientOption } from "@/lib/server/clients"
 import { store, useCollection } from "@/lib/store"
 
 const COB_ITEMS = [
@@ -73,10 +75,38 @@ type FormState = {
   preset?: Partial<Policy>
 }
 
-export function PolicyDatabase() {
+/** Server rows plus softcopies uploaded in this tab, which only live in the session store. */
+function withSessionFiles(server: Policy[], session: Policy[]): Policy[] {
+  const sessionById = new Map(session.map((p) => [p.id, p]))
+  return server.map((p) => {
+    const extra = (sessionById.get(p.id)?.files ?? []).filter(
+      (f) => f.url && !p.files.some((x) => x.id === f.id)
+    )
+    return extra.length ? { ...p, files: [...p.files, ...extra] } : p
+  })
+}
+
+export function PolicyDatabase({
+  initialPolicies,
+  clientOptions,
+}: {
+  initialPolicies: Policy[]
+  clientOptions: ClientOption[]
+}) {
   const today = useToday()
-  const policies = useCollection("policies")
+  const sessionPolicies = useCollection("policies")
   const claims = useCollection("claims")
+  const [, startDelete] = React.useTransition()
+
+  const policies = React.useMemo(
+    () => withSessionFiles(initialPolicies, sessionPolicies),
+    [initialPolicies, sessionPolicies]
+  )
+
+  // Downstream modules (dashboard, renewal notice, claims) still read the store.
+  React.useEffect(() => {
+    store.replace("policies", withSessionFiles(initialPolicies, store.all("policies")))
+  }, [initialPolicies])
 
   const [query, setQuery] = React.useState("")
   const [cob, setCob] = React.useState("all")
@@ -183,10 +213,16 @@ export function PolicyDatabase() {
           "Polis dan riwayat softcopy-nya dihapus dari database. Tindakan ini tidak bisa dibatalkan.",
         actionLabel: "Hapus",
       },
-      onSelect: () => {
-        store.remove("policies", p.id)
-        toast.success("Polis dihapus", { description: p.policyNo })
-      },
+      onSelect: () =>
+        startDelete(async () => {
+          const res = await deletePolicyAction(p.id)
+          if (!res.ok) {
+            toast.error("Gagal menghapus polis", { description: res.error })
+            return
+          }
+          store.remove("policies", p.id)
+          toast.success("Polis dihapus", { description: p.policyNo })
+        }),
     })
     return actions
   }
@@ -444,6 +480,7 @@ export function PolicyDatabase() {
           }}
           policy={form.policy}
           preset={form.preset}
+          clientOptions={clientOptions}
         />
       ) : null}
       <PolicyFilesSheet

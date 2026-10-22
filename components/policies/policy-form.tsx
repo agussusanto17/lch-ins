@@ -5,6 +5,7 @@ import { FileUp, Link2 } from "lucide-react"
 import { toast } from "sonner"
 import * as z from "zod"
 
+import { createPolicyAction, updatePolicyAction } from "@/app/(app)/policies/actions"
 import { FormDrawer } from "@/components/shared/form-drawer"
 import {
   NumberField,
@@ -34,6 +35,8 @@ import {
 } from "@/lib/data"
 import { addMonths, todayIso } from "@/lib/date"
 import { dateShort, money } from "@/lib/format"
+import type { ClientOption } from "@/lib/server/clients"
+import type { PolicyInput } from "@/lib/server/policies"
 import { newId, store, useCollection } from "@/lib/store"
 import { requiredText, validate, type FieldErrors } from "@/lib/validation"
 
@@ -124,6 +127,7 @@ export function PolicyForm({
   onOpenChange,
   policy,
   preset,
+  clientOptions,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -131,6 +135,7 @@ export function PolicyForm({
   policy?: Policy | null
   /** Isian awal, misalnya endorsement dari polis induk. */
   preset?: Partial<Draft>
+  clientOptions: ClientOption[]
 }) {
   const clients = useCollection("clients")
   const policies = useCollection("policies")
@@ -146,7 +151,11 @@ export function PolicyForm({
 
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
 
-  const clientItems = clients.map((c) => ({ label: c.name, value: c.id }))
+  const clientItems = clientOptions.map((c) => ({ label: c.name, value: c.id }))
+  // Slips in the session store may still point at mock client ids; match those by name.
+  const clientOptionFor = (id: string | null) =>
+    clientOptions.find((c) => c.id === id) ??
+    clientOptions.find((c) => c.name === clients.find((x) => x.id === id)?.name)
   const parentItems = policies
     .filter((p) => p.id !== draft.id && p.type !== "Cancellation")
     .map((p) => ({ label: `${p.policyNo} — ${p.insuredName}`, value: p.id }))
@@ -168,10 +177,10 @@ export function PolicyForm({
     }
     const panel = slip.securityPanel?.filter((r) => r.insurer) ?? []
     const leader = panel.find((r) => r.role === "As Leader") ?? panel[0]
-    const client = clients.find((c) => c.id === slip.clientId)
+    const client = clientOptionFor(slip.clientId)
     set({
       placingSlipId: slip.id,
-      clientId: slip.clientId,
+      clientId: client?.id ?? slip.clientId,
       insuredName: client?.name ?? slip.insuredName,
       cob: slip.cob,
       typeOfCover: slip.typeOfCover,
@@ -214,7 +223,7 @@ export function PolicyForm({
     })
   }
 
-  function submit() {
+  async function submit() {
     const result = validate(schema, draft)
     const errs = { ...result.errors }
     const duplicate = policies.find(
@@ -226,17 +235,6 @@ export function PolicyForm({
     setErrors(errs)
     if (!result.ok || duplicate) return false
 
-    const existing = draft.id ? store.get("policies", draft.id) : null
-    const files: PolicyFile[] = [...(existing?.files ?? [])]
-    if (file) {
-      files.push({
-        id: newId("pf"),
-        version: files.length + 1,
-        fileName: file.name,
-        uploadedAt: todayIso(),
-        url: URL.createObjectURL(file),
-      })
-    }
     const insurers =
       draft.insurers.length &&
       draft.insurers.some((r) => r.insurer === draft.insurer)
@@ -249,16 +247,36 @@ export function PolicyForm({
               role: "As Leader" as const,
             },
           ]
-    const record: Policy = {
-      ...draft,
-      id: draft.id ?? newId("p"),
+    const { id, ...fields } = draft
+    const input: PolicyInput = {
+      ...fields,
       policyNo: draft.policyNo.trim(),
       insuredName: draft.insuredName.trim(),
       insurers,
-      files,
     }
+    const res = id ? await updatePolicyAction(id, input) : await createPolicyAction(input)
+    if (!res.ok || !res.data) {
+      toast.error("Gagal menyimpan polis", { description: res.error })
+      return false
+    }
+
+    // Softcopies are not uploaded to storage yet; they stay as object URLs in this tab.
+    const sessionFiles = (id ? store.get("policies", id)?.files ?? [] : []).filter(
+      (f) => f.url && !res.data?.files.some((x) => x.id === f.id)
+    )
+    const files: PolicyFile[] = [...res.data.files, ...sessionFiles]
+    if (file) {
+      files.push({
+        id: newId("pf"),
+        version: files.length + 1,
+        fileName: file.name,
+        uploadedAt: todayIso(),
+        url: URL.createObjectURL(file),
+      })
+    }
+    const record: Policy = { ...res.data, files }
     store.upsert("policies", record)
-    toast.success(draft.id ? "Polis diperbarui" : "Polis tersimpan", {
+    toast.success(id ? "Polis diperbarui" : "Polis tersimpan", {
       description: `${record.policyNo} · ${record.insuredName}`,
     })
     onOpenChange(false)
@@ -340,7 +358,7 @@ export function PolicyForm({
             items={clientItems}
             value={draft.clientId}
             onValueChange={(id) => {
-              const client = clients.find((c) => c.id === id)
+              const client = clientOptions.find((c) => c.id === id)
               set({
                 clientId: id,
                 insuredName: client?.name ?? draft.insuredName,

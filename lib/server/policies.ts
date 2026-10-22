@@ -1,233 +1,281 @@
 import "server-only"
 
 import { Prisma } from "@/lib/generated/prisma/client"
+import { CLIENTS } from "@/lib/data/clients"
+import { POLICIES as MOCK_POLICIES } from "@/lib/data/policies"
+import { POLICY_TYPES } from "@/lib/data/reference"
+import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
+import type { ClassOfBusiness, Policy, SecurityPanelRow } from "@/lib/data/types"
+import { normalizeCob } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
+import { seedInitialClientsIfEmpty } from "@/lib/server/clients"
 import { recordAudit } from "@/server/services/audit"
-import type { PolicyFile, SecurityPanelRow } from "@/lib/data/types"
 
-export interface PolicyRecord {
-  dbId: string
-  id: string
-  policyNo: string
-  clientId: string | null
-  clientName?: string
-  cob: string
-  coverTypeId?: string | null
-  coverType?: string
-  inceptionDate: string
-  expiryDate: string
-  currency: string
-  sumInsured: number
-  premium: number
-  brokeragePct: number
-  type: string
-  riskLocation?: string
-  insurers: SecurityPanelRow[]
-  files: PolicyFile[]
-  placingSlipId?: string | null
-  parentPolicyId?: string | null
-  insuredName: string
-  insurer: string
-}
+export type PolicyRecord = Policy
+export type PolicyInput = Omit<Policy, "id" | "files">
 
-export interface PolicyInput {
-  policyNo: string
-  clientId: string
-  placingSlipId?: string | null
-  parentPolicyId?: string | null
-  insuredName: string
-  insurer: string
-  insurers: SecurityPanelRow[]
-  cob: string
-  coverTypeId?: string | null
-  coverType?: string
-  inceptionDate: string
-  expiryDate: string
-  currency: string
-  sumInsured: number
-  premium: number
-  brokeragePct: number
-  type: string
-  riskLocation: string
-}
+type Tx = Prisma.TransactionClient
 
-const policyIncludeRelations = {
-  client: { select: { name: true } },
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const policyInclude = {
   cob: { select: { name: true } },
-  coverType: { select: { name: true } },
-  policyType: { select: { code: true } },
+  policyType: { select: { name: true } },
   insurers: {
     include: {
       insurer: { select: { name: true } },
       position: { select: { code: true } },
     },
+    orderBy: { sharePct: "desc" },
   },
-  files: true,
-} as const
+  files: { orderBy: { version: "asc" } },
+} satisfies Prisma.PolicyInclude
 
-type PrismaPolicyWithRelations = Prisma.PolicyGetPayload<{
-  include: typeof policyIncludeRelations
-}>
+type PolicyRow = Prisma.PolicyGetPayload<{ include: typeof policyInclude }>
 
-const cobCache = new Map<string, string>()
-const policyTypeCache = new Map<string, string>()
-const coverTypeCache = new Map<string, string>()
+const isoDate = (d: Date) => d.toISOString().slice(0, 10)
 
-async function resolveCobId(cob: string): Promise<string> {
-  const cached = cobCache.get(cob)
-  if (cached) return cached
-
-  const record = await prisma.classOfBusiness.findFirst({
-    where: { name: cob },
-  })
-
-  if (record) {
-    cobCache.set(cob, record.id)
-    return record.id
-  }
-
-  throw new Error(`Class of Business "${cob}" not found in database`)
-}
-
-async function resolvePolicyTypeId(type: string): Promise<string> {
-  const cached = policyTypeCache.get(type)
-  if (cached) return cached
-
-  const record = await prisma.lookupValue.findFirst({
-    where: { lookupType: "policy_type", code: type },
-  })
-
-  if (record) {
-    policyTypeCache.set(type, record.id)
-    return record.id
-  }
-
-  throw new Error(`Policy type "${type}" not found in database`)
-}
-
-async function resolveCoverTypeId(coverType: string): Promise<string | null> {
-  const cached = coverTypeCache.get(coverType)
-  if (cached) return cached
-
-  const record = await prisma.coverType.findFirst({
-    where: { name: coverType },
-  })
-
-  if (record) {
-    coverTypeCache.set(coverType, record.id)
-    return record.id
-  }
-
-  return null
-}
-
-function toPolicyRecord(record: PrismaPolicyWithRelations): PolicyRecord {
-  const primaryInsurer = record.insurers?.[0]?.insurer?.name || ""
+function toPolicyRecord(row: PolicyRow): PolicyRecord {
+  const insurers: SecurityPanelRow[] = row.insurers.map((i) => ({
+    id: i.id,
+    insurer: i.insurer.name,
+    share: Number(i.sharePct),
+    role: i.position.code === "leader" ? "As Leader" : "As Member",
+  }))
+  const leader = insurers.find((i) => i.role === "As Leader") ?? insurers[0]
   return {
-    dbId: record.id,
-    id: record.id,
-    policyNo: record.policyNo,
-    clientId: record.clientId,
-    clientName: record.client?.name,
-    cob: record.cob?.name || "",
-    coverTypeId: record.coverTypeId,
-    coverType: record.coverType?.name,
-    inceptionDate: record.inceptionDate.toISOString().slice(0, 10),
-    expiryDate: record.expiryDate.toISOString().slice(0, 10),
-    currency: record.currencyCode,
-    sumInsured: Number(record.sumInsured),
-    premium: Number(record.premium),
-    brokeragePct: Number(record.brokeragePct),
-    type: record.policyType?.code || "Baru",
-    riskLocation: record.riskLocation ?? undefined,
-    insurers: record.insurers?.map((i) => ({
-      id: i.insurerId,
-      insurer: i.insurer?.name || "",
-      share: Number(i.sharePct),
-      role: (i.position?.code === "leader" ? "As Leader" : "Member") as SecurityPanelRow["role"],
-    })) || [],
-    files: record.files?.map((f) => ({
+    id: row.id,
+    policyNo: row.policyNo,
+    clientId: row.clientId,
+    placingSlipId: row.placingSlipId,
+    parentPolicyId: row.parentPolicyId,
+    insuredName: row.insuredName,
+    insurer: leader?.insurer ?? "",
+    insurers,
+    cob: normalizeCob(row.cob.name),
+    typeOfCover: row.typeOfCover ?? undefined,
+    inceptionDate: isoDate(row.inceptionDate),
+    expiryDate: isoDate(row.expiryDate),
+    currency: row.currencyCode,
+    sumInsured: Number(row.sumInsured),
+    premium: Number(row.premium),
+    brokeragePct: Number(row.brokeragePct),
+    type: POLICY_TYPES.find((t) => t === row.policyType.name) ?? "Baru",
+    riskLocation: row.riskLocation ?? "",
+    files: row.files.map((f) => ({
       id: f.id,
       version: f.version,
       fileName: f.fileName,
       uploadedAt: f.uploadedAt.toISOString(),
-    })) || [],
-    placingSlipId: record.placingSlipId,
-    parentPolicyId: record.parentPolicyId,
-    insuredName: record.insuredName,
-    insurer: primaryInsurer,
+    })),
   }
 }
 
+function auditSnapshot(p: PolicyRecord) {
+  return {
+    policyNo: p.policyNo,
+    insuredName: p.insuredName,
+    type: p.type,
+    insurer: p.insurer,
+    inceptionDate: p.inceptionDate,
+    expiryDate: p.expiryDate,
+    sumInsured: p.sumInsured,
+    premium: p.premium,
+    brokeragePct: p.brokeragePct,
+  }
+}
+
+/** App COB labels whose master-data row (SEOJK) carries a different name. */
+const MASTER_COB_NAME: Partial<Record<ClassOfBusiness, string>> = {
+  "Personal Accident": "GENERAL ACCIDENT",
+}
+
+async function resolveCobId(tx: Tx, cob: ClassOfBusiness): Promise<string> {
+  const row = await tx.classOfBusiness.findFirst({
+    where: { name: { equals: MASTER_COB_NAME[cob] ?? cob, mode: "insensitive" } },
+    select: { id: true },
+  })
+  if (!row) throw new Error(`Class of business "${cob}" belum ada di master data.`)
+  return row.id
+}
+
+async function resolvePolicyTypeId(tx: Tx, type: string): Promise<string> {
+  const row = await tx.lookupValue.findFirst({
+    where: { lookupType: "policy_type", name: type },
+    select: { id: true },
+  })
+  if (!row) throw new Error(`Tipe polis "${type}" belum ada di master data.`)
+  return row.id
+}
+
+async function findCoverTypeId(tx: Tx, cobId: string, label?: string) {
+  if (!label?.trim()) return null
+  const row = await tx.coverType.findFirst({
+    where: { cobId, name: { equals: label.trim(), mode: "insensitive" } },
+    select: { id: true },
+  })
+  return row?.id ?? null
+}
+
+// The session store still carries mock ids (c-001, s-005, p-002); map them by
+// their natural key so records picked from mock rows link to the DB rows.
+async function findClientId(tx: Tx, clientId: string | null) {
+  if (!clientId) return null
+  if (UUID_RE.test(clientId)) {
+    const row = await tx.client.findUnique({ where: { id: clientId }, select: { id: true } })
+    if (row) return row.id
+  }
+  const mock = CLIENTS.find((c) => c.id === clientId)
+  if (!mock) return null
+  const row = await tx.client.findFirst({
+    where: { name: { equals: mock.name.trim(), mode: "insensitive" } },
+    select: { id: true },
+  })
+  return row?.id ?? null
+}
+
+async function findSlipId(tx: Tx, slipId: string | null) {
+  if (!slipId) return null
+  if (UUID_RE.test(slipId)) {
+    const row = await tx.placingSlip.findUnique({ where: { id: slipId }, select: { id: true } })
+    if (row) return row.id
+  }
+  const slipNo = MOCK_SLIPS.find((s) => s.id === slipId)?.slipNo
+  if (!slipNo) return null
+  const row = await tx.placingSlip.findUnique({ where: { slipNo }, select: { id: true } })
+  return row?.id ?? null
+}
+
+async function findPolicyId(tx: Tx, policyId: string | null) {
+  if (!policyId) return null
+  if (UUID_RE.test(policyId)) {
+    const row = await tx.policy.findUnique({ where: { id: policyId }, select: { id: true } })
+    if (row) return row.id
+  }
+  const policyNo = MOCK_POLICIES.find((p) => p.id === policyId)?.policyNo
+  if (!policyNo) return null
+  const row = await tx.policy.findUnique({ where: { policyNo }, select: { id: true } })
+  return row?.id ?? null
+}
+
+async function resolveInsurerId(tx: Tx, name: string): Promise<string> {
+  const existing = await tx.insurer.findFirst({
+    where: { name: { equals: name.trim(), mode: "insensitive" } },
+    select: { id: true },
+  })
+  if (existing) return existing.id
+  const created = await tx.insurer.create({ data: { name: name.trim() }, select: { id: true } })
+  return created.id
+}
+
+async function policyData(tx: Tx, input: PolicyInput) {
+  const cobId = await resolveCobId(tx, input.cob)
+  return {
+    policyNo: input.policyNo.trim(),
+    insuredName: input.insuredName.trim(),
+    clientId: await findClientId(tx, input.clientId),
+    placingSlipId: await findSlipId(tx, input.placingSlipId),
+    parentPolicyId: await findPolicyId(tx, input.parentPolicyId),
+    cobId,
+    coverTypeId: await findCoverTypeId(tx, cobId, input.typeOfCover),
+    typeOfCover: input.typeOfCover?.trim() || null,
+    policyTypeId: await resolvePolicyTypeId(tx, input.type),
+    inceptionDate: new Date(input.inceptionDate),
+    expiryDate: new Date(input.expiryDate),
+    currencyCode: input.currency,
+    sumInsured: input.sumInsured,
+    premium: input.premium,
+    brokeragePct: input.brokeragePct,
+    riskLocation: input.riskLocation.trim() || null,
+  } satisfies Prisma.PolicyUncheckedCreateInput
+}
+
+/** Data dari form: klien dan polis induk yang dipilih harus sudah ada di database. */
+async function checkedPolicyData(tx: Tx, input: PolicyInput, selfId?: string) {
+  const data = await policyData(tx, input)
+  if (input.clientId && !data.clientId) {
+    throw new Error("Klien yang dipilih belum tersimpan di database.")
+  }
+  if (input.parentPolicyId && !data.parentPolicyId) {
+    throw new Error("Polis induk tidak ditemukan di database.")
+  }
+  if (selfId && data.parentPolicyId === selfId) {
+    throw new Error("Polis tidak bisa menjadi induk dirinya sendiri.")
+  }
+  const duplicate = await tx.policy.findUnique({
+    where: { policyNo: data.policyNo },
+    select: { id: true },
+  })
+  if (duplicate && duplicate.id !== selfId) {
+    throw new Error(`No. polis ${data.policyNo} sudah terdaftar.`)
+  }
+  return data
+}
+
+async function writeInsurers(tx: Tx, policyId: string, input: PolicyInput) {
+  const rows: SecurityPanelRow[] = input.insurers.length
+    ? input.insurers
+    : [{ id: "", insurer: input.insurer, share: 100, role: "As Leader" }]
+  const roles = await tx.lookupValue.findMany({
+    where: { lookupType: "security_role" },
+    select: { id: true, code: true },
+  })
+  const roleIds = new Map(roles.map((r) => [r.code, r.id]))
+
+  await tx.policyInsurer.deleteMany({ where: { policyId } })
+  for (const row of rows) {
+    const positionId = roleIds.get(row.role === "As Leader" ? "leader" : "member")
+    if (!positionId) throw new Error("Lookup security_role belum di-seed.")
+    await tx.policyInsurer.create({
+      data: {
+        policyId,
+        insurerId: await resolveInsurerId(tx, row.insurer),
+        sharePct: row.share,
+        positionId,
+      },
+    })
+  }
+}
+
+async function readPolicy(tx: Tx, id: string) {
+  return toPolicyRecord(
+    await tx.policy.findUniqueOrThrow({ where: { id }, include: policyInclude })
+  )
+}
+
 export async function listPolicies(): Promise<PolicyRecord[]> {
-  const records = await prisma.policy.findMany({
-    include: policyIncludeRelations,
+  await seedInitialPoliciesIfEmpty()
+  const rows = await prisma.policy.findMany({
+    include: policyInclude,
     orderBy: { expiryDate: "desc" },
   })
-
-  return records.map(toPolicyRecord)
+  return rows.map(toPolicyRecord)
 }
 
 export async function getPolicyById(id: string): Promise<PolicyRecord | null> {
-  const record = await prisma.policy.findUnique({
-    where: { id },
-    include: policyIncludeRelations,
-  })
-
-  return record ? toPolicyRecord(record) : null
+  if (!UUID_RE.test(id)) return null
+  const row = await prisma.policy.findUnique({ where: { id }, include: policyInclude })
+  return row ? toPolicyRecord(row) : null
 }
 
-export async function getPolicyByNo(policyNo: string): Promise<PolicyRecord | null> {
-  const record = await prisma.policy.findUnique({
-    where: { policyNo },
-    include: policyIncludeRelations,
+export async function createPolicy(input: PolicyInput, userId: string): Promise<PolicyRecord> {
+  return prisma.$transaction(async (tx) => {
+    const { id } = await tx.policy.create({
+      data: await checkedPolicyData(tx, input),
+      select: { id: true },
+    })
+    await writeInsurers(tx, id, input)
+    const record = await readPolicy(tx, id)
+    await recordAudit(tx, {
+      userId,
+      entity: "policies",
+      entityId: id,
+      action: "Create",
+      before: null,
+      after: auditSnapshot(record),
+    })
+    return record
   })
-
-  return record ? toPolicyRecord(record) : null
-}
-
-export async function createPolicy(
-  input: PolicyInput,
-  userId: string
-): Promise<PolicyRecord> {
-  const cobId = await resolveCobId(input.cob)
-  const policyTypeId = await resolvePolicyTypeId(input.type)
-  const coverTypeId = input.coverTypeId || (input.coverType ? await resolveCoverTypeId(input.coverType) : null)
-
-  const record = await prisma.policy.create({
-    data: {
-      policyNo: input.policyNo,
-      clientId: input.clientId,
-      placingSlipId: input.placingSlipId ?? undefined,
-      parentPolicyId: input.parentPolicyId ?? undefined,
-      insuredName: input.insuredName,
-      cobId,
-      coverTypeId: coverTypeId ?? undefined,
-      inceptionDate: new Date(input.inceptionDate),
-      expiryDate: new Date(input.expiryDate),
-      currencyCode: input.currency,
-      sumInsured: input.sumInsured,
-      premium: input.premium,
-      brokeragePct: input.brokeragePct,
-      policyTypeId,
-      riskLocation: input.riskLocation ?? undefined,
-    },
-    include: policyIncludeRelations,
-  })
-
-  await recordAudit(prisma, {
-    userId,
-    entity: "policies",
-    entityId: record.id,
-    action: "Create",
-    before: null,
-    after: {
-      policyNo: record.policyNo,
-      insuredName: record.insuredName,
-    },
-  })
-
-  return toPolicyRecord(record)
 }
 
 export async function updatePolicy(
@@ -235,220 +283,93 @@ export async function updatePolicy(
   input: PolicyInput,
   userId: string
 ): Promise<PolicyRecord> {
-  const existing = await prisma.policy.findUnique({ where: { id } })
-  if (!existing) {
-    throw new Error(`Policy dengan ID ${id} tidak ditemukan.`)
-  }
-
-  const cobId = await resolveCobId(input.cob)
-  const policyTypeId = await resolvePolicyTypeId(input.type)
-  const coverTypeId = input.coverTypeId || (input.coverType ? await resolveCoverTypeId(input.coverType) : null)
-
-  const record = await prisma.policy.update({
-    where: { id },
-    data: {
-      policyNo: input.policyNo,
-      clientId: input.clientId,
-      placingSlipId: input.placingSlipId ?? undefined,
-      parentPolicyId: input.parentPolicyId ?? undefined,
-      insuredName: input.insuredName,
-      cobId,
-      coverTypeId: coverTypeId ?? undefined,
-      inceptionDate: new Date(input.inceptionDate),
-      expiryDate: new Date(input.expiryDate),
-      currencyCode: input.currency,
-      sumInsured: input.sumInsured,
-      premium: input.premium,
-      brokeragePct: input.brokeragePct,
-      policyTypeId,
-      riskLocation: input.riskLocation ?? undefined,
-    },
-    include: policyIncludeRelations,
-  })
-
-  await recordAudit(prisma, {
-    userId,
-    entity: "policies",
-    entityId: id,
-    action: "Update",
-    before: {
-      policyNo: existing.policyNo,
-      insuredName: existing.insuredName,
-    },
-    after: {
-      policyNo: record.policyNo,
-      insuredName: record.insuredName,
-    },
-  })
-
-  return toPolicyRecord(record)
-}
-
-export async function updatePolicyInsurers(
-  id: string,
-  insurers: SecurityPanelRow[],
-  userId: string
-): Promise<PolicyRecord> {
-  const existing = await prisma.policy.findUnique({
-    where: { id },
-    include: { insurers: { include: { insurer: { select: { name: true } }, position: { select: { code: true } } } } },
-  })
-  if (!existing) {
-    throw new Error(`Policy dengan ID ${id} tidak ditemukan.`)
-  }
-
-  await prisma.policyInsurer.deleteMany({ where: { policyId: id } })
-
-  for (const insurer of insurers) {
-    await prisma.policyInsurer.create({
-      data: {
-        policyId: id,
-        insurerId: insurer.id,
-        sharePct: insurer.share,
-        positionId: insurer.role === "As Leader" ? "leader" : "member",
-      },
+  return prisma.$transaction(async (tx) => {
+    const before = await readPolicy(tx, id)
+    await tx.policy.update({ where: { id }, data: await checkedPolicyData(tx, input, id) })
+    await writeInsurers(tx, id, input)
+    const record = await readPolicy(tx, id)
+    await recordAudit(tx, {
+      userId,
+      entity: "policies",
+      entityId: id,
+      action: "Update",
+      before: auditSnapshot(before),
+      after: auditSnapshot(record),
     })
-  }
-
-  const record = await prisma.policy.findUnique({
-    where: { id },
-    include: policyIncludeRelations,
+    return record
   })
-
-  if (!record) {
-    throw new Error(`Policy dengan ID ${id} tidak ditemukan setelah update.`)
-  }
-
-  await recordAudit(prisma, {
-    userId,
-    entity: "policies",
-    entityId: id,
-    action: "Update",
-    before: { insurers: existing.insurers },
-    after: { insurers: insurers },
-  })
-
-  return toPolicyRecord(record)
 }
 
 export async function deletePolicy(id: string, userId: string): Promise<void> {
-  const existing = await prisma.policy.findUnique({ where: { id } })
-  if (!existing) {
-    throw new Error(`Policy dengan ID ${id} tidak ditemukan.`)
-  }
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.policy.findUnique({
+      where: { id },
+      include: {
+        ...policyInclude,
+        _count: { select: { claims: true, debitNotes: true, childPolicies: true } },
+      },
+    })
+    if (!existing) throw new Error("Polis tidak ditemukan.")
+    const { claims, debitNotes, childPolicies } = existing._count
+    if (claims > 0) throw new Error("Polis sudah memiliki klaim dan tidak dapat dihapus.")
+    if (debitNotes > 0) throw new Error("Polis sudah memiliki debit note dan tidak dapat dihapus.")
+    if (childPolicies > 0) {
+      throw new Error("Polis masih menjadi induk renewal, endorsement, atau pembatalan.")
+    }
 
-  const claimCount = await prisma.claim.count({ where: { policyId: id } })
-  if (claimCount > 0) {
-    throw new Error("Policy sudah memiliki klaim dan tidak dapat dihapus.")
-  }
-
-  const debitNoteCount = await prisma.debitNote.count({ where: { policyId: id } })
-  if (debitNoteCount > 0) {
-    throw new Error("Policy sudah memiliki debit note dan tidak dapat dihapus.")
-  }
-
-  await prisma.policy.delete({ where: { id } })
-
-  await recordAudit(prisma, {
-    userId,
-    entity: "policies",
-    entityId: id,
-    action: "Delete",
-    before: {
-      policyNo: existing.policyNo,
-      insuredName: existing.insuredName,
-    },
-    after: null,
+    await tx.policy.delete({ where: { id } })
+    await recordAudit(tx, {
+      userId,
+      entity: "policies",
+      entityId: id,
+      action: "Delete",
+      before: auditSnapshot(toPolicyRecord(existing)),
+      after: null,
+    })
   })
 }
 
 export async function seedInitialPoliciesIfEmpty(): Promise<number> {
-  const count = await prisma.policy.count()
-  if (count > 0) return 0
-
-  const cob = await prisma.classOfBusiness.findFirst({ where: { name: "Property" } })
-  if (!cob) return 0
-
-  const policyTypes = await prisma.lookupValue.findMany({
-    where: { lookupType: "policy_type" },
-    select: { id: true, code: true },
+  if ((await prisma.policy.count()) > 0) return 0
+  await seedInitialClientsIfEmpty()
+  const uploader = await prisma.user.findFirst({
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
   })
 
-  const typeMap = Object.fromEntries(policyTypes.map((t) => [t.code, t.id]))
-
-  const coverTypes = await prisma.coverType.findMany({
-    select: { id: true, name: true },
-  })
-
-  const coverTypeMap = Object.fromEntries(coverTypes.map((c) => [c.name, c.id]))
-
-  const seedData = [
-    {
-      policyNo: "PAR/2025/JKT/0871",
-      insuredName: "PT Graha Sentosa Properti",
-      insurer: "PT Asuransi Sinar Mas",
-      coverType: "Property All Risks (PAR)",
-      inceptionDate: "2025-09-01",
-      expiryDate: "2026-09-01",
-      currency: "IDR",
-      sumInsured: 365_500_000_000,
-      premium: 438_418_000,
-      brokeragePct: 12.5,
-      type: "Renewal",
-      riskLocation: "Grand Sentosa Mall, Jl. Jenderal Sudirman Kav. 52-53, Jakarta Selatan",
-      policyTypeId: typeMap["Renewal"],
-      coverTypeId: coverTypeMap["Property All Risks (PAR)"],
-    },
-    {
-      policyNo: "MV/FLT/2026/0088",
-      insuredName: "PT Nusantara Fleet Services",
-      insurer: "PT Asuransi Astra Buana",
-      coverType: "Motor Vehicle",
-      inceptionDate: "2026-01-15",
-      expiryDate: "2027-01-15",
-      currency: "IDR",
-      sumInsured: 125_000_000,
-      premium: 11_250_000,
-      brokeragePct: 25,
-      type: "Baru",
-      riskLocation: "Jl. Pulau Seputih Raya No. 12, Jakarta Selatan",
-      policyTypeId: typeMap["Baru"],
-      coverTypeId: coverTypeMap["Motor Vehicle"],
-    },
-  ]
-
+  // Parents first so endorsements can resolve parentPolicyId.
+  const ordered = [...MOCK_POLICIES].sort(
+    (a, b) => Number(a.parentPolicyId != null) - Number(b.parentPolicyId != null)
+  )
   let created = 0
-  for (const item of seedData) {
-    const record = await prisma.policy.create({
-      data: {
-        policyNo: item.policyNo,
-        insuredName: item.insuredName,
-        cobId: cob.id,
-        coverTypeId: item.coverTypeId,
-        inceptionDate: new Date(item.inceptionDate),
-        expiryDate: new Date(item.expiryDate),
-        currencyCode: item.currency,
-        sumInsured: item.sumInsured,
-        premium: item.premium,
-        brokeragePct: item.brokeragePct,
-        policyTypeId: item.policyTypeId,
-        riskLocation: item.riskLocation,
-      },
-    })
-
-    for (const insurer of [{ id: "ins-001", share: 100, role: "As Leader" }]) {
-      await prisma.policyInsurer.create({
-        data: {
-          policyId: record.id,
-          insurerId: insurer.id,
-          sharePct: insurer.share,
-          positionId: insurer.role === "As Leader" ? "leader" : "member",
-        },
+  for (const mock of ordered) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        const { id } = await tx.policy.create({
+          data: await policyData(tx, mock),
+          select: { id: true },
+        })
+        await writeInsurers(tx, id, mock)
+        if (uploader) {
+          for (const file of mock.files) {
+            await tx.policyFile.create({
+              data: {
+                policyId: id,
+                version: file.version,
+                fileName: file.fileName,
+                // Seed rows have no stored object; the path mirrors the file name.
+                filePath: file.fileName,
+                uploadedBy: uploader.id,
+                uploadedAt: new Date(file.uploadedAt),
+              },
+            })
+          }
+        }
       })
+      created++
+    } catch (err) {
+      console.error(`[seedInitialPoliciesIfEmpty] Failed seeding ${mock.policyNo}`, err)
     }
-
-    created++
   }
-
   return created
 }
