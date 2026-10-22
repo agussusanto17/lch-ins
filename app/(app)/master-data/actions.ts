@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { unstable_rethrow } from "next/navigation"
 import { z } from "zod"
 
 import type {
@@ -12,6 +13,11 @@ import type {
   LookupValue,
   WordingForm,
 } from "@/lib/generated/prisma/client"
+import {
+  createCobOjkClass,
+  updateCobOjkClass,
+  type CobOjkClassRecord,
+} from "@/lib/server/cob-ojk-classes"
 import {
   createAdjuster,
   createBankAccount,
@@ -513,6 +519,56 @@ export async function deleteLookupValueAction(
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Gagal menghapus nilai lookup",
+    }
+  }
+}
+
+const cobOjkClassSchema = z.object({
+  name: z.string().trim().min(2, "Nama klasifikasi OJK minimal 2 karakter").max(150),
+  isActive: z.boolean(),
+})
+
+const cobOjkClassIdSchema = z.uuid("ID klasifikasi OJK tidak valid")
+
+export async function createCobOjkClassAction(
+  data: z.infer<typeof cobOjkClassSchema>
+): Promise<ActionResponse<CobOjkClassRecord>> {
+  try {
+    const session = await requireManage("/master-data")
+    const parsed = cobOjkClassSchema.safeParse(data)
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message }
+    const res = await createCobOjkClass(parsed.data.name, session.id)
+    revalidatePath("/master-data")
+    revalidatePath("/policies")
+    return { ok: true, data: res }
+  } catch (err) {
+    unstable_rethrow(err)
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menambah klasifikasi OJK",
+    }
+  }
+}
+
+export async function updateCobOjkClassAction(
+  id: string,
+  data: z.infer<typeof cobOjkClassSchema>
+): Promise<ActionResponse<CobOjkClassRecord>> {
+  try {
+    const session = await requireManage("/master-data")
+    const classId = cobOjkClassIdSchema.safeParse(id)
+    if (!classId.success) return { ok: false, error: "ID klasifikasi OJK tidak valid" }
+    const parsed = cobOjkClassSchema.safeParse(data)
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message }
+    const res = await updateCobOjkClass(classId.data, parsed.data, session.id)
+    revalidatePath("/master-data")
+    revalidatePath("/policies")
+    return { ok: true, data: res }
+  } catch (err) {
+    unstable_rethrow(err)
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal memperbarui klasifikasi OJK",
     }
   }
 }

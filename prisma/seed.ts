@@ -244,6 +244,14 @@ const LOOKUPS: {
     ],
   },
   {
+    type: "placement_location",
+    system: false,
+    values: [
+      ["domestic", "Dalam Negeri"],
+      ["overseas", "Luar Negeri"],
+    ],
+  },
+  {
     // Status siklus hidup klaim, sesuai koreksi Harry 5 Okt 2026. Tahapan
     // dokumennya dipisah ke lookup claim_stage di bawah.
     type: "claim_status",

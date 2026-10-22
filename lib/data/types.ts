@@ -226,6 +226,11 @@ export interface Policy {
   brokeragePct: number
   type: PolicyType
   riskLocation: string
+  /** Nomor urut endorsement pada polis induk, ditentukan server. */
+  endorsementSeq?: number | null
+  cobOjkClassId?: string | null
+  placementLocationId?: string | null
+  groupingInsured?: string
   files: PolicyFile[]
 }
 

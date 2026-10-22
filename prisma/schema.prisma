@@ -105,22 +105,22 @@ enum CoverageType {
 // ---------------------------------------------------------------------------
 
 model User {
-  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String
-  email         String  @unique
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  email              String   @unique
   /// Diisi Better Auth. LCH tidak memverifikasi email, jadi selalu true.
-  emailVerified Boolean @default(true) @map("email_verified")
+  emailVerified      Boolean  @default(true) @map("email_verified")
   /// Foto profil, dipakai Better Auth. Belum dipakai LCH.
-  image         String?
+  image              String?
   /// lookup role primer (opsional / warisan untuk backward compatibility)
-  roleId        String?  @map("role_id") @db.Uuid
+  roleId             String?  @map("role_id") @db.Uuid
   /// Daftar role yang diberikan ke pengguna (multi-role)
-  roles         String[] @default([]) @map("roles")
+  roles              String[] @default([]) @map("roles")
   /// Jabatan pengguna (opsional)
-  jobTitle      String?  @map("job_title")
+  jobTitle           String?  @map("job_title")
   /// Menandai apakah pengguna wajib mengganti password pada saat login pertama
-  mustChangePassword Boolean @default(false) @map("must_change_password")
-  isActive      Boolean  @default(true) @map("is_active")
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
+  isActive           Boolean  @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -326,6 +326,7 @@ model LookupValue {
   clientDocumentTypes   ClientDocument[]    @relation("client_document_type")
   slipSecurityRoles     SlipSecurityPanel[] @relation("security_role_slip")
   policySecurityRoles   PolicyInsurer[]     @relation("security_role_policy")
+  policyPlacements      Policy[]            @relation("placement_location")
   policyTypes           Policy[]            @relation("policy_type")
   claimStatuses         Claim[]             @relation("claim_status")
   claimStages           Claim[]             @relation("claim_stage")
@@ -643,6 +644,21 @@ model WordingForm {
   slipWordingForms SlipWordingForm[]
 
   @@map("wording_forms")
+}
+
+/// Klasifikasi OJK untuk laporan produksi, contoh Rangka Kapal. Terpisah dari
+/// classes_of_business yang merupakan penggolongan internal LCH.
+model CobOjkClass {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String  @unique
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  policies Policy[]
+
+  @@map("cob_ojk_classes")
 }
 
 model Clause {
@@ -1028,38 +1044,47 @@ model SlipWordingForm {
 /// policy_type Endorsement atau Cancellation dan parent_policy_id menunjuk
 /// polis induknya. Tambahan premi bernilai positif, pengembalian premi negatif.
 model Policy {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  policyNo       String   @unique @map("policy_no")
-  placingSlipId  String?  @map("placing_slip_id") @db.Uuid
-  clientId       String?  @map("client_id") @db.Uuid
-  cobId          String   @map("cob_id") @db.Uuid
-  coverTypeId    String?  @map("cover_type_id") @db.Uuid
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  policyNo            String   @unique @map("policy_no")
+  placingSlipId       String?  @map("placing_slip_id") @db.Uuid
+  clientId            String?  @map("client_id") @db.Uuid
+  cobId               String   @map("cob_id") @db.Uuid
+  coverTypeId         String?  @map("cover_type_id") @db.Uuid
   /// Label pilihan form, misal "PAR + EQVET". Tidak semua label punya padanan di cover_types.
-  typeOfCover    String?  @map("type_of_cover")
-  insuredName    String   @map("insured_name")
-  riskLocation   String?  @map("risk_location")
-  inceptionDate  DateTime @map("inception_date") @db.Date
-  expiryDate     DateTime @map("expiry_date") @db.Date
-  currencyCode   String   @map("currency_code")
-  sumInsured     Decimal  @default(0) @map("sum_insured") @db.Decimal(18, 2)
+  typeOfCover         String?  @map("type_of_cover")
+  insuredName         String   @map("insured_name")
+  riskLocation        String?  @map("risk_location")
+  inceptionDate       DateTime @map("inception_date") @db.Date
+  expiryDate          DateTime @map("expiry_date") @db.Date
+  currencyCode        String   @map("currency_code")
+  sumInsured          Decimal  @default(0) @map("sum_insured") @db.Decimal(18, 2)
   /// Negatif untuk pengembalian premi pada pembatalan.
-  premium        Decimal  @default(0) @db.Decimal(18, 2)
-  brokeragePct   Decimal  @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
+  premium             Decimal  @default(0) @db.Decimal(18, 2)
+  brokeragePct        Decimal  @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
   /// lookup policy_type: Baru, Renewal, Endorsement, Cancellation.
-  policyTypeId   String   @map("policy_type_id") @db.Uuid
+  policyTypeId        String   @map("policy_type_id") @db.Uuid
   /// Polis induk untuk renewal, endorsement, dan pembatalan.
-  parentPolicyId String?  @map("parent_policy_id") @db.Uuid
+  parentPolicyId      String?  @map("parent_policy_id") @db.Uuid
+  /// Nomor urut endorsement pada polis induk, diisi server saat polis endorsement disimpan.
+  endorsementSeq      Int?     @map("endorsement_seq")
+  cobOjkClassId       String?  @map("cob_ojk_class_id") @db.Uuid
+  /// lookup placement_location: Dalam Negeri, Luar Negeri.
+  placementLocationId String?  @map("placement_location_id") @db.Uuid
+  /// Pengelompokan klien untuk laporan produksi.
+  groupingInsured     String?  @map("grouping_insured")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  placingSlip  PlacingSlip?    @relation(fields: [placingSlipId], references: [id])
-  client       Client?         @relation(fields: [clientId], references: [id])
-  cob          ClassOfBusiness @relation(fields: [cobId], references: [id])
-  coverType    CoverType?      @relation(fields: [coverTypeId], references: [id])
-  currency     Currency        @relation(fields: [currencyCode], references: [code])
-  policyType   LookupValue     @relation("policy_type", fields: [policyTypeId], references: [id])
-  parentPolicy Policy?         @relation("policyParent", fields: [parentPolicyId], references: [id])
+  cobOjkClass       CobOjkClass?    @relation(fields: [cobOjkClassId], references: [id])
+  placementLocation LookupValue?    @relation("placement_location", fields: [placementLocationId], references: [id])
+  placingSlip       PlacingSlip?    @relation(fields: [placingSlipId], references: [id])
+  client            Client?         @relation(fields: [clientId], references: [id])
+  cob               ClassOfBusiness @relation(fields: [cobId], references: [id])
+  coverType         CoverType?      @relation(fields: [coverTypeId], references: [id])
+  currency          Currency        @relation(fields: [currencyCode], references: [code])
+  policyType        LookupValue     @relation("policy_type", fields: [policyTypeId], references: [id])
+  parentPolicy      Policy?         @relation("policyParent", fields: [parentPolicyId], references: [id])
 
   childPolicies Policy[]        @relation("policyParent")
   insurers      PolicyInsurer[]
@@ -1067,6 +1092,7 @@ model Policy {
   claims        Claim[]
   debitNotes    DebitNote[]
 
+  @@unique([parentPolicyId, endorsementSeq])
   @@index([clientId])
   @@index([expiryDate])
   @@map("policies")
@@ -1141,9 +1167,9 @@ model Claim {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  policy   Policy      @relation(fields: [policyId], references: [id])
-  adjuster Adjuster?   @relation(fields: [adjusterId], references: [id])
-  currency Currency    @relation(fields: [currencyCode], references: [code])
+  policy   Policy       @relation(fields: [policyId], references: [id])
+  adjuster Adjuster?    @relation(fields: [adjusterId], references: [id])
+  currency Currency     @relation(fields: [currencyCode], references: [code])
   status   LookupValue  @relation("claim_status", fields: [statusId], references: [id])
   stage    LookupValue? @relation("claim_stage", fields: [stageId], references: [id])
 

@@ -1,20 +1,27 @@
 import { PageShell } from "@/components/layout/page-header"
 import { PolicyDatabase } from "@/components/policies/policy-database"
 import { listClientOptions } from "@/lib/server/clients"
-import { listPolicies } from "@/lib/server/policies"
+import { listPolicies, listPolicyFormOptions } from "@/lib/server/policies"
 import { requireAccess } from "@/lib/server/session"
 
 export const metadata = { title: "Policy Database — LCH Insurance Brokers" }
 
 export default async function PoliciesPage() {
   await requireAccess("/policies")
-  // Sequential: both seed clients on an empty database, and parallel seeds would duplicate rows.
+  // listPolicies runs first: it and listClientOptions both seed clients on an empty database.
   const policies = await listPolicies()
-  const clientOptions = await listClientOptions()
+  const [clientOptions, formOptions] = await Promise.all([
+    listClientOptions(),
+    listPolicyFormOptions(),
+  ])
 
   return (
     <PageShell>
-      <PolicyDatabase initialPolicies={policies} clientOptions={clientOptions} />
+      <PolicyDatabase
+        initialPolicies={policies}
+        clientOptions={clientOptions}
+        formOptions={formOptions}
+      />
     </PageShell>
   )
 }
