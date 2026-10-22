@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-22
 - **Branch:** `feat/erd-relational-tables`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #35
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
