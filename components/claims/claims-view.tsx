@@ -1,8 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { CircleCheck, Clock, Eye, Pencil, Plus, Receipt } from "lucide-react"
+import { CircleCheck, Clock, Eye, Pencil, Plus, Receipt, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
+import { deleteClaimAction } from "@/app/(app)/claims/actions"
+import { ClaimDetailSheet } from "@/components/claims/claim-detail-sheet"
 import { ClaimForm } from "@/components/claims/claim-form"
 import { PageHeader } from "@/components/layout/page-header"
 import { useToday } from "@/components/layout/today-provider"
@@ -12,7 +15,6 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
-import { ClaimDetailSheet } from "@/components/claims/claim-detail-sheet"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -37,82 +39,123 @@ import {
   CLAIM_STATUSES,
   CLASSES_OF_BUSINESS,
   isOpenClaim,
-  type Claim,
 } from "@/lib/data"
 import type { ExportSpec } from "@/lib/export"
 import { compactMoney, dateShort, money } from "@/lib/format"
-import { useCollection } from "@/lib/store"
+import type { ClaimFormOptions, ClaimRecord } from "@/lib/server/claims"
+import { store } from "@/lib/store"
 
 const STATUS_ITEMS = [
   { label: "Semua status", value: "all" },
   ...CLAIM_STATUSES.map((s) => ({ label: s, value: s })),
 ]
-/** Tahapan dokumen berjalan sendiri, jadi filternya terpisah dari status. */
+
 const STAGE_ITEMS = [
   { label: "Semua tahapan", value: "all" },
   ...CLAIM_STAGES.map((s) => ({ label: s, value: s })),
 ]
+
 const COB_ITEMS = [
   { label: "Semua COB", value: "all" },
   ...CLASSES_OF_BUSINESS.map((c) => ({ label: c, value: c })),
 ]
 
-export function ClaimsView() {
+export interface ClaimsViewProps {
+  initialClaims: ClaimRecord[]
+  formOptions: ClaimFormOptions
+}
+
+export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
+  const [items, setItems] = React.useState<ClaimRecord[]>(initialClaims)
+  const [prevInitial, setPrevInitial] = React.useState(initialClaims)
+  if (prevInitial !== initialClaims) {
+    setPrevInitial(initialClaims)
+    setItems(initialClaims)
+  }
+
+  React.useEffect(() => {
+    for (const c of initialClaims) {
+      store.upsert("claims", c)
+    }
+  }, [initialClaims])
+
   const today = useToday()
-  const claims = useCollection("claims")
-  const [query, setQuery] = React.useState("")
-  const [status, setStatus] = React.useState("all")
-  const [stage, setStage] = React.useState("all")
-  const [cob, setCob] = React.useState("all")
+  const [search, setSearch] = React.useState("")
+  const [status, setStatus] = React.useState<string>("all")
+  const [stage, setStage] = React.useState<string>("all")
+  const [cob, setCob] = React.useState<string>("all")
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [form, setForm] = React.useState<{
     key: number
-    claim: Claim | null
+    claim: ClaimRecord | null
   } | null>(null)
-  const selected = claims.find((c) => c.id === selectedId) ?? null
-  const year = today.slice(0, 4)
 
-  const rows = React.useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return claims.filter((c) => {
-      if (status !== "all" && c.status !== status) return false
-      if (stage !== "all" && c.stage !== stage) return false
-      if (cob !== "all" && c.cob !== cob) return false
-      if (!q) return true
-      return [
-        c.claimNo,
-        c.insuredName,
-        c.policyNo,
-        c.insurer,
-        c.lossDescription,
-      ].some((v) => v.toLowerCase().includes(q))
-    })
-  }, [claims, query, status, stage, cob])
+  const [, startTransition] = React.useTransition()
 
-  const {
-    page,
-    pageSize,
-    totalItems,
-    paginatedItems: paginatedRows,
-    setPage,
-    setPageSize,
-  } = usePagination(rows, 10)
+  const openList = items.filter(isOpenClaim)
+  const settledList = items.filter((c) => c.status === "Settled")
+  const openTotalIdr = openList.reduce(
+    (sum, c) => sum + toIdr(c.claimedAmount || c.estimatedLoss, c.currency),
+    0
+  )
+  const settledTotalIdr = settledList.reduce(
+    (sum, c) => sum + toIdr(c.paidAmount, c.currency),
+    0
+  )
+  const totalClaimsIdr = items.reduce(
+    (sum, c) => sum + toIdr(c.claimedAmount || c.estimatedLoss, c.currency),
+    0
+  )
 
-  const openCount = claims.filter(isOpenClaim).length
-  const paidValue = claims
-    .filter((c) => c.lossDate.startsWith(year))
-    .reduce((a, c) => a + toIdr(c.paidAmount, c.currency), 0)
-  const outstandingValue = claims
-    .filter(isOpenClaim)
-    .reduce(
-      (a, c) => a + toIdr(c.claimedAmount || c.estimatedLoss, c.currency),
-      0
+  const filtered = items.filter((c) => {
+    if (status !== "all" && c.status !== status) return false
+    if (stage !== "all" && c.stage !== stage) return false
+    if (cob !== "all" && c.cob !== cob) return false
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      c.claimNo.toLowerCase().includes(q) ||
+      c.insuredName.toLowerCase().includes(q) ||
+      (c.policyNo || "").toLowerCase().includes(q) ||
+      c.cob.toLowerCase().includes(q) ||
+      (c.location || "").toLowerCase().includes(q) ||
+      (c.lossDescription || "").toLowerCase().includes(q)
     )
+  })
 
-  const exportSpec: ExportSpec<Claim> = {
-    filename: "klaim-lch",
+  const { page, pageSize, totalItems, paginatedItems, setPage, setPageSize } =
+    usePagination(filtered, 10)
+
+  const selected = items.find((c) => c.id === selectedId) ?? null
+
+  function handleDelete(claim: ClaimRecord) {
+    startTransition(async () => {
+      const res = await deleteClaimAction(claim.id)
+      if (!res.ok) {
+        toast.error(res.error ?? "Gagal menghapus klaim")
+        return
+      }
+      setItems((prev) => prev.filter((c) => c.id !== claim.id))
+      store.replace(
+        "claims",
+        store.all("claims").filter((c) => c.id !== claim.id)
+      )
+      toast.success(`Klaim "${claim.claimNo}" berhasil dihapus`)
+    })
+  }
+
+  function handleSaved(saved: ClaimRecord) {
+    setItems((prev) =>
+      prev.some((c) => c.id === saved.id)
+        ? prev.map((c) => (c.id === saved.id ? saved : c))
+        : [saved, ...prev]
+    )
+  }
+
+  const exportSpec: ExportSpec<ClaimRecord> = {
+    filename: `lch-klaim-${today}`,
     sheet: "Klaim",
-    rows,
+    rows: filtered,
     columns: [
       { header: "No. Klaim", value: (c) => c.claimNo },
       { header: "No. Polis", value: (c) => c.policyNo },
@@ -128,75 +171,70 @@ export function ClaimsView() {
       },
       { header: "Tgl SPK/SPGR", value: (c) => c.spkDate, type: "date" },
       { header: "Mata Uang", value: (c) => c.currency },
-      { header: "Estimasi", value: (c) => c.estimatedLoss, type: "money" },
-      { header: "Diajukan", value: (c) => c.claimedAmount, type: "money" },
-      { header: "Dibayar", value: (c) => c.paidAmount, type: "money" },
-      { header: "Adjuster", value: (c) => c.adjuster },
+      { header: "Estimasi Kerugian", value: (c) => c.estimatedLoss, type: "money" },
+      { header: "Nilai Klaim", value: (c) => c.claimedAmount, type: "money" },
+      { header: "Nilai Dibayar", value: (c) => c.paidAmount, type: "money" },
       { header: "Status", value: (c) => c.status },
-      {
-        header: "Deskripsi Kerugian",
-        value: (c) => c.lossDescription,
-        width: 48,
-      },
+      { header: "Tahapan", value: (c) => c.stage },
+      { header: "Adjuster", value: (c) => c.adjuster },
+      { header: "Lokasi", value: (c) => c.location },
+      { header: "Deskripsi", value: (c) => c.lossDescription, width: 48 },
     ],
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <>
       <PageHeader
-        title="Klaim"
-        description="Manajemen klaim asuransi"
+        title="Klaim Asuransi"
+        description="Pencatatan kerugian, monitoring berkas dokumen, dan penyelesaian klaim tertanggung."
         actions={
           <Button
+            size="sm"
             onClick={() =>
               setForm((prev) => ({ key: (prev?.key ?? 0) + 1, claim: null }))
             }
           >
-            <Plus data-icon="inline-start" />
-            Input Klaim Baru
+            <Plus className="size-4" />
+            Catat Klaim Baru
           </Button>
         }
       />
-      <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+      <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatCard
-            label="Total Klaim"
-            value={claims.length}
-            sub="seluruh klaim tercatat"
-            icon={Receipt}
-          />
-          <StatCard
-            label="Klaim Terbuka"
-            value={openCount}
-            sub="belum selesai"
+            label="Klaim Berjalan (Outstanding)"
+            value={openList.length}
+            sub={`${compactMoney(openTotalIdr)} potensi beban`}
             icon={Clock}
           />
           <StatCard
-            label="Outstanding"
-            value={`Rp ${compactMoney(outstandingValue)}`}
-            sub="nilai klaim berjalan"
-            icon={Clock}
-          />
-          <StatCard
-            label="Sudah Dibayar"
-            value={`Rp ${compactMoney(paidValue)}`}
-            sub={`dibayar, kejadian ${year}`}
+            label="Klaim Selesai (Settled)"
+            value={settledList.length}
+            sub={`${compactMoney(settledTotalIdr)} terbayar`}
             icon={CircleCheck}
+          />
+          <StatCard
+            label="Total Klaim Tercatat"
+            value={items.length}
+            sub={`${compactMoney(totalClaimsIdr)} total pengajuan`}
+            icon={Receipt}
           />
         </div>
 
-        <div className="no-print flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <SearchInput
-            value={query}
-            onValueChange={setQuery}
-            placeholder="Cari no. klaim, tertanggung, polis…"
+            placeholder="Cari no. klaim, polis, tertanggung..."
+            value={search}
+            onValueChange={setSearch}
+            className="w-full sm:w-64"
           />
           <Select
             items={COB_ITEMS}
             value={cob}
             onValueChange={(v) => setCob(v as string)}
           >
-            <SelectTrigger size="sm" className="w-42">
+            <SelectTrigger size="sm" className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -249,28 +287,33 @@ export function ClaimsView() {
         </div>
 
         <Card className="gap-0 overflow-hidden py-0">
-          <Table className="min-w-[720px]">
+          <Table className="min-w-200">
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className={ACTION_COL_CLASS}>
-                  <span className="sr-only">Aksi</span>
-                </TableHead>
+              <TableRow className="bg-muted/50 text-xs">
+                <TableHead className={ACTION_COL_CLASS}>Aksi</TableHead>
                 <TableHead>No. Klaim</TableHead>
-                <TableHead>Tertanggung</TableHead>
+                <TableHead>Tertanggung & Polis</TableHead>
                 <TableHead>COB</TableHead>
                 <TableHead>Tgl Kejadian</TableHead>
                 <TableHead className="text-right">Nilai Klaim</TableHead>
-                <TableHead className="pr-4">Status</TableHead>
+                <TableHead className="pr-4">Status & Tahapan</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.length === 0 ? (
-                <TableEmpty colSpan={7} message="Tidak ada klaim yang cocok" />
+              {paginatedItems.length === 0 ? (
+                <TableEmpty
+                  colSpan={7}
+                  message={
+                    search || status !== "all" || stage !== "all" || cob !== "all"
+                      ? "Tidak ada klaim yang cocok dengan filter yang dipilih."
+                      : "Belum ada klaim yang tercatat."
+                  }
+                />
               ) : (
-                paginatedRows.map((c) => (
+                paginatedItems.map((c: ClaimRecord) => (
                   <TableRow
                     key={c.id}
-                    className="cursor-pointer"
+                    className="cursor-pointer text-xs hover:bg-muted/40"
                     onClick={() => setSelectedId(c.id)}
                   >
                     <TableCell
@@ -280,12 +323,12 @@ export function ClaimsView() {
                       <RowActions
                         actions={[
                           {
-                            label: "Lihat detail",
+                            label: "Detail",
                             icon: Eye,
                             onSelect: () => setSelectedId(c.id),
                           },
                           {
-                            label: "Edit klaim",
+                            label: "Edit",
                             icon: Pencil,
                             onSelect: () =>
                               setForm((prev) => ({
@@ -293,10 +336,21 @@ export function ClaimsView() {
                                 claim: c,
                               })),
                           },
+                          {
+                            label: "Hapus",
+                            icon: Trash2,
+                            destructive: true,
+                            confirm: {
+                              title: `Hapus klaim ${c.claimNo}?`,
+                              description: `Data klaim untuk ${c.insuredName} akan dihapus secara permanen dari basis data.`,
+                              actionLabel: "Hapus",
+                            },
+                            onSelect: () => handleDelete(c),
+                          },
                         ]}
                       />
                     </TableCell>
-                    <TableCell className="tabular font-medium">
+                    <TableCell className="tabular font-medium text-foreground whitespace-nowrap">
                       {c.claimNo}
                     </TableCell>
                     <TableCell className="max-w-55">
@@ -337,8 +391,7 @@ export function ClaimsView() {
         />
 
         <p className="text-xs text-muted-foreground">
-          Klik baris untuk membuka detail lengkap. Klaim bernomor tidak dihapus,
-          cukup ditutup dengan status Close atau Rejected.
+          Klik baris untuk membuka detail lengkap. Klaim dapat diubah atau ditutup statusnya.
         </p>
 
         <ClaimDetailSheet
@@ -349,7 +402,8 @@ export function ClaimsView() {
           }}
           onEdit={(c) => {
             setSelectedId(null)
-            setForm((prev) => ({ key: (prev?.key ?? 0) + 1, claim: c }))
+            const matched = items.find((it) => it.id === c.id)
+            setForm((prev) => ({ key: (prev?.key ?? 0) + 1, claim: matched ?? null }))
           }}
         />
         {form ? (
@@ -360,9 +414,11 @@ export function ClaimsView() {
               if (!open) setForm(null)
             }}
             claim={form.claim}
+            formOptions={formOptions}
+            onSaved={handleSaved}
           />
         ) : null}
       </div>
-    </div>
+    </>
   )
 }
