@@ -268,20 +268,24 @@ export interface ResolvedClause {
 /**
  * Klausula satu slip: isi master, lalu ditimpa override slip bila ada.
  * Dipakai form maupun dokumen cetak supaya hasilnya selalu sama.
+ * Mendukung master pool dinamis dari database PostgreSQL dan fallback ke CLAUSES.
  */
-export function resolveSlipClauses(slip: {
-  clauseIds: string[]
-  clauseOverrides?: Record<string, ClauseOverride>
-}): ResolvedClause[] {
+export function resolveSlipClauses(
+  slip: {
+    clauseIds: string[]
+    clauseOverrides?: Record<string, ClauseOverride>
+  },
+  pool?: { id: string; title: string; wording: string }[]
+): ResolvedClause[] {
   return slip.clauseIds.flatMap((id) => {
-    const master = CLAUSES.find((c) => c.id === id)
-    if (!master) return []
+    const master = pool?.find((c) => c.id === id) ?? CLAUSES.find((c) => c.id === id)
     const override = slip.clauseOverrides?.[id]
+    if (!master && !override) return []
     return [
       {
         id,
-        title: override?.title ?? master.title,
-        wording: wordingHtml(override?.wording ?? master.wording),
+        title: override?.title ?? master?.title ?? id,
+        wording: wordingHtml(override?.wording ?? master?.wording ?? ""),
         overridden: Boolean(override),
       },
     ]

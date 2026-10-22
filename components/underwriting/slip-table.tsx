@@ -41,6 +41,12 @@ import {
 import type { ExportSpec } from "@/lib/export"
 import { dateShort, money } from "@/lib/format"
 import { newId, store, useCollection } from "@/lib/store"
+import type { PlacingSlipRecord } from "@/lib/server/placing-slips"
+import {
+  deletePlacingSlipAction,
+  duplicatePlacingSlipAction,
+  togglePlacingSlipStatusAction,
+} from "@/app/(app)/underwriting/actions"
 
 const STATUS_ITEMS = [
   { label: "Semua status", value: "all" },
@@ -84,26 +90,35 @@ function actionsFor(slip: PlacingSlip, today: string): RowAction[] {
   actions.push({
     label: "Duplikat jadi draft baru",
     icon: Copy,
-    onSelect: () => {
-      // Salinan selalu mulai dari draft tanpa nomor dan tanpa data pasca-release.
-      const copy: PlacingSlip = {
-        ...slip,
-        id: newId("s"),
-        slipNo: null,
-        seq: 0,
-        status: "Draft",
-        sppaId: null,
-        subjectivity: undefined,
-        securityPanel: undefined,
-        closingInstruction: undefined,
-        coverNoteRemarks: undefined,
-        createdAt: today,
-        updatedAt: today,
+    onSelect: async () => {
+      // Duplikasi via Server Action ke database
+      const res = await duplicatePlacingSlipAction(slip.id)
+      if (res.ok && res.data) {
+        store.upsert("slips", res.data)
+        toast.success("Slip diduplikasi", {
+          description: `Draft baru untuk ${res.data.insuredName}`,
+        })
+      } else {
+        // Fallback local memory jika id belum sync ke DB
+        const copy: PlacingSlip = {
+          ...slip,
+          id: newId("s"),
+          slipNo: null,
+          seq: 0,
+          status: "Draft",
+          sppaId: null,
+          subjectivity: undefined,
+          securityPanel: undefined,
+          closingInstruction: undefined,
+          coverNoteRemarks: undefined,
+          createdAt: today,
+          updatedAt: today,
+        }
+        store.insert("slips", copy)
+        toast.success("Slip diduplikasi", {
+          description: `Draft baru untuk ${slip.insuredName}`,
+        })
       }
-      store.insert("slips", copy)
-      toast.success("Slip diduplikasi", {
-        description: `Draft baru untuk ${slip.insuredName}`,
-      })
     },
   })
   if (slip.status === "Draft") {
@@ -116,9 +131,14 @@ function actionsFor(slip: PlacingSlip, today: string): RowAction[] {
         description: `Draft untuk ${slip.insuredName || "tertanggung"} belum bernomor, jadi dihapus permanen.`,
         actionLabel: "Hapus",
       },
-      onSelect: () => {
+      onSelect: async () => {
         store.remove("slips", slip.id)
-        toast.success("Draft slip dihapus")
+        const res = await deletePlacingSlipAction(slip.id)
+        if (!res.ok && res.error) {
+          toast.error("Gagal menghapus dari database", { description: res.error })
+        } else {
+          toast.success("Draft slip dihapus")
+        }
       },
     })
   } else if (slip.status === "Released" || slip.status === "Quoted") {
@@ -132,22 +152,40 @@ function actionsFor(slip: PlacingSlip, today: string): RowAction[] {
           "Slip bernomor tidak dihapus supaya nomor tidak bolong. Statusnya menjadi Dibatalkan.",
         actionLabel: "Batalkan slip",
       },
-      onSelect: () => {
+      onSelect: async () => {
         store.update("slips", slip.id, {
           status: "Cancelled",
           updatedAt: today,
         })
-        toast.success("Slip dibatalkan", {
-          description: slip.slipNo ?? undefined,
-        })
+        const res = await togglePlacingSlipStatusAction(slip.id, "Cancelled")
+        if (!res.ok && res.error) {
+          toast.error("Gagal memperbarui status di database", { description: res.error })
+        } else {
+          toast.success("Slip dibatalkan", {
+            description: slip.slipNo ?? undefined,
+          })
+        }
       },
     })
   }
   return actions
 }
 
-export function SlipTable() {
+export function SlipTable({
+  initialSlips,
+}: {
+  initialSlips?: PlacingSlipRecord[]
+}) {
   const today = useToday()
+
+  React.useEffect(() => {
+    if (initialSlips && initialSlips.length > 0) {
+      for (const s of initialSlips) {
+        store.upsert("slips", s)
+      }
+    }
+  }, [initialSlips])
+
   const slips = useCollection("slips")
   const [query, setQuery] = React.useState("")
   const [status, setStatus] = React.useState("all")
@@ -251,7 +289,7 @@ export function SlipTable() {
       </div>
 
       <Card className="gap-0 overflow-hidden py-0">
-        <Table className="min-w-[840px]">
+        <Table className="min-w-210">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className={ACTION_COL_CLASS}>

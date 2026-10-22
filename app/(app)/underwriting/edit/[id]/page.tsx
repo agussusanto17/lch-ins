@@ -1,8 +1,11 @@
-import { PlacingSlipForm } from "@/components/underwriting/placing-slip-form"
-import { SLIPS, slipById } from "@/lib/data"
+import type { Metadata } from "next"
 
-export function generateStaticParams() {
-  return SLIPS.map((s) => ({ id: s.id }))
+import { PlacingSlipForm } from "@/components/underwriting/placing-slip-form"
+import { getPlacingSlipById } from "@/lib/server/placing-slips"
+import { slipById } from "@/lib/data"
+
+export const metadata: Metadata = {
+  title: "Edit Placing Slip — LCH Insurance Brokers",
 }
 
 export default async function EditSlipPage({
@@ -11,7 +14,7 @@ export default async function EditSlipPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  // Slip yang baru dibuat di sesi ini belum ada di data server, jadi form
-  // mencarinya di store sesi sebelum menyatakan tidak ditemukan.
-  return <PlacingSlipForm id={id} initial={slipById(id) ?? null} mode="edit" />
+  const slip = (await getPlacingSlipById(id)) ?? slipById(id) ?? null
+
+  return <PlacingSlipForm id={id} initial={slip} mode="edit" />
 }
