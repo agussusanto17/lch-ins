@@ -1,21 +1,9 @@
-/**
- * Claims Database Layer
- *
- * Provides PostgreSQL persistence for Claim entities with full CRUD operations,
- * relationship management, and audit logging.
- */
-
 import "server-only"
 
 import { Prisma } from "@/lib/generated/prisma/client"
-
 import type { Claim, ClaimStatus, ClaimStage } from "@/lib/data/types"
 import { prisma } from "@/lib/prisma"
 import { recordAudit } from "@/server/services/audit"
-
-// ---------------------------------------------------------------------------
-// Type Definitions
-// ---------------------------------------------------------------------------
 
 export interface ClaimRecord extends Omit<Claim, "policyNo"> {
   dbId: string
@@ -42,9 +30,27 @@ export interface ClaimInput {
   stageId: string
 }
 
-// ---------------------------------------------------------------------------
-// Lookup Resolution & Caching
-// ---------------------------------------------------------------------------
+const claimIncludeRelations = {
+  policy: {
+    select: {
+      policyNo: true,
+      insuredName: true,
+      cob: { select: { name: true } },
+      insurers: {
+        include: {
+          insurer: { select: { name: true } },
+        },
+      },
+    },
+  },
+  status: { select: { code: true } },
+  stage: { select: { code: true } },
+  adjuster: { select: { name: true } },
+} as const
+
+type PrismaClaimWithRelations = Prisma.ClaimGetPayload<{
+  include: typeof claimIncludeRelations
+}>
 
 const statusCache = new Map<string, string>()
 const stageCache = new Map<string, string>()
@@ -81,11 +87,8 @@ async function resolveStageId(stage: ClaimStage): Promise<string> {
   throw new Error(`Claim stage "${stage}" not found in database`)
 }
 
-// ---------------------------------------------------------------------------
-// Mapping Functions
-// ---------------------------------------------------------------------------
-
-function toClaimRecord(record: any): ClaimRecord {
+function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
+  const primaryInsurer = record.policy?.insurers?.[0]?.insurer?.name || ""
   return {
     dbId: record.id,
     id: record.claimNo,
@@ -93,13 +96,13 @@ function toClaimRecord(record: any): ClaimRecord {
     policyId: record.policyId,
     policyNo: record.policy?.policyNo || "",
     insuredName: record.policy?.insuredName || "",
-    insurer: record.policy?.insurer || "",
-    cob: record.policy?.cob,
+    insurer: primaryInsurer,
+    cob: record.policy?.cob?.name as Claim["cob"],
     currency: record.currencyCode,
-    lossDate: record.lossDate,
-    reportedDate: record.reportedDate,
-    documentCompleteDate: record.documentCompleteDate,
-    spkDate: record.spkDate,
+    lossDate: record.lossDate.toISOString().slice(0, 10),
+    reportedDate: record.reportedDate ? record.reportedDate.toISOString().slice(0, 10) : null,
+    documentCompleteDate: record.documentCompleteDate ? record.documentCompleteDate.toISOString().slice(0, 10) : null,
+    spkDate: record.spkDate ? record.spkDate.toISOString().slice(0, 10) : null,
     location: record.location || "",
     lossDescription: record.lossDescription || "",
     assetDescription: record.assetDescription || "",
@@ -113,17 +116,9 @@ function toClaimRecord(record: any): ClaimRecord {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Query Operations
-// ---------------------------------------------------------------------------
-
 export async function listClaims(): Promise<ClaimRecord[]> {
   const records = await prisma.claim.findMany({
-    include: {
-      policy: { select: { policyNo: true, insuredName: true, cob: true } },
-      status: { select: { code: true } },
-      stage: { select: { code: true } },
-    },
+    include: claimIncludeRelations,
     orderBy: { lossDate: "desc" },
   })
 
@@ -133,11 +128,7 @@ export async function listClaims(): Promise<ClaimRecord[]> {
 export async function getClaimById(id: string): Promise<ClaimRecord | null> {
   const record = await prisma.claim.findUnique({
     where: { id },
-    include: {
-      policy: { select: { policyNo: true, insuredName: true, cob: true } },
-      status: { select: { code: true } },
-      stage: { select: { code: true } },
-    },
+    include: claimIncludeRelations,
   })
 
   return record ? toClaimRecord(record) : null
@@ -146,19 +137,11 @@ export async function getClaimById(id: string): Promise<ClaimRecord | null> {
 export async function getClaimByNo(claimNo: string): Promise<ClaimRecord | null> {
   const record = await prisma.claim.findUnique({
     where: { claimNo },
-    include: {
-      policy: { select: { policyNo: true, insuredName: true, cob: true } },
-      status: { select: { code: true } },
-      stage: { select: { code: true } },
-    },
+    include: claimIncludeRelations,
   })
 
   return record ? toClaimRecord(record) : null
 }
-
-// ---------------------------------------------------------------------------
-// Mutation Operations
-// ---------------------------------------------------------------------------
 
 export async function createClaim(
   input: ClaimInput,
@@ -188,11 +171,7 @@ export async function createClaim(
       statusId,
       stageId,
     },
-    include: {
-      policy: { select: { policyNo: true, insuredName: true, cob: true } },
-      status: { select: { code: true } },
-      stage: { select: { code: true } },
-    },
+    include: claimIncludeRelations,
   })
 
   await recordAudit(prisma, {
@@ -238,11 +217,7 @@ export async function updateClaim(
       claimedAmount: input.claimedAmount,
       paidAmount: input.paidAmount,
     },
-    include: {
-      policy: { select: { policyNo: true, insuredName: true, cob: true } },
-      status: { select: { code: true } },
-      stage: { select: { code: true } },
-    },
+    include: claimIncludeRelations,
   })
 
   await recordAudit(prisma, {
@@ -278,11 +253,7 @@ export async function updateClaimStatus(
     data: {
       statusId,
     },
-    include: {
-      policy: { select: { policyNo: true, insuredName: true, cob: true } },
-      status: { select: { code: true } },
-      stage: { select: { code: true } },
-    },
+    include: claimIncludeRelations,
   })
 
   await recordAudit(prisma, {
@@ -321,10 +292,6 @@ export async function deleteClaim(id: string, userId: string): Promise<void> {
     after: null,
   })
 }
-
-// ---------------------------------------------------------------------------
-// Auto-seeding
-// ---------------------------------------------------------------------------
 
 export async function seedInitialClaimsIfEmpty(): Promise<number> {
   const count = await prisma.claim.count()
