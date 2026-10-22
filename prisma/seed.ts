@@ -402,7 +402,7 @@ async function seedDocumentTypes() {
     ],
     ["DN", "Debit Note", "{seq:4}/DNLCH/{MM}/{YYYY}"],
     ["CN", "Credit Note", "{seq:4}/CNLCH/{MM}/{YYYY}"],
-    ["CLM", "Klaim", "{seq:4}/CLM/{MM}/{YYYY}"],
+    ["CLM", "Klaim", "CLM-LCH{seq:3}/{COVER}/{MMROMAN}/{YYYY}"],
     ["JV", "Jurnal", "{seq:4}/JV/{MM}/{YYYY}"],
   ]
   for (const [code, name, numberPattern] of list) {
@@ -445,6 +445,29 @@ const COB_FORM: Record<string, { rateMode: string; formVariant: string }> = {
   "02": { rateMode: "percent", formVariant: "motor" },
 }
 
+/**
+ * Singkatan type of cover untuk token {COVER}, diambil dari kode di
+ * TYPE_OF_COVER (lib/data/reference.ts). Yang belum ada menunggu daftar LCH.
+ */
+const COVER_ABBREVIATIONS: Record<string, string> = {
+  "0103": "BI",
+  "0109": "PAR",
+  "0110": "IAR",
+  "0311": "MC",
+  "0312": "MC",
+  "0323": "MC",
+  "0401": "MH",
+  "0801": "CAR",
+  "0802": "EAR",
+  "0803": "MB",
+  "0804": "EEI",
+  "0901": "PL",
+  "0905": "PRL",
+  "0906": "PI",
+  "0913": "DNO",
+  "1004": "PA",
+}
+
 async function seedCobAndCoverTypes() {
   const rows = readCsv("cob-toc.csv")
   const permil = await lookupId("rate_mode", "permil")
@@ -476,10 +499,21 @@ async function seedCobAndCoverTypes() {
   }
 
   for (const r of rows) {
+    const abbreviation = COVER_ABBREVIATIONS[r.kode_toc]
     await prisma.coverType.upsert({
       where: { code: r.kode_toc },
-      create: { code: r.kode_toc, name: r.toc, cobId: cobs.get(r.kode_cob)! },
-      update: { name: r.toc, cobId: cobs.get(r.kode_cob)! },
+      create: {
+        code: r.kode_toc,
+        name: r.toc,
+        cobId: cobs.get(r.kode_cob)!,
+        abbreviation,
+      },
+      // Leave abbreviations set from master data alone when the seed has none.
+      update: {
+        name: r.toc,
+        cobId: cobs.get(r.kode_cob)!,
+        ...(abbreviation ? { abbreviation } : {}),
+      },
     })
   }
   return { cobs: cobs.size, coverTypes: rows.length }

@@ -371,13 +371,16 @@ model ClassOfBusiness {
 }
 
 model CoverType {
-  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cobId    String  @map("cob_id") @db.Uuid
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cobId        String  @map("cob_id") @db.Uuid
   /// 4 digit, contoh 0311 Marine Cargo Open Cover. Dua digit pertama adalah
   /// kode COB. Dipakai di nomor slip, jadi harus unik.
-  code     String  @unique
-  name     String
-  isActive Boolean @default(true) @map("is_active")
+  code         String  @unique
+  name         String
+  /// Singkatan untuk token {COVER} di nomor dokumen, contoh PAR, IAR, MC.
+  /// Kosong berarti segmen cover dilewati.
+  abbreviation String?
+  isActive     Boolean @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
