@@ -12,13 +12,13 @@ import { seedInitialClientsIfEmpty } from "@/lib/server/clients"
 import { recordAudit } from "@/server/services/audit"
 
 export type PolicyRecord = Policy
-export type PolicyInput = Omit<Policy, "id" | "files" | "endorsementSeq">
+export type PolicyInput = Omit<Policy, "id" | "files" | "endorsementSeq" | "placingSlipNo">
 
 export interface PolicyFormOptions {
   insurers: string[]
   currencies: { code: string; name: string }[]
-  placementLocations: { id: string; name: string }[]
-  cobOjkClasses: { id: string; name: string }[]
+  placementLocations: { id: string; name: string; isActive: boolean }[]
+  cobOjkClasses: { id: string; name: string; isActive: boolean }[]
 }
 
 type Tx = Prisma.TransactionClient
@@ -28,6 +28,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const policyInclude = {
   cob: { select: { name: true } },
   policyType: { select: { name: true } },
+  placingSlip: { select: { slipNo: true } },
   insurers: {
     include: {
       insurer: { select: { name: true } },
@@ -55,6 +56,7 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
     policyNo: row.policyNo,
     clientId: row.clientId,
     placingSlipId: row.placingSlipId,
+    placingSlipNo: row.placingSlip?.slipNo ?? null,
     parentPolicyId: row.parentPolicyId,
     insuredName: row.insuredName,
     insurer: leader?.insurer ?? "",
@@ -323,14 +325,18 @@ export async function listPolicyFormOptions(): Promise<PolicyFormOptions> {
       select: { code: true, name: true },
       orderBy: { code: "asc" },
     }),
+    // Inactive values still used by a policy are kept so the form can show their name.
     prisma.lookupValue.findMany({
-      where: { lookupType: "placement_location", isActive: true },
-      select: { id: true, name: true },
+      where: {
+        lookupType: "placement_location",
+        OR: [{ isActive: true }, { policyPlacements: { some: {} } }],
+      },
+      select: { id: true, name: true, isActive: true },
       orderBy: { sortOrder: "asc" },
     }),
     prisma.cobOjkClass.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true },
+      where: { OR: [{ isActive: true }, { policies: { some: {} } }] },
+      select: { id: true, name: true, isActive: true },
       orderBy: { name: "asc" },
     }),
   ])
