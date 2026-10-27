@@ -43,7 +43,6 @@ export function NotificationPopover() {
   const [open, setOpen] = React.useState(false)
   const [readIds, setReadIds] = React.useState<Set<string>>(new Set())
 
-  // Load read status from localStorage
   React.useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
@@ -51,7 +50,7 @@ export function NotificationPopover() {
         setReadIds(new Set(JSON.parse(stored)))
       }
     } catch {
-      // LocalStorage access fails in private modes or restricted contexts
+      // Storage unavailable or blocked
     }
   }, [])
 
@@ -62,7 +61,6 @@ export function NotificationPopover() {
   const items = React.useMemo<NotificationItem[]>(() => {
     const list: NotificationItem[] = []
 
-    // 1. Expiring policies
     const expiringPolicies = policies.filter(
       (p) => policyStatus(p.expiryDate, today) === "Expiring"
     )
@@ -78,7 +76,6 @@ export function NotificationPopover() {
       })
     }
 
-    // 2. Open / Pending claims
     const openClaims = claims.filter((c) => c.status === "Outstanding")
     for (const c of openClaims.slice(0, 4)) {
       list.push({
@@ -92,7 +89,6 @@ export function NotificationPopover() {
       })
     }
 
-    // 3. Draft placing slips
     const draftSlips = slips.filter((s) => s.status === "Draft")
     for (const s of draftSlips.slice(0, 3)) {
       list.push({
@@ -118,7 +114,7 @@ export function NotificationPopover() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(nextSet)))
     } catch {
-      // LocalStorage fallback
+      // Storage write failed
     }
   }
 
@@ -130,7 +126,7 @@ export function NotificationPopover() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(nextSet)))
       } catch {
-        // LocalStorage fallback
+        // Storage write failed
       }
     }
     setOpen(false)
