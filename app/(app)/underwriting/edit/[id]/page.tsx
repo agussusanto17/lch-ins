@@ -1,6 +1,9 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 
 import { PlacingSlipForm } from "@/components/underwriting/placing-slip-form"
+import { canManage } from "@/lib/access"
+import { currentUser } from "@/lib/server/session"
 import { getPlacingSlipById } from "@/lib/server/placing-slips"
 import { listVehicleOptions } from "@/lib/server/vehicles"
 import { slipById } from "@/lib/data"
@@ -14,6 +17,11 @@ export default async function EditSlipPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const user = await currentUser()
+  if (!user || !canManage(user.roles, "/underwriting")) {
+    redirect("/underwriting")
+  }
+
   const { id } = await params
   const [slip, vehicleOptions] = await Promise.all([
     getPlacingSlipById(id).then((s) => s ?? slipById(id) ?? null),

@@ -28,6 +28,7 @@ import {
   toggleClaimDocumentAction,
 } from "@/app/(app)/claims/actions"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -72,6 +73,8 @@ export function ClaimDetailSheet({
   onOpenChange: (open: boolean) => void
   onEdit?: (claim: Claim) => void
 }) {
+  const permission = usePermission()
+  const canManage = permission.canManage("/claims")
   const [activeTab, setActiveTab] = React.useState("overview")
   const [documents, setDocuments] = React.useState<ClaimDocumentRecord[]>([])
   const [isLoadingDocs, setIsLoadingDocs] = React.useState(false)
@@ -278,7 +281,7 @@ export function ClaimDetailSheet({
                     <span className="text-xs text-muted-foreground">
                       Adjuster: {claim.adjuster || "belum ditunjuk"}
                     </span>
-                    {onEdit ? (
+                    {onEdit && canManage ? (
                       <Button
                         variant="outline"
                         size="sm"
@@ -434,7 +437,11 @@ export function ClaimDetailSheet({
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
                       <FileText className="mb-2 size-8 text-muted-foreground/60" />
                       <p className="font-medium text-foreground">Belum ada daftar dokumen</p>
-                      <p className="text-xs">Tambahkan dokumen yang disyaratkan di bawah ini.</p>
+                      <p className="text-xs">
+                        {canManage
+                          ? "Tambahkan dokumen yang disyaratkan di bawah ini."
+                          : "Tidak ada dokumen yang disyaratkan."}
+                      </p>
                     </div>
                   ) : (
                     <div className="flex flex-col divide-y rounded-lg border bg-card">
@@ -448,7 +455,7 @@ export function ClaimDetailSheet({
                             <div className="pt-0.5">
                               <Checkbox
                                 checked={doc.isReceived}
-                                disabled={isToggling}
+                                disabled={isToggling || !canManage}
                                 onCheckedChange={(checked) =>
                                   handleToggleDocument(doc, checked === true)
                                 }
@@ -489,7 +496,7 @@ export function ClaimDetailSheet({
                                 ) : null}
                               </div>
                             </div>
-                            {!doc.isRequired && (
+                            {!doc.isRequired && canManage && (
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
@@ -507,94 +514,98 @@ export function ClaimDetailSheet({
                   )}
 
                   {/* Add Document Form */}
-                  <form
-                    onSubmit={handleAddDocument}
-                    className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3.5"
-                  >
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Tambah Berkas Tambahan
-                    </h4>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <Input
-                        placeholder="Nama dokumen berkas klaim..."
-                        value={newDocName}
-                        onChange={(e) => setNewDocName(e.target.value)}
-                        className="flex-1"
-                        disabled={isAddingDoc}
-                      />
-                      <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
-                        <Checkbox
-                          checked={newDocRequired}
-                          onCheckedChange={(checked) => setNewDocRequired(checked === true)}
+                  {canManage && (
+                    <form
+                      onSubmit={handleAddDocument}
+                      className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3.5"
+                    >
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Tambah Berkas Tambahan
+                      </h4>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <Input
+                          placeholder="Nama dokumen berkas klaim..."
+                          value={newDocName}
+                          onChange={(e) => setNewDocName(e.target.value)}
+                          className="flex-1"
                           disabled={isAddingDoc}
                         />
-                        Wajib
-                      </label>
-                      <Button
-                        type="submit"
-                        size="sm"
-                        disabled={isAddingDoc || !newDocName.trim()}
-                        className="sm:w-auto"
-                      >
-                        {isAddingDoc ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Plus data-icon="inline-start" className="size-3.5" />
-                        )}
-                        Tambah
-                      </Button>
-                    </div>
-                  </form>
+                        <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                          <Checkbox
+                            checked={newDocRequired}
+                            onCheckedChange={(checked) => setNewDocRequired(checked === true)}
+                            disabled={isAddingDoc}
+                          />
+                          Wajib
+                        </label>
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={isAddingDoc || !newDocName.trim()}
+                          className="sm:w-auto"
+                        >
+                          {isAddingDoc ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Plus data-icon="inline-start" className="size-3.5" />
+                          )}
+                          Tambah
+                        </Button>
+                      </div>
+                    </form>
+                  )}
                 </TabsContent>
 
                 {/* TAB 3: TINDAK LANJUT KLAIM (PRD A-18) */}
                 <TabsContent value="followups" className="flex flex-col gap-5 pt-1">
                   {/* Add Follow-up Form */}
-                  <form
-                    onSubmit={handleAddFollowup}
-                    className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3.5"
-                  >
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Catat Tindak Lanjut Baru
-                    </h4>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
-                          <Calendar className="size-3" />
-                          Tanggal:
-                        </label>
-                        <Input
-                          type="date"
-                          value={followupDate}
-                          onChange={(e) => setFollowupDate(e.target.value)}
-                          className="w-40 h-8 text-xs"
+                  {canManage && (
+                    <form
+                      onSubmit={handleAddFollowup}
+                      className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3.5"
+                    >
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Catat Tindak Lanjut Baru
+                      </h4>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
+                            <Calendar className="size-3" />
+                            Tanggal:
+                          </label>
+                          <Input
+                            type="date"
+                            value={followupDate}
+                            onChange={(e) => setFollowupDate(e.target.value)}
+                            className="w-40 h-8 text-xs"
+                            disabled={isAddingFollowup}
+                          />
+                        </div>
+                        <Textarea
+                          placeholder="Tulis catatan penanganan klaim, negosiasi dengan adjuster, komunikasi tertanggung..."
+                          value={followupNote}
+                          onChange={(e) => setFollowupNote(e.target.value)}
+                          rows={2}
+                          className="min-h-16 text-xs"
                           disabled={isAddingFollowup}
                         />
                       </div>
-                      <Textarea
-                        placeholder="Tulis catatan penanganan klaim, negosiasi dengan adjuster, komunikasi tertanggung..."
-                        value={followupNote}
-                        onChange={(e) => setFollowupNote(e.target.value)}
-                        rows={2}
-                        className="min-h-16 text-xs"
-                        disabled={isAddingFollowup}
-                      />
-                    </div>
-                    <div className="flex justify-end">
-                      <Button
-                        type="submit"
-                        size="sm"
-                        disabled={isAddingFollowup || !followupNote.trim()}
-                      >
-                        {isAddingFollowup ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Send data-icon="inline-start" className="size-3.5" />
-                        )}
-                        Simpan Catatan
-                      </Button>
-                    </div>
-                  </form>
+                      <div className="flex justify-end">
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={isAddingFollowup || !followupNote.trim()}
+                        >
+                          {isAddingFollowup ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Send data-icon="inline-start" className="size-3.5" />
+                          )}
+                          Simpan Catatan
+                        </Button>
+                      </div>
+                    </form>
+                  )}
 
                   {/* Followup Timeline */}
                   {isLoadingFollowups ? (
@@ -606,7 +617,11 @@ export function ClaimDetailSheet({
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
                       <Clock className="mb-2 size-8 text-muted-foreground/60" />
                       <p className="font-medium text-foreground">Belum ada riwayat tindak lanjut</p>
-                      <p className="text-xs">Catat aktivitas komunikasi atau investigasi klaim di atas.</p>
+                      <p className="text-xs">
+                        {canManage
+                          ? "Catat aktivitas komunikasi atau investigasi klaim di atas."
+                          : "Belum ada aktivitas komunikasi atau investigasi klaim."}
+                      </p>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-3">
@@ -627,20 +642,22 @@ export function ClaimDetailSheet({
                                   <User className="size-3" />
                                   {item.createdByName || "Staf Klaim"}
                                 </span>
-                                <Button
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  aria-label="Hapus catatan tindak lanjut"
-                                  disabled={isDeleting}
-                                  onClick={() => handleDeleteFollowup(item.id)}
-                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                >
-                                  {isDeleting ? (
-                                    <Loader2 className="size-3 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="size-3" />
-                                  )}
-                                </Button>
+                                {canManage && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    aria-label="Hapus catatan tindak lanjut"
+                                    disabled={isDeleting}
+                                    onClick={() => handleDeleteFollowup(item.id)}
+                                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                  >
+                                    {isDeleting ? (
+                                      <Loader2 className="size-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="size-3" />
+                                    )}
+                                  </Button>
+                                )}
                               </div>
                             </div>
                             <p className="text-xs leading-relaxed text-foreground/90 whitespace-pre-wrap">

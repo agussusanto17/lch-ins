@@ -10,6 +10,7 @@ import {
   deleteClauseAction,
   saveClauseAction,
 } from "@/app/(app)/underwriting/master-clauses/actions"
+import { usePermission } from "@/components/auth/permission-provider"
 import { PageShell } from "@/components/layout/page-header"
 import {
   FormActions,
@@ -57,17 +58,22 @@ export interface ClauseFormValue {
 export function ClauseForm({
   clause,
   mode,
+  canManage,
   cobs,
   coverTypes,
   groups,
 }: {
   clause?: ClauseFormValue
   mode: "new" | "edit"
+  canManage?: boolean
   cobs: { id: string; name: string; code: string; isActive: boolean }[]
   coverTypes: { id: string; name: string; code: string; cobId: string; isActive: boolean }[]
   groups: string[]
 }) {
   const router = useRouter()
+  const permission = usePermission()
+  const canManageEffective =
+    canManage ?? permission.canManage("/underwriting/master-clauses")
   const [title, setTitle] = React.useState(clause?.title ?? "")
   const [wording, setWording] = React.useState(clause?.wordingHtml ?? "")
   const [sourceGroup, setSourceGroup] = React.useState(
@@ -144,7 +150,13 @@ export function ClauseForm({
   return (
     <PageShell className="gap-0 p-0">
       <FormToolbar
-        title={mode === "new" ? "Clause Baru" : "Edit Clause"}
+        title={
+          mode === "new"
+            ? "Clause Baru"
+            : canManageEffective
+              ? "Edit Clause"
+              : "Detail Clause"
+        }
         backHref={LIST_HREF}
         badge={
           sourceGroup ? <Badge variant="secondary">{sourceGroup}</Badge> : null
@@ -162,7 +174,8 @@ export function ClauseForm({
                 id="cl-title"
                 value={title}
                 placeholder="Contoh: Machinery Breakdown Clause"
-                autoFocus
+                autoFocus={canManageEffective}
+                disabled={!canManageEffective}
                 onChange={(e) => setTitle(e.target.value)}
               />
             </Field>
@@ -173,6 +186,7 @@ export function ClauseForm({
                 <Select
                   items={groupItems}
                   value={sourceGroup || NONE}
+                  disabled={!canManageEffective}
                   onValueChange={(v) =>
                     setSourceGroup(v === NONE ? "" : (v as string))
                   }
@@ -201,6 +215,7 @@ export function ClauseForm({
                 <Select
                   items={cobItems}
                   value={cobId || NONE}
+                  disabled={!canManageEffective}
                   onValueChange={(v) => {
                     setCobId(v === NONE ? "" : (v as string))
                     setCoverTypeId("")
@@ -226,7 +241,7 @@ export function ClauseForm({
                 <Select
                   items={coverItems}
                   value={coverTypeId || NONE}
-                  disabled={!cobId}
+                  disabled={!canManageEffective || !cobId}
                   onValueChange={(v) =>
                     setCoverTypeId(v === NONE ? "" : (v as string))
                   }
@@ -261,6 +276,7 @@ export function ClauseForm({
           <RichTextEditor
             value={wording}
             onChange={setWording}
+            editable={canManageEffective}
             minHeight="26rem"
             placeholder="Tulis wording klausula lengkap — gunakan daftar bernomor untuk sub-ayat."
           />
@@ -268,7 +284,7 @@ export function ClauseForm({
       </FormBody>
 
       <FormActions>
-        {mode === "edit" ? (
+        {canManageEffective && mode === "edit" ? (
           <AlertDialog>
             <AlertDialogTrigger render={<Button variant="destructive" />}>
               <Trash2 data-icon="inline-start" />
@@ -297,12 +313,14 @@ export function ClauseForm({
             render={<Link href={LIST_HREF} />}
             nativeButton={false}
           >
-            Batal
+            {canManageEffective ? "Batal" : "Kembali"}
           </Button>
-          <Button onClick={save} disabled={saving}>
-            <Save data-icon="inline-start" />
-            {saving ? "Menyimpan…" : "Simpan Clause"}
-          </Button>
+          {canManageEffective ? (
+            <Button onClick={save} disabled={saving}>
+              <Save data-icon="inline-start" />
+              {saving ? "Menyimpan…" : "Simpan Clause"}
+            </Button>
+          ) : null}
         </div>
       </FormActions>
     </PageShell>

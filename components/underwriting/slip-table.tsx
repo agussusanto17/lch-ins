@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Card } from "@/components/ui/card"
 import {
   Select,
@@ -60,22 +61,29 @@ const COB_ITEMS = [
   ...CLASSES_OF_BUSINESS.map((c) => ({ label: c, value: c })),
 ]
 
-function actionsFor(slip: PlacingSlip, today: string): RowAction[] {
+function actionsFor(
+  slip: PlacingSlip,
+  today: string,
+  canManage: boolean
+): RowAction[] {
   const actions: RowAction[] = [
     {
       label: "Lihat placing slip",
       icon: Eye,
       render: <Link href={`/underwriting/slip/${slip.id}`} />,
     },
-    {
-      label:
-        slip.status === "Closed" || slip.status === "Cancelled"
-          ? "Buka slip"
-          : "Edit slip",
-      icon: Pencil,
-      render: <Link href={`/underwriting/edit/${slip.id}`} />,
-    },
   ]
+  if (!canManage) {
+    return actions
+  }
+  actions.push({
+    label:
+      slip.status === "Closed" || slip.status === "Cancelled"
+        ? "Buka slip"
+        : "Edit slip",
+    icon: Pencil,
+    render: <Link href={`/underwriting/edit/${slip.id}`} />,
+  })
   if (
     slip.status === "Released" ||
     slip.status === "Quoted" ||
@@ -187,6 +195,8 @@ export function SlipTable({
   }, [initialSlips])
 
   const slips = useCollection("slips")
+  const permission = usePermission()
+  const canManage = permission.canManage("/underwriting")
   const [query, setQuery] = React.useState("")
   const [status, setStatus] = React.useState("all")
   const [cob, setCob] = React.useState("all")
@@ -313,7 +323,7 @@ export function SlipTable({
               paginatedRows.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className={ACTION_COL_CLASS}>
-                    <RowActions actions={actionsFor(s, today)} />
+                    <RowActions actions={actionsFor(s, today, canManage)} />
                   </TableCell>
                   <TableCell className="max-w-57.5">
                     {s.slipNo ? (

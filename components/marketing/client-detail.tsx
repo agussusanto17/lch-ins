@@ -18,6 +18,7 @@ import { ClientForm } from "@/components/marketing/client-form"
 import { SppaTable } from "@/components/marketing/sppa-table"
 import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -55,6 +56,9 @@ export function ClientDetail({
   vehicleOptions,
 }: ClientDetailProps) {
   const today = useToday()
+  const permission = usePermission()
+  const canManageMarketing = permission.canManage("/marketing")
+  const canManageUnderwriting = permission.canManage("/underwriting")
 
   React.useEffect(() => {
     if (initialClient) {
@@ -115,20 +119,24 @@ export function ClientDetail({
               <ArrowLeft data-icon="inline-start" />
               Kembali
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setEditKey((k) => (k ?? 0) + 1)}
-            >
-              <Pencil data-icon="inline-start" />
-              Edit KYC
-            </Button>
-            <Button
-              render={<Link href={`/underwriting/new?client=${client.id}`} />}
-              nativeButton={false}
-            >
-              <FilePlus2 data-icon="inline-start" />
-              Buat Placing Slip
-            </Button>
+            {canManageMarketing && (
+              <Button
+                variant="outline"
+                onClick={() => setEditKey((k) => (k ?? 0) + 1)}
+              >
+                <Pencil data-icon="inline-start" />
+                Edit KYC
+              </Button>
+            )}
+            {canManageUnderwriting && (
+              <Button
+                render={<Link href={`/underwriting/new?client=${client.id}`} />}
+                nativeButton={false}
+              >
+                <FilePlus2 data-icon="inline-start" />
+                Buat Placing Slip
+              </Button>
+            )}
           </>
         }
       />
@@ -292,7 +300,11 @@ export function ClientDetail({
                   <TableRow key={s.id}>
                     <TableCell className="pl-5">
                       <Link
-                        href={`/underwriting/edit/${s.id}`}
+                        href={
+                          canManageUnderwriting
+                            ? `/underwriting/edit/${s.id}`
+                            : `/underwriting/slip/${s.id}`
+                        }
                         className="tabular text-xs font-semibold text-primary hover:underline"
                       >
                         {s.slipNo ?? "Draft"}

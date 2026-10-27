@@ -25,6 +25,7 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -97,6 +98,8 @@ export function PolicyDatabase({
   formOptions: PolicyFormOptions
 }) {
   const today = useToday()
+  const permission = usePermission()
+  const canManage = permission.canManage("/policies")
   const sessionPolicies = useCollection("policies")
   const claims = useCollection("claims")
   const [, startDelete] = React.useTransition()
@@ -149,6 +152,16 @@ export function PolicyDatabase({
   } = usePagination(rows, 10)
 
   function actionsFor(p: Policy): RowAction[] {
+    if (!canManage) {
+      return [
+        {
+          label: `Softcopy (${p.files.length} versi)`,
+          icon: FileText,
+          onSelect: () => setFilesFor(p.id),
+        },
+      ]
+    }
+
     const claimCount = claims.filter((c) => c.policyId === p.id).length
     const childCount = policies.filter((x) => x.parentPolicyId === p.id).length
     const blocked = claimCount > 0 || childCount > 0
@@ -277,10 +290,12 @@ export function PolicyDatabase({
         title="Policy Database"
         description="Database polis asuransi beserta softcopy dokumen"
         actions={
-          <Button onClick={() => openForm(null)}>
-            <Plus data-icon="inline-start" />
-            Tambah Polis
-          </Button>
+          canManage ? (
+            <Button onClick={() => openForm(null)}>
+              <Plus data-icon="inline-start" />
+              Tambah Polis
+            </Button>
+          ) : undefined
         }
       />
 

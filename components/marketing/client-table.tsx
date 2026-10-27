@@ -18,6 +18,7 @@ import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Card } from "@/components/ui/card"
 import {
   Select,
@@ -76,6 +77,8 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
   const slips = useCollection("slips")
   const policies = useCollection("policies")
   const sppa = useCollection("sppa")
+  const permission = usePermission()
+  const canManage = permission.canManage("/marketing")
   const [query, setQuery] = React.useState("")
   const [cob, setCob] = React.useState("all")
   const [status, setStatus] = React.useState("all")
@@ -115,8 +118,17 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
         icon: Eye,
         render: <Link href={`/marketing/clients/${c.id}`} />,
       },
-      { label: "Edit klien", icon: Pencil, onSelect: () => onEdit(c) },
     ]
+
+    if (!canManage) {
+      return actions
+    }
+
+    actions.push({
+      label: "Edit klien",
+      icon: Pencil,
+      onSelect: () => onEdit(c),
+    })
 
     if (used) {
       actions.push({

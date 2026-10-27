@@ -17,6 +17,7 @@ import {
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { SearchInput } from "@/components/shared/table-toolbar"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -60,6 +61,8 @@ export function CobCoverTab({
   rateModes,
   formVariants,
 }: CobCoverTabProps) {
+  const permission = usePermission()
+  const canManage = permission.canManage("/master-data")
   const [cobs, setCobs] = React.useState<MasterCobRecord[]>(initialCobs)
   const [query, setQuery] = React.useState("")
   const [expandedCobIds, setExpandedCobIds] = React.useState<Record<string, boolean>>({})
@@ -365,10 +368,12 @@ export function CobCoverTab({
           placeholder="Cari kode atau nama COB / Cover Type…"
           className="w-full sm:max-w-xs"
         />
-        <Button size="sm" onClick={openAddCob} className="h-9 gap-1.5 text-xs">
-          <Plus className="size-4" />
-          Tambah COB Baru
-        </Button>
+        {canManage && (
+          <Button size="sm" onClick={openAddCob} className="h-9 gap-1.5 text-xs">
+            <Plus className="size-4" />
+            Tambah COB Baru
+          </Button>
+        )}
       </div>
 
       {/* COB Table */}
@@ -383,13 +388,13 @@ export function CobCoverTab({
               <TableHead className="w-36">Varian Form</TableHead>
               <TableHead className="w-28 text-center">Sub-Cover</TableHead>
               <TableHead className="w-24">Status</TableHead>
-              <TableHead className="w-32 text-right pr-4">Aksi</TableHead>
+              {canManage && <TableHead className="w-32 text-right pr-4">Aksi</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredCobs.length === 0 ? (
               <TableEmpty
-                colSpan={8}
+                colSpan={canManage ? 8 : 7}
                 message={
                   query ? "Tidak ada COB yang cocok dengan pencarian." : "Belum ada data COB."
                 }
@@ -451,60 +456,64 @@ export function CobCoverTab({
                       <TableCell>
                         <StatusBadge status={cob.isActive ? "Active" : "Inactive"} />
                       </TableCell>
-                      <TableCell className="text-right pr-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditCob(cob)}
-                            className="size-7 text-muted-foreground hover:text-foreground"
-                            title="Edit COB"
-                          >
-                            <Edit2 className="size-3.5" />
-                          </Button>
-                          <Switch
-                            checked={cob.isActive}
-                            onCheckedChange={() => handleToggleCob(cob.id, cob.isActive)}
-                            disabled={isPending}
-                            title={cob.isActive ? "Nonaktifkan COB" : "Aktifkan COB"}
-                            className="scale-75"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteCob(cob)}
-                            disabled={isPending || totalUsed > 0 || cob.coverTypes.length > 0}
-                            className="size-7 text-destructive hover:bg-destructive/10"
-                            title={
-                              totalUsed > 0
-                                ? "Tidak dapat dihapus karena sudah dipakai transaksi"
-                                : "Hapus COB"
-                            }
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {canManage && (
+                        <TableCell className="text-right pr-4">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditCob(cob)}
+                              className="size-7 text-muted-foreground hover:text-foreground"
+                              title="Edit COB"
+                            >
+                              <Edit2 className="size-3.5" />
+                            </Button>
+                            <Switch
+                              checked={cob.isActive}
+                              onCheckedChange={() => handleToggleCob(cob.id, cob.isActive)}
+                              disabled={isPending}
+                              title={cob.isActive ? "Nonaktifkan COB" : "Aktifkan COB"}
+                              className="scale-75"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteCob(cob)}
+                              disabled={isPending || totalUsed > 0 || cob.coverTypes.length > 0}
+                              className="size-7 text-destructive hover:bg-destructive/10"
+                              title={
+                                totalUsed > 0
+                                  ? "Tidak dapat dihapus karena sudah dipakai transaksi"
+                                  : "Hapus COB"
+                              }
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
 
                     {/* Sub-Cover Rows */}
                     {isExpanded && (
                       <TableRow className="bg-muted/15 hover:bg-muted/20">
-                        <TableCell colSpan={8} className="p-0 pl-12 pr-4 py-3">
+                        <TableCell colSpan={canManage ? 8 : 7} className="p-0 pl-12 pr-4 py-3">
                           <div className="flex flex-col gap-2 rounded-md border bg-card/60 p-3">
                             <div className="flex items-center justify-between border-b pb-2">
                               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                 Sub-Cover Type untuk COB {cob.name} ({cob.coverTypes.length})
                               </span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openAddCover(cob.id, cob.code)}
-                                className="h-7 gap-1 text-xs"
-                              >
-                                <Plus className="size-3" />
-                                Tambah Sub-Cover
-                              </Button>
+                              {canManage && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openAddCover(cob.id, cob.code)}
+                                  className="h-7 gap-1 text-xs"
+                                >
+                                  <Plus className="size-3" />
+                                  Tambah Sub-Cover
+                                </Button>
+                              )}
                             </div>
 
                             {cob.coverTypes.length === 0 ? (
@@ -527,34 +536,38 @@ export function CobCoverTab({
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <StatusBadge status={ct.isActive ? "Active" : "Inactive"} />
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => openEditCover(cob.id, ct)}
-                                        className="size-6 text-muted-foreground hover:text-foreground"
-                                        title="Edit Sub-Cover"
-                                      >
-                                        <Edit2 className="size-3" />
-                                      </Button>
-                                      <Switch
-                                        checked={ct.isActive}
-                                        onCheckedChange={() =>
-                                          handleToggleCover(cob.id, ct.id, ct.isActive)
-                                        }
-                                        disabled={isPending}
-                                        className="scale-65"
-                                        title={ct.isActive ? "Nonaktifkan" : "Aktifkan"}
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleDeleteCover(cob.id, ct)}
-                                        disabled={isPending}
-                                        className="size-6 text-destructive hover:bg-destructive/10"
-                                        title="Hapus Sub-Cover"
-                                      >
-                                        <Trash2 className="size-3" />
-                                      </Button>
+                                      {canManage && (
+                                        <>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => openEditCover(cob.id, ct)}
+                                            className="size-6 text-muted-foreground hover:text-foreground"
+                                            title="Edit Sub-Cover"
+                                          >
+                                            <Edit2 className="size-3" />
+                                          </Button>
+                                          <Switch
+                                            checked={ct.isActive}
+                                            onCheckedChange={() =>
+                                              handleToggleCover(cob.id, ct.id, ct.isActive)
+                                            }
+                                            disabled={isPending}
+                                            className="scale-65"
+                                            title={ct.isActive ? "Nonaktifkan" : "Aktifkan"}
+                                          />
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleDeleteCover(cob.id, ct)}
+                                            disabled={isPending}
+                                            className="size-6 text-destructive hover:bg-destructive/10"
+                                            title="Hapus Sub-Cover"
+                                          >
+                                            <Trash2 className="size-3" />
+                                          </Button>
+                                        </>
+                                      )}
                                     </div>
                                   </div>
                                 ))}

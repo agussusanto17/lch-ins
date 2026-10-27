@@ -13,6 +13,7 @@ import {
 } from "@/app/(app)/master-data/actions"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -59,6 +60,8 @@ export function FinanceDocsTab({
   initialWordingForms,
   banks,
 }: FinanceDocsTabProps) {
+  const permission = usePermission()
+  const canManage = permission.canManage("/master-data")
   const [subTab, setSubTab] = React.useState<"banks" | "currencies" | "wordings">("banks")
   const [bankAccounts, setBankAccounts] = React.useState<BankAccountRecord[]>(initialBankAccounts)
   const [currencies] = React.useState<Currency[]>(initialCurrencies)
@@ -233,14 +236,14 @@ export function FinanceDocsTab({
           </TabsList>
         </Tabs>
 
-        {subTab === "banks" && (
+        {subTab === "banks" && canManage && (
           <Button size="sm" onClick={openAddBank} className="h-9 gap-1.5 text-xs">
             <Plus className="size-4" />
             Tambah Rekening Bank
           </Button>
         )}
 
-        {subTab === "wordings" && (
+        {subTab === "wordings" && canManage && (
           <Button
             size="sm"
             onClick={() => {
@@ -267,12 +270,12 @@ export function FinanceDocsTab({
                 <TableHead className="w-24">Valuta</TableHead>
                 <TableHead className="w-44">Tipe Rekening</TableHead>
                 <TableHead className="w-24">Status</TableHead>
-                <TableHead className="w-24 text-right pr-4">Aksi</TableHead>
+                {canManage && <TableHead className="w-24 text-right pr-4">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {bankAccounts.length === 0 ? (
-                <TableEmpty colSpan={7} message="Belum ada data rekening bank operasional." />
+                <TableEmpty colSpan={canManage ? 7 : 6} message="Belum ada data rekening bank operasional." />
               ) : (
                 bankAccounts.map((acc) => (
                   <TableRow key={acc.id} className="text-xs hover:bg-muted/40 transition-colors">
@@ -302,17 +305,19 @@ export function FinanceDocsTab({
                     <TableCell>
                       <StatusBadge status={acc.isActive ? "Active" : "Inactive"} />
                     </TableCell>
-                    <TableCell className="text-right pr-4">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Switch
-                          checked={acc.isActive}
-                          onCheckedChange={() => handleToggleBank(acc.id, acc.isActive)}
-                          disabled={isPending}
-                          className="scale-75"
-                          title={acc.isActive ? "Nonaktifkan rekening" : "Aktifkan rekening"}
-                        />
-                      </div>
-                    </TableCell>
+                    {canManage && (
+                      <TableCell className="text-right pr-4">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Switch
+                            checked={acc.isActive}
+                            onCheckedChange={() => handleToggleBank(acc.id, acc.isActive)}
+                            disabled={isPending}
+                            className="scale-75"
+                            title={acc.isActive ? "Nonaktifkan rekening" : "Aktifkan rekening"}
+                          />
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -357,12 +362,12 @@ export function FinanceDocsTab({
               <TableRow className="hover:bg-transparent">
                 <TableHead>Nama Wording Form Baku</TableHead>
                 <TableHead className="w-28">Status</TableHead>
-                <TableHead className="w-24 text-right pr-4">Aksi</TableHead>
+                {canManage && <TableHead className="w-24 text-right pr-4">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {wordingForms.length === 0 ? (
-                <TableEmpty colSpan={3} message="Belum ada data wording form polis baku." />
+                <TableEmpty colSpan={canManage ? 3 : 2} message="Belum ada data wording form polis baku." />
               ) : (
                 wordingForms.map((w) => (
                   <TableRow key={w.id} className="text-xs hover:bg-muted/40">
@@ -370,17 +375,19 @@ export function FinanceDocsTab({
                     <TableCell>
                       <StatusBadge status={w.isActive ? "Active" : "Inactive"} />
                     </TableCell>
-                    <TableCell className="text-right pr-4">
-                      <div className="flex items-center justify-end">
-                        <Switch
-                          checked={w.isActive}
-                          onCheckedChange={() => handleToggleWording(w.id, w.isActive)}
-                          disabled={isPending}
-                          className="scale-75"
-                          title={w.isActive ? "Nonaktifkan wording" : "Aktifkan wording"}
-                        />
-                      </div>
-                    </TableCell>
+                    {canManage && (
+                      <TableCell className="text-right pr-4">
+                        <div className="flex items-center justify-end">
+                          <Switch
+                            checked={w.isActive}
+                            onCheckedChange={() => handleToggleWording(w.id, w.isActive)}
+                            disabled={isPending}
+                            className="scale-75"
+                            title={w.isActive ? "Nonaktifkan wording" : "Aktifkan wording"}
+                          />
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}

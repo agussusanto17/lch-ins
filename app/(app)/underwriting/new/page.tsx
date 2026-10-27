@@ -1,7 +1,10 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 
 import { NewSlip } from "@/components/underwriting/new-slip"
+import { canManage } from "@/lib/access"
 import { getClientById } from "@/lib/server/clients"
+import { currentUser } from "@/lib/server/session"
 import { getSppaById } from "@/lib/server/sppa"
 import { listVehicleOptions } from "@/lib/server/vehicles"
 
@@ -14,6 +17,11 @@ export default async function NewSlipPage({
 }: {
   searchParams: Promise<{ sppa?: string; client?: string }>
 }) {
+  const user = await currentUser()
+  if (!user || !canManage(user.roles, "/underwriting")) {
+    redirect("/underwriting")
+  }
+
   const { sppa, client } = await searchParams
 
   const [initialSppa, initialClient, vehicleOptions] = await Promise.all([

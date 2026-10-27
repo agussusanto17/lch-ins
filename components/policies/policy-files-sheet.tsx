@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { usePermission } from "@/components/auth/permission-provider"
 import {
   Sheet,
   SheetContent,
@@ -29,6 +30,8 @@ export function PolicyFilesSheet({
   policy: Policy | null
   onOpenChange: (open: boolean) => void
 }) {
+  const permission = usePermission()
+  const canManage = permission.canManage("/policies")
   const inputRef = React.useRef<HTMLInputElement>(null)
   const files = [...(policy?.files ?? [])].reverse()
 
@@ -108,24 +111,26 @@ export function PolicyFilesSheet({
           )}
         </div>
 
-        <div className="border-t px-6 py-4">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="application/pdf,image/*"
-            className="sr-only"
-            tabIndex={-1}
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) upload(file)
-              e.target.value = ""
-            }}
-          />
-          <Button className="w-full" onClick={() => inputRef.current?.click()}>
-            <FileUp data-icon="inline-start" />
-            Upload versi baru
-          </Button>
-        </div>
+        {canManage && (
+          <div className="border-t px-6 py-4">
+            <input
+              ref={inputRef}
+              type="file"
+              accept="application/pdf,image/*"
+              className="sr-only"
+              tabIndex={-1}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) upload(file)
+                e.target.value = ""
+              }}
+            />
+            <Button className="w-full" onClick={() => inputRef.current?.click()}>
+              <FileUp data-icon="inline-start" />
+              Upload versi baru
+            </Button>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   )

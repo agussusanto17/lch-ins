@@ -10,6 +10,7 @@ import {
 } from "@/app/(app)/master-data/actions"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -39,6 +40,8 @@ export interface CobOjkClassesTabProps {
 }
 
 export function CobOjkClassesTab({ initialCobOjkClasses }: CobOjkClassesTabProps) {
+  const permission = usePermission()
+  const canManage = permission.canManage("/master-data")
   const [items, setItems] = React.useState<CobOjkClassRecord[]>(initialCobOjkClasses)
   const [search, setSearch] = React.useState("")
   const [isPending, startTransition] = React.useTransition()
@@ -129,10 +132,12 @@ export function CobOjkClassesTab({ initialCobOjkClasses }: CobOjkClassesTabProps
           />
         </div>
 
-        <Button onClick={openAdd} size="sm" className="h-8.5 gap-1.5 text-xs">
-          <Plus className="size-3.5" />
-          Tambah Klasifikasi OJK
-        </Button>
+        {canManage && (
+          <Button onClick={openAdd} size="sm" className="h-8.5 gap-1.5 text-xs">
+            <Plus className="size-3.5" />
+            Tambah Klasifikasi OJK
+          </Button>
+        )}
       </div>
 
       <Card className="overflow-hidden">
@@ -142,14 +147,18 @@ export function CobOjkClassesTab({ initialCobOjkClasses }: CobOjkClassesTabProps
               <TableHead>Nama Klasifikasi OJK</TableHead>
               <TableHead className="w-36 text-center">Polis Terkait</TableHead>
               <TableHead className="w-28">Status</TableHead>
-              <TableHead className="w-20 text-center">Aktif</TableHead>
-              <TableHead className="w-20 text-right pr-4">Aksi</TableHead>
+              {canManage && (
+                <>
+                  <TableHead className="w-20 text-center">Aktif</TableHead>
+                  <TableHead className="w-20 text-right pr-4">Aksi</TableHead>
+                </>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableEmpty
-                colSpan={5}
+                colSpan={canManage ? 5 : 3}
                 message={
                   search
                     ? `Tidak ada klasifikasi OJK yang cocok dengan "${search}".`
@@ -168,27 +177,31 @@ export function CobOjkClassesTab({ initialCobOjkClasses }: CobOjkClassesTabProps
                   <TableCell>
                     <StatusBadge status={item.isActive ? "Active" : "Inactive"} />
                   </TableCell>
-                  <TableCell className="text-center">
-                    <Switch
-                      checked={item.isActive}
-                      onCheckedChange={() => handleToggle(item)}
-                      disabled={isPending}
-                      className="scale-75"
-                      title={item.isActive ? "Nonaktifkan klasifikasi" : "Aktifkan klasifikasi"}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right pr-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEdit(item)}
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                      title="Edit klasifikasi OJK"
-                    >
-                      <Pencil className="size-3.5" />
-                      <span className="sr-only">Edit {item.name}</span>
-                    </Button>
-                  </TableCell>
+                  {canManage && (
+                    <>
+                      <TableCell className="text-center">
+                        <Switch
+                          checked={item.isActive}
+                          onCheckedChange={() => handleToggle(item)}
+                          disabled={isPending}
+                          className="scale-75"
+                          title={item.isActive ? "Nonaktifkan klasifikasi" : "Aktifkan klasifikasi"}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right pr-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEdit(item)}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                          title="Edit klasifikasi OJK"
+                        >
+                          <Pencil className="size-3.5" />
+                          <span className="sr-only">Edit {item.name}</span>
+                        </Button>
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               ))
             )}
