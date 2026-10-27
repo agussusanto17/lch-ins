@@ -2,9 +2,10 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bell, LogOut } from "lucide-react"
+import { LogOut } from "lucide-react"
 
 import { CommandMenu } from "@/components/layout/command-menu"
+import { NotificationPopover } from "@/components/layout/notification-popover"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -15,7 +16,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -157,15 +157,7 @@ export function AppTopbar({ user }: { user?: CurrentUser | null }) {
 
       <div className="ml-auto flex items-center gap-2">
         <CommandMenu />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Notifikasi"
-          className="relative"
-        >
-          <Bell />
-          <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
-        </Button>
+        <NotificationPopover />
         <ThemeToggle />
         <Separator orientation="vertical" className="mx-1 h-4" />
 

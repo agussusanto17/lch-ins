@@ -4,6 +4,7 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { FilePlus2, Search, TriangleAlert, UserPlus } from "lucide-react"
 
+import { usePermission } from "@/components/auth/permission-provider"
 import { NAV_GROUPS } from "@/components/layout/nav-items"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,19 +19,10 @@ import {
 } from "@/components/ui/command"
 import { SLIPS } from "@/lib/data"
 
-const ACTIONS = [
-  {
-    title: "Buat Placing Slip baru",
-    href: "/underwriting/new",
-    icon: FilePlus2,
-  },
-  { title: "Tambah klien baru", href: "/marketing", icon: UserPlus },
-  { title: "Input klaim baru", href: "/claims", icon: TriangleAlert },
-]
-
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false)
   const router = useRouter()
+  const { canAccess, canManage } = usePermission()
 
   React.useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -47,6 +39,29 @@ export function CommandMenu() {
     setOpen(false)
     router.push(href)
   }
+
+  const allowedActions = [
+    canManage("/underwriting")
+      ? {
+          title: "Buat Placing Slip baru",
+          href: "/underwriting/new",
+          icon: FilePlus2,
+        }
+      : null,
+    canManage("/marketing")
+      ? { title: "Tambah klien baru", href: "/marketing", icon: UserPlus }
+      : null,
+    canManage("/claims")
+      ? { title: "Input klaim baru", href: "/claims", icon: TriangleAlert }
+      : null,
+  ].filter((a): a is { title: string; href: string; icon: typeof FilePlus2 } => a !== null)
+
+  const allowedPages = NAV_GROUPS.flatMap((g) => g.items).filter((item) =>
+    canAccess(item.href)
+  )
+
+  const canAccessUnderwriting = canAccess("/underwriting")
+  const canManageUnderwriting = canManage("/underwriting")
 
   return (
     <>
@@ -70,45 +85,61 @@ export function CommandMenu() {
         <CommandInput placeholder="Ketik untuk mencari…" />
         <CommandList>
           <CommandEmpty>Tidak ada hasil.</CommandEmpty>
-          <CommandGroup heading="Aksi cepat">
-            {ACTIONS.map((a) => (
-              <CommandItem
-                key={a.title}
-                value={a.title}
-                onSelect={() => go(a.href)}
-              >
-                <a.icon />
-                {a.title}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          <CommandSeparator />
-          <CommandGroup heading="Halaman">
-            {NAV_GROUPS.flatMap((g) => g.items).map((item) => (
-              <CommandItem
-                key={item.href}
-                value={item.title}
-                onSelect={() => go(item.href)}
-              >
-                <item.icon />
-                {item.title}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          <CommandSeparator />
-          <CommandGroup heading="Placing Slip">
-            {SLIPS.slice(0, 6).map((s) => (
-              <CommandItem
-                key={s.id}
-                value={`${s.slipNo ?? "draft"} ${s.insuredName}`}
-                onSelect={() => go(`/underwriting/edit/${s.id}`)}
-              >
-                <FilePlus2 />
-                <span className="truncate">{s.insuredName}</span>
-                <CommandShortcut>{s.slipNo ?? "Draft"}</CommandShortcut>
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          {allowedActions.length > 0 ? (
+            <>
+              <CommandGroup heading="Aksi cepat">
+                {allowedActions.map((a) => (
+                  <CommandItem
+                    key={a.title}
+                    value={a.title}
+                    onSelect={() => go(a.href)}
+                  >
+                    <a.icon />
+                    {a.title}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          ) : null}
+          {allowedPages.length > 0 ? (
+            <>
+              <CommandGroup heading="Halaman">
+                {allowedPages.map((item) => (
+                  <CommandItem
+                    key={item.href}
+                    value={item.title}
+                    onSelect={() => go(item.href)}
+                  >
+                    <item.icon />
+                    {item.title}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          ) : null}
+          {canAccessUnderwriting ? (
+            <CommandGroup heading="Placing Slip">
+              {SLIPS.slice(0, 6).map((s) => (
+                <CommandItem
+                  key={s.id}
+                  value={`${s.slipNo ?? "draft"} ${s.insuredName}`}
+                  onSelect={() =>
+                    go(
+                      canManageUnderwriting
+                        ? `/underwriting/edit/${s.id}`
+                        : `/underwriting/slip/${s.id}`
+                    )
+                  }
+                >
+                  <FilePlus2 />
+                  <span className="truncate">{s.insuredName}</span>
+                  <CommandShortcut>{s.slipNo ?? "Draft"}</CommandShortcut>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ) : null}
         </CommandList>
       </CommandDialog>
     </>
