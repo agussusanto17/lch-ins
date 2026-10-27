@@ -13,6 +13,7 @@ import {
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { SearchInput } from "@/components/shared/table-toolbar"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -79,6 +80,8 @@ export function LookupValuesTab({
   initialLookups,
   availableTypes,
 }: LookupValuesTabProps) {
+  const permission = usePermission()
+  const canManage = permission.canManage("/master-data")
   const [selectedType, setSelectedType] = React.useState<string>(
     availableTypes[0] ?? "client_status"
   )
@@ -253,10 +256,12 @@ export function LookupValuesTab({
           />
         </div>
 
-        <Button size="sm" onClick={openAddDialog} className="h-9 gap-1.5 text-xs">
-          <Plus className="size-4" />
-          Tambah Pilihan Baru
-        </Button>
+        {canManage && (
+          <Button size="sm" onClick={openAddDialog} className="h-9 gap-1.5 text-xs">
+            <Plus className="size-4" />
+            Tambah Pilihan Baru
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -269,13 +274,13 @@ export function LookupValuesTab({
               <TableHead>Label Pilihan Dropdown</TableHead>
               <TableHead className="w-32">Tipe Entri</TableHead>
               <TableHead className="w-28">Status</TableHead>
-              <TableHead className="w-28 text-right pr-4">Aksi</TableHead>
+              {canManage && <TableHead className="w-28 text-right pr-4">Aksi</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredLookups.length === 0 ? (
               <TableEmpty
-                colSpan={6}
+                colSpan={canManage ? 6 : 5}
                 message={
                   query
                     ? "Tidak ada nilai pilihan yang cocok dengan pencarian."
@@ -310,40 +315,42 @@ export function LookupValuesTab({
                   <TableCell>
                     <StatusBadge status={lookup.isActive ? "Active" : "Inactive"} />
                   </TableCell>
-                  <TableCell className="text-right pr-4">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(lookup)}
-                        className="size-7 text-muted-foreground hover:text-foreground"
-                        title="Edit label pilihan"
-                      >
-                        <Edit2 className="size-3.5" />
-                      </Button>
-                      <Switch
-                        checked={lookup.isActive}
-                        onCheckedChange={() => handleToggleStatus(lookup.id, lookup.isActive)}
-                        disabled={isPending}
-                        className="scale-75"
-                        title={lookup.isActive ? "Nonaktifkan pilihan" : "Aktifkan pilihan"}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(lookup)}
-                        disabled={isPending || lookup.isSystem}
-                        className="size-7 text-destructive hover:bg-destructive/10"
-                        title={
-                          lookup.isSystem
-                            ? "Entri sistem dilindungi dan tidak dapat dihapus"
-                            : "Hapus pilihan kustom"
-                        }
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {canManage && (
+                    <TableCell className="text-right pr-4">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(lookup)}
+                          className="size-7 text-muted-foreground hover:text-foreground"
+                          title="Edit label pilihan"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </Button>
+                        <Switch
+                          checked={lookup.isActive}
+                          onCheckedChange={() => handleToggleStatus(lookup.id, lookup.isActive)}
+                          disabled={isPending}
+                          className="scale-75"
+                          title={lookup.isActive ? "Nonaktifkan pilihan" : "Aktifkan pilihan"}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(lookup)}
+                          disabled={isPending || lookup.isSystem}
+                          className="size-7 text-destructive hover:bg-destructive/10"
+                          title={
+                            lookup.isSystem
+                              ? "Entri sistem dilindungi dan tidak dapat dihapus"
+                              : "Hapus pilihan kustom"
+                          }
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}

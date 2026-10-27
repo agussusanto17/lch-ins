@@ -19,6 +19,7 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -51,6 +52,9 @@ export function SppaTable({
 }: SppaTableProps) {
   const all = useCollection("sppa")
   const slips = useCollection("slips")
+  const permission = usePermission()
+  const canManageMarketing = permission.canManage("/marketing")
+  const canManageUnderwriting = permission.canManage("/underwriting")
   const [query, setQuery] = React.useState("")
   const [isPending, startTransition] = React.useTransition()
 
@@ -93,18 +97,27 @@ export function SppaTable({
         icon: Printer,
         render: <Link href={`/marketing/sppa/${s.id}`} />,
       },
-      {
+    ]
+
+    if (canManageUnderwriting) {
+      actions.push({
         label: "Buat placing slip",
         icon: FilePlus2,
         render: <Link href={`/underwriting/new?sppa=${s.id}`} />,
-      },
-      {
-        label: "Edit SPPA",
-        icon: Pencil,
-        onSelect: () =>
-          setForm((prev) => ({ key: (prev?.key ?? 0) + 1, sppa: s })),
-      },
-    ]
+      })
+    }
+
+    if (!canManageMarketing) {
+      return actions
+    }
+
+    actions.push({
+      label: "Edit SPPA",
+      icon: Pencil,
+      onSelect: () =>
+        setForm((prev) => ({ key: (prev?.key ?? 0) + 1, sppa: s })),
+    })
+
     if (s.status === "Draft") {
       actions.push({
         label: "Tandai Submitted",
@@ -192,15 +205,17 @@ export function SppaTable({
           {!compact ? (
             <ExportButtons spec={exportSpec} printHref={printHref} />
           ) : null}
-          <Button
-            size="sm"
-            onClick={() =>
-              setForm((prev) => ({ key: (prev?.key ?? 0) + 1, sppa: null }))
-            }
-          >
-            <Plus data-icon="inline-start" />
-            Buat SPPA
-          </Button>
+          {canManageMarketing ? (
+            <Button
+              size="sm"
+              onClick={() =>
+                setForm((prev) => ({ key: (prev?.key ?? 0) + 1, sppa: null }))
+              }
+            >
+              <Plus data-icon="inline-start" />
+              Buat SPPA
+            </Button>
+          ) : null}
         </div>
       </div>
 

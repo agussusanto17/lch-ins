@@ -109,16 +109,19 @@ export function RichTextEditor({
   placeholder = "Tulis wording klausula…",
   minHeight = "22rem",
   className,
+  editable = true,
 }: {
   value: string
   onChange?: (html: string) => void
   placeholder?: string
   minHeight?: string
   className?: string
+  editable?: boolean
 }) {
   const editor = useEditor({
     extensions: [StarterKit.configure({ link: { openOnClick: false } })],
     content: value,
+    editable,
     immediatelyRender: false,
     editorProps: {
       attributes: {
@@ -144,60 +147,65 @@ export function RichTextEditor({
   return (
     <div
       className={cn(
-        "focus-within:border-ring focus-within:ring-ring/30 overflow-hidden rounded-lg border transition-[box-shadow,border-color] focus-within:ring-3",
+        "overflow-hidden rounded-lg border transition-[box-shadow,border-color]",
+        editable
+          ? "focus-within:border-ring focus-within:ring-ring/30 focus-within:ring-3"
+          : "bg-muted/15 border-border",
         className
       )}
     >
-      <div className="bg-muted/40 flex flex-wrap items-center gap-0.5 border-b px-1.5 py-1">
-        {MARKS.map((item) => (
-          <ToolButton key={item.label} item={item} editor={editor} />
-        ))}
-        <Separator orientation="vertical" className="mx-1 h-5" />
-        {BLOCKS.map((item) => (
-          <ToolButton key={item.label} item={item} editor={editor} />
-        ))}
-        <Separator orientation="vertical" className="mx-1 h-5" />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Hapus format"
-          title="Hapus format"
-          className="rounded-md"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
-        >
-          <RemoveFormatting />
-        </Button>
-        <div className="ml-auto flex items-center gap-0.5">
+      {editable ? (
+        <div className="bg-muted/40 flex flex-wrap items-center gap-0.5 border-b px-1.5 py-1">
+          {MARKS.map((item) => (
+            <ToolButton key={item.label} item={item} editor={editor} />
+          ))}
+          <Separator orientation="vertical" className="mx-1 h-5" />
+          {BLOCKS.map((item) => (
+            <ToolButton key={item.label} item={item} editor={editor} />
+          ))}
+          <Separator orientation="vertical" className="mx-1 h-5" />
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Undo"
-            title="Undo"
+            aria-label="Hapus format"
+            title="Hapus format"
             className="rounded-md"
-            disabled={!editor.can().undo()}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().undo().run()}
+            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
           >
-            <Undo2 />
+            <RemoveFormatting />
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Redo"
-            title="Redo"
-            className="rounded-md"
-            disabled={!editor.can().redo()}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().redo().run()}
-          >
-            <Redo2 />
-          </Button>
+          <div className="ml-auto flex items-center gap-0.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Undo"
+              title="Undo"
+              className="rounded-md"
+              disabled={!editor.can().undo()}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().undo().run()}
+            >
+              <Undo2 />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Redo"
+              title="Redo"
+              className="rounded-md"
+              disabled={!editor.can().redo()}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().redo().run()}
+            >
+              <Redo2 />
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="relative">
         {empty ? (

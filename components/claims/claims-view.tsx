@@ -5,6 +5,7 @@ import { CircleCheck, Clock, Eye, Pencil, Plus, Receipt, Trash2 } from "lucide-r
 import { toast } from "sonner"
 
 import { deleteClaimAction } from "@/app/(app)/claims/actions"
+import { usePermission } from "@/components/auth/permission-provider"
 import { ClaimDetailSheet } from "@/components/claims/claim-detail-sheet"
 import { ClaimForm } from "@/components/claims/claim-form"
 import { PageHeader } from "@/components/layout/page-header"
@@ -80,6 +81,8 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
   }, [initialClaims])
 
   const today = useToday()
+  const permission = usePermission()
+  const canManage = permission.canManage("/claims")
   const [search, setSearch] = React.useState("")
   const [status, setStatus] = React.useState<string>("all")
   const [stage, setStage] = React.useState<string>("all")
@@ -188,15 +191,17 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
         title="Klaim Asuransi"
         description="Pencatatan kerugian, monitoring berkas dokumen, dan penyelesaian klaim tertanggung."
         actions={
-          <Button
-            size="sm"
-            onClick={() =>
-              setForm((prev) => ({ key: (prev?.key ?? 0) + 1, claim: null }))
-            }
-          >
-            <Plus className="size-4" />
-            Catat Klaim Baru
-          </Button>
+          canManage ? (
+            <Button
+              size="sm"
+              onClick={() =>
+                setForm((prev) => ({ key: (prev?.key ?? 0) + 1, claim: null }))
+              }
+            >
+              <Plus className="size-4" />
+              Catat Klaim Baru
+            </Button>
+          ) : null
         }
       />
 
@@ -327,26 +332,30 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
                             icon: Eye,
                             onSelect: () => setSelectedId(c.id),
                           },
-                          {
-                            label: "Edit",
-                            icon: Pencil,
-                            onSelect: () =>
-                              setForm((prev) => ({
-                                key: (prev?.key ?? 0) + 1,
-                                claim: c,
-                              })),
-                          },
-                          {
-                            label: "Hapus",
-                            icon: Trash2,
-                            destructive: true,
-                            confirm: {
-                              title: `Hapus klaim ${c.claimNo}?`,
-                              description: `Data klaim untuk ${c.insuredName} akan dihapus secara permanen dari basis data.`,
-                              actionLabel: "Hapus",
-                            },
-                            onSelect: () => handleDelete(c),
-                          },
+                          ...(canManage
+                            ? [
+                                {
+                                  label: "Edit",
+                                  icon: Pencil,
+                                  onSelect: () =>
+                                    setForm((prev) => ({
+                                      key: (prev?.key ?? 0) + 1,
+                                      claim: c,
+                                    })),
+                                },
+                                {
+                                  label: "Hapus",
+                                  icon: Trash2,
+                                  destructive: true,
+                                  confirm: {
+                                    title: `Hapus klaim ${c.claimNo}?`,
+                                    description: `Data klaim untuk ${c.insuredName} akan dihapus secara permanen dari basis data.`,
+                                    actionLabel: "Hapus",
+                                  },
+                                  onSelect: () => handleDelete(c),
+                                },
+                              ]
+                            : []),
                         ]}
                       />
                     </TableCell>
@@ -400,11 +409,15 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
           onOpenChange={(v) => {
             if (!v) setSelectedId(null)
           }}
-          onEdit={(c) => {
-            setSelectedId(null)
-            const matched = items.find((it) => it.id === c.id)
-            setForm((prev) => ({ key: (prev?.key ?? 0) + 1, claim: matched ?? null }))
-          }}
+          onEdit={
+            canManage
+              ? (c) => {
+                  setSelectedId(null)
+                  const matched = items.find((it) => it.id === c.id)
+                  setForm((prev) => ({ key: (prev?.key ?? 0) + 1, claim: matched ?? null }))
+                }
+              : undefined
+          }
         />
         {form ? (
           <ClaimForm

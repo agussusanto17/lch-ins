@@ -17,6 +17,7 @@ import {
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { SearchInput } from "@/components/shared/table-toolbar"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -49,6 +50,8 @@ export interface VehiclesTabProps {
 }
 
 export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
+  const permission = usePermission()
+  const canManage = permission.canManage("/master-data")
   const [brands, setBrands] = React.useState<VehicleBrandRecord[]>(initialBrands)
   const [query, setQuery] = React.useState("")
   const [expandedBrandIds, setExpandedBrandIds] = React.useState<Record<string, boolean>>({})
@@ -345,10 +348,12 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
           placeholder="Cari merek atau tipe kendaraan…"
           className="w-full sm:max-w-xs"
         />
-        <Button size="sm" onClick={openAddBrand} className="h-9 gap-1.5 text-xs">
-          <Plus className="size-4" />
-          Tambah Merek Baru
-        </Button>
+        {canManage && (
+          <Button size="sm" onClick={openAddBrand} className="h-9 gap-1.5 text-xs">
+            <Plus className="size-4" />
+            Tambah Merek Baru
+          </Button>
+        )}
       </div>
 
       <Card className="gap-0 overflow-hidden py-0">
@@ -423,43 +428,45 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                         <StatusBadge status={brand.isActive ? "Active" : "Inactive"} />
                       </TableCell>
                       <TableCell className="text-right pr-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditBrand(brand)}
-                            className="size-7 text-muted-foreground hover:text-foreground"
-                            title="Edit Merek"
-                            aria-label={`Edit merek ${brand.name}`}
-                          >
-                            <Edit2 className="size-3.5" />
-                          </Button>
-                          <Switch
-                            checked={brand.isActive}
-                            onCheckedChange={() => handleToggleBrand(brand.id, brand.isActive)}
-                            disabled={isPending}
-                            title={brand.isActive ? "Nonaktifkan Merek" : "Aktifkan Merek"}
-                            aria-label={`Status merek ${brand.name}`}
-                            className="scale-75"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteBrand(brand)}
-                            disabled={isPending || brand.usage > 0 || brand.types.length > 0}
-                            className="size-7 text-muted-foreground hover:text-destructive"
-                            title={
-                              brand.usage > 0
-                                ? "Tidak dapat dihapus karena sudah dipakai transaksi"
-                                : brand.types.length > 0
-                                  ? "Hapus dulu semua tipe di merek ini"
-                                  : "Hapus Merek"
-                            }
-                            aria-label={`Hapus merek ${brand.name}`}
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
+                        {canManage ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditBrand(brand)}
+                              className="size-7 text-muted-foreground hover:text-foreground"
+                              title="Edit Merek"
+                              aria-label={`Edit merek ${brand.name}`}
+                            >
+                              <Edit2 className="size-3.5" />
+                            </Button>
+                            <Switch
+                              checked={brand.isActive}
+                              onCheckedChange={() => handleToggleBrand(brand.id, brand.isActive)}
+                              disabled={isPending}
+                              title={brand.isActive ? "Nonaktifkan Merek" : "Aktifkan Merek"}
+                              aria-label={`Status merek ${brand.name}`}
+                              className="scale-75"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteBrand(brand)}
+                              disabled={isPending || brand.usage > 0 || brand.types.length > 0}
+                              className="size-7 text-muted-foreground hover:text-destructive"
+                              title={
+                                brand.usage > 0
+                                  ? "Tidak dapat dihapus karena sudah dipakai transaksi"
+                                  : brand.types.length > 0
+                                    ? "Hapus dulu semua tipe di merek ini"
+                                    : "Hapus Merek"
+                              }
+                              aria-label={`Hapus merek ${brand.name}`}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                        ) : null}
                       </TableCell>
                     </TableRow>
 
@@ -471,16 +478,18 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                 Tipe Kendaraan untuk Merek {brand.name} ({brand.types.length})
                               </span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openAddType(brand)}
-                                className="h-7 gap-1 text-xs"
-                                aria-label={`Tambah tipe untuk merek ${brand.name}`}
-                              >
-                                <Plus className="size-3" />
-                                Tambah Tipe
-                              </Button>
+                              {canManage && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openAddType(brand)}
+                                  className="h-7 gap-1 text-xs"
+                                  aria-label={`Tambah tipe untuk merek ${brand.name}`}
+                                >
+                                  <Plus className="size-3" />
+                                  Tambah Tipe
+                                </Button>
+                              )}
                             </div>
 
                             {brand.types.length === 0 ? (
@@ -506,43 +515,47 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <StatusBadge status={type.isActive ? "Active" : "Inactive"} />
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => openEditType(brand, type)}
-                                        className="size-6 text-muted-foreground hover:text-foreground"
-                                        title="Edit Tipe"
-                                        aria-label={`Edit tipe ${type.name}`}
-                                      >
-                                        <Edit2 className="size-3" />
-                                      </Button>
-                                      <Switch
-                                        checked={type.isActive}
-                                        onCheckedChange={() =>
-                                          handleToggleType(brand.id, type.id, type.isActive)
-                                        }
-                                        disabled={isPending}
-                                        className="scale-65"
-                                        title={
-                                          type.isActive ? "Nonaktifkan Tipe" : "Aktifkan Tipe"
-                                        }
-                                        aria-label={`Status tipe ${type.name}`}
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleDeleteType(brand.id, type)}
-                                        disabled={isPending || type.usage > 0}
-                                        className="size-6 text-muted-foreground hover:text-destructive"
-                                        title={
-                                          type.usage > 0
-                                            ? "Tidak dapat dihapus karena sudah dipakai transaksi"
-                                            : "Hapus Tipe"
-                                        }
-                                        aria-label={`Hapus tipe ${type.name}`}
-                                      >
-                                        <Trash2 className="size-3" />
-                                      </Button>
+                                      {canManage && (
+                                        <>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => openEditType(brand, type)}
+                                            className="size-6 text-muted-foreground hover:text-foreground"
+                                            title="Edit Tipe"
+                                            aria-label={`Edit tipe ${type.name}`}
+                                          >
+                                            <Edit2 className="size-3" />
+                                          </Button>
+                                          <Switch
+                                            checked={type.isActive}
+                                            onCheckedChange={() =>
+                                              handleToggleType(brand.id, type.id, type.isActive)
+                                            }
+                                            disabled={isPending}
+                                            className="scale-65"
+                                            title={
+                                              type.isActive ? "Nonaktifkan Tipe" : "Aktifkan Tipe"
+                                            }
+                                            aria-label={`Status tipe ${type.name}`}
+                                          />
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleDeleteType(brand.id, type)}
+                                            disabled={isPending || type.usage > 0}
+                                            className="size-6 text-muted-foreground hover:text-destructive"
+                                            title={
+                                              type.usage > 0
+                                                ? "Tidak dapat dihapus karena sudah dipakai transaksi"
+                                                : "Hapus Tipe"
+                                            }
+                                            aria-label={`Hapus tipe ${type.name}`}
+                                          >
+                                            <Trash2 className="size-3" />
+                                          </Button>
+                                        </>
+                                      )}
                                     </div>
                                   </div>
                                 ))}

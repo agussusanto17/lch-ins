@@ -1,10 +1,12 @@
 import { PageShell } from "@/components/layout/page-header"
 import { MasterClauses } from "@/components/underwriting/master-clauses"
+import { canManage } from "@/lib/access"
 import {
   listClauses,
   listCobOptions,
   listSourceGroups,
 } from "@/lib/server/clauses"
+import { currentUser } from "@/lib/server/session"
 
 export const metadata = { title: "Master Clauses — LCH Insurance Brokers" }
 
@@ -24,13 +26,16 @@ export default async function MasterClausesPage({
     page: Number(one(sp.page)) || 1,
   }
 
-  // Pencarian dan paginasi dikerjakan database, bukan di browser, karena
-  // pustaka LCH berisi ratusan klausul dengan wording panjang.
-  const [result, groups, cobs] = await Promise.all([
+  const [result, groups, cobs, user] = await Promise.all([
     listClauses(filter),
     listSourceGroups(),
     listCobOptions(),
+    currentUser(),
   ])
+
+  const canManageClauses = user
+    ? canManage(user.roles, "/underwriting/master-clauses")
+    : false
 
   return (
     <PageShell>
@@ -39,6 +44,7 @@ export default async function MasterClausesPage({
         groups={groups}
         cobs={cobs}
         filter={filter}
+        canManage={canManageClauses}
       />
     </PageShell>
   )

@@ -3,6 +3,7 @@ import { connection } from "next/server"
 
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { AppTopbar } from "@/components/layout/app-topbar"
+import { PermissionProvider } from "@/components/auth/permission-provider"
 import { TodayProvider } from "@/components/layout/today-provider"
 import { MandatoryPasswordDialog } from "@/components/auth/mandatory-password-dialog"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -28,33 +29,35 @@ export default async function AppLayout({
 
   return (
     <TodayProvider today={today}>
-      <SidebarProvider>
-        <AppSidebar
-          roleCode={user.roleCode}
-          roles={user.roles}
-        />
-        {/*
-          Jangan pasang `overflow-hidden` di sini — itu membuat scroll container
-          baru sehingga topbar `sticky top-0` menempel ke container yang tidak
-          pernah scroll. Lebar ditahan lewat `overflow-x: clip` di html/body.
-
-          `min-w-0` wajib: SidebarInset adalah flex item, dan tanpa ini lebarnya
-          ikut lebar minimum tabel (sel `whitespace-nowrap`). Halaman jadi lebih
-          lebar dari viewport lalu terpotong clip, sementara wrapper
-          `overflow-x-auto` di tabel tidak pernah aktif.
-        */}
-        <SidebarInset className="min-w-0">
-          <AppTopbar user={user} />
-          <div className="flex-1 bg-background">{children}</div>
-        </SidebarInset>
-        {user.mustChangePassword ? (
-          <MandatoryPasswordDialog
-            userEmail={user.email}
-            userName={user.name}
+      <PermissionProvider roles={user.roles}>
+        <SidebarProvider>
+          <AppSidebar
+            roleCode={user.roleCode}
+            roles={user.roles}
           />
-        ) : null}
-        <Toaster position="top-center" />
-      </SidebarProvider>
+          {/*
+            Jangan pasang `overflow-hidden` di sini — itu membuat scroll container
+            baru sehingga topbar `sticky top-0` menempel ke container yang tidak
+            pernah scroll. Lebar ditahan lewat `overflow-x: clip` di html/body.
+
+            `min-w-0` wajib: SidebarInset adalah flex item, dan tanpa ini lebarnya
+            ikut lebar minimum tabel (sel `whitespace-nowrap`). Halaman jadi lebih
+            lebar dari viewport lalu terpotong clip, sementara wrapper
+            `overflow-x-auto` di tabel tidak pernah aktif.
+          */}
+          <SidebarInset className="min-w-0">
+            <AppTopbar user={user} />
+            <div className="flex-1 bg-background">{children}</div>
+          </SidebarInset>
+          {user.mustChangePassword ? (
+            <MandatoryPasswordDialog
+              userEmail={user.email}
+              userName={user.name}
+            />
+          ) : null}
+          <Toaster position="top-center" />
+        </SidebarProvider>
+      </PermissionProvider>
     </TodayProvider>
   )
 }

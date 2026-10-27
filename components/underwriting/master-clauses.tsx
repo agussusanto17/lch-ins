@@ -3,8 +3,9 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { BookOpenText, Pencil, Plus } from "lucide-react"
+import { BookOpenText, Eye, Pencil, Plus } from "lucide-react"
 
+import { usePermission } from "@/components/auth/permission-provider"
 import { PageHeader } from "@/components/layout/page-header"
 import { SearchInput } from "@/components/shared/table-toolbar"
 import { Badge } from "@/components/ui/badge"
@@ -40,6 +41,7 @@ export interface MasterClausesProps {
   groups: string[]
   cobs: { id: string; name: string; code: string }[]
   filter: { query: string; sourceGroup: string; cobId: string; page: number }
+  canManage?: boolean
 }
 
 export function MasterClauses({
@@ -47,10 +49,14 @@ export function MasterClauses({
   groups,
   cobs,
   filter,
+  canManage,
 }: MasterClausesProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const permission = usePermission()
+  const canManageEffective =
+    canManage ?? permission.canManage("/underwriting/master-clauses")
   const [query, setQuery] = React.useState(filter.query)
 
   /** Filter disimpan di URL supaya hasil pencarian bisa dibagikan dan di-back. */
@@ -92,13 +98,15 @@ export function MasterClauses({
         title="Master Clauses"
         description="Pustaka klausula LCH, dipakai saat menyusun placing slip"
         actions={
-          <Button
-            render={<Link href="/underwriting/master-clauses/new" />}
-            nativeButton={false}
-          >
-            <Plus data-icon="inline-start" />
-            Tambah Clause
-          </Button>
+          canManageEffective ? (
+            <Button
+              render={<Link href="/underwriting/master-clauses/new" />}
+              nativeButton={false}
+            >
+              <Plus data-icon="inline-start" />
+              Tambah Clause
+            </Button>
+          ) : null
         }
       />
 
@@ -193,18 +201,33 @@ export function MasterClauses({
                     {wordingText(c.wordingHtml)}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Edit ${c.title}`}
-                  className="shrink-0"
-                  render={
-                    <Link href={`/underwriting/master-clauses/${c.id}`} />
-                  }
-                  nativeButton={false}
-                >
-                  <Pencil />
-                </Button>
+                {canManageEffective ? (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Edit ${c.title}`}
+                    className="shrink-0"
+                    render={
+                      <Link href={`/underwriting/master-clauses/${c.id}`} />
+                    }
+                    nativeButton={false}
+                  >
+                    <Pencil />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Lihat detail ${c.title}`}
+                    className="shrink-0"
+                    render={
+                      <Link href={`/underwriting/master-clauses/${c.id}`} />
+                    }
+                    nativeButton={false}
+                  >
+                    <Eye />
+                  </Button>
+                )}
               </div>
             </Card>
           ))}

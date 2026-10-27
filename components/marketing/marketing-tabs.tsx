@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Plus } from "lucide-react"
 
+import { usePermission } from "@/components/auth/permission-provider"
 import { PageHeader } from "@/components/layout/page-header"
 import { ClientForm } from "@/components/marketing/client-form"
 import { ClientTable } from "@/components/marketing/client-table"
@@ -44,6 +45,8 @@ export function MarketingTabs({
 
   const sppa = useCollection("sppa")
   const sppaCount = sppa.length > 0 ? sppa.length : (initialSppa?.length ?? 0)
+  const permission = usePermission()
+  const canManageMarketing = permission.canManage("/marketing")
   const [form, setForm] = React.useState<{
     key: number
     client: Client | null
@@ -55,14 +58,16 @@ export function MarketingTabs({
         title="Marketing"
         description="Database klien dan KYC, SPPA, serta renewal notice"
         actions={
-          <Button
-            onClick={() =>
-              setForm((prev) => ({ key: (prev?.key ?? 0) + 1, client: null }))
-            }
-          >
-            <Plus data-icon="inline-start" />
-            Tambah Klien
-          </Button>
+          canManageMarketing ? (
+            <Button
+              onClick={() =>
+                setForm((prev) => ({ key: (prev?.key ?? 0) + 1, client: null }))
+              }
+            >
+              <Plus data-icon="inline-start" />
+              Tambah Klien
+            </Button>
+          ) : null
         }
       />
 

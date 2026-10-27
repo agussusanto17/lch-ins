@@ -15,6 +15,7 @@ import {
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { SearchInput } from "@/components/shared/table-toolbar"
+import { usePermission } from "@/components/auth/permission-provider"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -49,6 +50,8 @@ export function InsurersAdjustersTab({
   initialInsurers,
   initialAdjusters,
 }: InsurersAdjustersTabProps) {
+  const permission = usePermission()
+  const canManage = permission.canManage("/master-data")
   const [partnerType, setPartnerType] = React.useState<"insurer" | "adjuster">("insurer")
   const [insurers, setInsurers] = React.useState<Insurer[]>(initialInsurers)
   const [adjusters, setAdjusters] = React.useState<Adjuster[]>(initialAdjusters)
@@ -283,10 +286,12 @@ export function InsurersAdjustersTab({
           />
         </div>
 
-        <Button size="sm" onClick={openAddDialog} className="h-9 gap-1.5 text-xs">
-          <Plus className="size-4" />
-          {partnerType === "insurer" ? "Tambah Asuransi" : "Tambah Adjuster"}
-        </Button>
+        {canManage && (
+          <Button size="sm" onClick={openAddDialog} className="h-9 gap-1.5 text-xs">
+            <Plus className="size-4" />
+            {partnerType === "insurer" ? "Tambah Asuransi" : "Tambah Adjuster"}
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -302,13 +307,13 @@ export function InsurersAdjustersTab({
               <TableHead className="w-36">Telepon</TableHead>
               <TableHead>Alamat Kantor</TableHead>
               <TableHead className="w-24">Status</TableHead>
-              <TableHead className="w-24 text-right pr-4">Aksi</TableHead>
+              {canManage && <TableHead className="w-24 text-right pr-4">Aksi</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {(partnerType === "insurer" ? filteredInsurers : filteredAdjusters).length === 0 ? (
               <TableEmpty
-                colSpan={7}
+                colSpan={canManage ? 7 : 6}
                 message={
                   query
                     ? `Tidak ada ${
@@ -334,30 +339,32 @@ export function InsurersAdjustersTab({
                   <TableCell>
                     <StatusBadge status={item.isActive ? "Active" : "Inactive"} />
                   </TableCell>
-                  <TableCell className="text-right pr-4">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(item)}
-                        className="size-7 text-muted-foreground hover:text-foreground"
-                        title="Edit data rekanan"
-                      >
-                        <Edit2 className="size-3.5" />
-                      </Button>
-                      <Switch
-                        checked={item.isActive}
-                        onCheckedChange={() =>
-                          partnerType === "insurer"
-                            ? handleToggleInsurer(item.id, item.isActive)
-                            : handleToggleAdjuster(item.id, item.isActive)
-                        }
-                        disabled={isPending}
-                        className="scale-75"
-                        title={item.isActive ? "Nonaktifkan" : "Aktifkan"}
-                      />
-                    </div>
-                  </TableCell>
+                  {canManage && (
+                    <TableCell className="text-right pr-4">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(item)}
+                          className="size-7 text-muted-foreground hover:text-foreground"
+                          title="Edit data rekanan"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </Button>
+                        <Switch
+                          checked={item.isActive}
+                          onCheckedChange={() =>
+                            partnerType === "insurer"
+                              ? handleToggleInsurer(item.id, item.isActive)
+                              : handleToggleAdjuster(item.id, item.isActive)
+                          }
+                          disabled={isPending}
+                          className="scale-75"
+                          title={item.isActive ? "Nonaktifkan" : "Aktifkan"}
+                        />
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
