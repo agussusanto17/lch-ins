@@ -15,7 +15,7 @@ import {
   type PlacingSlipInput,
   type PlacingSlipRecord,
 } from "@/lib/server/placing-slips"
-import { releaseIssues } from "@/components/underwriting/slip-model"
+import { validatePlacingSlipForRelease } from "@/lib/server/tariffs"
 import { prisma } from "@/lib/prisma"
 import { requireManage } from "@/lib/server/session"
 
@@ -197,10 +197,32 @@ export async function releasePlacingSlipAction(
       return { ok: false, error: "Placing Slip tidak ditemukan." }
     }
 
-    // Same check the form runs, repeated here so a crafted request cannot skip it.
-    const issues = releaseIssues(target)
-    if (issues.length > 0) {
-      return { ok: false, error: issues.join(" ") }
+    const validation = await validatePlacingSlipForRelease(target)
+    if (!validation.canRelease) {
+      const errorDetails: string[] = []
+      if (validation.releaseIssues.length > 0) {
+        errorDetails.push(...validation.releaseIssues)
+      }
+      if (validation.missingExceptions.length > 0) {
+        for (const item of validation.missingExceptions) {
+          errorDetails.push(
+            `Rate ${item.line.label} (${item.line.rate}%) berada ${
+              item.reason === "below" ? "di bawah batas minimal" : "di atas batas maksimal"
+            } OJK (${item.line.min ?? 0}% - ${item.line.max ?? 0}%) dan belum memiliki catatan justifikasi exception.`
+          )
+        }
+      }
+      if (validation.brokerageIssue) {
+        errorDetails.push(
+          `Brokerage ${validation.brokerageIssue.current}% melebihi batas maksimal OJK ${validation.brokerageIssue.max}% untuk ${target.cob}.`
+        )
+      }
+      if (validation.biIssues.length > 0) {
+        for (const bi of validation.biIssues) {
+          errorDetails.push(bi.message)
+        }
+      }
+      return { ok: false, error: errorDetails.join(" ") }
     }
 
     const released = await releasePlacingSlip(target.dbId, user.id)

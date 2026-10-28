@@ -1,8 +1,13 @@
 import "server-only"
 
 import type { PlacingSlip, RateLine } from "@/lib/data/types"
+import { totalSumInsured } from "@/lib/calc"
 import { OCCUPATION_TARIFFS, type OccupationTariff } from "@/lib/data/ojk-tariff"
 import { matchEqZone, matchFloodRegion } from "@/lib/data/ojk-zones"
+import {
+  findMotorTariffBounds,
+  findMotorExtensionBounds,
+} from "@/lib/data/ojk-motor"
 
 export interface RateBounds {
   min: number
@@ -70,9 +75,75 @@ export function getPropertyRateBounds(
   return bounds
 }
 
-/** Motor bounds are not resolved yet, so motor slips skip the OOB check. */
-export function getMotorRateBounds(_slip: PlacingSlip): RateBounds | null {
-  return null
+export function getMotorRateBounds(slip: PlacingSlip): RateBounds | null {
+  if (slip.cob !== "Motor Vehicle") return null
+  const tsi = totalSumInsured(slip)
+  const vehicleDesc = slip.interestItems.map((i) => i.description).join(" ")
+  const locationOrPlate = slip.riskLocation || vehicleDesc || ""
+  const coverType = slip.typeOfCover || slip.coverage || "Comprehensive"
+
+  return findMotorTariffBounds({
+    vehicleDesc,
+    tsi,
+    locationOrPlate,
+    coverType,
+  })
+}
+
+export function getMotorExtensionBounds(
+  extensionLabel: string,
+  coverType?: string
+): RateBounds | null {
+  return findMotorExtensionBounds(extensionLabel, coverType)
+}
+
+export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
+  if (slip.cob === "Property") {
+    const propBounds = getPropertyRateBounds(slip)
+    return slip.rateLines.map((l) => {
+      if (l.min != null || l.max != null) return l
+      const b = propBounds[l.label]
+      if (b) {
+        return { ...l, min: b.min, max: b.max, boundSource: b.source }
+      }
+      return l
+    })
+  }
+
+  if (slip.cob === "Motor Vehicle") {
+    const motorCascoBounds = getMotorRateBounds(slip)
+    const coverType = slip.typeOfCover || slip.coverage || "Comprehensive"
+    return slip.rateLines.map((l) => {
+      if (l.min != null || l.max != null) return l
+      if (
+        l.label === "Comprehensive Casco" ||
+        l.label === "Total Loss Only" ||
+        l.label.toLowerCase().includes("casco") ||
+        l.label.toLowerCase().includes("comprehensive")
+      ) {
+        if (motorCascoBounds) {
+          return {
+            ...l,
+            min: motorCascoBounds.min,
+            max: motorCascoBounds.max,
+            boundSource: motorCascoBounds.source,
+          }
+        }
+      }
+      const extBounds = findMotorExtensionBounds(l.label, coverType)
+      if (extBounds) {
+        return {
+          ...l,
+          min: extBounds.min,
+          max: extBounds.max,
+          boundSource: extBounds.source,
+        }
+      }
+      return l
+    })
+  }
+
+  return slip.rateLines
 }
 
 export function isOutOfBounds(line: RateLine): boolean {
@@ -141,6 +212,7 @@ export function validateBiRateScaling(
 }
 
 export interface PreReleaseValidation {
+  canRelease: boolean
   releaseIssues: string[]
   missingExceptions: Array<{ line: RateLine; reason: "below" | "above" }>
   brokerageIssue?: { max: number; current: number }
@@ -167,16 +239,26 @@ export async function validatePlacingSlipForRelease(
     if (!slip.constructionClass) releaseIssues.push("Pilih kelas konstruksi.")
     if (!slip.riskLocation?.trim()) releaseIssues.push("Isi risk location.")
   }
-  if (slip.sumInsuredSection1.length + slip.sumInsuredSection2.length === 0) {
+  if (totalSumInsured(slip) <= 0) {
     releaseIssues.push("Isi sum insured.")
   }
   if (!slip.rateLines.some((l) => (l.rate ?? 0) > 0)) {
     releaseIssues.push("Isi minimal satu rate.")
   }
 
-  const allLines = slip.rateLines
-    .concat(slip.tplLines ?? [])
-    .concat(slip.paLines ?? [])
+  const boundedRateLines = attachSlipRateBounds(slip)
+  const boundedTpl = (slip.tplLines ?? []).map((l) => {
+    if (l.min != null || l.max != null) return l
+    const b = findMotorExtensionBounds(l.label)
+    return b ? { ...l, min: b.min, max: b.max, boundSource: b.source } : l
+  })
+  const boundedPa = (slip.paLines ?? []).map((l) => {
+    if (l.min != null || l.max != null) return l
+    const b = findMotorExtensionBounds(l.label)
+    return b ? { ...l, min: b.min, max: b.max, boundSource: b.source } : l
+  })
+
+  const allLines = boundedRateLines.concat(boundedTpl).concat(boundedPa)
   const missingExceptions = getMissingExceptions(allLines, slip.rateExceptions)
 
   let brokerageIssue: PreReleaseValidation["brokerageIssue"]
@@ -195,7 +277,14 @@ export async function validatePlacingSlipForRelease(
     releaseIssues.push(issue.message)
   }
 
+  const canRelease =
+    releaseIssues.length === 0 &&
+    missingExceptions.length === 0 &&
+    !brokerageIssue &&
+    biIssues.length === 0
+
   return {
+    canRelease,
     releaseIssues,
     missingExceptions,
     brokerageIssue,
