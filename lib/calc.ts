@@ -49,7 +49,7 @@ export function sumPremium(lines: { premium: number }[]) {
 
 /** Total sum insured — Property uses Sections 1 & 2; other COBs use interest items. */
 export function totalSumInsured(slip: PlacingSlip) {
-  if (slip.sumInsuredSection1.length || slip.sumInsuredSection2.length) {
+  if (slip.cob === "Property") {
     return sumItems(slip.sumInsuredSection1) + sumItems(slip.sumInsuredSection2)
   }
   return sumItems(slip.interestItems)

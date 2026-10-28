@@ -12,6 +12,10 @@ import {
   type Sppa,
 } from "@/lib/data"
 import { OCCUPATION_TARIFFS } from "@/lib/data/ojk-tariff"
+import {
+  findMotorTariffBounds,
+  findMotorExtensionBounds,
+} from "@/lib/data/ojk-motor"
 import { todayIso, yearMonth } from "@/lib/date"
 import { normalizeCob, romanMonth } from "@/lib/format"
 
@@ -173,17 +177,60 @@ export function occupationBounds(
  * dan kelas konstruksi slip, jadi rate yang diketik manual tetap tervalidasi.
  */
 export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
-  const auto =
-    slip.cob === "Property"
-      ? occupationBounds(slip.occupation, slip.constructionClass)
-      : null
-  return slip.rateLines.map((l) => {
-    if (l.min != null || l.max != null) return l
-    if (auto && l.label === "FLEXAS") {
-      return { ...l, min: auto.min, max: auto.max, boundSource: auto.source }
-    }
-    return l
-  })
+  if (slip.cob === "Property") {
+    const auto = occupationBounds(slip.occupation, slip.constructionClass)
+    return slip.rateLines.map((l) => {
+      if (l.min != null || l.max != null) return l
+      if (auto && l.label === "FLEXAS") {
+        return { ...l, min: auto.min, max: auto.max, boundSource: auto.source }
+      }
+      return l
+    })
+  }
+
+  if (slip.cob === "Motor Vehicle") {
+    const tsi = totalSumInsured(slip)
+    const vehicleDesc = slip.interestItems.map((i) => i.description).join(" ")
+    const locationOrPlate = slip.riskLocation || vehicleDesc || ""
+    const coverType = slip.typeOfCover || slip.coverage || "Comprehensive"
+    const motorBounds = findMotorTariffBounds({
+      vehicleDesc,
+      tsi,
+      locationOrPlate,
+      coverType,
+    })
+
+    return slip.rateLines.map((l) => {
+      if (l.min != null || l.max != null) return l
+      if (
+        l.label === "Comprehensive Casco" ||
+        l.label === "Total Loss Only" ||
+        l.label.toLowerCase().includes("casco") ||
+        l.label.toLowerCase().includes("comprehensive")
+      ) {
+        if (motorBounds) {
+          return {
+            ...l,
+            min: motorBounds.min,
+            max: motorBounds.max,
+            boundSource: motorBounds.source,
+          }
+        }
+      }
+      const extBounds = findMotorExtensionBounds(l.label, coverType)
+      if (extBounds) {
+        return {
+          ...l,
+          min: extBounds.min,
+          max: extBounds.max,
+          boundSource: extBounds.source,
+        }
+      }
+      return l
+    })
+  }
+
+  return slip.rateLines
 }
 
 export function isOutOfBounds(line: RateLine) {
@@ -217,13 +264,35 @@ export function releaseIssues(slip: PlacingSlip) {
   if (!slip.rateLines.some((l) => (l.rate ?? 0) > 0)) {
     issues.push("Isi minimal satu rate.")
   }
-  for (const line of rateLinesWithBounds(slip)) {
-    if (isOutOfBounds(line) && !slip.rateExceptions?.[line.id]?.note.trim()) {
+
+  const allLines = rateLinesWithBounds(slip)
+    .concat(slip.tplLines ?? [])
+    .concat(slip.paLines ?? [])
+  for (const line of allLines) {
+    const bounded =
+      line.min != null || line.max != null
+        ? line
+        : {
+            ...line,
+            ...findMotorExtensionBounds(line.label),
+          }
+    if (isOutOfBounds(bounded) && !slip.rateExceptions?.[line.id]?.note?.trim()) {
       issues.push(
         `Rate ${line.label} di luar batas OJK dan belum ada alasannya.`
       )
     }
   }
+
+  if (slip.cob === "Property" && (slip.brokeragePct ?? 0) > 15) {
+    issues.push(
+      `Brokerage ${slip.brokeragePct}% melebihi batas maksimal OJK 15% untuk Property.`
+    )
+  } else if (slip.cob === "Motor Vehicle" && (slip.brokeragePct ?? 0) > 25) {
+    issues.push(
+      `Brokerage ${slip.brokeragePct}% melebihi batas maksimal OJK 25% untuk Motor Vehicle.`
+    )
+  }
+
   return issues
 }
 

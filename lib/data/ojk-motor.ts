@@ -118,10 +118,24 @@ const MOTOR_REGION_2 = [
   "Bogor", "Depok", "Tangerang", "Serang", "Cilegon", "Karawang", "Cikarang",
 ]
 
-/** Tebak wilayah tarif kendaraan bermotor dari alamat lokasi risiko. */
-export function matchMotorRegion(location: string): string | null {
-  const hay = (location || "").toLowerCase()
-  if (!hay.trim()) return null
+const PLATES_REGION_1 = new Set([
+  "BA", "BB", "BD", "BE", "BG", "BH", "BK", "BL", "BM", "BN", "BP",
+])
+const PLATES_REGION_2 = new Set(["A", "B", "D", "E", "F", "T", "Z"])
+
+export function matchMotorRegion(locationOrPlate: string): string | null {
+  const text = (locationOrPlate || "").trim()
+  if (!text) return null
+
+  const plateMatch = text.toUpperCase().match(/\b([A-Z]{1,2})\s*\d{1,4}\b/)
+  if (plateMatch) {
+    const code = plateMatch[1]
+    if (PLATES_REGION_2.has(code)) return MOTOR_REGIONS[1]
+    if (PLATES_REGION_1.has(code)) return MOTOR_REGIONS[0]
+    return MOTOR_REGIONS[2]
+  }
+
+  const hay = text.toLowerCase()
   if (MOTOR_REGION_2.some((k) => hay.includes(k.toLowerCase()))) {
     return MOTOR_REGIONS[1]
   }
@@ -129,4 +143,231 @@ export function matchMotorRegion(location: string): string | null {
     return MOTOR_REGIONS[0]
   }
   return MOTOR_REGIONS[2]
+}
+
+export function resolveMotorTsiBand(tsi: number): string {
+  if (tsi <= 125_000_000) return "0 sampai Rp125.000.000"
+  if (tsi <= 200_000_000) return "Di atas Rp125.000.000 sampai Rp200.000.000"
+  if (tsi <= 400_000_000) return "Di atas Rp200.000.000 sampai Rp400.000.000"
+  if (tsi <= 800_000_000) return "Di atas Rp400.000.000 sampai Rp800.000.000"
+  return "Di atas Rp800.000.000"
+}
+
+export function detectVehicleCategory(desc: string, tsi: number): string {
+  const hay = (desc || "").toLowerCase()
+  if (
+    hay.includes("roda dua") ||
+    hay.includes("motorcycle") ||
+    hay.includes("motor cycle") ||
+    hay.includes("sepeda motor") ||
+    hay.includes("scooter") ||
+    hay.includes("vespa") ||
+    hay.includes("vario") ||
+    hay.includes("beat") ||
+    hay.includes("nmax") ||
+    hay.includes("pcx") ||
+    hay.includes("aerox") ||
+    hay.includes("mio")
+  ) {
+    return "Kategori 8"
+  }
+  if (hay.includes("bus") || hay.includes("microbus")) {
+    return "Kategori 7"
+  }
+  if (
+    hay.includes("truk") ||
+    hay.includes("truck") ||
+    hay.includes("pickup") ||
+    hay.includes("pick up") ||
+    hay.includes("box") ||
+    hay.includes("derek") ||
+    hay.includes("tangki") ||
+    hay.includes("trailer")
+  ) {
+    return "Kategori 6"
+  }
+
+  if (tsi <= 125_000_000) return "Kategori 1"
+  if (tsi <= 200_000_000) return "Kategori 2"
+  if (tsi <= 400_000_000) return "Kategori 3"
+  if (tsi <= 800_000_000) return "Kategori 4"
+  return "Kategori 5"
+}
+
+export function findMotorTariffBounds(params: {
+  category?: string
+  vehicleDesc?: string
+  tsi: number
+  locationOrPlate: string
+  coverType?: string
+}): { min: number; max: number; source: string } | null {
+  const { tsi, vehicleDesc = "", locationOrPlate, coverType = "" } = params
+  const category = params.category || detectVehicleCategory(vehicleDesc, tsi)
+  const isComprehensive =
+    coverType.toLowerCase().includes("comprehensive") ||
+    coverType.toLowerCase().includes("all risk") ||
+    coverType.toLowerCase().includes("casco") ||
+    !coverType.toLowerCase().includes("total loss")
+  const coverKey = isComprehensive ? "Comprehensive" : "Total Loss Only"
+  const region = matchMotorRegion(locationOrPlate) ?? MOTOR_REGIONS[1]
+
+  const band =
+    category === "Kategori 6" ||
+    category === "Kategori 7" ||
+    category === "Kategori 8"
+      ? "Semua uang pertanggungan"
+      : resolveMotorTsiBand(tsi)
+
+  const match = MOTOR_TARIFFS.find(
+    (t) =>
+      t.category === category &&
+      t.region === region &&
+      t.cover === coverKey &&
+      t.sumInsuredBand === band
+  )
+
+  if (!match) return null
+
+  const regionShort = region.startsWith("Wilayah 1")
+    ? "Wilayah 1"
+    : region.startsWith("Wilayah 2")
+      ? "Wilayah 2"
+      : "Wilayah 3"
+
+  return {
+    min: match.min,
+    max: match.max,
+    source: `${match.category} ${regionShort} ${match.cover}`,
+  }
+}
+
+export function findMotorExtensionBounds(
+  extensionLabel: string,
+  coverType: string = "Comprehensive"
+): { min: number; max: number; source: string } | null {
+  const hay = extensionLabel.toLowerCase()
+  const isComprehensive =
+    !coverType.toLowerCase().includes("total loss") &&
+    !coverType.toLowerCase().includes("tlo")
+  const policyType = isComprehensive ? "Comprehensive" : "Total Loss Only"
+
+  if (
+    hay.includes("banjir") ||
+    hay.includes("flood") ||
+    hay.includes("windstorm") ||
+    hay.includes("fwtwd")
+  ) {
+    const entry = MOTOR_EXTENSION_TARIFFS.find(
+      (e) => e.cover.startsWith("Banjir") && e.policyType === policyType
+    )
+    if (entry && entry.min != null && entry.max != null) {
+      return {
+        min: entry.min,
+        max: entry.max,
+        source: `Perluasan Banjir KBM ${policyType}`,
+      }
+    }
+  }
+
+  if (
+    hay.includes("gempa") ||
+    hay.includes("earthquake") ||
+    hay.includes("tsunami") ||
+    hay.includes("eqvet")
+  ) {
+    const entry = MOTOR_EXTENSION_TARIFFS.find(
+      (e) => e.cover.startsWith("Gempa") && e.policyType === policyType
+    )
+    if (entry && entry.min != null && entry.max != null) {
+      return {
+        min: entry.min,
+        max: entry.max,
+        source: `Perluasan Gempa KBM ${policyType}`,
+      }
+    }
+  }
+
+  if (
+    hay.includes("srcc") ||
+    hay.includes("huru-hara") ||
+    hay.includes("kerusuhan") ||
+    hay.includes("riot") ||
+    hay.includes("strike")
+  ) {
+    const entry = MOTOR_EXTENSION_TARIFFS.find(
+      (e) => e.cover.startsWith("Huru-hara") && e.policyType === policyType
+    )
+    if (entry && entry.min != null && entry.max != null) {
+      return {
+        min: entry.min,
+        max: entry.max,
+        source: `Perluasan SRCC KBM ${policyType}`,
+      }
+    }
+  }
+
+  if (
+    hay.includes("terorisme") ||
+    hay.includes("sabotase") ||
+    hay.includes("terrorism") ||
+    hay.includes("sabotage")
+  ) {
+    const entry = MOTOR_EXTENSION_TARIFFS.find(
+      (e) => e.cover.startsWith("Terorisme") && e.policyType === policyType
+    )
+    if (entry && entry.min != null && entry.max != null) {
+      return {
+        min: entry.min,
+        max: entry.max,
+        source: `Perluasan Terorisme KBM ${policyType}`,
+      }
+    }
+  }
+
+  if (
+    hay.includes("third party") ||
+    hay.includes("tpl") ||
+    hay.includes("tjh") ||
+    hay.includes("tanggung jawab hukum")
+  ) {
+    return {
+      min: 0.25,
+      max: 1.0,
+      source: "TJH Pihak Ketiga OJK (0.25% - 1.00%)",
+    }
+  }
+
+  if (
+    hay.includes("pengemudi") ||
+    hay.includes("driver") ||
+    hay.includes("pa pengemudi") ||
+    hay.includes("pa driver")
+  ) {
+    const entry = MOTOR_EXTENSION_TARIFFS.find((e) =>
+      e.cover.startsWith("Kecelakaan diri pengemudi")
+    )
+    return {
+      min: entry?.min ?? 0.5,
+      max: entry?.max ?? 0.5,
+      source: "PA Pengemudi KBM (0.50%)",
+    }
+  }
+
+  if (
+    hay.includes("penumpang") ||
+    hay.includes("passenger") ||
+    hay.includes("pa penumpang") ||
+    hay.includes("pa passenger")
+  ) {
+    const entry = MOTOR_EXTENSION_TARIFFS.find((e) =>
+      e.cover.startsWith("Kecelakaan diri penumpang")
+    )
+    return {
+      min: entry?.min ?? 0.1,
+      max: entry?.max ?? 0.1,
+      source: "PA Penumpang KBM (0.10%)",
+    }
+  }
+
+  return null
 }
