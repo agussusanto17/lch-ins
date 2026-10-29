@@ -67,9 +67,7 @@ interface ClientTableProps {
 export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
   React.useEffect(() => {
     if (initialClients && initialClients.length > 0) {
-      for (const c of initialClients) {
-        store.upsert("clients", c)
-      }
+      store.hydrate("clients", initialClients)
     }
   }, [initialClients])
 

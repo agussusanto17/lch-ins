@@ -60,9 +60,7 @@ export function SppaTable({
 
   React.useEffect(() => {
     if (!initialSppa?.length) return
-    for (const item of initialSppa) {
-      store.upsert("sppa", item)
-    }
+    store.hydrate("sppa", initialSppa)
   }, [initialSppa])
   const [form, setForm] = React.useState<{
     key: number

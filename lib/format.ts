@@ -92,14 +92,24 @@ const MONTHS_SHORT = [
   "Des",
 ]
 
+/** Cocok untuk "2026-08-11", bukan untuk nilai yang sudah ada jamnya. */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+
 function parse(input: string | Date) {
-  return typeof input === "string" ? new Date(`${input}T00:00:00`) : input
+  if (typeof input !== "string") return input
+  // Tanggal saja ditambah T00:00:00 supaya dibaca sebagai tengah malam waktu
+  // lokal. Tanpa itu string polos dibaca sebagai UTC dan tanggalnya bisa mundur
+  // sehari. Nilai yang sudah lengkap dengan jam — updatedAt dari database
+  // dikirim sebagai ISO penuh — harus dipakai apa adanya; menempelkan
+  // T00:00:00 ke belakangnya justru bikin Invalid Date.
+  return new Date(DATE_ONLY.test(input) ? `${input}T00:00:00` : input)
 }
 
 /** Standard application date format: "10 Agu 2026" */
 export function dateShort(input?: string | Date | null) {
   if (!input) return "—"
   const d = parse(input)
+  if (Number.isNaN(d.getTime())) return "—"
   return `${d.getDate().toString().padStart(2, "0")} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`
 }
 
@@ -107,6 +117,7 @@ export function dateShort(input?: string | Date | null) {
 export function dateLong(input?: string | Date | null) {
   if (!input) return "—"
   const d = parse(input)
+  if (Number.isNaN(d.getTime())) return "—"
   return `${d.getDate()} ${MONTHS_ID[d.getMonth()]} ${d.getFullYear()}`
 }
 
@@ -114,6 +125,7 @@ export function dateLong(input?: string | Date | null) {
 export function dateEn(input?: string | Date | null) {
   if (!input) return "—"
   const d = parse(input)
+  if (Number.isNaN(d.getTime())) return "—"
   return `${d.getDate().toString().padStart(2, "0")} ${MONTHS_EN[d.getMonth()]} ${d.getFullYear()}`
 }
 
@@ -121,6 +133,7 @@ export function dateEn(input?: string | Date | null) {
 export function dateInput(input?: string | Date | null) {
   if (!input) return ""
   const d = parse(input)
+  if (Number.isNaN(d.getTime())) return ""
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 

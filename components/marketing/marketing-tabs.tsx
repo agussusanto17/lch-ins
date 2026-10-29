@@ -38,9 +38,7 @@ export function MarketingTabs({
 }: MarketingTabsProps) {
   React.useEffect(() => {
     if (!initialSppa?.length) return
-    for (const item of initialSppa) {
-      store.upsert("sppa", item)
-    }
+    store.hydrate("sppa", initialSppa)
   }, [initialSppa])
 
   const sppa = useCollection("sppa")
