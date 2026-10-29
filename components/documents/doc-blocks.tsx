@@ -5,6 +5,7 @@ import {
   parseVehicleDescription,
   resolveSlipClauses,
   type PlacingSlip,
+  type SecurityPanelRow,
 } from "@/lib/data"
 import { dateEn, money, num } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -536,31 +537,62 @@ export function SignatureGrid({
   )
 }
 
-export function SignedBlock({ label }: { label: string }) {
+/**
+ * Satu blok tanda tangan per asuransi di security panel, berselang kiri-kanan
+ * mengikuti urutan panel — leader di kiri atas. Instruksi LCH 29 Oktober 2026:
+ * "di ttd nya ada kiri kanan kiri kanan ttd sesuai yang diinput."
+ *
+ * Panel yang masih kosong tetap mendapat satu blok tanpa nama, supaya dokumen
+ * draft tetap punya tempat tanda tangan.
+ */
+export function InsurerSignatureGrid({
+  slip,
+  caption,
+}: {
+  slip: PlacingSlip
+  caption?: string
+}) {
+  const panel = slip.securityPanel ?? []
   return (
-    <>
-      <SectionHeading>SIGNED</SectionHeading>
-      <div className="flex flex-col gap-5 text-[13px]">
-        <p>
-          {label}:{" "}
-          <span className="text-muted-foreground">
-            ___________________________
-          </span>
+    <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 text-[13px] sm:grid-cols-2">
+      {panel.length === 0 ? (
+        <InsurerSignature caption={caption} />
+      ) : (
+        panel.map((p) => (
+          <InsurerSignature key={p.id} caption={caption} party={p} />
+        ))
+      )}
+    </div>
+  )
+}
+
+function InsurerSignature({
+  caption,
+  party,
+}: {
+  caption?: string
+  party?: SecurityPanelRow
+}) {
+  return (
+    <div className="avoid-break">
+      {caption ? (
+        <p className="mb-14 text-muted-foreground">{caption}</p>
+      ) : (
+        <div className="h-16" />
+      )}
+      <p className="border-t pt-1 font-bold">
+        {party?.insurer ?? "Nama Perusahaan Asuransi"}
+      </p>
+      <p className="text-xs text-muted-foreground">Authorized Signatory</p>
+      {party ? (
+        <p className="text-xs text-muted-foreground">
+          {party.role} · {num(party.share, 2)}%
         </p>
-        <p>
-          Tanda Tangan:{" "}
-          <span className="text-muted-foreground">
-            ___________________________
-          </span>
-        </p>
-        <p>
-          Tanggal:{" "}
-          <span className="text-muted-foreground">
-            ___________________________
-          </span>
-        </p>
-      </div>
-    </>
+      ) : null}
+      <p className="mt-2 text-xs text-muted-foreground">
+        Tanggal: ...................
+      </p>
+    </div>
   )
 }
 
