@@ -417,9 +417,9 @@ export function PolicyDatabase({
                           <TableCell className="text-muted-foreground">
                             {p.cob}
                           </TableCell>
-                          <TableCell className="tabular text-xs">
+                          <TableCell className="tabular">
                             {dateShort(p.inceptionDate)}
-                            <span className="block text-muted-foreground">
+                            <span className="block text-xs text-muted-foreground">
                               s/d {dateShort(p.expiryDate)}
                             </span>
                           </TableCell>

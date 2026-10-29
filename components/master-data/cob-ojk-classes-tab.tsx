@@ -143,7 +143,7 @@ export function CobOjkClassesTab({ initialCobOjkClasses }: CobOjkClassesTabProps
       <Card className="overflow-hidden">
         <Table className="min-w-160">
           <TableHeader>
-            <TableRow className="bg-muted/50 text-xs">
+            <TableRow>
               <TableHead>Nama Klasifikasi OJK</TableHead>
               <TableHead className="w-36 text-center">Polis Terkait</TableHead>
               <TableHead className="w-28">Status</TableHead>
@@ -167,10 +167,10 @@ export function CobOjkClassesTab({ initialCobOjkClasses }: CobOjkClassesTabProps
               />
             ) : (
               filtered.map((item) => (
-                <TableRow key={item.id} className="text-xs hover:bg-muted/40">
+                <TableRow key={item.id}>
                   <TableCell className="font-medium text-foreground">{item.name}</TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="outline" className="text-2xs font-normal">
+                    <Badge variant="outline" className="font-normal">
                       {item._count.policies} polis
                     </Badge>
                   </TableCell>

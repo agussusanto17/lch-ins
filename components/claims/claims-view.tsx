@@ -292,7 +292,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
         <Card className="gap-0 overflow-hidden py-0">
           <Table className="min-w-200">
             <TableHeader>
-              <TableRow className="bg-muted/50 text-xs">
+              <TableRow>
                 <TableHead className={ACTION_COL_CLASS}>Aksi</TableHead>
                 <TableHead>No. Klaim</TableHead>
                 <TableHead>Tertanggung & Polis</TableHead>
@@ -316,7 +316,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
                 paginatedItems.map((c: ClaimRecord) => (
                   <TableRow
                     key={c.id}
-                    className="cursor-pointer text-xs hover:bg-muted/40"
+                    className="cursor-pointer"
                     onClick={() => setSelectedId(c.id)}
                   >
                     <TableCell

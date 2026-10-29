@@ -19,6 +19,7 @@ import {
   type RowAction,
   ACTION_COL_CLASS,
 } from "@/components/shared/row-actions"
+import { ToneBadge } from "@/components/shared/status-badge"
 import { SearchInput } from "@/components/shared/table-toolbar"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { TablePagination, usePagination } from "@/components/shared/table-pagination"
@@ -322,9 +323,7 @@ export function UserTable({
                         <span className="font-medium text-foreground flex items-center gap-1.5">
                           {u.name}
                           {isSelf && (
-                            <span className="rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-semibold text-primary">
-                              Anda
-                            </span>
+                            <ToneBadge tone="info">Anda</ToneBadge>
                           )}
                         </span>
                         <span className="text-xs text-muted-foreground">
@@ -346,7 +345,7 @@ export function UserTable({
                             <UserRoleBadge key={r} role={r} />
                           ))
                         ) : (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground">
                             Tanpa peran
                           </span>
                         )}
@@ -355,33 +354,33 @@ export function UserTable({
 
                     <TableCell>
                       {u.isActive ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                        <ToneBadge tone="success">
                           <UserCheck className="size-3" />
                           Aktif
-                        </span>
+                        </ToneBadge>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                        <ToneBadge tone="danger">
                           <UserMinus className="size-3" />
                           Nonaktif
-                        </span>
+                        </ToneBadge>
                       )}
                     </TableCell>
 
                     <TableCell>
                       {u.mustChangePassword ? (
-                        <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-300">
-                          <ShieldAlert className="size-3 text-amber-600 dark:text-amber-400" />
+                        <ToneBadge tone="warning">
+                          <ShieldAlert className="size-3" />
                           Wajib Ganti Sandi
-                        </span>
+                        </ToneBadge>
                       ) : (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground">
                           Normal
                         </span>
                       )}
                     </TableCell>
 
                     <TableCell>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-muted-foreground">
                         {dateShort(u.createdAt)}
                       </span>
                     </TableCell>

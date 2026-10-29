@@ -305,7 +305,7 @@ export function ClientDetail({
                             ? `/underwriting/edit/${s.id}`
                             : `/underwriting/slip/${s.id}`
                         }
-                        className="tabular text-xs font-semibold text-primary hover:underline"
+                        className="tabular font-semibold text-primary hover:underline"
                       >
                         {s.slipNo ?? "Draft"}
                       </Link>
@@ -349,16 +349,16 @@ export function ClientDetail({
               ) : (
                 clientPolicies.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="tabular pl-5 text-xs font-medium">
+                    <TableCell className="tabular pl-5 font-medium">
                       {p.policyNo}
-                      <span className="block font-normal text-muted-foreground">
+                      <span className="block text-xs font-normal text-muted-foreground">
                         {p.type}
                       </span>
                     </TableCell>
-                    <TableCell className="tabular text-xs">
+                    <TableCell className="tabular">
                       {dateShort(p.expiryDate)}
                     </TableCell>
-                    <TableCell className="tabular text-right text-xs">
+                    <TableCell className="tabular text-right">
                       {money(p.premium, p.currency)}
                     </TableCell>
                     <TableCell className="pr-5">
@@ -398,13 +398,13 @@ export function ClientDetail({
             ) : (
               clientClaims.map((c) => (
                 <TableRow key={c.id}>
-                  <TableCell className="tabular pl-5 text-xs font-medium">
+                  <TableCell className="tabular pl-5 font-medium">
                     {c.claimNo}
                   </TableCell>
-                  <TableCell className="tabular text-xs">
+                  <TableCell className="tabular">
                     {dateShort(c.lossDate)}
                   </TableCell>
-                  <TableCell className="tabular text-right text-xs">
+                  <TableCell className="tabular text-right">
                     {money(c.claimedAmount || c.estimatedLoss, c.currency)}
                   </TableCell>
                   <TableCell className="pr-5">

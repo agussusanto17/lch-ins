@@ -222,7 +222,7 @@ export function RenewalNotice({
                     <TableCell className="text-muted-foreground">
                       {p.cob}
                     </TableCell>
-                    <TableCell className="max-w-55 truncate text-xs text-muted-foreground">
+                    <TableCell className="max-w-55 truncate text-muted-foreground">
                       {p.insurer}
                     </TableCell>
                     <TableCell>

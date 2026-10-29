@@ -11,7 +11,7 @@ import {
   toggleWordingFormStatusAction,
   updateBankAccountAction,
 } from "@/app/(app)/master-data/actions"
-import { StatusBadge } from "@/components/shared/status-badge"
+import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { usePermission } from "@/components/auth/permission-provider"
 import { Badge } from "@/components/ui/badge"
@@ -278,7 +278,7 @@ export function FinanceDocsTab({
                 <TableEmpty colSpan={canManage ? 7 : 6} message="Belum ada data rekening bank operasional." />
               ) : (
                 bankAccounts.map((acc) => (
-                  <TableRow key={acc.id} className="text-xs hover:bg-muted/40 transition-colors">
+                  <TableRow key={acc.id}>
                     <TableCell className="font-medium text-foreground">
                       {acc.bank?.name ?? "Bank"}
                     </TableCell>
@@ -289,15 +289,12 @@ export function FinanceDocsTab({
                     <TableCell className="font-mono">{acc.currencyCode}</TableCell>
                     <TableCell>
                       {acc.isPremiumTrust ? (
-                        <Badge
-                          variant="secondary"
-                          className="bg-amber-500/15 text-amber-700 dark:text-amber-400 gap-1 text-[11px]"
-                        >
+                        <ToneBadge tone="warning">
                           <ShieldAlert className="size-3" />
                           Titipan Premi
-                        </Badge>
+                        </ToneBadge>
                       ) : (
-                        <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                        <Badge variant="outline" className="text-muted-foreground">
                           Operasional
                         </Badge>
                       )}
@@ -339,7 +336,7 @@ export function FinanceDocsTab({
             </TableHeader>
             <TableBody>
               {currencies.map((curr) => (
-                <TableRow key={curr.code} className="text-xs hover:bg-muted/40">
+                <TableRow key={curr.code}>
                   <TableCell className="font-mono font-semibold text-foreground">
                     {curr.code}
                   </TableCell>
@@ -370,7 +367,7 @@ export function FinanceDocsTab({
                 <TableEmpty colSpan={canManage ? 3 : 2} message="Belum ada data wording form polis baku." />
               ) : (
                 wordingForms.map((w) => (
-                  <TableRow key={w.id} className="text-xs hover:bg-muted/40">
+                  <TableRow key={w.id}>
                     <TableCell className="font-medium text-foreground">{w.name}</TableCell>
                     <TableCell>
                       <StatusBadge status={w.isActive ? "Active" : "Inactive"} />

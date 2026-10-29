@@ -13,7 +13,7 @@ import {
   entityLabel,
 } from "@/components/audit/audit-fields"
 import { AUDIT_PAGE_SIZES, type AuditFilter } from "@/components/audit/audit-filter"
-import { StatusBadge } from "@/components/shared/status-badge"
+import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { TablePagination } from "@/components/shared/table-pagination"
 import { ExportButtons, SearchInput } from "@/components/shared/table-toolbar"
@@ -281,7 +281,7 @@ export function AuditTable({
             ) : (
               result.items.map((log) => {
                 return (
-                  <TableRow key={log.id} className="text-xs">
+                  <TableRow key={log.id}>
                     <TableCell className="tabular text-muted-foreground font-mono">
                       {new Date(log.createdAt).toLocaleString("id-ID", {
                         dateStyle: "short",
@@ -292,7 +292,7 @@ export function AuditTable({
                       <p className="font-medium text-foreground truncate max-w-48">
                         {log.userName}
                       </p>
-                      <p className="text-[11px] text-muted-foreground truncate max-w-48">
+                      <p className="text-xs text-muted-foreground truncate max-w-48">
                         {log.userEmail}
                       </p>
                     </TableCell>
@@ -300,10 +300,10 @@ export function AuditTable({
                       <StatusBadge status={log.action} />
                     </TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center gap-1 rounded bg-secondary/80 px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground">
+                      <ToneBadge>
                         <Layers className="size-3 shrink-0" />
                         <span className="truncate max-w-28">{entityLabel(log.entity)}</span>
-                      </span>
+                      </ToneBadge>
                     </TableCell>
                     <TableCell>
                       <p

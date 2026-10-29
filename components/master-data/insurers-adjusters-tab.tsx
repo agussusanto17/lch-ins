@@ -324,7 +324,7 @@ export function InsurersAdjustersTab({
               />
             ) : (
               (partnerType === "insurer" ? filteredInsurers : filteredAdjusters).map((item) => (
-                <TableRow key={item.id} className="text-xs hover:bg-muted/40 transition-colors">
+                <TableRow key={item.id}>
                   <TableCell className="font-medium text-foreground">{item.name}</TableCell>
                   <TableCell>{item.contactPerson || "—"}</TableCell>
                   <TableCell className="font-mono text-muted-foreground">

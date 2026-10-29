@@ -385,7 +385,7 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
 
                 return (
                   <React.Fragment key={brand.id}>
-                    <TableRow className="text-xs hover:bg-muted/40 transition-colors">
+                    <TableRow>
                       <TableCell className="pl-3">
                         <Button
                           variant="ghost"
@@ -409,17 +409,17 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                         <div className="font-medium text-foreground">{brand.name}</div>
                       </TableCell>
                       <TableCell className="text-center font-mono">
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary">
                           {brand.types.length}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         {brand.usage > 0 ? (
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-muted-foreground">
                             {brand.usage} transaksi
                           </span>
                         ) : (
-                          <span className="text-[11px] text-muted-foreground italic">
+                          <span className="text-muted-foreground italic">
                             Belum dipakai
                           </span>
                         )}
@@ -497,7 +497,7 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                                 Belum ada tipe kendaraan untuk merek ini.
                               </p>
                             ) : (
-                              <div className="divide-y text-xs">
+                              <div className="divide-y">
                                 {brand.types.map((type) => (
                                   <div
                                     key={type.id}
@@ -508,7 +508,7 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                                         {type.name}
                                       </span>
                                       {type.usage > 0 ? (
-                                        <span className="text-[11px] text-muted-foreground">
+                                        <span className="text-xs text-muted-foreground">
                                           ({type.usage} transaksi)
                                         </span>
                                       ) : null}

@@ -410,7 +410,7 @@ export function CobCoverTab({
 
                 return (
                   <React.Fragment key={cob.id}>
-                    <TableRow className="text-xs hover:bg-muted/40 transition-colors">
+                    <TableRow>
                       <TableCell className="pl-3">
                         <Button
                           variant="ghost"
@@ -432,24 +432,24 @@ export function CobCoverTab({
                       <TableCell>
                         <div className="font-medium text-foreground">{cob.name}</div>
                         {totalUsed > 0 && (
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground">
                             Dipakai: {totalUsed} data transaksi
                           </div>
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-[11px] font-normal">
+                        <Badge variant="outline" className="font-normal">
                           {cob.rateMode?.name ?? "—"}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <Layers className="size-3" />
+                        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                          <Layers className="size-3.5" />
                           {cob.formVariant?.name ?? "—"}
                         </span>
                       </TableCell>
                       <TableCell className="text-center font-mono">
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary">
                           {cob.coverTypes.length}
                         </Badge>
                       </TableCell>
@@ -521,7 +521,7 @@ export function CobCoverTab({
                                 Belum ada sub-cover type untuk COB ini.
                               </p>
                             ) : (
-                              <div className="divide-y text-xs">
+                              <div className="divide-y">
                                 {cob.coverTypes.map((ct) => (
                                   <div
                                     key={ct.id}

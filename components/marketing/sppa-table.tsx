@@ -258,13 +258,13 @@ export function SppaTable({
                     <TableCell className="tabular text-right font-medium">
                       {money(s.sumInsured, s.currency)}
                     </TableCell>
-                    <TableCell className="tabular text-xs">
+                    <TableCell className="tabular">
                       {dateShort(s.periodStart)}
-                      <span className="block text-muted-foreground">
+                      <span className="block text-xs text-muted-foreground">
                         s/d {dateShort(s.periodEnd)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell>
                       {linked.length ? (
                         <Link
                           href={`/underwriting/edit/${linked[0].id}`}
