@@ -5,7 +5,9 @@ import logoLch from "@/public/images/logo-lch.jpg"
 export const LCH_ADDRESS = {
   line1: "Springhill Office Tower 11th Floor Unit H",
   line2: "Jl. Benyamin Suaeb Block D6, Kemayoran, Jakarta Utara 14410",
-  phone: "Phone : +62 21 - 2605 1671, +62 21 - 2605 1672",
+  // 1071/1072 nomor PT. LCH Insurance Brokers. 1671/1672 nomor Lestari Cipta
+  // Hokindo, nama lama; jangan dipakai lagi (pernah balik sendiri di PR #29).
+  phone: "Phone : +62 21 - 2605 1071, +62 21 - 2605 1072",
 }
 
 /** Logo resmi; nama perusahaan dan nomor SKOJK sudah ada di dalam gambar. */

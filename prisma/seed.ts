@@ -974,14 +974,17 @@ const PRESERVED_MOCK_USERS: SeedUserRecord[] = [
  *    - Akun tanpa konflik identitas di-seed langsung.
  */
 const OPERATIONAL_USERS: SeedUserRecord[] = [
-  // Unifikasi multi-role (Marketing & Placement)
+  // Super Admin ditunjuk LCH 29 Oktober 2026: Harry dan Tresna. Role bidangnya
+  // tetap dipertahankan supaya daftar ini tetap menggambarkan pekerjaan asli
+  // orangnya, walaupun admin sendiri sudah Kelola di seluruh menu.
   {
     email: "harry@lch.co.id",
     name: "HARRY SETIAWAN",
-    roles: ["marketing", "placement"],
+    roles: ["admin", "marketing", "placement"],
     jobTitle: "SPV",
     mustChangePassword: true,
   },
+  // Unifikasi multi-role (Marketing & Placement)
   {
     email: "aziz@lch.co.id",
     name: "AZIZ SURYA",
@@ -1007,7 +1010,7 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
   {
     email: "tresna@lch.co.id",
     name: "TRESNA",
-    roles: ["claim"],
+    roles: ["admin", "claim"],
     jobTitle: "Klaim",
     mustChangePassword: true,
   },
@@ -1040,7 +1043,7 @@ const IDENTITY_CONFLICTS = [
       { name: "YENIE YUSTIKA", role: "finance / admin" },
     ],
     resolution:
-      "Dilewati otomatis untuk mencegah account takeover / tumpang tindih hak akses antar individu berbeda. Administrator disarankan membuat akun terpisah individual di menu /users (misal: yenie@lch.co.id).",
+      "Dilewati otomatis untuk mencegah account takeover / tumpang tindih hak akses antar individu berbeda. Administrator disarankan membuat akun terpisah individual di menu /users (misal: yenie@lch.co.id). Catatan 29 Oktober 2026: Super Admin sudah ditunjuk ke Harry dan Tresna, jadi kandidat \"Super Admin\" di baris ini kemungkinan sudah tidak berlaku dan email ini milik Yenie saja. Menunggu konfirmasi LCH sebelum di-seed.",
   },
   {
     sharedEmail: "policyadmin@lch.co.id",

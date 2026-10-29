@@ -57,6 +57,26 @@ function Missing() {
 
 const unitOf = (slip: PlacingSlip) => (slip.cob === "Motor Vehicle" ? "%" : "‰")
 
+/*
+ * Baris brokerage dan net premium. Dipakai Placing Slip dan Closing
+ * Instruction. Quotation Slip sengaja tanpa keduanya, sesuai instruksi LCH
+ * 29 Oktober 2026.
+ */
+const brokerageRows = (slip: PlacingSlip): PremiumRow[] => [
+  {
+    label: `Brokerage ${num(slip.brokeragePct, 2)}%`,
+    rate: "",
+    premium: brokerageAmount(slip),
+    emphasis: "brokerage",
+  },
+  {
+    label: "Net Premium (after Brokerage)",
+    rate: "",
+    premium: netPremium(slip),
+    emphasis: "net",
+  },
+]
+
 export function PlacingSlipDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
@@ -82,12 +102,10 @@ export function PlacingSlipDocument(props: DocProps) {
       <SectionHeading>RATE &amp; PREMIUM</SectionHeading>
       <PremiumTable
         slip={slip}
-        rows={premiumRows(slip)}
+        rows={[...premiumRows(slip), ...brokerageRows(slip)]}
         unitLabel={unitOf(slip)}
       />
       <PayableTable slip={slip} />
-
-      <SecurityPanelBlock slip={slip} />
 
       <SignatureGrid
         place={`Jakarta, ${dateLong(slip.updatedAt)}`}
@@ -134,6 +152,8 @@ export function QuotationSlipDocument(props: DocProps) {
       />
       <PayableTable slip={slip} />
 
+      <SecurityPanelBlock slip={slip} />
+
       <SignatureGrid
         place={`Jakarta, ${dateLong(slip.updatedAt)}`}
         confirmationTitle="KONFIRMASI TERTANGGUNG / INSURED CONFIRMATION"
@@ -151,7 +171,11 @@ export function CoverNoteDocument(props: DocProps) {
   const number = derivedDocNumber(slip.slipNo, "CN")
   return (
     <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
-      <Letterhead />
+      {/*
+       * Draft Cover Note sengaja tanpa kop surat, cukup judulnya saja
+       * (instruksi LCH 29 Oktober 2026). Kop baru dipasang pada cover note
+       * final yang diterbitkan asuransi.
+       */}
       <DocTitle
         title="COVER NOTE"
         number={
@@ -197,21 +221,7 @@ export function ClosingInstructionDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
   const number = derivedDocNumber(slip.slipNo, "CI")
-  const rows: PremiumRow[] = [
-    ...premiumRows(slip),
-    {
-      label: `Brokerage ${num(slip.brokeragePct, 2)}%`,
-      rate: "",
-      premium: brokerageAmount(slip),
-      emphasis: "brokerage",
-    },
-    {
-      label: "Net Premium (after Brokerage)",
-      rate: "",
-      premium: netPremium(slip),
-      emphasis: "net",
-    },
-  ]
+  const rows: PremiumRow[] = [...premiumRows(slip), ...brokerageRows(slip)]
 
   return (
     <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
@@ -224,6 +234,16 @@ export function ClosingInstructionDocument(props: DocProps) {
       <DetailTable slip={slip} />
       <InterestBlock slip={slip} />
       <DeductibleBlock slip={slip} />
+
+      {slip.subjectivity ? (
+        <>
+          <SectionHeading>SUBJECTIVITY</SectionHeading>
+          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground">
+            {slip.subjectivity}
+          </p>
+        </>
+      ) : null}
+
       <ClausesBlock slip={slip} inline />
 
       <SectionHeading>RATE &amp; PREMIUM</SectionHeading>
