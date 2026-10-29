@@ -1,14 +1,20 @@
 "use client"
 
+import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LogOut } from "lucide-react"
+import { ChevronRight, LogOut } from "lucide-react"
 
 import logoMark from "@/public/images/logo-lch-mark.png"
-import { NAV_GROUPS } from "@/components/layout/nav-items"
+import { NAV_GROUPS, type NavItem } from "@/components/layout/nav-items"
 import { canAccess } from "@/lib/access"
 import { signOut } from "@/lib/auth-client"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Sidebar,
   SidebarContent,
@@ -18,9 +24,14 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/"
@@ -31,6 +42,95 @@ function isActive(pathname: string, href: string) {
     )
   }
   return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+function NavButton({
+  item,
+  active,
+}: {
+  item: NavItem
+  active: boolean
+}) {
+  return (
+    <SidebarMenuButton
+      render={<Link href={item.href} />}
+      isActive={active}
+      tooltip={item.title}
+    >
+      <item.icon />
+      <span className="truncate">{item.title}</span>
+      {item.soon ? (
+        <span
+          title="Modul belum dikerjakan"
+          className="ml-auto shrink-0 rounded-full border px-1.5 py-px text-[9px] font-medium tracking-wide text-muted-foreground"
+        >
+          SOON
+        </span>
+      ) : null}
+    </SidebarMenuButton>
+  )
+}
+
+/**
+ * Menu yang punya submenu.
+ *
+ * Judulnya tetap tautan — menuju halaman induk, yang mengalihkan ke bagian
+ * pertama — dan tanda panah di sebelahnya yang membuka tutup daftarnya. Dua
+ * sasaran klik yang terpisah, supaya membuka submenu tidak memaksa pindah
+ * halaman dan sebaliknya.
+ */
+function NavItemWithSub({
+  item,
+  pathname,
+}: {
+  item: NavItem
+  pathname: string
+}) {
+  const active = isActive(pathname, item.href)
+
+  // Terbuka sendiri begitu salah satu anaknya aktif, termasuk saat pindah ke
+  // sana dari tempat lain — tautan di dalam halaman, misalnya. Disetel saat
+  // render, bukan di dalam efek, supaya tidak memicu render bertingkat.
+  const [open, setOpen] = React.useState(active)
+  const [prevActive, setPrevActive] = React.useState(active)
+  if (prevActive !== active) {
+    setPrevActive(active)
+    if (active) setOpen(true)
+  }
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <SidebarMenuItem>
+        <NavButton item={item} active={active} />
+        <CollapsibleTrigger
+          render={
+            <SidebarMenuAction
+              aria-label={`${open ? "Tutup" : "Buka"} submenu ${item.title}`}
+            />
+          }
+          className="peer-data-[active=true]/menu-button:text-sidebar-accent-foreground"
+        >
+          <ChevronRight
+            className={cn("transition-transform duration-150", open && "rotate-90")}
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {item.items?.map((sub) => (
+              <SidebarMenuSubItem key={sub.href}>
+                <SidebarMenuSubButton
+                  render={<Link href={sub.href} />}
+                  isActive={pathname === sub.href}
+                >
+                  <span className="truncate">{sub.title}</span>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  )
 }
 
 export function AppSidebar({
@@ -79,26 +179,22 @@ export function AppSidebar({
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      render={<Link href={item.href} />}
-                      isActive={isActive(pathname, item.href)}
-                      tooltip={item.title}
-                    >
-                      <item.icon />
-                      <span className="truncate">{item.title}</span>
-                      {item.soon ? (
-                        <span
-                          title="Modul belum dikerjakan"
-                          className="ml-auto shrink-0 rounded-full border px-1.5 py-px text-[9px] font-medium tracking-wide text-muted-foreground"
-                        >
-                          SOON
-                        </span>
-                      ) : null}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {group.items.map((item) =>
+                  item.items?.length ? (
+                    <NavItemWithSub
+                      key={item.href}
+                      item={item}
+                      pathname={pathname}
+                    />
+                  ) : (
+                    <SidebarMenuItem key={item.href}>
+                      <NavButton
+                        item={item}
+                        active={isActive(pathname, item.href)}
+                      />
+                    </SidebarMenuItem>
+                  )
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

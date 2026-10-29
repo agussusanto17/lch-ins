@@ -24,6 +24,12 @@ export interface NavItem {
   icon: LucideIcon
   /** Modul yang belum dikerjakan, ditandai di sidebar. */
   soon?: boolean
+  /**
+   * Submenu yang muncul di bawah menu ini saat dibuka. Anaknya memakai
+   * ikonnya sendiri atau tidak sama sekali — di sidebar anak ditampilkan
+   * sebagai teks bertakik, mengikuti kebiasaan submenu pada umumnya.
+   */
+  items?: Array<Pick<NavItem, "title" | "href">>
 }
 
 export interface NavGroup {
@@ -97,6 +103,18 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Master Data",
         href: "/master-data",
         icon: Database,
+        // Tujuh bagian ini dulunya tab di dalam halaman. Dipindah ke submenu
+        // supaya masing-masing punya alamat sendiri: bisa ditautkan,
+        // di-bookmark, dan dibuka tanpa memuat data enam bagian lain.
+        items: [
+          { title: "COB & Cover Type", href: "/master-data/cob" },
+          { title: "Tarif Baku OJK", href: "/master-data/tariff-ojk" },
+          { title: "Klasifikasi OJK", href: "/master-data/ojk-classes" },
+          { title: "Asuransi & Adjuster", href: "/master-data/partners" },
+          { title: "Keuangan & Wording", href: "/master-data/finance-docs" },
+          { title: "Kendaraan", href: "/master-data/vehicles" },
+          { title: "Nilai Pilihan Dropdown", href: "/master-data/lookups" },
+        ],
       },
       { title: "Report", href: "/reports", icon: ChartColumn },
     ],
@@ -111,4 +129,10 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ]
 
-export const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items)
+export const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) =>
+  g.items.flatMap((item) =>
+    item.items
+      ? [item, ...item.items.map((sub) => ({ ...item, ...sub, items: undefined }))]
+      : [item]
+  )
+)
