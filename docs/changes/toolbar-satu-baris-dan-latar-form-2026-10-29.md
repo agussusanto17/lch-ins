@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-29
 - **Branch:** `fix/toolbar-satu-baris-dan-latar-form`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** [#51](https://github.com/agussusanto17/lch-ins/pull/51)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
@@ -115,7 +115,7 @@ selebar 980px di tengah.
 ## Catatan untuk yang melanjutkan
 
 **Form lain belum memakai `FormBody`.** Form klien, SPPA, polis, dan klaim
-memakai pola sendiri (dialog atau sheet), jadi tidak ikut berubah. Kalau nanti
+memakai `FormDrawer` (sheet), jadi tidak ikut berubah. Kalau nanti
 ada form halaman penuh baru, pakai `FormBody` supaya latarnya seragam.
 
 **Aturan Wajib nomor 4 belum dijalankan:** graphify belum terpasang di mesin ini.
