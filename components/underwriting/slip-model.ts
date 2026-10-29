@@ -40,7 +40,24 @@ export function makeRateLines(cob: ClassOfBusiness): RateLine[] {
       premium: 0,
     }))
   }
-  return [{ id: "r1", label: "Rate (‰)", rate: null, premium: 0 }]
+  return [{ id: "r1", label: GENERIC_RATE_LABEL, rate: null, premium: 0 }]
+}
+
+/** Label baris rate tunggal di COB selain Property dan Motor Vehicle. */
+export const GENERIC_RATE_LABEL = "Rate (‰)"
+
+/**
+ * Nama cover sebuah baris rate, untuk deductible per cover. Baris tunggal
+ * "Rate (‰)" bukan nama cover, jadi diganti type of cover slipnya; tanpa itu
+ * dokumen mencetak "Rate (‰)" di kolom cover.
+ */
+export function coverLabel(
+  slip: Pick<PlacingSlip, "typeOfCover" | "cob">,
+  line: Pick<RateLine, "label">
+) {
+  return line.label === GENERIC_RATE_LABEL
+    ? slip.typeOfCover || slip.cob
+    : line.label
 }
 
 export function makeMotorSubLines(): {
