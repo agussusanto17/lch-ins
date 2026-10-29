@@ -21,17 +21,17 @@ import {
   MOTOR_ACQUISITION_CAP_PCT,
 } from "@/lib/data/ojk-motor"
 import type {
-  BiScale,
-  TariffEqProperty,
-  TariffFlood,
-} from "@/lib/generated/prisma/client"
-import type { OccupationRecord } from "@/lib/server/master-data"
+  BiScaleRow,
+  OccupationRecord,
+  TariffEqPropertyRow,
+  TariffFloodRow,
+} from "@/lib/server/master-data"
 
 export interface TariffOjkTabProps {
   initialOccupations: OccupationRecord[]
-  tariffEqProperty: TariffEqProperty[]
-  tariffFlood: TariffFlood[]
-  biScales: BiScale[]
+  tariffEqProperty: TariffEqPropertyRow[]
+  tariffFlood: TariffFloodRow[]
+  biScales: BiScaleRow[]
 }
 
 interface GroupedMotorTariff {
@@ -187,13 +187,13 @@ export function TariffOjkTab({
                           <div className="font-medium text-foreground">{occ.name}</div>
                         </TableCell>
                         <TableCell className="text-center font-mono text-muted-foreground">
-                          {k1 ? `${Number(k1.rateMin)}‰ – ${Number(k1.rateMax)}‰` : "—"}
+                          {k1 ? `${k1.rateMin}‰ – ${k1.rateMax}‰` : "—"}
                         </TableCell>
                         <TableCell className="text-center font-mono text-muted-foreground">
-                          {k2 ? `${Number(k2.rateMin)}‰ – ${Number(k2.rateMax)}‰` : "—"}
+                          {k2 ? `${k2.rateMin}‰ – ${k2.rateMax}‰` : "—"}
                         </TableCell>
                         <TableCell className="text-center font-mono text-muted-foreground">
-                          {k3 ? `${Number(k3.rateMin)}‰ – ${Number(k3.rateMax)}‰` : "—"}
+                          {k3 ? `${k3.rateMin}‰ – ${k3.rateMax}‰` : "—"}
                         </TableCell>
                       </TableRow>
                     )
@@ -371,7 +371,7 @@ export function TariffOjkTab({
                       {formatZone(eq.zone)}
                     </TableCell>
                     <TableCell className="text-right pr-6 font-mono font-medium text-foreground">
-                      {Number(eq.rate)}‰
+                      {eq.rate}‰
                     </TableCell>
                   </TableRow>
                 ))
@@ -409,10 +409,10 @@ export function TariffOjkTab({
                       {formatZone(f.zone)}
                     </TableCell>
                     <TableCell className="text-center font-mono">
-                      {f.rateMin !== null ? `${Number(f.rateMin)}%` : "—"}
+                      {f.rateMin !== null ? `${f.rateMin}%` : "—"}
                     </TableCell>
                     <TableCell className="text-center font-mono">
-                      {f.rateMax !== null ? `${Number(f.rateMax)}%` : "—"}
+                      {f.rateMax !== null ? `${f.rateMax}%` : "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {f.note ?? "—"}
@@ -451,7 +451,7 @@ export function TariffOjkTab({
                       {b.indemnityMonths} Bulan
                     </TableCell>
                     <TableCell className="text-right pr-6 font-mono font-semibold text-foreground">
-                      {Number(b.percentage)}%
+                      {b.percentage}%
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       Faktor pengali tarif dasar asuransi Business Interruption (BI)

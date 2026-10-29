@@ -92,8 +92,41 @@ export interface LookupValueInput {
   isActive?: boolean
 }
 
+/*
+ * Prisma mengembalikan kolom Decimal sebagai objek Decimal.js, dan React
+ * menolak objek berkelas di batas server-ke-client: sekali buka Master Data
+ * memunculkan sekitar 1.800 peringatan "Only plain objects can be passed to
+ * Client Components", cukup untuk menenggelamkan error yang sesungguhnya.
+ *
+ * Nilainya sendiri tetap sampai — Decimal.js punya toJSON() sehingga React
+ * mengirimnya sebagai string — tapi tipe di sisi client tetap berbunyi
+ * Decimal. Artinya `rateMin.toNumber()` lolos pemeriksaan TypeScript lalu
+ * gagal saat dijalankan, karena yang diterima string. Tarif dikonversi di
+ * sini supaya tipe dan isinya sama-sama jujur: number.
+ */
+export type TariffOccupationRow = Omit<
+  TariffOccupation,
+  "rateMin" | "rateMax"
+> & {
+  rateMin: number
+  rateMax: number
+}
+
+export type TariffEqPropertyRow = Omit<TariffEqProperty, "rate"> & {
+  rate: number
+}
+
+export type TariffFloodRow = Omit<TariffFlood, "rateMin" | "rateMax"> & {
+  rateMin: number | null
+  rateMax: number | null
+}
+
+export type BiScaleRow = Omit<BiScale, "percentage"> & {
+  percentage: number
+}
+
 export interface OccupationRecord extends Occupation {
-  tariffs: TariffOccupation[]
+  tariffs: TariffOccupationRow[]
 }
 
 // ---------------------------------------------------------------------------
@@ -201,7 +234,7 @@ export async function listOccupations(params?: {
   limit?: number
 }): Promise<OccupationRecord[]> {
   const q = params?.search?.trim()
-  return prisma.occupation.findMany({
+  const rows = await prisma.occupation.findMany({
     where: q
       ? {
           OR: [
@@ -218,24 +251,39 @@ export async function listOccupations(params?: {
       },
     },
   })
+  return rows.map((o) => ({
+    ...o,
+    tariffs: o.tariffs.map((t) => ({
+      ...t,
+      rateMin: t.rateMin.toNumber(),
+      rateMax: t.rateMax.toNumber(),
+    })),
+  }))
 }
 
-export async function listTariffEqProperty(): Promise<TariffEqProperty[]> {
-  return prisma.tariffEqProperty.findMany({
+export async function listTariffEqProperty(): Promise<TariffEqPropertyRow[]> {
+  const rows = await prisma.tariffEqProperty.findMany({
     orderBy: [{ constructionCategory: "asc" }, { zone: "asc" }],
   })
+  return rows.map((r) => ({ ...r, rate: r.rate.toNumber() }))
 }
 
-export async function listTariffFlood(): Promise<TariffFlood[]> {
-  return prisma.tariffFlood.findMany({
+export async function listTariffFlood(): Promise<TariffFloodRow[]> {
+  const rows = await prisma.tariffFlood.findMany({
     orderBy: [{ line: "asc" }, { region: "asc" }, { zone: "asc" }],
   })
+  return rows.map((r) => ({
+    ...r,
+    rateMin: r.rateMin?.toNumber() ?? null,
+    rateMax: r.rateMax?.toNumber() ?? null,
+  }))
 }
 
-export async function listBiScales(): Promise<BiScale[]> {
-  return prisma.biScale.findMany({
+export async function listBiScales(): Promise<BiScaleRow[]> {
+  const rows = await prisma.biScale.findMany({
     orderBy: { indemnityMonths: "asc" },
   })
+  return rows.map((r) => ({ ...r, percentage: r.percentage.toNumber() }))
 }
 
 // ---------------------------------------------------------------------------

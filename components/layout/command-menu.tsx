@@ -17,12 +17,15 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command"
-import { SLIPS } from "@/lib/data"
+import { useCollection } from "@/lib/store"
 
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false)
   const router = useRouter()
   const { canAccess, canManage } = usePermission()
+  // Dari store sesi, bukan dari data contoh statis: begitu sebuah halaman
+  // memuat slip dari database, palet ikut menampilkan slip yang sama.
+  const slips = useCollection("slips")
 
   React.useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -121,7 +124,7 @@ export function CommandMenu() {
           ) : null}
           {canAccessUnderwriting ? (
             <CommandGroup heading="Placing Slip">
-              {SLIPS.slice(0, 6).map((s) => (
+              {slips.slice(0, 6).map((s) => (
                 <CommandItem
                   key={s.id}
                   value={`${s.slipNo ?? "draft"} ${s.insuredName}`}

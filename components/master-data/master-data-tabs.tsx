@@ -21,18 +21,18 @@ import { VehiclesTab } from "@/components/master-data/vehicles-tab"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
   Adjuster,
-  BiScale,
   Currency,
   Insurer,
   LookupValue,
-  TariffEqProperty,
-  TariffFlood,
   WordingForm,
 } from "@/lib/generated/prisma/client"
 import type {
   BankAccountRecord,
+  BiScaleRow,
   MasterCobRecord,
   OccupationRecord,
+  TariffEqPropertyRow,
+  TariffFloodRow,
 } from "@/lib/server/master-data"
 import type { CobOjkClassRecord } from "@/lib/server/cob-ojk-classes"
 import type { VehicleBrandRecord } from "@/lib/server/vehicles"
@@ -42,9 +42,9 @@ export interface MasterDataTabsProps {
   rateModes: LookupValue[]
   formVariants: LookupValue[]
   initialOccupations: OccupationRecord[]
-  tariffEqProperty: TariffEqProperty[]
-  tariffFlood: TariffFlood[]
-  biScales: BiScale[]
+  tariffEqProperty: TariffEqPropertyRow[]
+  tariffFlood: TariffFloodRow[]
+  biScales: BiScaleRow[]
   initialInsurers: Insurer[]
   initialAdjusters: Adjuster[]
   initialBankAccounts: BankAccountRecord[]
