@@ -75,9 +75,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
   }
 
   React.useEffect(() => {
-    for (const c of initialClaims) {
-      store.upsert("claims", c)
-    }
+    store.hydrate("claims", initialClaims)
   }, [initialClaims])
 
   const today = useToday()

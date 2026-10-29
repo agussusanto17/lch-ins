@@ -45,6 +45,9 @@ const INITIAL: Collections = {
 let state: Collections = INITIAL
 const listeners = new Set<() => void>()
 
+/** Koleksi yang sudah pernah menerima daftar dari server. */
+const hydrated = new Set<Key>()
+
 function subscribe(listener: () => void) {
   listeners.add(listener)
   return () => {
@@ -96,6 +99,26 @@ export const store = {
         r.id === id ? { ...r, ...patch } : r
       ) as Collections[K]
     )
+  },
+  /**
+   * Pasang daftar dari server ke sebuah koleksi.
+   *
+   * Store ini dimuati data contoh saat modul diimpor, dari waktu modulnya
+   * belum punya database. Karena itu hidrasi pertama sebuah koleksi membuang
+   * data contohnya lebih dulu; kalau tidak, baris dari database tampil
+   * berdampingan dengan contohnya dan daftarnya jadi dobel.
+   *
+   * Hidrasi berikutnya hanya upsert, karena daftar yang datang belum tentu
+   * lengkap. Halaman detail klien, misalnya, cuma mengirim SPPA milik klien
+   * itu — kalau itu ikut mengganti seisi koleksi, SPPA klien lain hilang.
+   */
+  hydrate<K extends Key>(key: K, rows: Collections[K]) {
+    if (hydrated.has(key)) {
+      for (const row of rows as Row<K>[]) store.upsert(key, row)
+      return
+    }
+    hydrated.add(key)
+    commit(key, rows)
   },
   /** Simpan baris: ganti bila id sudah ada, tambah bila belum. */
   upsert<K extends Key>(key: K, row: Row<K>) {

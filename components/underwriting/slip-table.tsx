@@ -188,9 +188,7 @@ export function SlipTable({
 
   React.useEffect(() => {
     if (initialSlips && initialSlips.length > 0) {
-      for (const s of initialSlips) {
-        store.upsert("slips", s)
-      }
+      store.hydrate("slips", initialSlips)
     }
   }, [initialSlips])
 
