@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-29
 - **Branch:** `fix/ukuran-font-tabel-dan-chip`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** [#50](https://github.com/agussusanto17/lch-ins/pull/50)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
