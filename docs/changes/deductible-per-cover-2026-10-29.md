@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-29
 - **Branch:** `feat/deductible-per-cover`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** [#53](https://github.com/agussusanto17/lch-ins/pull/53)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
