@@ -28,7 +28,10 @@ import {
 } from "@/lib/data"
 import { daysBetween, yearMonth } from "@/lib/date"
 import { compactMoney, dateShort, monthLabel, rupiah } from "@/lib/format"
-import { useCollection } from "@/lib/store"
+import type { ClaimRecord } from "@/lib/server/claims"
+import type { ClientRecord } from "@/lib/server/clients"
+import type { PlacingSlipRecord } from "@/lib/server/placing-slips"
+import type { PolicyRecord } from "@/lib/server/policies"
 
 const QUICK_LINKS = [
   {
@@ -63,12 +66,36 @@ const QUICK_LINKS = [
   },
 ]
 
-export function DashboardView() {
+export interface DashboardViewProps {
+  initialClients: ClientRecord[]
+  initialPolicies: PolicyRecord[]
+  initialClaims: ClaimRecord[]
+  initialSlips: PlacingSlipRecord[]
+}
+
+export function DashboardView({
+  initialClients,
+  initialPolicies,
+  initialClaims,
+  initialSlips,
+}: DashboardViewProps) {
+  /*
+   * Dihitung langsung dari data server, tidak lewat store sesi.
+   *
+   * Store dimuati data contoh saat modul diimpor, jadi membacanya berarti
+   * render pertama memakai angka contoh dan baru berganti ke angka database
+   * setelah efek hidrasi jalan. Di halaman ini bedanya kelihatan: angkanya
+   * sempat salah sepersekian detik sebelum berubah sendiri.
+   *
+   * Tabel tetap perlu store supaya hasil edit form langsung terlihat tanpa
+   * memuat ulang. Dashboard tidak: ini halaman ringkasan yang dibuka, bukan
+   * disunting, dan setiap kali dibuka Next mengambil datanya lagi dari server.
+   */
   const today = useToday()
-  const clients = useCollection("clients")
-  const policies = useCollection("policies")
-  const claims = useCollection("claims")
-  const slips = useCollection("slips")
+  const clients = initialClients
+  const policies = initialPolicies
+  const claims = initialClaims
+  const slips = initialSlips
 
   const totals = computeTotals({ clients, policies, claims, slips }, today)
   const renewals = upcomingRenewals(policies, today, 60)
