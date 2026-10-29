@@ -9,7 +9,7 @@ import { canManage } from "@/lib/access"
 import { listPlacingSlips } from "@/lib/server/placing-slips"
 import { currentUser } from "@/lib/server/session"
 
-export const metadata: Metadata = { title: "Underwriting — LCH Insurance Brokers" }
+export const metadata: Metadata = { title: "Placement — LCH Insurance Brokers" }
 
 export default async function UnderwritingPage() {
   const [initialSlips, user] = await Promise.all([
@@ -24,7 +24,7 @@ export default async function UnderwritingPage() {
   return (
     <PageShell>
       <PageHeader
-        title="Underwriting"
+        title="Placement"
         description="Placing slip management — draft, release, dan dokumen turunan"
         actions={
           canManageUnderwriting ? (

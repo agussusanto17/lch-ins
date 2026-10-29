@@ -14,7 +14,7 @@ const fontMono = Geist_Mono({
 export const metadata = {
   title: "LCH Insurance Brokers",
   description:
-    "Sistem manajemen underwriting, polis, dan klaim PT. LCH Insurance Brokers.",
+    "Sistem manajemen placement, polis, dan klaim PT. LCH Insurance Brokers.",
 }
 
 export default function RootLayout({
