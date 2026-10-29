@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-29
 - **Branch:** `fix/decimal-ke-client-dan-dashboard-database`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** [#48](https://github.com/agussusanto17/lch-ins/pull/48)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
