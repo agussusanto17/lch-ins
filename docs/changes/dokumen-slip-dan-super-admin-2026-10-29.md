@@ -62,6 +62,24 @@ Admin bersama. Entri itu dihapus dari `IDENTITY_CONFLICTS` dan akunnya di-seed
 seperti akun operasional lain, jadi tinggal `policyadmin@lch.co.id` yang masih
 bentrok.
 
+### PIC klaim Yusuf dan Tejo
+
+LCH menyebut PIC klaim adalah Yusuf dan Tejo. Tejo sudah punya akun sendiri
+(`sutejo@lch.co.id`), sedangkan Yusuf belum ada di mana pun. Diasumsikan dialah
+orang di balik akun generik "CLAIM LCH", jadi akun itu diberi nama YUSUF dengan
+email `claim@lch.co.id` yang lama, karena alamat pribadinya belum diberitahu.
+Kalau asumsinya meleset, Admin tinggal mengubah nama atau emailnya dari
+`/users`, tidak perlu ubah kode.
+
+Tresna masih memegang `claim` di samping `admin`. Dibiarkan: LCH tidak bilang
+rolenya dicabut, dan `admin` sudah Kelola di semua menu jadi tidak ada bedanya.
+
+Seed sekarang ikut memperbarui kolom `name` untuk pengguna yang sudah ada.
+Sebelumnya hanya `roles` dan `jobTitle` yang diperbarui, sehingga koreksi nama
+dari LCH cuma berlaku di database kosong.
+
+### Peran Yenie
+
 Lembar referensi LCH menulis peran Yenie "finance / admin", tetapi di sini dia
 baru diberi `finance`. Alasannya `admin` membuka menu Pengguna dan Audit Trail
 serta Kelola di seluruh menu; lebih aman kurang dulu lalu ditambahkan Admin dari

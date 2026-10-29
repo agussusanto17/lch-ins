@@ -993,9 +993,13 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
     mustChangePassword: true,
   },
   // Klaim, Accounting, Finance
+  // LCH menyebut PIC klaim adalah Yusuf dan Tejo (29 Oktober 2026). Tejo sudah
+  // punya akun sendiri di bawah; akun generik "CLAIM LCH" diberi nama Yusuf.
+  // Emailnya masih claim@lch.co.id karena alamat pribadinya belum diberitahu,
+  // tinggal diganti Admin dari /users kalau sudah ada.
   {
     email: "claim@lch.co.id",
-    name: "CLAIM LCH",
+    name: "YUSUF",
     roles: ["claim"],
     jobTitle: "Staff Klaim",
     mustChangePassword: true,
@@ -1079,6 +1083,9 @@ async function seedUsers() {
       await prisma.user.update({
         where: { id: existing.id },
         data: {
+          // Nama ikut diperbarui supaya koreksi dari LCH benar-benar terpasang
+          // saat seed dijalankan ulang, bukan cuma berlaku di database kosong.
+          name: item.name,
           roles: item.roles,
           jobTitle: item.jobTitle ?? existing.jobTitle,
         },
