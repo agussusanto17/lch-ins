@@ -10,13 +10,13 @@ import {
   DeductibleBlock,
   DetailTable,
   DocTitle,
+  InsurerSignatureGrid,
   InterestBlock,
   PayableTable,
   PremiumTable,
   SectionHeading,
   SecurityPanelBlock,
   SignatureGrid,
-  SignedBlock,
   premiumRows,
   type PremiumRow,
 } from "@/components/documents/doc-blocks"
@@ -209,7 +209,8 @@ export function CoverNoteDocument(props: DocProps) {
         </>
       ) : null}
 
-      <SignedBlock label="Nama Perusahaan Asuransi" />
+      <SectionHeading>SIGNED</SectionHeading>
+      <InsurerSignatureGrid slip={slip} />
       <p className="mt-8 text-[13px]">Jakarta, {dateLong(slip.updatedAt)}</p>
 
       <PrintedAt />
@@ -265,12 +266,10 @@ export function ClosingInstructionDocument(props: DocProps) {
         </>
       ) : null}
 
-      <SignedBlock label="Nama Perusahaan Asuransi" />
-
       <p className="mt-8 mb-1 text-[13px]">
         Jakarta, {dateLong(slip.updatedAt)}
       </p>
-      <div className="avoid-break mt-4 grid grid-cols-1 gap-8 text-[13px] sm:grid-cols-2">
+      <div className="avoid-break mt-4 grid grid-cols-1 gap-x-8 text-[13px] sm:grid-cols-2">
         <div>
           <p className="mb-14 text-muted-foreground">
             Disiapkan oleh / Prepared by,
@@ -278,17 +277,18 @@ export function ClosingInstructionDocument(props: DocProps) {
           <p className="border-t pt-1 font-bold">PT. LCH Insurance Brokers</p>
           <p className="text-xs text-muted-foreground">Authorized Signatory</p>
         </div>
-        <div>
-          <p className="mb-14 text-muted-foreground">
-            Diterima &amp; Ditandatangani / Accepted &amp; Signed by,
-          </p>
-          <p className="border-t pt-1 font-bold">Nama Perusahaan Asuransi</p>
-          <p className="text-xs text-muted-foreground">Authorized Signatory</p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Tanggal: ...................
-          </p>
-        </div>
       </div>
+
+      {/*
+       * Penerimaan per asuransi menggantikan satu blok "Nama Perusahaan
+       * Asuransi" yang kosong; kalau dua-duanya dipasang, tanda tangan
+       * asuransi muncul dua kali.
+       */}
+      <SectionHeading>SIGNED</SectionHeading>
+      <InsurerSignatureGrid
+        slip={slip}
+        caption="Diterima & Ditandatangani / Accepted & Signed by,"
+      />
 
       <PrintedAt />
     </DocumentShell>
