@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-29
 - **Branch:** `feat/tanda-tangan-per-asuransi`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** [#52](https://github.com/agussusanto17/lch-ins/pull/52)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
