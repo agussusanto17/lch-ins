@@ -1028,6 +1028,19 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
     jobTitle: "Finance",
     mustChangePassword: true,
   },
+  // LCH memastikan 29 Oktober 2026 bahwa adminfin@lch.co.id milik Yenie, bukan
+  // akun Super Admin bersama, jadi konflik identitas pada email ini selesai.
+  // Lembar referensi menulis perannya "finance / admin", tetapi di sini baru
+  // diberi finance saja: admin membuka Pengguna dan Audit Trail serta Kelola di
+  // seluruh menu, jadi lebih aman kurang dulu lalu ditambah Admin dari /users
+  // kalau LCH memang meminta. Menunggu jawaban.
+  {
+    email: "adminfin@lch.co.id",
+    name: "YENIE YUSTIKA",
+    roles: ["finance"],
+    jobTitle: "Finance & Admin",
+    mustChangePassword: true,
+  },
 ]
 
 /**
@@ -1036,15 +1049,6 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
  *    atau duplikasi akun berbeda orang pada 1 alamat email.
  */
 const IDENTITY_CONFLICTS = [
-  {
-    sharedEmail: "adminfin@lch.co.id",
-    candidates: [
-      { name: "Super Admin", role: "admin" },
-      { name: "YENIE YUSTIKA", role: "finance / admin" },
-    ],
-    resolution:
-      "Dilewati otomatis untuk mencegah account takeover / tumpang tindih hak akses antar individu berbeda. Administrator disarankan membuat akun terpisah individual di menu /users (misal: yenie@lch.co.id). Catatan 29 Oktober 2026: Super Admin sudah ditunjuk ke Harry dan Tresna, jadi kandidat \"Super Admin\" di baris ini kemungkinan sudah tidak berlaku dan email ini milik Yenie saja. Menunggu konfirmasi LCH sebelum di-seed.",
-  },
   {
     sharedEmail: "policyadmin@lch.co.id",
     candidates: [

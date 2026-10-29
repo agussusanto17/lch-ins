@@ -52,8 +52,21 @@ Role bidangnya sengaja dipertahankan supaya daftar pengguna tetap menggambarkan
 pekerjaan asli orangnya, walaupun `admin` sendiri sudah Kelola di seluruh menu.
 
 Permintaan "password diseragamkan" tidak butuh perubahan kode: seed memang sudah
-memakai satu kata sandi awal untuk semua akun baru, dan ketujuh akun operasional
+memakai satu kata sandi awal untuk semua akun baru, dan seluruh akun operasional
 sudah `mustChangePassword: true`, jadi wajib ganti saat login pertama.
+
+### Akun Yenie, konflik `adminfin@lch.co.id` selesai
+
+LCH memastikan `adminfin@lch.co.id` memang milik Yenie Yustika, bukan akun Super
+Admin bersama. Entri itu dihapus dari `IDENTITY_CONFLICTS` dan akunnya di-seed
+seperti akun operasional lain, jadi tinggal `policyadmin@lch.co.id` yang masih
+bentrok.
+
+Lembar referensi LCH menulis peran Yenie "finance / admin", tetapi di sini dia
+baru diberi `finance`. Alasannya `admin` membuka menu Pengguna dan Audit Trail
+serta Kelola di seluruh menu; lebih aman kurang dulu lalu ditambahkan Admin dari
+`/users` kalau LCH memang memintanya, daripada terlanjur memberi akses yang
+tidak diperlukan. Sudah ditanyakan, menunggu jawaban.
 
 ### Regresi nomor telepon kop surat
 
@@ -101,12 +114,21 @@ Nomor telepon terbaca 2605 1071 dan 2605 1072 di seluruh dokumen. Pencarian
 `1671` dan `1672` di seluruh kode tidak menemukan apa pun selain komentar
 peringatan. Tidak ada error di console browser.
 
-Role tersimpan benar setelah seed dijalankan ulang:
+Kedelapan akun LCH tersimpan benar setelah seed dijalankan ulang, semuanya
+`must_change_password = t`:
 
 ```
-tresna@lch.co.id | TRESNA         | {admin,claim}               | must_change_password = t
-harry@lch.co.id  | HARRY SETIAWAN | {admin,marketing,placement} | must_change_password = t
+accounting@lch.co.id | ACCOUNTING LCH | {accounting}
+adminfin@lch.co.id   | YENIE YUSTIKA  | {finance}
+aziz@lch.co.id       | AZIZ SURYA     | {marketing,placement}
+claim@lch.co.id      | CLAIM LCH      | {claim}
+finance02@lch.co.id  | FITRI          | {finance}
+harry@lch.co.id      | HARRY SETIAWAN | {admin,marketing,placement}
+sutejo@lch.co.id     | SUTEJO         | {claim}
+tresna@lch.co.id     | TRESNA         | {admin,claim}
 ```
+
+Keluaran seed menyisakan satu konflik identitas saja, `policyadmin@lch.co.id`.
 
 ## Catatan untuk yang melanjutkan
 
@@ -123,13 +145,9 @@ menyebut instruksi LCH, bukan alasannya, sampai Harry menjawab. Kalau dugaan ini
 salah, yang perlu diperiksa bukan cuma Quotation Slip tapi juga dokumen lain
 yang sampai ke pihak luar.
 
-**Konflik `adminfin@lch.co.id` kemungkinan besar sudah selesai tapi belum
-dikonfirmasi.** Sheet pengguna LCH menulis email itu dua kali, untuk "Super
-Admin" dan untuk Yenie Yustika, dan seed melewatinya supaya satu email tidak
-dipakai dua orang. Karena Super Admin sekarang sudah ditunjuk ke Harry dan
-Tresna, kandidat "Super Admin" di baris itu semestinya gugur dan email tersebut
-milik Yenie saja. Teks penanganannya di seed sudah diperbarui, tapi akunnya
-belum dibuat sampai LCH menjawab.
+**Peran Yenie belum final.** Akunnya sudah dibuat dengan `finance`, sedangkan
+lembar referensi LCH menulis "finance / admin". Kalau LCH menjawab dia memang
+perlu Admin, cukup tambahkan dari `/users`, tidak perlu ubah seed.
 
 **`policyadmin@lch.co.id` masih bentrok** antara Muhaimin dan Farah, belum ada
 jawaban.
