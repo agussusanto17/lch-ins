@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-29
 - **Branch:** `feat/master-data-submenu-sidebar`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** [#49](https://github.com/agussusanto17/lch-ins/pull/49)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
