@@ -289,7 +289,7 @@ export function LookupValuesTab({
               />
             ) : (
               filteredLookups.map((lookup) => (
-                <TableRow key={lookup.id} className="text-xs hover:bg-muted/40 transition-colors">
+                <TableRow key={lookup.id}>
                   <TableCell className="text-center font-mono text-muted-foreground">
                     {lookup.sortOrder}
                   </TableCell>
@@ -301,13 +301,13 @@ export function LookupValuesTab({
                     {lookup.isSystem ? (
                       <Badge
                         variant="secondary"
-                        className="gap-1 text-[11px] font-normal text-muted-foreground"
+                        className="gap-1 font-normal text-muted-foreground"
                       >
                         <Lock className="size-3" />
                         Sistem
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[11px] font-normal">
+                      <Badge variant="outline" className="font-normal">
                         Kustom
                       </Badge>
                     )}

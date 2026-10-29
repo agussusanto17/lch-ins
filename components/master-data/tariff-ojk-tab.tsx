@@ -179,7 +179,7 @@ export function TariffOjkTab({
                     const k3 = occ.tariffs.find((t) => t.constructionClass === "K3")
 
                     return (
-                      <TableRow key={occ.id} className="text-xs hover:bg-muted/40">
+                      <TableRow key={occ.id}>
                         <TableCell className="font-mono font-semibold text-foreground">
                           {occ.code}
                         </TableCell>
@@ -258,16 +258,16 @@ export function TariffOjkTab({
                 </TableHeader>
                 <TableBody>
                   {groupedMotorTariffs.map((t, idx) => (
-                    <TableRow key={`${t.category}-${t.region}-${idx}`} className="text-xs hover:bg-muted/40">
+                    <TableRow key={`${t.category}-${t.region}-${idx}`}>
                       <TableCell>
                         <span className="font-semibold text-foreground block">
                           {t.category}
                         </span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {t.vehicle}
                         </span>
                       </TableCell>
-                      <TableCell className="text-muted-foreground font-mono text-[11px]">
+                      <TableCell className="text-muted-foreground font-mono">
                         {t.sumInsuredBand}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
@@ -321,14 +321,14 @@ export function TariffOjkTab({
                         : "Ditentukan Underwriter"
 
                     return (
-                      <TableRow key={`${ext.cover}-${ext.policyType}-${idx}`} className="text-xs hover:bg-muted/40">
+                      <TableRow key={`${ext.cover}-${ext.policyType}-${idx}`}>
                         <TableCell className="font-semibold text-foreground">
                           {ext.cover}
                         </TableCell>
-                        <TableCell className="text-muted-foreground font-mono text-[11px]">
+                        <TableCell className="text-muted-foreground font-mono">
                           {ext.policyType || "Comprehensive & TLO"}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-[11px]">
+                        <TableCell className="text-muted-foreground">
                           {ext.basis}
                         </TableCell>
                         <TableCell className="text-center font-mono font-medium text-foreground">
@@ -363,7 +363,7 @@ export function TariffOjkTab({
                 <TableEmpty colSpan={3} message="Belum ada data tarif gempa bumi." />
               ) : (
                 tariffEqProperty.map((eq) => (
-                  <TableRow key={eq.id} className="text-xs hover:bg-muted/40">
+                  <TableRow key={eq.id}>
                     <TableCell className="font-medium text-foreground">
                       {eq.constructionCategory}
                     </TableCell>
@@ -400,7 +400,7 @@ export function TariffOjkTab({
                 <TableEmpty colSpan={6} message="Belum ada data tarif banjir." />
               ) : (
                 tariffFlood.map((f) => (
-                  <TableRow key={f.id} className="text-xs hover:bg-muted/40">
+                  <TableRow key={f.id}>
                     <TableCell className="font-medium text-foreground">
                       {f.line}
                     </TableCell>
@@ -443,10 +443,7 @@ export function TariffOjkTab({
                 <TableEmpty colSpan={3} message="Belum ada data skala BI." />
               ) : (
                 biScales.map((b) => (
-                  <TableRow
-                    key={b.indemnityMonths}
-                    className="text-xs hover:bg-muted/40"
-                  >
+                  <TableRow key={b.indemnityMonths}>
                     <TableCell className="font-mono font-medium text-foreground">
                       {b.indemnityMonths} Bulan
                     </TableCell>

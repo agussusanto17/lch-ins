@@ -283,7 +283,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
                         >
                           {c.name}
                         </Link>
-                        <span className="shrink-0 text-[11px] text-muted-foreground">
+                        <span className="shrink-0 text-xs text-muted-foreground">
                           ({c.clientType})
                         </span>
                       </div>
@@ -305,7 +305,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
                       </p>
                     </TableCell>
                     <TableCell className="max-w-40">
-                      <span className="text-xs font-medium">{c.cob}</span>
+                      <span className="font-medium">{c.cob}</span>
                     </TableCell>
                     <TableCell className="max-w-50">
                       {missing.length === 0 ? (
@@ -316,7 +316,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
                             Kurang {missing.length} data
                           </ToneBadge>
                           <span
-                            className="truncate text-[11px] text-muted-foreground"
+                            className="truncate text-xs text-muted-foreground"
                             title={missing.join(", ")}
                           >
                             {missing.join(", ")}
@@ -330,17 +330,17 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
                     <TableCell className="max-w-60 pr-4">
                       {primaryAddress ? (
                         <div className="flex flex-col">
-                          <span className="truncate text-xs">
+                          <span className="truncate">
                             {primaryAddress.value}
                           </span>
                           {c.addresses.length > 1 ? (
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               +{c.addresses.length - 1} alamat lain
                             </span>
                           ) : null}
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                   </TableRow>

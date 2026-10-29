@@ -67,7 +67,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const BASE =
-  "inline-flex h-5.5 w-fit shrink-0 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium whitespace-nowrap"
+  "inline-flex h-5 w-fit shrink-0 items-center gap-1.5 rounded-4xl px-2 text-xs font-medium whitespace-nowrap"
 
 export function StatusBadge({
   status,

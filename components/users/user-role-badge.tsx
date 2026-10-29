@@ -5,23 +5,23 @@ import { isValidRoleCode, ROLE_LABELS, type RoleCode } from "@/lib/access"
 import { cn } from "@/lib/utils"
 
 export const userRoleBadgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium tracking-wide transition-colors",
+  "inline-flex h-5 w-fit shrink-0 items-center rounded-4xl px-2 text-xs font-medium whitespace-nowrap",
   {
     variants: {
       roleVariant: {
         admin:
-          "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+          "bg-purple-500/10 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
         marketing:
-          "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+          "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
         placement:
-          "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+          "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
         claim:
-          "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+          "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
         accounting:
-          "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+          "bg-teal-500/10 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
         finance:
-          "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
-        fallback: "border-border bg-muted text-muted-foreground",
+          "bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
+        fallback: "bg-muted text-muted-foreground",
       },
     },
     defaultVariants: {

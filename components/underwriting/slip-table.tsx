@@ -325,11 +325,11 @@ export function SlipTable({
                   </TableCell>
                   <TableCell className="max-w-57.5">
                     {s.slipNo ? (
-                      <span className="tabular text-xs font-semibold text-primary">
+                      <span className="tabular font-semibold text-primary">
                         {s.slipNo}
                       </span>
                     ) : (
-                      <span className="text-xs text-muted-foreground italic">
+                      <span className="text-muted-foreground italic">
                         Belum di-release
                       </span>
                     )}
