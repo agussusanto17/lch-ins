@@ -491,7 +491,7 @@ function SlipEditor({
 
       <SlipFormBody>
         {slip.sppaId ? (
-          <p className="flex items-center gap-2 rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+          <p className="flex items-center gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
             <Info className="size-4 shrink-0" />
             Dibuat dari SPPA {slip.insuredName}. Data dasar terisi dari SPPA dan
             tetap bisa diubah.
@@ -506,7 +506,7 @@ function SlipEditor({
           </p>
         ) : null}
         {locked ? (
-          <p className="flex items-start gap-2 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
+          <p className="flex items-start gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
             <Ban className="mt-0.5 size-4 shrink-0" />
             Slip berstatus{" "}
             {slip.status === "Cancelled" ? "dibatalkan" : "Closed"} dan tidak

@@ -152,7 +152,6 @@ export function AuditTable({
             value={query}
             onValueChange={setQuery}
             placeholder="Cari pengguna atau modul…"
-            className="w-full sm:max-w-xs"
           />
 
           <div className="flex flex-wrap items-center gap-2">

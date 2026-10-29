@@ -346,7 +346,6 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
           value={query}
           onValueChange={setQuery}
           placeholder="Cari merek atau tipe kendaraan…"
-          className="w-full sm:max-w-xs"
         />
         {canManage && (
           <Button size="sm" onClick={openAddBrand} className="h-9 gap-1.5 text-xs">

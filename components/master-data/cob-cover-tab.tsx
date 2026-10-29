@@ -366,7 +366,6 @@ export function CobCoverTab({
           value={query}
           onValueChange={setQuery}
           placeholder="Cari kode atau nama COB / Cover Type…"
-          className="w-full sm:max-w-xs"
         />
         {canManage && (
           <Button size="sm" onClick={openAddCob} className="h-9 gap-1.5 text-xs">
