@@ -145,6 +145,8 @@ export interface RateLine {
   min?: number | null
   max?: number | null
   boundSource?: string
+  /** Deductible untuk cover ini, teks bebas. */
+  deductible?: string
 }
 
 export const RATE_EXCEPTION_REASONS = [

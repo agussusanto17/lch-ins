@@ -44,6 +44,7 @@ import {
 import {
   buildSlipNo,
   coverCodeFor,
+  coverLabel,
   isOutOfBounds,
   nextSlipSeq,
   rateLinesWithBounds,
@@ -906,31 +907,83 @@ function SlipEditor({
             }`}
           >
             <div className="flex flex-col gap-5">
+              {/*
+               * Deductible per cover, satu isian untuk tiap baris rate
+               * (instruksi LCH 29 Oktober 2026). Baris TPL dan PA tidak ikut:
+               * risiko sendiri motor berlaku untuk kendaraan dan perluasannya.
+               */}
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">
-                  {isProperty
-                    ? "Deductible — Section 1 (Material Damage)"
-                    : "Deductible"}
-                </p>
-                <StringList
-                  values={slip.deductiblesSection1}
-                  onChange={(v) => set({ deductiblesSection1: v })}
-                  placeholder="Contoh: 10% of claim minimum IDR 10,000,000"
-                  addLabel="Tambah deductible"
-                />
+                <p className="text-sm font-medium">Deductible per cover</p>
+                <div className="overflow-hidden rounded-xl border">
+                  {slip.rateLines.map((line) => (
+                    <div
+                      key={line.id}
+                      className="grid grid-cols-1 items-center gap-x-4 gap-y-1.5 border-b px-3 py-2.5 last:border-0 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]"
+                    >
+                      <label
+                        htmlFor={`deductible-${line.id}`}
+                        className="truncate text-sm text-muted-foreground"
+                        title={coverLabel(slip, line)}
+                      >
+                        {coverLabel(slip, line)}
+                      </label>
+                      <Input
+                        id={`deductible-${line.id}`}
+                        value={line.deductible ?? ""}
+                        onChange={(e) =>
+                          set({
+                            rateLines: slip.rateLines.map((l) =>
+                              l.id === line.id
+                                ? { ...l, deductible: e.target.value }
+                                : l
+                            ),
+                          })
+                        }
+                        placeholder={
+                          line.label.startsWith("BI")
+                            ? "Contoh: 14 days waiting period"
+                            : "Contoh: 10% of claim minimum IDR 10,000,000"
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {isProperty ? (
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm font-medium">
-                    Deductible — Section 2 (Business Interruption)
-                  </p>
-                  <StringList
-                    values={slip.deductiblesSection2}
-                    onChange={(v) => set({ deductiblesSection2: v })}
-                    placeholder="Contoh: 14 days waiting period"
-                    addLabel="Tambah deductible"
-                  />
+              {/*
+               * Deductible per section dari sebelum aturan per cover. Tidak
+               * bisa dipindah otomatis — "for Earthquake" harus masuk EQVET,
+               * bukan FLEXAS — jadi tetap ditampilkan sampai dipindah tangan.
+               * Slip baru tidak pernah melihat bagian ini.
+               */}
+              {slip.deductiblesSection1.length ||
+              slip.deductiblesSection2.length ? (
+                <div className="flex flex-col gap-3 rounded-xl border border-dashed p-4">
+                  <div>
+                    <p className="text-sm font-medium">
+                      Deductible lama (belum per cover)
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Pindahkan ke cover yang sesuai di atas, lalu hapus dari
+                      sini.
+                    </p>
+                  </div>
+                  {slip.deductiblesSection1.length ? (
+                    <StringList
+                      values={slip.deductiblesSection1}
+                      onChange={(v) => set({ deductiblesSection1: v })}
+                      placeholder="Contoh: 10% of claim minimum IDR 10,000,000"
+                      addLabel="Tambah deductible"
+                    />
+                  ) : null}
+                  {slip.deductiblesSection2.length ? (
+                    <StringList
+                      values={slip.deductiblesSection2}
+                      onChange={(v) => set({ deductiblesSection2: v })}
+                      placeholder="Contoh: 14 days waiting period"
+                      addLabel="Tambah deductible"
+                    />
+                  ) : null}
                 </div>
               ) : null}
 

@@ -58,6 +58,7 @@ const rateLineSchema = z.object({
   basis: z.string().optional(),
   min: z.coerce.number().nullable().optional(),
   max: z.coerce.number().nullable().optional(),
+  deductible: z.string().max(500).optional(),
 })
 
 const securityPanelRowSchema = z.object({
