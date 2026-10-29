@@ -252,7 +252,6 @@ export function LookupValuesTab({
             value={query}
             onValueChange={setQuery}
             placeholder="Cari kode atau label…"
-            className="w-full sm:max-w-xs"
           />
         </div>
 

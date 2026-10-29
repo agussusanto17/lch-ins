@@ -230,7 +230,7 @@ function QuotationEditor({ slip }: { slip: PlacingSlip }) {
           </p>
         ) : null}
         {locked ? (
-          <p className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
+          <p className="rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
             Slip berstatus {slip.status === "Closed" ? "Closed" : "dibatalkan"}.
             Quotation hanya bisa dilihat.
           </p>

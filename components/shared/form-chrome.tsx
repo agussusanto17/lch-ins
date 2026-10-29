@@ -80,11 +80,20 @@ export function FormActions({ className, children }: { className?: string; child
   )
 }
 
-/** Wrapper konten di antara kedua bar sticky. */
+/**
+ * Wrapper konten di antara kedua bar sticky.
+ *
+ * Latarnya abu-abu tipis supaya kartu section yang putih terbaca sebagai
+ * bagian-bagian terpisah; form slip punya delapan section dan di atas latar
+ * putih batasnya cuma garis tipis. Di tema gelap latarnya tetap `background`,
+ * karena di sana `muted` lebih terang dari kartu dan urutannya jadi terbalik.
+ */
 export function FormBody({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn("mx-auto flex w-full max-w-[1440px] flex-col gap-4 px-4 py-5 md:px-6", className)}>
-      {children}
+    <div className="flex-1 bg-muted dark:bg-background">
+      <div className={cn("mx-auto flex w-full max-w-[1440px] flex-col gap-4 px-4 py-5 md:px-6", className)}>
+        {children}
+      </div>
     </div>
   )
 }

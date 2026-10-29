@@ -143,7 +143,6 @@ export function TariffOjkTab({
             value={query}
             onValueChange={setQuery}
             placeholder="Cari kode atau nama okupasi OJK…"
-            className="w-full sm:max-w-xs"
           />
         )}
       </div>

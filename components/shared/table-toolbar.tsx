@@ -39,7 +39,7 @@ export function SearchInput({
   className?: string
 }) {
   return (
-    <InputGroup className={cn("h-9 w-full sm:max-w-xs", className)}>
+    <InputGroup className={cn("h-9 w-full sm:w-80", className)}>
       <InputGroupAddon>
         <Search />
       </InputGroupAddon>
