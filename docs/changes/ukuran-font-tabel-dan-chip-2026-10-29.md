@@ -72,7 +72,7 @@ Satu aturan untuk semua tabel daftar data:
 - Sel yang isinya satu nilai redup saja — "14 transaksi", nama asuransi, varian
   form — tetap teks utama kolomnya, jadi 14px redup, bukan 12px.
 
-Diterapkan di 16 tabel di 15 berkas: Klaim, Marketing (klien, SPPA, renewal,
+Diterapkan di 16 berkas tabel: Klaim, Marketing (klien, SPPA, renewal,
 dan dua tabel di detail klien), Placement, Policy Database, ketujuh bagian
 Master Data, Pengguna, dan Audit Trail.
 
@@ -96,7 +96,7 @@ kedua tabel itu lebih gelap dari tabel lain.
 - `components/ui/table.tsx`: `TableHead`.
 - `components/shared/status-badge.tsx`: kelas dasar `StatusBadge`/`ToneBadge`.
 - `components/users/user-role-badge.tsx`: bentuk dan ukuran chip peran.
-- Lima belas berkas tabel di `components/claims`, `marketing`, `master-data`,
+- Enam belas berkas tabel di `components/claims`, `marketing`, `master-data`,
   `policies`, `underwriting`, `users`, dan `audit`.
 
 ## Dampak
