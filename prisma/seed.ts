@@ -974,14 +974,17 @@ const PRESERVED_MOCK_USERS: SeedUserRecord[] = [
  *    - Akun tanpa konflik identitas di-seed langsung.
  */
 const OPERATIONAL_USERS: SeedUserRecord[] = [
-  // Unifikasi multi-role (Marketing & Placement)
+  // Super Admin ditunjuk LCH 29 Oktober 2026: Harry dan Tresna. Role bidangnya
+  // tetap dipertahankan supaya daftar ini tetap menggambarkan pekerjaan asli
+  // orangnya, walaupun admin sendiri sudah Kelola di seluruh menu.
   {
     email: "harry@lch.co.id",
     name: "HARRY SETIAWAN",
-    roles: ["marketing", "placement"],
+    roles: ["admin", "marketing", "placement"],
     jobTitle: "SPV",
     mustChangePassword: true,
   },
+  // Unifikasi multi-role (Marketing & Placement)
   {
     email: "aziz@lch.co.id",
     name: "AZIZ SURYA",
@@ -990,9 +993,13 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
     mustChangePassword: true,
   },
   // Klaim, Accounting, Finance
+  // LCH menyebut PIC klaim adalah Yusuf dan Tejo (29 Oktober 2026). Tejo sudah
+  // punya akun sendiri di bawah; akun generik "CLAIM LCH" diberi nama Yusuf.
+  // Emailnya masih claim@lch.co.id karena alamat pribadinya belum diberitahu,
+  // tinggal diganti Admin dari /users kalau sudah ada.
   {
     email: "claim@lch.co.id",
-    name: "CLAIM LCH",
+    name: "YUSUF",
     roles: ["claim"],
     jobTitle: "Staff Klaim",
     mustChangePassword: true,
@@ -1007,7 +1014,7 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
   {
     email: "tresna@lch.co.id",
     name: "TRESNA",
-    roles: ["claim"],
+    roles: ["admin", "claim"],
     jobTitle: "Klaim",
     mustChangePassword: true,
   },
@@ -1025,6 +1032,19 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
     jobTitle: "Finance",
     mustChangePassword: true,
   },
+  // LCH memastikan 29 Oktober 2026 bahwa adminfin@lch.co.id milik Yenie, bukan
+  // akun Super Admin bersama, jadi konflik identitas pada email ini selesai.
+  // Lembar referensi menulis perannya "finance / admin", tetapi di sini baru
+  // diberi finance saja: admin membuka Pengguna dan Audit Trail serta Kelola di
+  // seluruh menu, jadi lebih aman kurang dulu lalu ditambah Admin dari /users
+  // kalau LCH memang meminta. Menunggu jawaban.
+  {
+    email: "adminfin@lch.co.id",
+    name: "YENIE YUSTIKA",
+    roles: ["finance"],
+    jobTitle: "Finance & Admin",
+    mustChangePassword: true,
+  },
 ]
 
 /**
@@ -1033,15 +1053,6 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
  *    atau duplikasi akun berbeda orang pada 1 alamat email.
  */
 const IDENTITY_CONFLICTS = [
-  {
-    sharedEmail: "adminfin@lch.co.id",
-    candidates: [
-      { name: "Super Admin", role: "admin" },
-      { name: "YENIE YUSTIKA", role: "finance / admin" },
-    ],
-    resolution:
-      "Dilewati otomatis untuk mencegah account takeover / tumpang tindih hak akses antar individu berbeda. Administrator disarankan membuat akun terpisah individual di menu /users (misal: yenie@lch.co.id).",
-  },
   {
     sharedEmail: "policyadmin@lch.co.id",
     candidates: [
@@ -1072,6 +1083,9 @@ async function seedUsers() {
       await prisma.user.update({
         where: { id: existing.id },
         data: {
+          // Nama ikut diperbarui supaya koreksi dari LCH benar-benar terpasang
+          // saat seed dijalankan ulang, bukan cuma berlaku di database kosong.
+          name: item.name,
           roles: item.roles,
           jobTitle: item.jobTitle ?? existing.jobTitle,
         },
