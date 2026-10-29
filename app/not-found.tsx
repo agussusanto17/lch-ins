@@ -27,7 +27,7 @@ export default function NotFound() {
             nativeButton={false}
           >
             <Search data-icon="inline-start" />
-            Lihat Underwriting
+            Lihat Placement
           </Button>
         </div>
       </div>

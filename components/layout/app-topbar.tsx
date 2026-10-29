@@ -32,7 +32,7 @@ import type { CurrentUser } from "@/lib/server/session"
 
 const SEGMENT_LABELS: Record<string, string> = {
   marketing: "Marketing",
-  underwriting: "Underwriting",
+  underwriting: "Placement",
   policies: "Policy Database",
   claims: "Klaim",
   reports: "Report",

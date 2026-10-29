@@ -112,7 +112,7 @@ export function QuotationDraftForm({
           </h1>
           <Button render={<Link href="/underwriting" />} nativeButton={false}>
             <ArrowLeft data-icon="inline-start" />
-            Kembali ke Underwriting
+            Kembali ke Placement
           </Button>
         </div>
       </PageShell>

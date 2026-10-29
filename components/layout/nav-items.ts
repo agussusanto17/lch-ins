@@ -40,7 +40,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Operasional",
     items: [
       { title: "Marketing", href: "/marketing", icon: Users },
-      { title: "Underwriting", href: "/underwriting", icon: FileText },
+      { title: "Placement", href: "/underwriting", icon: FileText },
       { title: "Policy Database", href: "/policies", icon: ShieldCheck },
       { title: "Klaim", href: "/claims", icon: TriangleAlert },
     ],
