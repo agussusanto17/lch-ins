@@ -31,7 +31,10 @@ asuransi. Tafsiran yang dipakai:
 
 Tafsiran lain yang mungkin — tiap blok satu baris sendiri dan posisinya
 bergantian — ditolak karena memakan halaman dan tidak lazim di dokumen
-asuransi. Perlu dikonfirmasi ke Harry kalau yang dimaksud ternyata itu.
+asuransi.
+
+Tafsiran ini sudah dikonfirmasi Agus pada hari yang sama, jadi tidak perlu
+ditanyakan lagi ke Harry.
 
 ## Yang berubah
 
@@ -97,8 +100,6 @@ Perusahaan Asuransi" kosong di samping blok bernama. Blok "Disiapkan oleh" LCH
 muncul di Closing Instruction dan tidak di Cover Note, sama seperti sebelumnya.
 
 ## Catatan untuk yang melanjutkan
-
-**Tafsiran tata letak perlu dikonfirmasi ke Harry**, lihat bagian Asumsi.
 
 **Cetak belum diuji ke kertas.** Pemecahan halaman hanya dijaga dengan
 `avoid-break` per blok; slip dengan banyak asuransi bisa memindahkan sebagian
