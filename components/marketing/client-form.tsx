@@ -14,7 +14,13 @@ import { FormDrawer } from "@/components/shared/form-drawer"
 import { SelectInput, TextField } from "@/components/shared/form-fields"
 import { useFormOptions } from "@/components/shared/form-options-provider"
 import { Button } from "@/components/ui/button"
-import { FieldGroup, FieldSeparator } from "@/components/ui/field"
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldSeparator,
+} from "@/components/ui/field"
+import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   CLIENT_STATUSES,
@@ -557,16 +563,20 @@ export function ClientForm({
                 onChange={(v) => patchAddress(a.id, { value: v })}
                 error={errors[`addresses.${i}.value`]}
               />
-              <label className="flex w-fit items-center gap-2 text-xs text-muted-foreground">
-                <input
-                  type="radio"
-                  name="primary-address"
+              {/* Radio terlalu kecil untuk diklik. Mematikan semua switch tetap
+                  aman: saat simpan, alamat pertama dijadikan utama. */}
+              <Field orientation="horizontal" className="w-fit">
+                <Switch
+                  id={`primary-${a.id}`}
                   checked={Boolean(a.isPrimary)}
-                  onChange={() => patchAddress(a.id, { isPrimary: true })}
-                  className="accent-primary"
+                  onCheckedChange={(v) =>
+                    patchAddress(a.id, { isPrimary: Boolean(v) })
+                  }
                 />
-                Alamat utama
-              </label>
+                <FieldLabel htmlFor={`primary-${a.id}`} className="font-normal">
+                  Alamat utama
+                </FieldLabel>
+              </Field>
             </div>
           ))}
           <Button

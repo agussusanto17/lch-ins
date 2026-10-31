@@ -13,14 +13,14 @@ const toggleVariants = cva(
         default: "bg-transparent",
         outline: "border border-input bg-transparent hover:bg-muted",
         // Gaya bawaan semua pilihan berbentuk chip di aplikasi (form klien, form
-        // slip, panel tarif OJK). Bingkai pilihan yang belum aktif 3,4:1 terhadap
-        // latar putih (border-input hanya 1,2:1) supaya terbaca bisa diklik. Yang
-        // aktif tidak memakai latar primary penuh agar tidak mirip tombol utama:
-        // bingkai primary 2px, latar primary/8, teks primary 4,9:1. Tebal bingkai
-        // jadi penanda selain warna; px-[11px] menahan lebar chip (ukuran
-        // default dan sm memakai px-3).
+        // slip, panel tarif OJK). Pilihan yang belum aktif berbingkai abu-abu
+        // tipis (permintaan Agus); tanda bisa diklik datang dari bentuk pil,
+        // kursor pointer, dan bingkai primary saat hover. Yang aktif tidak memakai
+        // latar primary penuh agar tidak mirip tombol utama: bingkai primary 2px,
+        // latar primary/8, teks primary 4,9:1. Tebal bingkai jadi penanda selain
+        // warna; px-[11px] menahan lebar chip (ukuran default dan sm memakai px-3).
         filter:
-          "cursor-pointer border border-foreground/50 bg-transparent hover:border-primary aria-pressed:border-2 aria-pressed:border-primary aria-pressed:bg-primary/8 aria-pressed:px-[11px] aria-pressed:text-primary aria-pressed:hover:bg-primary/12 aria-pressed:hover:text-primary",
+          "cursor-pointer border border-border bg-transparent hover:border-primary aria-pressed:border-2 aria-pressed:border-primary aria-pressed:bg-primary/8 aria-pressed:px-[11px] aria-pressed:text-primary aria-pressed:hover:bg-primary/12 aria-pressed:hover:text-primary",
       },
       size: {
         default:
