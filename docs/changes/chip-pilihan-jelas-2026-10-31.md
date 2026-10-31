@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-31
 - **Branch:** `fix/chip-tarif-ojk`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#64](https://github.com/agussusanto17/lch-ins/pull/64)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
