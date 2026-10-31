@@ -74,10 +74,10 @@ export const CONSTRUCTION_CLASSES = [
 export type ConstructionClassCode =
   (typeof CONSTRUCTION_CLASSES)[number]["code"]
 
-/** Label kelas konstruksi yang tampil di slip dan dokumen cetak. */
+/** Kelas konstruksi di dokumen cetak berbahasa Inggris, contoh K2 menjadi "Class II". */
 export function constructionClassLabel(code: string | undefined | null) {
-  const hit = CONSTRUCTION_CLASSES.find((c) => c.code === code)
-  return hit ? `${hit.label} (${hit.code})` : (code ?? "")
+  const roman = ["I", "II", "III"][Number(code?.match(/\d+/)?.[0]) - 1]
+  return roman ? `Class ${roman}` : (code ?? "")
 }
 
 /**
