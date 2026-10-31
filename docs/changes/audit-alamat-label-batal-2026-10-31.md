@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-31
 - **Branch:** `fix/audit-alamat-label-batal`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#60](https://github.com/agussusanto17/lch-ins/pull/60)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
