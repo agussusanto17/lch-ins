@@ -25,8 +25,8 @@ Agus mengusulkan perubahan ini ke Harry (LCH) dan disetujui lewat chat pada
 ## Yang berubah
 
 - Halaman Master Data → COB & Cover Type tidak lagi punya tombol Tambah COB,
-  Edit COB, dan Hapus COB. Gantinya keterangan "COB baru ditambahkan oleh
-  developer". Switch aktif/nonaktif COB tetap ada.
+  Edit COB, dan Hapus COB, tanpa keterangan pengganti (permintaan Agus). Switch
+  aktif/nonaktif COB tetap ada.
 - Server Action `createCobAction`, `updateCobAction`, dan `deleteCobAction`
   dihapus, jadi tidak bisa dipanggil langsung dari browser.
 - Type of cover (sub-cover) tidak berubah: tetap bisa ditambah, diedit,
@@ -83,8 +83,8 @@ COB yang ditambah lewat migrasi tidak tercatat di audit trail.
 - `npx eslint` pada file yang diubah: lolos.
 - Uji manual di localhost dengan akun admin uji, di Master Data → COB & Cover
   Type:
-  - Tombol Tambah COB, Edit COB, dan Hapus COB tidak ada. Keterangan "COB baru
-    ditambahkan oleh developer" tampil.
+  - Tombol Tambah COB, Edit COB, dan Hapus COB tidak ada, dan toolbar hanya
+    berisi kotak pencarian.
   - SIT UJI COB dinonaktifkan lalu diaktifkan lagi: toast "COB dinonaktifkan"
     dan "COB diaktifkan", status ikut berubah.
   - Sub-cover tetap punya tombol Tambah, Edit, Hapus, dan switch aktif.

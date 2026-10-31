@@ -247,10 +247,6 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           onValueChange={setQuery}
           placeholder="Cari kode atau nama COB / Cover Type…"
         />
-        <p className="text-xs text-muted-foreground">
-          COB baru ditambahkan oleh developer. Type of cover bisa dikelola di
-          sini.
-        </p>
       </div>
 
       {/* COB Table */}
