@@ -124,7 +124,7 @@ type SectionKey = (typeof SECTION_KEYS)[number]
 
 const toItem = (v: string) => ({ label: v, value: v })
 const CONSTRUCTION_ITEMS = CONSTRUCTION_CLASSES.map((c) => ({
-  label: `${c.label} (${c.code}) — ${c.description}`,
+  label: `${c.label} — ${c.description}`,
   value: c.code,
 }))
 const INDEMNITY_ITEMS = BI_SCALE_OJK.map((s) => ({
