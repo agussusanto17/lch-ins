@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Edit2, Lock, Plus, Trash2 } from "lucide-react"
+import { Lock, Pencil, Plus, Power, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -10,8 +10,14 @@ import {
   toggleLookupValueStatusAction,
   updateLookupValueAction,
 } from "@/app/(app)/master-data/actions"
+import {
+  ACTION_COL_CLASS,
+  RowActions,
+  type RowAction,
+} from "@/components/shared/row-actions"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
+import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { SearchInput } from "@/components/shared/table-toolbar"
 import { usePermission } from "@/components/auth/permission-provider"
 import { Badge } from "@/components/ui/badge"
@@ -120,6 +126,15 @@ export function LookupValuesTab({
       .sort((a, b) => a.sortOrder - b.sortOrder)
   }, [lookups, selectedType, query])
 
+  const {
+    page,
+    pageSize,
+    totalItems,
+    paginatedItems,
+    setPage,
+    setPageSize,
+  } = usePagination(filteredLookups, 10)
+
   function openAddDialog() {
     setEditingLookup(null)
     setCode("")
@@ -211,8 +226,6 @@ export function LookupValuesTab({
       return
     }
 
-    if (!confirm(`Hapus nilai pilihan "${lookup.name}"?`)) return
-
     startTransition(async () => {
       const res = await deleteLookupValueAction(lookup.id)
       if (!res.ok) {
@@ -224,11 +237,34 @@ export function LookupValuesTab({
     })
   }
 
+  function actionsFor(lookup: LookupValue): RowAction[] {
+    return [
+      { label: "Edit label", icon: Pencil, onSelect: () => openEditDialog(lookup) },
+      {
+        label: lookup.isActive ? "Nonaktifkan" : "Aktifkan",
+        icon: Power,
+        disabled: isPending,
+        onSelect: () => handleToggleStatus(lookup.id, lookup.isActive),
+      },
+      {
+        label: lookup.isSystem ? "Hapus (entri sistem)" : "Hapus",
+        icon: Trash2,
+        destructive: true,
+        disabled: isPending || lookup.isSystem,
+        confirm: {
+          title: "Hapus nilai pilihan ini?",
+          description: `"${lookup.name}" dihapus permanen dari kategori ini.`,
+          actionLabel: "Hapus",
+        },
+        onSelect: () => handleDelete(lookup),
+      },
+    ]
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Category selector & Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-3.5 shadow-xs">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Select
             items={categoryItems}
             value={selectedType}
@@ -256,24 +292,23 @@ export function LookupValuesTab({
         </div>
 
         {canManage && (
-          <Button size="sm" onClick={openAddDialog}>
-            <Plus className="size-4" />
+          <Button onClick={openAddDialog}>
+            <Plus data-icon="inline-start" />
             Tambah Pilihan Baru
           </Button>
         )}
       </div>
 
-      {/* Table */}
       <Card className="gap-0 overflow-hidden py-0">
         <Table className="min-w-200">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
+              {canManage && <TableHead className={ACTION_COL_CLASS}>Aksi</TableHead>}
               <TableHead className="w-16 text-center">Urutan</TableHead>
               <TableHead className="w-48">Kode Sistem</TableHead>
               <TableHead>Label Pilihan Dropdown</TableHead>
               <TableHead className="w-32">Tipe Entri</TableHead>
-              <TableHead className="w-28">Status</TableHead>
-              {canManage && <TableHead className="w-28 text-right pr-4">Aksi</TableHead>}
+              <TableHead className="w-28 pr-4">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -287,8 +322,13 @@ export function LookupValuesTab({
                 }
               />
             ) : (
-              filteredLookups.map((lookup) => (
+              paginatedItems.map((lookup) => (
                 <TableRow key={lookup.id}>
+                  {canManage && (
+                    <TableCell className={ACTION_COL_CLASS}>
+                      <RowActions actions={actionsFor(lookup)} />
+                    </TableCell>
+                  )}
                   <TableCell className="text-center font-mono text-muted-foreground">
                     {lookup.sortOrder}
                   </TableCell>
@@ -311,51 +351,24 @@ export function LookupValuesTab({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="pr-4">
                     <StatusBadge status={lookup.isActive ? "Active" : "Inactive"} />
                   </TableCell>
-                  {canManage && (
-                    <TableCell className="text-right pr-4">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(lookup)}
-                          className="size-7 text-muted-foreground hover:text-foreground"
-                          title="Edit label pilihan"
-                        >
-                          <Edit2 className="size-3.5" />
-                        </Button>
-                        <Switch
-                          checked={lookup.isActive}
-                          onCheckedChange={() => handleToggleStatus(lookup.id, lookup.isActive)}
-                          disabled={isPending}
-                          className="scale-75"
-                          title={lookup.isActive ? "Nonaktifkan pilihan" : "Aktifkan pilihan"}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(lookup)}
-                          disabled={isPending || lookup.isSystem}
-                          className="size-7 text-destructive hover:bg-destructive/10"
-                          title={
-                            lookup.isSystem
-                              ? "Entri sistem dilindungi dan tidak dapat dihapus"
-                              : "Hapus pilihan kustom"
-                          }
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </Card>
+
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        itemName="pilihan"
+      />
 
       {/* Modal Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
