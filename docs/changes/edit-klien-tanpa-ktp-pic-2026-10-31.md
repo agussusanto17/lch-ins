@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-31
 - **Branch:** `fix/edit-klien-tanpa-ktp-pic`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#59](https://github.com/agussusanto17/lch-ins/pull/59)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
