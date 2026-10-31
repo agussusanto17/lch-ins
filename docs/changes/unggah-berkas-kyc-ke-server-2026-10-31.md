@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-31
 - **Branch:** `fix/unggah-berkas-kyc`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#58](https://github.com/agussusanto17/lch-ins/pull/58)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
