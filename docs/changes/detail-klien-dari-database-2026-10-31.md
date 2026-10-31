@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-31
 - **Branch:** `fix/detail-klien-dari-database`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#57](https://github.com/agussusanto17/lch-ins/pull/57)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
