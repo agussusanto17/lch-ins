@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-31
 - **Branch:** `feat/kunci-cob-master-data`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#61](https://github.com/agussusanto17/lch-ins/pull/61)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
