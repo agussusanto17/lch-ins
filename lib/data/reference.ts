@@ -57,27 +57,31 @@ export const CLAIM_STAGES: ClaimStage[] = [
 /** Klaim yang masih berjalan, dipakai untuk outstanding di dashboard. */
 export const OPEN_CLAIM_STATUSES: ClaimStatus[] = ["Outstanding"]
 
-/** Kelas konstruksi harta benda (lookup construction_class). */
+/**
+ * Kelas konstruksi harta benda (lookup construction_class). Label memakai angka
+ * romawi di semua tempat: form slip, panel tarif OJK, master tarif, dan dokumen
+ * cetak. Kode K1 sampai K3 tetap jadi nilai data.
+ */
 export const CONSTRUCTION_CLASSES = [
   {
     code: "K1",
-    label: "Kelas 1",
+    label: "Class I",
     description: "Seluruhnya bahan tidak mudah terbakar",
   },
   {
     code: "K2",
-    label: "Kelas 2",
+    label: "Class II",
     description: "Bahan mudah terbakar paling banyak 20%",
   },
-  { code: "K3", label: "Kelas 3", description: "Selain kelas 1 dan 2" },
+  { code: "K3", label: "Class III", description: "Selain Class I dan II" },
 ] as const
 export type ConstructionClassCode =
   (typeof CONSTRUCTION_CLASSES)[number]["code"]
 
-/** Kelas konstruksi di dokumen cetak berbahasa Inggris, contoh K2 menjadi "Class II". */
+/** Label kelas konstruksi dari kodenya, contoh K2 menjadi "Class II". */
 export function constructionClassLabel(code: string | undefined | null) {
-  const roman = ["I", "II", "III"][Number(code?.match(/\d+/)?.[0]) - 1]
-  return roman ? `Class ${roman}` : (code ?? "")
+  const match = CONSTRUCTION_CLASSES.find((c) => c.code === code?.toUpperCase())
+  return match ? match.label : (code ?? "")
 }
 
 /**
