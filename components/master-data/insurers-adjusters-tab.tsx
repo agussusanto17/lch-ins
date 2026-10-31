@@ -287,7 +287,7 @@ export function InsurersAdjustersTab({
         </div>
 
         {canManage && (
-          <Button size="sm" onClick={openAddDialog} className="h-9 gap-1.5 text-xs">
+          <Button size="sm" onClick={openAddDialog}>
             <Plus className="size-4" />
             {partnerType === "insurer" ? "Tambah Asuransi" : "Tambah Adjuster"}
           </Button>
@@ -381,14 +381,14 @@ export function InsurersAdjustersTab({
                 ? `Edit ${partnerType === "insurer" ? "Asuransi" : "Adjuster"}`
                 : `Tambah ${partnerType === "insurer" ? "Asuransi" : "Adjuster"} Baru`}
             </DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription>
               Masukkan informasi rekanan {partnerType === "insurer" ? "penanggung risiko" : "penilai klaim"}.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-3 py-2 text-xs">
+          <div className="flex flex-col gap-3 py-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="partner-name" className="text-xs font-medium">
+              <Label htmlFor="partner-name">
                 Nama Perusahaan / Lembaga <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -396,12 +396,11 @@ export function InsurersAdjustersTab({
                 placeholder="Contoh: PT Asuransi Wahana Tata, PT McLarens Indonesia"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-8.5 text-xs"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="partner-cp" className="text-xs font-medium">
+              <Label htmlFor="partner-cp">
                 Contact Person (PIC)
               </Label>
               <Input
@@ -409,13 +408,12 @@ export function InsurersAdjustersTab({
                 placeholder="Nama PIC operasional"
                 value={contactPerson}
                 onChange={(e) => setContactPerson(e.target.value)}
-                className="h-8.5 text-xs"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="partner-email" className="text-xs font-medium">
+                <Label htmlFor="partner-email">
                   Email
                 </Label>
                 <Input
@@ -424,12 +422,11 @@ export function InsurersAdjustersTab({
                   placeholder="kontak@rekanan.co.id"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-8.5 text-xs"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="partner-phone" className="text-xs font-medium">
+                <Label htmlFor="partner-phone">
                   No. Telepon
                 </Label>
                 <Input
@@ -440,13 +437,12 @@ export function InsurersAdjustersTab({
                   onChange={(e) =>
                     setPhone(e.target.value.replace(/[^0-9+() -]/g, ""))
                   }
-                  className="h-8.5 text-xs"
                 />
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="partner-address" className="text-xs font-medium">
+              <Label htmlFor="partner-address">
                 Alamat Kantor
               </Label>
               <Textarea
@@ -455,12 +451,11 @@ export function InsurersAdjustersTab({
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 rows={2}
-                className="text-xs"
               />
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">
-              <span className="text-xs font-medium">Status Aktif Operasional</span>
+              <span className="text-sm font-medium">Status Aktif Operasional</span>
               <Switch checked={isActive} onCheckedChange={setIsActive} />
             </div>
           </div>
@@ -471,7 +466,6 @@ export function InsurersAdjustersTab({
               variant="outline"
               size="sm"
               onClick={() => setDialogOpen(false)}
-              className="text-xs"
             >
               Batal
             </Button>
@@ -480,7 +474,6 @@ export function InsurersAdjustersTab({
               size="sm"
               onClick={handleSave}
               disabled={isPending}
-              className="text-xs"
             >
               {editingItem ? "Simpan Perubahan" : "Simpan Rekanan"}
             </Button>

@@ -358,7 +358,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => openAddCover(cob.id, cob.code)}
-                                  className="h-7 gap-1 text-xs"
+                                  className="h-7 gap-1"
                                 >
                                   <Plus className="size-3" />
                                   Tambah Sub-Cover
@@ -450,14 +450,14 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
             <DialogTitle>
               {editingCover ? "Edit Type of Cover" : "Tambah Sub-Cover Type"}
             </DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription>
               Sub-tipe jaminan asuransi (contoh: 0311 Marine Cargo Open Cover).
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-3.5 py-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cover-code" className="text-xs font-medium">
+              <Label htmlFor="cover-code">
                 Kode Sub-Cover (3-6 karakter unik) <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -466,7 +466,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                 value={coverCode}
                 onChange={(e) => setCoverCode(e.target.value)}
                 maxLength={6}
-                className="h-8.5 font-mono text-xs"
+                className="font-mono"
               />
               {!editingCover ? (
                 <p className="text-[11px] text-muted-foreground">
@@ -477,7 +477,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cover-name" className="text-xs font-medium">
+              <Label htmlFor="cover-name">
                 Nama Type of Cover <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -485,12 +485,11 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                 placeholder="Contoh: Marine Cargo Open Cover, Property All Risks"
                 value={coverName}
                 onChange={(e) => setCoverName(e.target.value)}
-                className="h-8.5 text-xs"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cover-abbreviation" className="text-xs font-medium">
+              <Label htmlFor="cover-abbreviation">
                 Singkatan di Nomor Slip
               </Label>
               <Input
@@ -499,7 +498,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                 value={coverAbbreviation}
                 onChange={(e) => setCoverAbbreviation(e.target.value.toUpperCase())}
                 maxLength={10}
-                className="h-8.5 font-mono text-xs"
+                className="font-mono"
               />
               <p className="text-[11px] text-muted-foreground">
                 Dipakai di nomor slip, misalnya 001/LCH-PLCMT/PS-PAR/X/2026.
@@ -508,7 +507,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">
-              <span className="text-xs font-medium">Status Aktif Operasional</span>
+              <span className="text-sm font-medium">Status Aktif Operasional</span>
               <Switch checked={coverIsActive} onCheckedChange={setCoverIsActive} />
             </div>
           </div>
@@ -519,7 +518,6 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
               variant="outline"
               size="sm"
               onClick={() => setCoverDialogOpen(false)}
-              className="text-xs"
             >
               Batal
             </Button>
@@ -528,7 +526,6 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
               size="sm"
               onClick={handleSaveCover}
               disabled={isPending}
-              className="text-xs"
             >
               {editingCover ? "Simpan Perubahan" : "Tambah Sub-Cover"}
             </Button>

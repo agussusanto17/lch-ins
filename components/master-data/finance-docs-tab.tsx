@@ -238,7 +238,7 @@ export function FinanceDocsTab({
         </Tabs>
 
         {subTab === "banks" && canManage && (
-          <Button size="sm" onClick={openAddBank} className="h-9 gap-1.5 text-xs">
+          <Button size="sm" onClick={openAddBank}>
             <Plus className="size-4" />
             Tambah Rekening Bank
           </Button>
@@ -252,7 +252,6 @@ export function FinanceDocsTab({
               setNewCurrencyName("")
               setCurrencyDialogOpen(true)
             }}
-            className="h-9 gap-1.5 text-xs"
           >
             <Plus className="size-4" />
             Tambah Mata Uang
@@ -374,14 +373,14 @@ export function FinanceDocsTab({
             <DialogTitle>
               {editingBankAcc ? "Edit Rekening Bank" : "Tambah Rekening Bank"}
             </DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription>
               Rekening bank operasional LCH untuk penerimaan premi atau transaksi bisnis.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-3 py-2 text-xs">
+          <div className="flex flex-col gap-3 py-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="bank-select" className="text-xs font-medium">
+              <Label htmlFor="bank-select">
                 Pilih Bank <span className="text-destructive">*</span>
               </Label>
               <Select
@@ -389,12 +388,12 @@ export function FinanceDocsTab({
                 value={bankId}
                 onValueChange={(val) => setBankId(val ?? "")}
               >
-                <SelectTrigger id="bank-select" className="h-8.5 text-xs">
+                <SelectTrigger id="bank-select" className="w-full">
                   <SelectValue placeholder="Pilih bank" />
                 </SelectTrigger>
                 <SelectContent>
                   {banks.map((b) => (
-                    <SelectItem key={b.id} value={b.id} className="text-xs">
+                    <SelectItem key={b.id} value={b.id}>
                       {b.name}
                     </SelectItem>
                   ))}
@@ -403,7 +402,7 @@ export function FinanceDocsTab({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="acc-no" className="text-xs font-medium">
+              <Label htmlFor="acc-no">
                 Nomor Rekening <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -415,12 +414,12 @@ export function FinanceDocsTab({
                 onChange={(e) =>
                   setAccountNo(e.target.value.replace(/[^0-9-]/g, ""))
                 }
-                className="h-8.5 font-mono text-xs"
+                className="font-mono"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="acc-name" className="text-xs font-medium">
+              <Label htmlFor="acc-name">
                 Nama Pemilik Rekening <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -428,23 +427,22 @@ export function FinanceDocsTab({
                 placeholder="PT LCH Insurance Brokers"
                 value={accountName}
                 onChange={(e) => setAccountName(e.target.value)}
-                className="h-8.5 text-xs"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="acc-curr" className="text-xs font-medium">
+              <Label htmlFor="acc-curr">
                 Mata Uang <span className="text-destructive">*</span>
               </Label>
               <Select value={currencyCode} onValueChange={(val) => setCurrencyCode(val ?? "IDR")}>
-                <SelectTrigger id="acc-curr" className="h-8.5 text-xs">
+                <SelectTrigger id="acc-curr" className="w-full">
                   <SelectValue placeholder="Pilih valuta" />
                 </SelectTrigger>
                 <SelectContent>
                   {currencies
                     .filter((c) => c.isActive || c.code === currencyCode)
                     .map((c) => (
-                    <SelectItem key={c.code} value={c.code} className="text-xs">
+                    <SelectItem key={c.code} value={c.code}>
                       {c.code} — {c.name}
                     </SelectItem>
                   ))}
@@ -454,7 +452,7 @@ export function FinanceDocsTab({
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">
               <div className="flex flex-col">
-                <span className="text-xs font-medium">Rekening Titipan Premi</span>
+                <span className="text-sm font-medium">Rekening Titipan Premi</span>
                 <span className="text-[11px] text-muted-foreground">
                   Pisahkan rekening dana premi nasabah dari rekening operasional
                 </span>
@@ -463,7 +461,7 @@ export function FinanceDocsTab({
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">
-              <span className="text-xs font-medium">Status Aktif</span>
+              <span className="text-sm font-medium">Status Aktif</span>
               <Switch checked={bankIsActive} onCheckedChange={setBankIsActive} />
             </div>
           </div>
@@ -474,7 +472,6 @@ export function FinanceDocsTab({
               variant="outline"
               size="sm"
               onClick={() => setBankDialogOpen(false)}
-              className="text-xs"
             >
               Batal
             </Button>
@@ -483,7 +480,6 @@ export function FinanceDocsTab({
               size="sm"
               onClick={handleSaveBank}
               disabled={isPending}
-              className="text-xs"
             >
               {editingBankAcc ? "Simpan Perubahan" : "Simpan Rekening"}
             </Button>
@@ -496,15 +492,15 @@ export function FinanceDocsTab({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Tambah Mata Uang</DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription>
               Kode ISO 4217 tiga huruf menjadi kunci dan tidak bisa diubah.
               Mata uang yang tidak dipakai lagi cukup dinonaktifkan.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-3 py-2 text-xs">
+          <div className="flex flex-col gap-3 py-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="currency-code" className="text-xs font-medium">
+              <Label htmlFor="currency-code">
                 Kode ISO <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -513,11 +509,11 @@ export function FinanceDocsTab({
                 value={newCurrencyCode}
                 onChange={(e) => setNewCurrencyCode(e.target.value.toUpperCase())}
                 maxLength={3}
-                className="h-8.5 font-mono text-xs"
+                className="font-mono"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="currency-name" className="text-xs font-medium">
+              <Label htmlFor="currency-name">
                 Nama Mata Uang <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -525,7 +521,6 @@ export function FinanceDocsTab({
                 placeholder="Contoh: Japanese Yen"
                 value={newCurrencyName}
                 onChange={(e) => setNewCurrencyName(e.target.value)}
-                className="h-8.5 text-xs"
               />
             </div>
           </div>
@@ -536,7 +531,6 @@ export function FinanceDocsTab({
               variant="outline"
               size="sm"
               onClick={() => setCurrencyDialogOpen(false)}
-              className="text-xs"
             >
               Batal
             </Button>
@@ -545,7 +539,6 @@ export function FinanceDocsTab({
               size="sm"
               onClick={handleSaveCurrency}
               disabled={isPending}
-              className="text-xs"
             >
               Simpan Mata Uang
             </Button>

@@ -348,7 +348,7 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
           placeholder="Cari merek atau tipe kendaraan…"
         />
         {canManage && (
-          <Button size="sm" onClick={openAddBrand} className="h-9 gap-1.5 text-xs">
+          <Button size="sm" onClick={openAddBrand}>
             <Plus className="size-4" />
             Tambah Merek Baru
           </Button>
@@ -482,7 +482,7 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => openAddType(brand)}
-                                  className="h-7 gap-1 text-xs"
+                                  className="h-7 gap-1"
                                   aria-label={`Tambah tipe untuk merek ${brand.name}`}
                                 >
                                   <Plus className="size-3" />
@@ -578,14 +578,14 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
             <DialogTitle>
               {editingBrand ? "Edit Merek Kendaraan" : "Tambah Merek Kendaraan Baru"}
             </DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription>
               Merek kendaraan yang dapat dipilih saat pembuatan SPPA dan placing slip.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-3.5 py-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="brand-name" className="text-xs font-medium">
+              <Label htmlFor="brand-name">
                 Nama Merek <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -593,12 +593,11 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                 placeholder="Contoh: Toyota, Honda, Daihatsu"
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
-                className="h-8.5 text-xs"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="brand-sort" className="text-xs font-medium">
+              <Label htmlFor="brand-sort">
                 Urutan Tampilan
               </Label>
               <Input
@@ -608,7 +607,6 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                 placeholder="0"
                 value={brandSortOrder}
                 onChange={(e) => setBrandSortOrder(e.target.value)}
-                className="h-8.5 text-xs"
               />
               <span className="text-[11px] text-muted-foreground">
                 Merek dengan urutan lebih kecil muncul lebih awal di dropdown.
@@ -616,7 +614,7 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">
-              <span className="text-xs font-medium">Status Aktif Operasional</span>
+              <span className="text-sm font-medium">Status Aktif Operasional</span>
               <Switch
                 checked={brandIsActive}
                 onCheckedChange={setBrandIsActive}
@@ -631,7 +629,6 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
               variant="outline"
               size="sm"
               onClick={() => setBrandDialogOpen(false)}
-              className="text-xs"
             >
               Batal
             </Button>
@@ -640,7 +637,6 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
               size="sm"
               onClick={handleSaveBrand}
               disabled={isPending}
-              className="text-xs"
             >
               {editingBrand ? "Simpan Perubahan" : "Tambah Merek"}
             </Button>
@@ -656,14 +652,14 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                 ? `Edit Tipe (${parentBrand?.name ?? ""})`
                 : `Tambah Tipe Kendaraan (${parentBrand?.name ?? ""})`}
             </DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription>
               Model/tipe kendaraan di bawah merek {parentBrand?.name ?? ""}.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-3.5 py-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="type-name" className="text-xs font-medium">
+              <Label htmlFor="type-name">
                 Nama Tipe <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -671,12 +667,11 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
                 placeholder="Contoh: Avanza, Innova Zenix, HR-V"
                 value={typeName}
                 onChange={(e) => setTypeName(e.target.value)}
-                className="h-8.5 text-xs"
               />
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">
-              <span className="text-xs font-medium">Status Aktif Operasional</span>
+              <span className="text-sm font-medium">Status Aktif Operasional</span>
               <Switch
                 checked={typeIsActive}
                 onCheckedChange={setTypeIsActive}
@@ -691,7 +686,6 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
               variant="outline"
               size="sm"
               onClick={() => setTypeDialogOpen(false)}
-              className="text-xs"
             >
               Batal
             </Button>
@@ -700,7 +694,6 @@ export function VehiclesTab({ initialBrands }: VehiclesTabProps) {
               size="sm"
               onClick={handleSaveType}
               disabled={isPending}
-              className="text-xs"
             >
               {editingType ? "Simpan Perubahan" : "Tambah Tipe"}
             </Button>

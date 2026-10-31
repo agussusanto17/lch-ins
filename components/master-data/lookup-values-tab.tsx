@@ -256,7 +256,7 @@ export function LookupValuesTab({
         </div>
 
         {canManage && (
-          <Button size="sm" onClick={openAddDialog} className="h-9 gap-1.5 text-xs">
+          <Button size="sm" onClick={openAddDialog}>
             <Plus className="size-4" />
             Tambah Pilihan Baru
           </Button>
@@ -364,14 +364,14 @@ export function LookupValuesTab({
             <DialogTitle>
               {editingLookup ? "Edit Nilai Pilihan" : "Tambah Nilai Pilihan Baru"}
             </DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription>
               Kategori: <strong>{TYPE_LABELS[selectedType] ?? selectedType}</strong>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-3 py-2 text-xs">
+          <div className="flex flex-col gap-3 py-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lookup-code" className="text-xs font-medium">
+              <Label htmlFor="lookup-code">
                 Kode Sistem <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -380,7 +380,7 @@ export function LookupValuesTab({
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 disabled={Boolean(editingLookup?.isSystem)}
-                className="h-8.5 font-mono text-xs"
+                className="font-mono"
               />
               {editingLookup?.isSystem && (
                 <p className="text-[11px] text-muted-foreground italic">
@@ -390,7 +390,7 @@ export function LookupValuesTab({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lookup-name" className="text-xs font-medium">
+              <Label htmlFor="lookup-name">
                 Label Tampilan Dropdown <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -398,12 +398,11 @@ export function LookupValuesTab({
                 placeholder="Contoh: Aktif, Korporasi / Badan Usaha"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-8.5 text-xs"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lookup-sort" className="text-xs font-medium">
+              <Label htmlFor="lookup-sort">
                 Urutan Tampil (Sort Order)
               </Label>
               <Input
@@ -417,12 +416,12 @@ export function LookupValuesTab({
                   const cleaned = e.target.value.replace(/\D/g, "")
                   setSortOrder(cleaned === "" ? 0 : Math.max(0, parseInt(cleaned, 10)))
                 }}
-                className="h-8.5 font-mono text-xs"
+                className="font-mono"
               />
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">
-              <span className="text-xs font-medium">Status Aktif di Dropdown</span>
+              <span className="text-sm font-medium">Status Aktif di Dropdown</span>
               <Switch checked={isActive} onCheckedChange={setIsActive} />
             </div>
           </div>
@@ -433,7 +432,6 @@ export function LookupValuesTab({
               variant="outline"
               size="sm"
               onClick={() => setDialogOpen(false)}
-              className="text-xs"
             >
               Batal
             </Button>
@@ -442,7 +440,6 @@ export function LookupValuesTab({
               size="sm"
               onClick={handleSave}
               disabled={isPending}
-              className="text-xs"
             >
               {editingLookup ? "Simpan Perubahan" : "Simpan Pilihan"}
             </Button>
