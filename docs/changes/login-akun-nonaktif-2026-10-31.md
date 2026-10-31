@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-31
 - **Branch:** `fix/login-akun-nonaktif`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#62](https://github.com/agussusanto17/lch-ins/pull/62)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
