@@ -39,6 +39,9 @@ Agus meninjau tampilan form pada 31 Oktober 2026 dan menemukan beberapa hal:
 - Input teks, input angka, dan grup input (`rounded-lg`) menjadi `rounded-4xl`,
   sehingga berbentuk pil seperti dropdown. Perubahan ini ikut menyentuh kolom
   telepon "+62" dan input tanggal.
+- Picker File di Berkas KYC (elemen sendiri yang meniru Input) ikut berbentuk
+  pil. Cincin fokus keyboard dipindah dari label ke kotaknya, jadi tidak lagi
+  membungkus teks "File".
 - Textarea memakai `rounded-3xl`. Bentuk pil penuh di kotak beberapa baris akan
   memotong sudut teks, jadi radius besar ini yang paling dekat.
 - Radio "Alamat utama" diganti switch, sama seperti "Period TBA" di form slip.
@@ -77,7 +80,10 @@ Agus meninjau tampilan form pada 31 Oktober 2026 dan menemukan beberapa hal:
   - Form Edit KYC PT Graha Sentosa Properti (tidak disimpan):
     - Input, termasuk telepon "+62" dan tanggal, memiliki radius 20,8px pada
       tinggi 36px, jadi berbentuk pil penuh. Dropdown 17,6px.
-    - Textarea 17,6px.
+    - Textarea 17,6px. Picker File di Berkas KYC 20,8px (pil).
+    - Aturan `peer-focus-visible` untuk cincin fokus picker File ada di CSS
+      hasil `npm run build`. Dev server yang sedang berjalan masih memakai CSS
+      lama sampai di-restart.
     - Radio sudah tidak ada. Menyalakan switch alamat kedua mematikan switch
       alamat pertama.
     - Tipe Klien memakai gaya chip baru.

@@ -622,12 +622,12 @@ export function ClientForm({
                 onValueChange={(v) => patchDocument(d.id, { type: v })}
                 error={errors[`documents.${i}.type`]}
               />
-              <label className="flex min-w-0 cursor-pointer flex-col gap-1.5 rounded-lg has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/30">
+              <label className="flex min-w-0 cursor-pointer flex-col gap-1.5">
                 <span className="text-sm font-medium">File</span>
                 <input
                   type="file"
                   accept={UPLOAD_ACCEPT}
-                  className="sr-only"
+                  className="peer sr-only"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     e.target.value = ""
@@ -648,7 +648,8 @@ export function ClientForm({
                     })
                   }}
                 />
-                <span className="flex h-9 items-center gap-2 truncate rounded-lg bg-input/50 px-3 text-sm">
+                {/* Tampil seperti Input: pil, cincin fokus di kotaknya sendiri. */}
+                <span className="flex h-9 items-center gap-2 truncate rounded-4xl border border-transparent bg-input/50 px-3 text-sm transition-[color,box-shadow] peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring/30">
                   <FileUp className="size-4 shrink-0 text-muted-foreground" />
                   <span className="truncate">
                     {d.fileName || "Pilih file…"}
