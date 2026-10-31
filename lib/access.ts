@@ -25,14 +25,19 @@ export const CANONICAL_ROLES = [
     description: "Pencatatan, verifikasi, dan tahapan dokumen klaim",
   },
   {
-    code: "accounting",
-    label: "Accounting",
-    description: "Pencatatan jurnal memorial dan pelaporan keuangan",
-  },
-  {
     code: "finance",
     label: "Finance",
     description: "Penerbitan Debit/Credit Note, penerimaan, dan hutang-piutang premi",
+  },
+  {
+    code: "accounting",
+    label: "Accounting",
+    description: "Verifikasi pembayaran, pengelolaan piutang/hutang, pembukuan jurnal",
+  },
+  {
+    code: "direksi",
+    label: "Direksi",
+    description: "Pengawasan eksekutif dengan akses lihat penuh seluruh modul",
   },
 ] as const
 
@@ -47,8 +52,9 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   marketing: "Marketing",
   placement: "Teknik",
   claim: "Klaim",
-  accounting: "Accounting",
   finance: "Finance",
+  accounting: "Accounting",
+  direksi: "Direksi",
 }
 
 /**
@@ -84,9 +90,10 @@ export function validateRoleCodes(
 
 export type AccessLevel = "kelola" | "lihat" | "tidak"
 
+/** Mapping single-letter aliases untuk matriks hak akses. */
 const K = "kelola" as const
 const L = "lihat" as const
-const N = "tidak" as const
+const T = "tidak" as const
 
 /** Urutan kolom pada ACCESS_MATRIX, mengikuti Sheet Hak Akses LCH. */
 const COLUMNS = [
@@ -96,6 +103,7 @@ const COLUMNS = [
   "claim",
   "finance",
   "accounting",
+  "direksi",
 ] as const satisfies readonly RoleCode[]
 
 /**
@@ -115,26 +123,28 @@ const COLUMNS = [
  * dari Underwriting walau alamatnya berada di bawahnya.
  */
 export const ACCESS_MATRIX: Record<string, readonly AccessLevel[]> = {
-  "/": [K, L, L, L, L, L],
-  "/marketing": [K, K, K, L, K, K],
-  "/underwriting": [K, L, K, L, L, L],
-  "/underwriting/master-clauses": [K, L, K, L, N, L],
-  "/policies": [K, L, K, L, L, L],
-  "/claims": [K, L, K, K, L, L],
-  "/finance/notes": [K, L, L, L, K, L],
-  "/finance/payments": [K, L, L, L, K, K],
-  "/finance/receivables": [K, L, L, L, K, K],
-  "/accounting/journal": [K, N, N, N, K, K],
-  "/accounting/statements": [K, N, N, N, L, K],
-  "/master-data": [K, L, K, L, L, L],
-  "/reports": [K, L, L, L, L, K],
-  "/users": [K, N, N, N, N, N],
+  // Baris diurutkan mengikuti 14 menu dari sheet LCH
+  // Kolom: Admin, Marketing, Placement, Claim, Finance, Accounting, Direksi
+  "/": [K, L, L, L, L, L, L],
+  "/marketing": [K, K, K, L, T, T, L],
+  "/underwriting": [K, L, K, L, L, L, L],
+  "/underwriting/master-clauses": [K, T, K, T, T, T, L],
+  "/policies": [K, L, K, L, L, L, L],
+  "/claims": [K, L, K, K, L, L, L],
+  "/finance/notes": [K, L, L, L, K, L, L],
+  "/finance/payments": [K, L, L, L, K, K, L],
+  "/finance/receivables": [K, L, L, L, K, K, L],
+  "/accounting/journal": [K, T, T, T, K, K, L],
+  "/accounting/statements": [K, T, T, L, L, K, L],
+  "/master-data": [K, T, K, T, T, T, L],
+  "/reports": [K, L, K, K, K, K, L],
+  "/users": [K, T, T, T, T, T, L],
 
   // Dua menu berikut tidak ada di sheet LCH; mereka menghapusnya dari usulan
   // awal. Dibatasi Admin sampai LCH memutuskan, karena isinya menyentuh
   // seluruh modul.
-  "/audit-trail": [K, N, N, N, N, N],
-  "/settings": [K, N, N, N, N, N],
+  "/audit-trail": [K, T, T, T, T, T, T],
+  "/settings": [K, T, T, T, T, T, T],
 }
 
 /** Public routes accessible without authentication. */
