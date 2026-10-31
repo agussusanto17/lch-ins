@@ -17,10 +17,12 @@ export const userRoleBadgeVariants = cva(
           "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
         claim:
           "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
-        accounting:
-          "bg-teal-500/10 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
         finance:
           "bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
+        accounting:
+          "bg-teal-500/10 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+        direksi:
+          "bg-slate-500/10 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
         fallback: "bg-muted text-muted-foreground",
       },
     },
