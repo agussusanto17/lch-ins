@@ -1,4 +1,4 @@
-# Chip pilihan, input berbentuk pil, dan switch alamat utama
+# Chip pilihan, input berbentuk pil, switch alamat utama, tombol Buat SPPA, dan kelas konstruksi romawi
 
 - **Tanggal:** 2026-10-31
 - **Branch:** `fix/chip-tarif-ojk`
@@ -19,6 +19,12 @@ Agus meninjau tampilan form pada 31 Oktober 2026 dan menemukan beberapa hal:
   input.
 - Radio "Alamat utama" di form klien terlalu kecil dan sulit diklik. Agus
   minta diganti switch.
+- Di detail klien, tombol "Buat SPPA" berada di atas tabel, terpisah dari
+  judul card SPPA. Agus minta tombol itu di header card, rata kanan sejajar
+  judul.
+- Dropdown Construction Class di form slip masih menampilkan "Kelas 1 (K1)",
+  padahal dokumen cetak sudah "Class I" sejak PR #63. Agus minta semua tempat
+  memakai angka romawi.
 
 ## Yang berubah
 
@@ -47,6 +53,22 @@ Agus meninjau tampilan form pada 31 Oktober 2026 dan menemukan beberapa hal:
 - Radio "Alamat utama" diganti switch, sama seperti "Period TBA" di form slip.
   Switch tetap saling eksklusif antar-alamat. Bila semua dimatikan, alamat
   pertama dijadikan utama saat simpan, sesuai perilaku sebelumnya.
+- Tabel SPPA mode `compact` (detail klien) sekarang membungkus dirinya dengan
+  `SectionCard` berjudul SPPA, dan tombol Buat SPPA mengisi slot action di
+  header card. Pencarian dan export tetap tidak tampil di mode ini. Halaman
+  daftar SPPA tidak berubah.
+- Kelas konstruksi memakai label "Class I", "Class II", dan "Class III" di:
+  - dropdown Construction Class form slip, tanpa kode K1 sampai K3;
+  - chip panel Tarif Harta Benda (FLEXAS) beserta catatannya;
+  - judul kolom Master Data > Tarif Baku OJK;
+  - dokumen cetak, seperti sebelumnya.
+
+  Semua label diambil dari `CONSTRUCTION_CLASSES`, jadi cukup diubah di satu
+  tempat. Kode K1 sampai K3 tetap menjadi nilai data dan dasar pencarian tarif.
+- Nama lookup `construction_class` di master data diganti "Class I", "Class
+  II", dan "Class III" lewat seed dan migrasi data. Migrasi hanya mengganti
+  nama bawaan "Kelas 1" sampai "Kelas 3", jadi nama yang sudah diubah lewat
+  master data tidak tertimpa.
 
 ## File utama
 
@@ -55,16 +77,28 @@ Agus meninjau tampilan form pada 31 Oktober 2026 dan menemukan beberapa hal:
 - `components/ui/input.tsx`, `number-input.tsx`, `input-group.tsx`,
   `textarea.tsx`: radius sudut.
 - `components/underwriting/placing-slip-form.tsx`: Wording Form memakai
-  `Toggle`.
+  `Toggle`, label dropdown Construction Class.
 - `components/underwriting/insured-picker.tsx`: pilihan alamat memakai
   `Toggle`.
-- `components/marketing/client-form.tsx`: switch alamat utama.
+- `components/marketing/client-form.tsx`: switch alamat utama dan picker File.
+- `components/marketing/sppa-table.tsx`, `client-detail.tsx`: tombol Buat SPPA
+  di header card.
+- `lib/data/reference.ts`: label kelas konstruksi; `constructionClassLabel`
+  membaca `CONSTRUCTION_CLASSES`.
+- `components/underwriting/ojk-panels.tsx`: chip kelas konstruksi.
+- `components/master-data/tariff-ojk-tab.tsx`: judul kolom tarif okupasi.
+- `prisma/seed.ts`,
+  `prisma/migrations/20261031200000_construction_class_roman/migration.sql`:
+  nama lookup kelas konstruksi.
 
 ## Dampak
 
-- **Database:** tidak ada.
+- **Database:** migrasi data `20261031200000_construction_class_roman`
+  mengganti nama tiga baris `lookup_values` (construction_class). Tidak ada
+  perubahan skema.
 - **Env:** tidak ada.
-- **Deploy:** tidak ada langkah tambahan.
+- **Deploy:** tidak ada langkah tambahan. `npm run build` menjalankan
+  `prisma migrate deploy`.
 
 ## Verifikasi
 
@@ -87,6 +121,18 @@ Agus meninjau tampilan form pada 31 Oktober 2026 dan menemukan beberapa hal:
     - Radio sudah tidak ada. Menyalakan switch alamat kedua mematikan switch
       alamat pertama.
     - Tipe Klien memakai gaya chip baru.
+  - Detail klien PT SIT Korporasi Uji: tombol Buat SPPA ada di header card
+    SPPA, rata kanan sejajar judul, dan hanya ada satu.
+  - Draft slip harta benda berkelas K1: dropdown menampilkan "Class I —
+    Seluruhnya bahan tidak mudah terbakar". Panel Tarif Harta Benda
+    menampilkan chip Class I (aktif), Class II, dan Class III dengan catatan
+    baru.
+  - Master Data > Tarif Baku OJK: kolom Kode OJK, Klasifikasi Okupasi, Class I,
+    Class II, dan Class III.
+- Migrasi di database lokal: baris `construction_class` berisi Class I, Class
+  II, dan Class III.
+- `constructionClassLabel`: K1 sampai K3, termasuk huruf kecil, menjadi Class I
+  sampai Class III. Nilai lain dikembalikan apa adanya.
 
 ## Catatan untuk yang melanjutkan
 
@@ -96,5 +142,9 @@ Agus meninjau tampilan form pada 31 Oktober 2026 dan menemukan beberapa hal:
   outline dan belum disamakan.
 - Komponen `RadioGroup` tidak lagi dipakai di form. Bila nanti dipakai,
   ukurannya perlu diperbesar dulu (Agus menilai radio terlalu kecil).
+- Dropdown Construction Class, chip panel tarif, dan dokumen cetak membaca
+  konstanta `CONSTRUCTION_CLASSES`, bukan `lookup_values`, karena keterangan
+  tiap kelas tidak ada di master. Mengubah nama lewat master data belum
+  mengubah tampilan di sana.
 - **Aturan Wajib nomor 4 belum dijalankan:** graphify belum terpasang di mesin
   ini.
