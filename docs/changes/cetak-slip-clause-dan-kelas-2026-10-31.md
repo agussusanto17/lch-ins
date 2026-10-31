@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-10-31
 - **Branch:** `fix/cetak-slip-clause-dan-kelas`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#63](https://github.com/agussusanto17/lch-ins/pull/63)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
