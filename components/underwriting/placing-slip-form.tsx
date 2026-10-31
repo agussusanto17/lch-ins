@@ -85,6 +85,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { Toggle } from "@/components/ui/toggle"
 import {
   BI_BASE_LABELS,
   brokerageAmount,
@@ -716,15 +717,13 @@ function SlipEditor({
                   {wordingNames.map((w) => {
                     const active = slip.wordingForms.includes(w)
                     return (
-                      <Button
+                      <Toggle
                         key={w}
-                        type="button"
-                        variant={active ? "secondary" : "outline"}
                         size="sm"
-                        aria-pressed={active}
+                        pressed={active}
                         // Nama wording bisa panjang; biarkan pindah baris daripada terpotong.
                         className="h-auto min-h-8 max-w-full py-1.5 text-left whitespace-normal"
-                        onClick={() =>
+                        onPressedChange={() =>
                           set({
                             wordingForms: active
                               ? slip.wordingForms.filter((x) => x !== w)
@@ -734,7 +733,7 @@ function SlipEditor({
                       >
                         {active ? <Check data-icon="inline-start" /> : null}
                         {w}
-                      </Button>
+                      </Toggle>
                     )
                   })}
                 </div>

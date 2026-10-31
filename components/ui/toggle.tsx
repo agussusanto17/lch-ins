@@ -12,6 +12,15 @@ const toggleVariants = cva(
       variant: {
         default: "bg-transparent",
         outline: "border border-input bg-transparent hover:bg-muted",
+        // Gaya bawaan semua pilihan berbentuk chip di aplikasi (form klien, form
+        // slip, panel tarif OJK). Bingkai pilihan yang belum aktif 3,4:1 terhadap
+        // latar putih (border-input hanya 1,2:1) supaya terbaca bisa diklik. Yang
+        // aktif tidak memakai latar primary penuh agar tidak mirip tombol utama:
+        // bingkai primary 2px, latar primary/8, teks primary 4,9:1. Tebal bingkai
+        // jadi penanda selain warna; px-[11px] menahan lebar chip (ukuran
+        // default dan sm memakai px-3).
+        filter:
+          "cursor-pointer border border-foreground/50 bg-transparent hover:border-primary aria-pressed:border-2 aria-pressed:border-primary aria-pressed:bg-primary/8 aria-pressed:px-[11px] aria-pressed:text-primary aria-pressed:hover:bg-primary/12 aria-pressed:hover:text-primary",
       },
       size: {
         default:
@@ -21,7 +30,7 @@ const toggleVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "filter",
       size: "default",
     },
   }
@@ -29,7 +38,7 @@ const toggleVariants = cva(
 
 function Toggle({
   className,
-  variant = "default",
+  variant = "filter",
   size = "default",
   ...props
 }: TogglePrimitive.Props & VariantProps<typeof toggleVariants>) {
