@@ -393,10 +393,6 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
           itemName="klaim"
         />
 
-        <p className="text-xs text-muted-foreground">
-          Klik baris untuk membuka detail lengkap. Klaim dapat diubah atau ditutup statusnya.
-        </p>
-
         <ClaimDetailSheet
           claim={selected}
           open={selected !== null}
