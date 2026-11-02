@@ -37,22 +37,59 @@ interface NotificationItem {
 
 const STORAGE_KEY = "lch_read_notifications"
 
+// The storage event only fires in other tabs, so same-tab writes notify these.
+const readListeners = new Set<() => void>()
+
+function subscribeReadIds(onChange: () => void) {
+  readListeners.add(onChange)
+  window.addEventListener("storage", onChange)
+  return () => {
+    readListeners.delete(onChange)
+    window.removeEventListener("storage", onChange)
+  }
+}
+
+function readStoredIds(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEY)
+  } catch {
+    // Storage unavailable or blocked
+    return null
+  }
+}
+
+function parseReadIds(stored: string | null): Set<string> {
+  if (!stored) return new Set()
+  try {
+    return new Set(JSON.parse(stored))
+  } catch {
+    return new Set()
+  }
+}
+
+function saveReadIds(ids: Set<string>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(ids)))
+  } catch {
+    // Storage write failed
+  }
+  readListeners.forEach((notify) => notify())
+}
+
 export function NotificationPopover() {
   const router = useRouter()
   const today = useToday()
   const [open, setOpen] = React.useState(false)
-  const [readIds, setReadIds] = React.useState<Set<string>>(new Set())
-
-  React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        setReadIds(new Set(JSON.parse(stored)))
-      }
-    } catch {
-      // Storage unavailable or blocked
-    }
-  }, [])
+  // Server snapshot is null so the hydrated markup matches; stored ids apply right after.
+  const storedReadIds = React.useSyncExternalStore(
+    subscribeReadIds,
+    readStoredIds,
+    () => null
+  )
+  const readIds = React.useMemo(
+    () => parseReadIds(storedReadIds),
+    [storedReadIds]
+  )
 
   const policies = useCollection("policies")
   const slips = useCollection("slips")
@@ -109,25 +146,14 @@ export function NotificationPopover() {
 
   function markAllRead() {
     const allIds = items.map((i) => i.id)
-    const nextSet = new Set(allIds)
-    setReadIds(nextSet)
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(nextSet)))
-    } catch {
-      // Storage write failed
-    }
+    saveReadIds(new Set(allIds))
   }
 
   function handleSelect(item: NotificationItem) {
     if (!readIds.has(item.id)) {
       const nextSet = new Set(readIds)
       nextSet.add(item.id)
-      setReadIds(nextSet)
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(nextSet)))
-      } catch {
-        // Storage write failed
-      }
+      saveReadIds(nextSet)
     }
     setOpen(false)
     router.push(item.href)
