@@ -1,13 +1,14 @@
 import type { Metadata } from "next"
+import Image from "next/image"
 import { redirect } from "next/navigation"
 import { connection } from "next/server"
 
 import { LoginForm } from "@/components/auth/login-form"
-import { LchLogo } from "@/components/documents/letterhead"
 import { currentUser } from "@/lib/server/session"
+import logoMark from "@/public/images/logo-lch-mark.png"
 
 export const dynamic = "force-dynamic"
-export const metadata: Metadata = { title: "Masuk — LCH Insurance Brokers" }
+export const metadata: Metadata = { title: "Masuk | LCH Insurance Brokers" }
 
 export default async function LoginPage({
   searchParams,
@@ -32,22 +33,56 @@ export default async function LoginPage({
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-muted/40 px-4 py-10">
-      <div className="w-full max-w-sm">
-        <div className="mb-7 flex flex-col items-center text-center">
-          <h1 className="sr-only">PT. LCH Insurance Brokers</h1>
-          <div className="rounded-xl bg-white px-5 py-3 shadow-sm ring-1 ring-black/5">
-            <LchLogo alt="" className="h-10 w-auto" />
-          </div>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Sistem Back Office
-          </p>
+    <main className="grid min-h-svh bg-background lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      {/* Panel merek. Indigo dan emas diambil dari logo LCH (#29166E, #F7C303),
+          simpul logo jadi motif besar di belakang. Gradien satu warna hanya
+          memberi kedalaman, terang di kiri atas tempat logo berada. */}
+      <section className="relative isolate flex flex-col gap-10 overflow-hidden bg-[radial-gradient(120%_90%_at_0%_0%,#3a28a6_0%,#29166e_55%,#1d0f52_100%)] px-6 py-8 text-white sm:px-10 lg:min-h-svh lg:px-14 lg:py-12">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-24 -right-32 -z-10 size-96 bg-white/[0.07] [mask-image:url(/images/logo-lch-mark-mono.svg)] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] sm:size-[34rem] lg:-top-52 lg:-right-72 lg:size-[60rem]"
+        />
+
+        <div className="flex items-center gap-3.5">
+          <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white p-2 shadow-lg shadow-black/20">
+            <Image src={logoMark} alt="" className="size-full" loading="eager" />
+          </span>
+          <span className="leading-tight">
+            <span className="block text-base font-semibold sm:text-lg">
+              PT. LCH Insurance Brokers
+            </span>
+            <span className="mt-0.5 block text-sm text-white/75">
+              SKOJK Nomor KEP-46/NB.1/2016
+            </span>
+          </span>
         </div>
 
-        <div className="rounded-xl border bg-background p-6 shadow-sm">
-          <LoginForm next={target} />
+        <div className="lg:mt-auto">
+          <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-7xl">
+            Sistem
+            <br />
+            <span className="text-[#f7c303]">Back Office</span>
+          </h1>
+          <p className="mt-4 max-w-xl text-base text-balance text-white/80 sm:text-lg lg:mt-6">
+            SPPA, placing slip, polis, dan klaim dalam satu sistem.
+          </p>
         </div>
-      </div>
+      </section>
+
+      <section className="flex flex-col px-6 py-10 sm:px-10 lg:px-16 lg:py-12">
+        <div className="m-auto w-full max-w-sm">
+          <h2 className="text-2xl font-semibold tracking-tight">Masuk</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Akun dibuat oleh Admin LCH. Login pertama wajib mengganti kata sandi.
+          </p>
+          <div className="mt-8">
+            <LoginForm next={target} />
+          </div>
+        </div>
+        <p className="mx-auto mt-10 w-full max-w-sm text-center text-xs text-muted-foreground lg:text-left">
+          © {new Date().getFullYear()} PT. LCH Insurance Brokers
+        </p>
+      </section>
     </main>
   )
 }
