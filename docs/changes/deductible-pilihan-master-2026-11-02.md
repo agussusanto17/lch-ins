@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-02
 - **Branch:** `feat/deductible-pilihan-master`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#74](https://github.com/agussusanto17/lch-ins/pull/74)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
