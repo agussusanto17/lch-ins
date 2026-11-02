@@ -108,7 +108,7 @@ export function LoginForm({ next }: { next: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <Field>
         <FieldLabel htmlFor="email">Email</FieldLabel>
         <Input
@@ -120,6 +120,7 @@ export function LoginForm({ next }: { next: string }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="nama@lch.co.id"
+          className="h-11"
         />
       </Field>
 
@@ -133,12 +134,13 @@ export function LoginForm({ next }: { next: string }) {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="pr-10"
+            className="h-11 pr-12"
           />
+          {/* Area klik 44px setinggi input, sesuai batas minimum target sentuh. */}
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
             aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
           >
             {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -149,14 +151,15 @@ export function LoginForm({ next }: { next: string }) {
       {error ? (
         <p
           role="alert"
-          className="flex items-start gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+          className="flex items-start gap-2 rounded-2xl border border-destructive/40 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive"
         >
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           {error}
         </p>
       ) : null}
 
-      <Button type="submit" disabled={pending} className="mt-1 w-full">
+      {/* Tinggi dan ukuran huruf mengikuti input: 16px di ponsel, 14px dari md. */}
+      <Button type="submit" disabled={pending} className="mt-2 h-11 w-full text-base md:text-sm">
         {pending ? (
           <>
             <LoaderCircle className="size-4 animate-spin" />
