@@ -317,7 +317,7 @@ export function SlipTable({
                   <TableCell className={ACTION_COL_CLASS}>
                     <RowActions actions={actionsFor(s, today, canManage)} />
                   </TableCell>
-                  <TableCell className="max-w-57.5">
+                  <TableCell className="max-w-full">
                     {s.slipNo ? (
                       <span className="tabular font-semibold text-primary">
                         {s.slipNo}
