@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-02
 - **Branch:** `fix/lint-klaim-dokumen`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #76
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
