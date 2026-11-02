@@ -2,16 +2,23 @@ import "server-only"
 
 import type { PlacingSlip, RateLine } from "@/lib/data/types"
 import { totalSumInsured } from "@/lib/calc"
-import { OCCUPATION_TARIFFS, type OccupationTariff } from "@/lib/data/ojk-tariff"
+import {
+  EQ_PROPERTY_TARIFFS,
+  FLOOD_TARIFFS,
+  OCCUPATION_TARIFFS,
+  type OccupationTariff,
+} from "@/lib/data/ojk-tariff"
 import { matchEqZone, matchFloodRegion } from "@/lib/data/ojk-zones"
 import {
   findMotorTariffBounds,
   findMotorExtensionBounds,
+  matchMotorRegion,
 } from "@/lib/data/ojk-motor"
 
 export interface RateBounds {
   min: number
-  max: number
+  /** null bila tidak ada batas atas, misalnya banjir zona tinggi yang memakai loading. */
+  max: number | null
   source: string
 }
 
@@ -52,23 +59,36 @@ export function getPropertyRateBounds(
     bounds["FLEXAS"] = flexasBounds
   }
 
+  // Lampiran III Tabel III.A: tarif gempa tetap per kategori konstruksi dan
+  // zona. Slip belum mencatat kategori konstruksi gempa (jumlah lantai,
+  // rangka), jadi batasnya rentang semua kategori di zona itu. Rumah tinggal
+  // (okupasi 2976) memakai baris DW, selainnya baris Com.
   const eqZone = matchEqZone(riskLocation)
-  if (eqZone && eqZone.zone <= 5) {
-    // EQ property tariffs are not exported yet, so bounds derive from the zone number.
-    const baseRate = eqZone.zone
+  if (eqZone && eqZone.zone >= 1 && eqZone.zone <= 5) {
+    const dwelling = occupationCode.split(/[^0-9A-Za-z]/)[0].startsWith("2976")
+    const rates = EQ_PROPERTY_TARIFFS.filter((t) =>
+      t.construction.startsWith(dwelling ? "DW:" : "Com:")
+    ).map((t) => t.z[eqZone.zone - 1])
     bounds["EQVET"] = {
-      min: 0.75 * baseRate * 0.1,
-      max: 1.9 * baseRate * 0.1,
-      source: `Zona Gempa ${eqZone.regency} (${eqZone.zone})`,
+      min: Math.min(...rates),
+      max: Math.max(...rates),
+      source: `Gempa ${dwelling ? "Dwelling" : "Commercial"} Zona ${eqZone.zone}, ${eqZone.regency}`,
     }
   }
 
+  // Lampiran II Tabel II.A dalam persen, baris rate properti dalam per mil.
+  // Zona banjir tidak tercatat di slip dan zona tinggi memakai tarif Zona 1
+  // ditambah loading, jadi hanya batas bawah Zona 1 yang dijaga.
   const floodRegion = matchFloodRegion(riskLocation)
-  if (floodRegion) {
+  const floodZone1 = FLOOD_TARIFFS.find(
+    (t) =>
+      t.line === "Harta Benda" && t.region === floodRegion && t.zone === "Zona 1"
+  )
+  if (floodRegion && floodZone1?.min != null) {
     bounds["FWTWD"] = {
-      min: 0.045,
-      max: 0.055,
-      source: `Zona Banjir ${floodRegion}`,
+      min: Number((floodZone1.min * 10).toFixed(6)),
+      max: null,
+      source: `Banjir ${floodRegion}, batas bawah Zona 1`,
     }
   }
 
@@ -92,9 +112,10 @@ export function getMotorRateBounds(slip: PlacingSlip): RateBounds | null {
 
 export function getMotorExtensionBounds(
   extensionLabel: string,
-  coverType?: string
+  coverType?: string,
+  region?: string | null
 ): RateBounds | null {
-  return findMotorExtensionBounds(extensionLabel, coverType)
+  return findMotorExtensionBounds(extensionLabel, coverType, region)
 }
 
 export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
@@ -113,6 +134,8 @@ export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
   if (slip.cob === "Motor Vehicle") {
     const motorCascoBounds = getMotorRateBounds(slip)
     const coverType = slip.typeOfCover || slip.coverage || "Comprehensive"
+    const vehicleDesc = slip.interestItems.map((i) => i.description).join(" ")
+    const region = matchMotorRegion(slip.riskLocation || vehicleDesc || "")
     return slip.rateLines.map((l) => {
       if (l.min != null || l.max != null) return l
       if (
@@ -130,7 +153,7 @@ export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
           }
         }
       }
-      const extBounds = findMotorExtensionBounds(l.label, coverType)
+      const extBounds = findMotorExtensionBounds(l.label, coverType, region)
       if (extBounds) {
         return {
           ...l,
