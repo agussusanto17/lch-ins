@@ -229,6 +229,7 @@ export function MasterClauses({
         pageSize={result.pageSize}
         totalItems={result.total}
         onPageChange={(p) => push({ page: String(p) })}
+        onPageSizeChange={(s) => push({ size: String(s) })}
         itemName="clause"
       />
     </>

@@ -3,8 +3,8 @@ import "server-only"
 import { prisma } from "@/lib/prisma"
 import { sanitizeHtml } from "@/lib/sanitize"
 
-/** Jumlah clause per halaman. Pustaka LCH berisi 595 klausul. */
-export const CLAUSE_PAGE_SIZE = 20
+/** Pilihan jumlah clause per halaman, sama dengan pilihan di TablePagination. */
+const CLAUSE_PAGE_SIZES = [10, 25, 50, 100]
 
 export interface ClauseFilter {
   query?: string
@@ -12,6 +12,7 @@ export interface ClauseFilter {
   sourceGroup?: string
   cobId?: string
   page?: number
+  pageSize?: number
 }
 
 export interface ClauseListItem {
@@ -43,14 +44,17 @@ function whereFrom(filter: ClauseFilter) {
 
 export async function listClauses(filter: ClauseFilter) {
   const page = Math.max(1, filter.page ?? 1)
+  const pageSize = CLAUSE_PAGE_SIZES.includes(filter.pageSize ?? 0)
+    ? filter.pageSize!
+    : CLAUSE_PAGE_SIZES[0]
   const where = whereFrom(filter)
 
   const [rows, total] = await Promise.all([
     prisma.clause.findMany({
       where,
       orderBy: [{ title: "asc" }, { sourceGroup: "asc" }],
-      skip: (page - 1) * CLAUSE_PAGE_SIZE,
-      take: CLAUSE_PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       include: {
         cob: { select: { name: true } },
         coverType: { select: { name: true } },
@@ -72,8 +76,8 @@ export async function listClauses(filter: ClauseFilter) {
     items,
     total,
     page,
-    pageSize: CLAUSE_PAGE_SIZE,
-    pageCount: Math.max(1, Math.ceil(total / CLAUSE_PAGE_SIZE)),
+    pageSize,
+    pageCount: Math.max(1, Math.ceil(total / pageSize)),
   }
 }
 

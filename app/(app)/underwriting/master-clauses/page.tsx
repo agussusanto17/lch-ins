@@ -24,6 +24,7 @@ export default async function MasterClausesPage({
     sourceGroup: one(sp.group) ?? "",
     cobId: one(sp.cob) ?? "",
     page: Number(one(sp.page)) || 1,
+    pageSize: Number(one(sp.size)) || undefined,
   }
 
   const [result, groups, cobs, user] = await Promise.all([

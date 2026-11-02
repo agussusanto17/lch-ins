@@ -106,7 +106,7 @@ export function TariffOjkTab({
     paginatedItems: paginatedOccupations,
     setPage,
     setPageSize,
-  } = usePagination(filteredOccupations, 15)
+  } = usePagination(filteredOccupations, 10)
 
   return (
     <div className="flex flex-col gap-4">
@@ -200,7 +200,6 @@ export function TariffOjkTab({
             totalItems={totalItems}
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
-            pageSizeOptions={[15, 30, 50, 100]}
             itemName="Okupasi"
           />
         </>
