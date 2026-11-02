@@ -32,9 +32,7 @@ export interface AuditEntry {
   context?: Record<string, unknown>
 }
 
-/**
- * Technical and sensitive credential fields that must NEVER be persisted in changes.
- */
+/** Technical and sensitive credential fields that must never be persisted in changes. */
 const IGNORED_FIELDS = new Set([
   "updatedAt",
   "createdAt",

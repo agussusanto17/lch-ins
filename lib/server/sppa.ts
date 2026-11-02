@@ -330,9 +330,6 @@ export async function seedInitialSppaIfEmpty(): Promise<number> {
   return seeded
 }
 
-/**
- * Retrieve list of SPPA records with relational filters.
- */
 export async function listSppa(params: ListSppaParams = {}): Promise<SppaRecord[]> {
   await seedInitialSppaIfEmpty()
 
@@ -413,9 +410,6 @@ async function vehicleFieldsFor(cobName: string, input: SppaInput) {
   return checkVehiclePair(prisma, input.vehicleBrandId, input.vehicleTypeId)
 }
 
-/**
- * Create a new SPPA record in PostgreSQL.
- */
 export async function createSppa(input: SppaInput, userId: string): Promise<SppaRecord> {
   const cache = await getSppaLookupsCache()
   const clientId = await resolveClientId(input.clientId)
@@ -466,9 +460,6 @@ export async function createSppa(input: SppaInput, userId: string): Promise<Sppa
   return mapPrismaSppaToRecord(created)
 }
 
-/**
- * Update an existing SPPA record in PostgreSQL.
- */
 export async function updateSppa(
   id: string,
   input: SppaInput,

@@ -68,7 +68,6 @@ export function discountAmount(slip: PlacingSlip) {
   return roundCents((totalPremium(slip) * (slip.discountPct || 0)) / 100)
 }
 
-/** Total payable = gross premium - discount + admin fee + stamp duty. */
 export function totalPayable(slip: PlacingSlip) {
   return roundCents(
     totalPremium(slip) -

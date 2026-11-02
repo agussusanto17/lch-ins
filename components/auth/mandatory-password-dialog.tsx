@@ -18,14 +18,9 @@ interface MandatoryPasswordDialogProps {
 }
 
 /**
- * Modal wajib ganti kata sandi non-closable untuk enterprise back-office LCH.
- *
- * Ditampilkan di atas layout normal dashboard LCH dengan overlay abu-abu
- * transparan tanpa backdrop blur, sehingga dashboard dan sidebar role-based
- * di belakang tetap tampak namun non-aktif.
- *
- * Seluruh aksi penutup (tombol X, tombol Escape, klik backdrop luar) dinonaktifkan
- * sampai proses pergantian kata sandi berhasil diselesaikan.
+ * Modal wajib ganti kata sandi yang tidak bisa ditutup (tombol X, Escape,
+ * klik backdrop) sampai kata sandi berhasil diganti. Overlay abu-abu tanpa
+ * blur, jadi dashboard dan sidebar di belakang tetap tampak tapi nonaktif.
  */
 export function MandatoryPasswordDialog({
   userEmail,
@@ -45,18 +40,15 @@ export function MandatoryPasswordDialog({
         }}
       >
         <DialogHeader className="text-left gap-2 p-0">
-          {/* 1. Small restrained security context label */}
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <ShieldCheck className="size-3.5 text-primary" />
             <span>Keamanan Akun</span>
           </div>
 
-          {/* 2. Main heading */}
           <DialogTitle className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
             Buat kata sandi baru
           </DialogTitle>
 
-          {/* 3. Concise explanation identifying account */}
           <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
             Kata sandi sementara untuk akun{" "}
             {userEmail ? (
@@ -68,7 +60,6 @@ export function MandatoryPasswordDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* 4 - 9. Form fields, validation, submit & logout */}
         <ChangePasswordForm />
       </DialogContent>
     </Dialog>

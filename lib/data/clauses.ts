@@ -1,7 +1,7 @@
 import type { Clause, ClauseOverride } from "./types"
 
 /**
- * CATATAN MIGRASI. Master Clauses sudah pindah ke database, sumber sebenarnya
+ * Catatan migrasi. Master Clauses sudah pindah ke database, sumber sebenarnya
  * ada di `lib/server/clauses.ts` berisi 595 klausul asli LCH.
  *
  * Data di bawah tinggal dipakai dua tempat yang belum dipindah, yaitu pemilih

@@ -21,8 +21,10 @@ export type SlipStatus =
 /** Dihitung dari tanggal berakhir polis, tidak disimpan (PRD A-17). */
 export type PolicyStatus = "Active" | "Expiring" | "Expired"
 export type PolicyType = "Baru" | "Renewal" | "Endorsement" | "Cancellation"
-/** Sesuai daftar status klaim di ERD (lookup claim_status). */
-/** Status siklus hidup klaim. Tahapan dokumennya dicatat terpisah di ClaimStage. */
+/**
+ * Status siklus hidup klaim sesuai ERD (lookup claim_status). Tahapan
+ * dokumennya dicatat terpisah di ClaimStage.
+ */
 export type ClaimStatus = "Outstanding" | "Settled" | "Closed" | "Rejected"
 
 /** Tahapan dokumen dan proses klaim, berjalan sendiri di samping status. */

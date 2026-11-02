@@ -23,10 +23,9 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Catatan: jangan redirect otomatis dari rute publik (/login) ke / di sini
-  // hanya berdasarkan keberadaan cookie. Jika cookie tersebut stale/kedaluwarsa,
-  // layout aplikasi akan melempar kembali ke /login sehingga terjadi loop redirect tak terbatas.
-  // Pengecekan sesi yang valid untuk /login didelegasikan ke app/login/page.tsx via currentUser().
+  // Jangan redirect /login ke / hanya karena cookie ada. Cookie kedaluwarsa
+  // membuat layout melempar balik ke /login sehingga terjadi loop redirect.
+  // Sesi di /login dicek oleh app/login/page.tsx lewat currentUser().
 
   // Layout aplikasi perlu tahu path yang diminta untuk memeriksa hak akses,
   // dan Next tidak memberikannya ke layout. Jadi path dititipkan lewat header.

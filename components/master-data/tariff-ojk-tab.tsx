@@ -137,7 +137,6 @@ export function TariffOjkTab({
         </div>
       )}
 
-      {/* 1. Okupasi & Properti */}
       {activeSubTab === "occupation" && (
         <>
           <Card className="gap-0 overflow-hidden py-0">
@@ -225,7 +224,6 @@ export function TariffOjkTab({
             </div>
           </div>
 
-          {/* Table IV.A: Basic Casco tariffs */}
           <div className="flex flex-col gap-2">
             <div>
               <h3 className="text-sm font-semibold text-foreground">
@@ -280,7 +278,6 @@ export function TariffOjkTab({
             </Card>
           </div>
 
-          {/* Table IV.B: Extension coverage tariffs */}
           <div className="flex flex-col gap-2">
             <div>
               <h3 className="text-sm font-semibold text-foreground">
@@ -340,7 +337,6 @@ export function TariffOjkTab({
         </div>
       )}
 
-      {/* 3. Gempa Bumi */}
       {activeSubTab === "earthquake" && (
         <Card className="gap-0 overflow-hidden py-0">
           <Table className="min-w-200">
@@ -374,7 +370,6 @@ export function TariffOjkTab({
         </Card>
       )}
 
-      {/* 3. Banjir */}
       {activeSubTab === "flood" && (
         <Card className="gap-0 overflow-hidden py-0">
           <Table className="min-w-200">
@@ -418,7 +413,6 @@ export function TariffOjkTab({
         </Card>
       )}
 
-      {/* 4. Skala BI */}
       {activeSubTab === "biscale" && (
         <Card className="gap-0 overflow-hidden py-0">
           <Table className="min-w-200">

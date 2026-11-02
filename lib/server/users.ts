@@ -165,7 +165,6 @@ export async function createUser(data: CreateUserInput): Promise<{
     throw new Error(roleValidation.error)
   }
 
-  // Cek apakah email sudah terdaftar
   const existing = await prisma.user.findUnique({
     where: { email },
   })
@@ -281,7 +280,6 @@ export async function updateUser(
     throw new Error("Pengguna tidak ditemukan.")
   }
 
-  // Jika email berubah, cek duplikasi
   if (target.email !== email) {
     const emailConflict = await prisma.user.findUnique({
       where: { email },
@@ -295,14 +293,14 @@ export async function updateUser(
     target.roles.includes("admin") || target.roleId === "admin"
   const willHaveAdminRole = roleValidation.roles.includes("admin")
 
-  // Proteksi 1: Pencegahan deaktivasi diri sendiri
+  // Pencegahan deaktivasi diri sendiri
   if (admin.id === id && !isActive) {
     throw new Error(
       "Anda tidak dapat menonaktifkan akun sendiri saat sedang masuk."
     )
   }
 
-  // Proteksi 2: Pencegahan pencabutan role admin dari last active admin
+  // Pencegahan pencabutan role admin dari last active admin
   if (hadAdminRole && !willHaveAdminRole && target.isActive) {
     const activeAdmins = await prisma.user.count({
       where: {
@@ -317,7 +315,7 @@ export async function updateUser(
     }
   }
 
-  // Proteksi 3: Pencegahan penonaktifan last active admin
+  // Pencegahan penonaktifan last active admin
   if (hadAdminRole && target.isActive && !isActive) {
     const activeAdmins = await prisma.user.count({
       where: {
@@ -517,7 +515,6 @@ export async function resetUserPassword(id: string): Promise<{
       data: { mustChangePassword: true },
     })
 
-    // Cabut seluruh sesi aktif yang ada
     await tx.session.deleteMany({
       where: { userId: id },
     })

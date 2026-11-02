@@ -137,9 +137,6 @@ function revalidateUnderwritingPaths(id?: string) {
   }
 }
 
-/**
- * Menyimpan Placing Slip (membuat baru atau memperbarui draft yang ada).
- */
 export async function savePlacingSlipAction(
   slip: PlacingSlip,
   mode: "new" | "edit"
@@ -250,9 +247,6 @@ export async function releasePlacingSlipAction(
   }
 }
 
-/**
- * Mengubah status Placing Slip (misal: "Draft", "Quoted", "Cancelled").
- */
 export async function togglePlacingSlipStatusAction(
   id: string,
   status: SlipStatus
@@ -366,9 +360,6 @@ export async function duplicatePlacingSlipAction(
   }
 }
 
-/**
- * Mengambil daftar klausula master dari database PostgreSQL untuk ClausePicker.
- */
 export async function getClausesForPickerAction(): Promise<ActionResponse<ClausePickerItem[]>> {
   try {
     const rows = await prisma.clause.findMany({

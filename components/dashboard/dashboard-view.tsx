@@ -80,16 +80,10 @@ export function DashboardView({
   initialSlips,
 }: DashboardViewProps) {
   /*
-   * Dihitung langsung dari data server, tidak lewat store sesi.
-   *
-   * Store dimuati data contoh saat modul diimpor, jadi membacanya berarti
-   * render pertama memakai angka contoh dan baru berganti ke angka database
-   * setelah efek hidrasi jalan. Di halaman ini bedanya kelihatan: angkanya
-   * sempat salah sepersekian detik sebelum berubah sendiri.
-   *
-   * Tabel tetap perlu store supaya hasil edit form langsung terlihat tanpa
-   * memuat ulang. Dashboard tidak: ini halaman ringkasan yang dibuka, bukan
-   * disunting, dan setiap kali dibuka Next mengambil datanya lagi dari server.
+   * Dihitung dari data server, bukan store sesi. Store dimuati data contoh saat
+   * modul diimpor, jadi render pertama sempat menampilkan angka contoh sampai
+   * efek hidrasi jalan. Tabel tetap butuh store supaya hasil edit langsung
+   * terlihat; dashboard tidak, karena Next mengambil ulang datanya setiap dibuka.
    */
   const today = useToday()
   const clients = initialClients

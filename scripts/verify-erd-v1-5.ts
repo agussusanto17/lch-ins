@@ -3,14 +3,12 @@ import { prisma } from "../lib/prisma"
 async function main() {
   console.log("=== VERIFY ERD V1.5 RELATIONAL MODELS ===")
 
-  // 1. Sources
   const sources = await prisma.source.findMany()
   if (sources.length < 3) {
     throw new Error(`Expected at least 3 sources, got ${sources.length}`)
   }
   console.log(`Sources verified: ${sources.length} records (${sources.map((s) => s.code).join(", ")})`)
 
-  // 2. CoverType Priority
   const prioritized = await prisma.coverType.findMany({
     where: { priority: { not: null } },
   })
@@ -19,7 +17,6 @@ async function main() {
   }
   console.log(`CoverType priorities verified: ${prioritized.length} records`)
 
-  // 3. ClaimDocumentType
   const docTypes = await prisma.claimDocumentType.findMany({
     include: { cob: true },
   })
@@ -28,7 +25,7 @@ async function main() {
   }
   console.log(`Claim document types verified: ${docTypes.length} records across COBs`)
 
-  // 4. Test InsurerClaimPic with a temporary insurer
+  // Test InsurerClaimPic with a temporary insurer
   const testInsurer = await prisma.insurer.create({
     data: {
       name: "PT Asuransi Uji Integrasi",
@@ -53,7 +50,7 @@ async function main() {
   })
   console.log(`InsurerClaimPic created: ${testPic.name} (id: ${testPic.id})`)
 
-  // 5. Test ClientInsurerCode with first client
+  // Test ClientInsurerCode with first client
   const client = await prisma.client.findFirst()
   if (client) {
     const clientCode = await prisma.clientInsurerCode.create({
@@ -86,7 +83,7 @@ async function main() {
     await prisma.clientInsurerCode.delete({ where: { id: clientCode.id } })
   }
 
-  // 6. Test ClaimDocument and ClaimFollowup with first claim
+  // Test ClaimDocument and ClaimFollowup with first claim
   const claim = await prisma.claim.findFirst()
   const user = await prisma.user.findFirst()
   if (claim && user) {

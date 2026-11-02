@@ -196,9 +196,6 @@ type PrismaClientWithRelations = Prisma.ClientGetPayload<{
   }
 }>
 
-/**
- * Transform Prisma database entity into UI-compatible ClientRecord.
- */
 function mapPrismaClientToRecord(
   c: PrismaClientWithRelations,
   counts?: { sppa?: number; placingSlips?: number; policies?: number }
@@ -433,9 +430,6 @@ export async function listInsuredOptions(): Promise<InsuredOption[]> {
   }))
 }
 
-/**
- * Retrieve all clients from PostgreSQL with relational fields and filters.
- */
 export async function listClients(
   params: ListClientsParams = {}
 ): Promise<ClientRecord[]> {
@@ -506,16 +500,12 @@ export async function listClients(
   return rows.map((r) => mapPrismaClientToRecord(r))
 }
 
-/**
- * Retrieve a single client record by ID from PostgreSQL.
- */
 export async function getClientById(
   id: string
 ): Promise<ClientRecord | null> {
   if (!id) return null
   await seedInitialClientsIfEmpty()
 
-  // Verify whether id is a valid UUID
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       id
@@ -587,9 +577,6 @@ export async function getClientById(
   return mapPrismaClientToRecord(row)
 }
 
-/**
- * Persist a new client record with associated addresses and documents into PostgreSQL.
- */
 /**
  * Isi klien untuk audit trail. Alamat dan berkas KYC ada di tabel sendiri,
  * jadi disertakan sebagai teks supaya perubahannya ikut tercatat (SIT-012).
@@ -778,9 +765,6 @@ export async function createClient(
   return getClientById(record.id) as Promise<ClientRecord>
 }
 
-/**
- * Update an existing client record in PostgreSQL.
- */
 export async function updateClient(
   id: string,
   input: ClientInput,

@@ -543,7 +543,6 @@ function SlipEditor({
         ) : null}
 
         <fieldset disabled={locked} className="contents">
-          {/* ---------- Informasi Dasar ---------- */}
           <SectionCard
             title="Informasi Dasar"
             {...sectionProps("basic")}
@@ -724,7 +723,6 @@ function SlipEditor({
             </div>
           </SectionCard>
 
-          {/* ---------- Wording Form + Detail Coverage ---------- */}
           {usesPropertyBlocks(slip.cob) ? (
             <>
               <SectionCard
@@ -822,7 +820,6 @@ function SlipEditor({
             </>
           ) : null}
 
-          {/* ---------- Interest Insured ---------- */}
           <SectionCard
             title={
               usesSectionSumInsured(slip.cob)
@@ -884,7 +881,6 @@ function SlipEditor({
             )}
           </SectionCard>
 
-          {/* ---------- Sum Insured (Property) ---------- */}
           {usesSectionSumInsured(slip.cob) ? (
             <SectionCard
               title="Sum Insured *"
@@ -932,7 +928,6 @@ function SlipEditor({
             </SectionCard>
           ) : null}
 
-          {/* ---------- Deductible & Clauses ---------- */}
           <SectionCard
             title="Deductible & Clauses"
             {...sectionProps("deductible")}
@@ -1017,7 +1012,6 @@ function SlipEditor({
             </div>
           </SectionCard>
 
-          {/* ---------- Rate & Premium ---------- */}
           <SectionCard
             title="Rate & Premium"
             {...sectionProps("rate")}
@@ -1193,7 +1187,6 @@ function SlipEditor({
             </div>
           </SectionCard>
 
-          {/* ---------- Brokerage ---------- */}
           <SectionCard
             title="Brokerage"
             {...sectionProps("brokerage")}

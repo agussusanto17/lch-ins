@@ -21,7 +21,6 @@ export function ChangePasswordForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      {/* 4. Current password */}
       <Field className="gap-1.5">
         <FieldLabel htmlFor="currentPassword" className="text-sm font-medium">
           Kata sandi saat ini
@@ -52,7 +51,6 @@ export function ChangePasswordForm() {
         </div>
       </Field>
 
-      {/* 5. New password */}
       <Field className="gap-1.5">
         <FieldLabel htmlFor="newPassword" className="text-sm font-medium">
           Kata sandi baru
@@ -82,7 +80,6 @@ export function ChangePasswordForm() {
         </div>
       </Field>
 
-      {/* 6. Confirm new password */}
       <Field className="gap-1.5">
         <FieldLabel htmlFor="confirmPassword" className="text-sm font-medium">
           Konfirmasi kata sandi baru
@@ -112,7 +109,6 @@ export function ChangePasswordForm() {
         </div>
       </Field>
 
-      {/* 7. Inline validation & error messages */}
       {state?.error ? (
         <p
           role="alert"
@@ -123,7 +119,6 @@ export function ChangePasswordForm() {
         </p>
       ) : null}
 
-      {/* 8. Primary action */}
       <Button
         type="submit"
         disabled={pending}
@@ -139,7 +134,6 @@ export function ChangePasswordForm() {
         )}
       </Button>
 
-      {/* 9. Secondary logout action */}
       <Button
         type="button"
         variant="ghost"

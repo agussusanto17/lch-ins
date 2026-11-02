@@ -58,7 +58,6 @@ async function runTests() {
     }
   }
 
-  // 1. COB & Cover Type
   console.log("[TEST 1] COB & Cover Type CRUD & Reference Guards")
   const rateMode = await prisma.lookupValue.findFirst({ where: { lookupType: "rate_mode" } })
   const formVariant = await prisma.lookupValue.findFirst({ where: { lookupType: "form_variant" } })
@@ -138,7 +137,6 @@ async function runTests() {
   const cobAfterDelete = await prisma.classOfBusiness.findUnique({ where: { id: newCob.id } })
   assert(!cobAfterDelete, "COB deleted successfully after references cleared")
 
-  // 2. Insurers & Adjusters
   console.log("\n[TEST 2] Insurers & Adjusters CRUD")
   const testInsurer = await createInsurer(
     {
@@ -213,7 +211,6 @@ async function runTests() {
   await prisma.insurer.delete({ where: { id: testInsurer.id } })
   await prisma.adjuster.delete({ where: { id: testAdjuster.id } })
 
-  // 3. Bank Accounts & Wording Forms
   console.log("\n[TEST 3] Bank Accounts & Wording Forms")
   const bankLookup = await prisma.lookupValue.findFirst({ where: { lookupType: "bank" } })
   if (!bankLookup) throw new Error("Bank lookup seed missing.")
@@ -263,7 +260,6 @@ async function runTests() {
   await toggleWordingFormStatus(testWording.id, false, admin.id)
   await prisma.wordingForm.delete({ where: { id: testWording.id } })
 
-  // 4. Lookup Values & System Protection
   console.log("\n[TEST 4] Lookup Values & System Protection")
   const testLookupCode = `CUSTOM_TEST_${Date.now()}`
   const newLookup = await createLookupValue(
@@ -313,7 +309,6 @@ async function runTests() {
   const lookupAfterDelete = await prisma.lookupValue.findUnique({ where: { id: newLookup.id } })
   assert(!lookupAfterDelete, "Custom lookup deleted")
 
-  // 5. Query Listings
   console.log("\n[TEST 5] Query Listings Verification")
   const cobList = await listMasterCob()
   assert(cobList.length > 0, "listMasterCob returns populated COBs")

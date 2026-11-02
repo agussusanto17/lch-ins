@@ -48,7 +48,6 @@ async function runTests() {
     }
   }
 
-  // TEST 1: Sensitive Credential Redaction in diffChanges
   console.log("[TEST 1] Sensitive Credential & Secret Redaction in diffChanges")
   const beforeSecret = {
     name: "User Test",
@@ -101,7 +100,6 @@ async function runTests() {
   // Cleanup direct test audit record
   await prisma.auditLog.delete({ where: { id: directAuditRecord.id } })
 
-  // TEST 2: Client Creation Audit
   console.log("\n[TEST 2] Client Creation Audit Logging")
   const testClientName = `PT Test Audit Log ${Date.now()}`
   const createdClient = await createClient(
@@ -134,7 +132,6 @@ async function runTests() {
     "Audit log correctly relates to user record"
   )
 
-  // TEST 3: Client Update Audit
   console.log("\n[TEST 3] Client Update Audit Logging")
   await updateClient(
     createdClient.id,
@@ -165,7 +162,6 @@ async function runTests() {
     "Field changes recorded accurately with before and after snapshots"
   )
 
-  // TEST 4: Client Status Toggle Audit
   console.log("\n[TEST 4] Client Status Toggle Audit Logging")
   await toggleClientStatus(createdClient.id, "Inactive", adminUser.id)
 
@@ -184,7 +180,6 @@ async function runTests() {
     "Status toggle logged with status change"
   )
 
-  // TEST 5: SPPA Creation Audit
   console.log("\n[TEST 5] SPPA Creation Audit Logging")
   const testSppa = await createSppa(
     {
@@ -213,7 +208,6 @@ async function runTests() {
   assert(Boolean(sppaCreateLog), "Audit log created for SPPA creation")
   assert(sppaCreateLog?.userId === adminUser.id, "Audit log attributed to actor")
 
-  // TEST 6: SPPA Status Toggle Audit
   console.log("\n[TEST 6] SPPA Status Toggle Audit Logging")
   await toggleSppaStatus(testSppa.id, "Submitted", adminUser.id)
 
@@ -232,7 +226,6 @@ async function runTests() {
     "SPPA status change (Draft -> Submitted) logged"
   )
 
-  // TEST 7: SPPA Deletion Audit
   console.log("\n[TEST 7] SPPA Deletion Audit Logging")
   await deleteSppa(testSppa.id, adminUser.id)
 
@@ -246,7 +239,6 @@ async function runTests() {
 
   assert(Boolean(sppaDeleteLog), "Audit log created for SPPA deletion with action 'Delete'")
 
-  // TEST 8: Query Audit Logs Layer (listAuditLogs & listAuditEntities)
   console.log("\n[TEST 8] Query Audit Logs Layer (listAuditLogs & listAuditEntities)")
   const entities = await listAuditEntities()
   assert(entities.includes("clients"), "listAuditEntities contains 'clients'")
@@ -284,7 +276,6 @@ async function runTests() {
   })
   assert(Boolean(clientDeleteLog), "Client deletion logged with action 'Delete'")
 
-  // SUMMARY
   console.log("\n==========================================")
   console.log(`AUDIT TRAIL INTEGRATION TEST RESULTS: ${passed} PASSED, ${failed} FAILED`)
   console.log("==========================================")

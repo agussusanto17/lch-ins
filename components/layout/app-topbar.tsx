@@ -217,7 +217,6 @@ export function AppTopbar({ user }: { user?: CurrentUser | null }) {
                 </div>
               </div>
 
-              {/* Roles Badge List */}
               <div className="mt-2.5 flex flex-wrap gap-1">
                 {roleLabels.length > 0 ? (
                   roleLabels.map((role) => (

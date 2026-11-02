@@ -144,7 +144,6 @@ export function RoleMultiSelect({
           </div>
         </div>
 
-        {/* Roles List */}
         <div className="mt-1 max-h-72 space-y-1 overflow-y-auto pr-1">
           {CANONICAL_ROLES.map((role) => {
             const isSelected = value.includes(role.code)

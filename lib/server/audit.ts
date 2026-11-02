@@ -393,9 +393,6 @@ export async function listAuditUsers(): Promise<{ id: string; name: string }[]> 
   })
 }
 
-/**
- * Fetch a single audit log entry by ID.
- */
 export async function getAuditLogById(
   id: string
 ): Promise<AuditLogRecord | null> {
@@ -419,9 +416,7 @@ export async function getAuditLogById(
   return record
 }
 
-/**
- * Get distinct entity names present in the audit log for filter dropdown.
- */
+/** Distinct entities for the audit log filter dropdown. */
 export async function listAuditEntities(): Promise<string[]> {
   const groups = await prisma.auditLog.groupBy({
     by: ["entity"],

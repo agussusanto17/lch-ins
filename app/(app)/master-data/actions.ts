@@ -67,9 +67,7 @@ export interface ActionResponse<T = unknown> {
   error?: string
 }
 
-// ---------------------------------------------------------------------------
-// Zod Schemas
-// ---------------------------------------------------------------------------
+// Zod schemas
 
 const coverTypeSchema = z.object({
   cobId: z.string().min(1, "Pilih COB yang valid"),
@@ -148,9 +146,7 @@ const lookupValueSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
-// ---------------------------------------------------------------------------
-// 1. COB Actions
-// ---------------------------------------------------------------------------
+// COB actions
 
 // Dari aplikasi, COB hanya bisa diaktifkan atau dinonaktifkan. Tambah, ubah,
 // dan hapus COB dikerjakan developer lewat migrasi, sesuai kesepakatan dengan
@@ -174,9 +170,7 @@ export async function toggleCobStatusAction(
   }
 }
 
-// ---------------------------------------------------------------------------
-// 2. Cover Type Actions
-// ---------------------------------------------------------------------------
+// Cover type actions
 
 export async function createCoverTypeAction(
   data: z.infer<typeof coverTypeSchema>
@@ -246,9 +240,7 @@ export async function deleteCoverTypeAction(
   }
 }
 
-// ---------------------------------------------------------------------------
-// 3. Insurers & Adjusters Actions
-// ---------------------------------------------------------------------------
+// Insurers & adjusters actions
 
 export async function createInsurerAction(
   data: z.infer<typeof insurerSchema>
@@ -354,9 +346,7 @@ export async function toggleAdjusterStatusAction(
   }
 }
 
-// ---------------------------------------------------------------------------
-// 4. Bank Account & Wording Form Actions
-// ---------------------------------------------------------------------------
+// Bank account & wording form actions
 
 export async function createBankAccountAction(
   data: z.infer<typeof bankAccountSchema>
@@ -484,9 +474,7 @@ export async function toggleWordingFormStatusAction(
   }
 }
 
-// ---------------------------------------------------------------------------
-// 5. Lookup Values Actions
-// ---------------------------------------------------------------------------
+// Lookup values actions
 
 export async function createLookupValueAction(
   data: z.infer<typeof lookupValueSchema>
@@ -606,9 +594,7 @@ export async function updateCobOjkClassAction(
   }
 }
 
-// ---------------------------------------------------------------------------
 // Merek dan tipe kendaraan
-// ---------------------------------------------------------------------------
 
 const vehicleIdSchema = z.uuid()
 

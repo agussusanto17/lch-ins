@@ -451,11 +451,7 @@ export function SppaKycDocument({
   )
 }
 
-/**
- * Cetak keseluruhan tabel SPPA berformat lembar kerja (Excel spreadsheet).
- * Menampilkan grid sel bergaris penuh, header abu-abu rapat,
- * angka pertanggungan rata kanan, dan baris total di bagian bawah.
- */
+/** Cetak tabel SPPA berformat lembar kerja Excel. */
 export function SppaExcelDocument({
   rows,
   today,

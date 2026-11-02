@@ -13,7 +13,6 @@ import {
 async function runTests() {
   console.log("=== STARTING CLAIM DOCUMENTS & FOLLOWUPS E2E TEST ===")
 
-  // 1. Get an existing claim and user
   const claim = await prisma.claim.findFirst({
     include: { policy: { include: { cob: true } } },
   })
@@ -25,14 +24,13 @@ async function runTests() {
 
   console.log(`Testing with Claim: ${claim.claimNo} (COB: ${claim.policy.cob.name}), User: ${user.name}`)
 
-  // 2. Test listClaimDocuments (auto-initializes checklist if empty)
+  // listClaimDocuments auto-initializes the checklist when empty.
   const docs = await listClaimDocuments(claim.id)
   if (docs.length === 0) {
     throw new Error(`Expected claim documents to be populated for COB ${claim.policy.cob.name}`)
   }
   console.log(`[PASS] listClaimDocuments returned ${docs.length} document checklist items`)
 
-  // 3. Test toggleClaimDocument
   const targetDoc = docs[0]
   const toggled = await toggleClaimDocument(targetDoc.id, true, "2026-10-22", user.id)
   if (!toggled.isReceived || toggled.receivedDate !== "2026-10-22") {
@@ -40,7 +38,6 @@ async function runTests() {
   }
   console.log(`[PASS] toggleClaimDocument marked '${toggled.documentTypeName}' as received`)
 
-  // 4. Test updateClaimDocument (notes)
   const updatedNote = "Dokumen asli sudah diverifikasi oleh staf operasional"
   const docWithNotes = await updateClaimDocument(targetDoc.id, { notes: updatedNote }, user.id)
   if (docWithNotes.notes !== updatedNote) {
@@ -48,7 +45,6 @@ async function runTests() {
   }
   console.log(`[PASS] updateClaimDocument saved notes correctly`)
 
-  // 5. Test addClaimDocument (custom ad-hoc document)
   const customDoc = await addClaimDocument(claim.id, {
     name: "Surat Keterangan Kerusakan dari Pihak Ketiga",
     isRequired: false,
@@ -59,7 +55,6 @@ async function runTests() {
   }
   console.log(`[PASS] addClaimDocument created custom item: ${customDoc.documentTypeName}`)
 
-  // 6. Test deleteClaimDocument
   await deleteClaimDocument(customDoc.id, user.id)
   const docsAfterDelete = await listClaimDocuments(claim.id)
   if (docsAfterDelete.some((d) => d.id === customDoc.id)) {
@@ -67,7 +62,6 @@ async function runTests() {
   }
   console.log(`[PASS] deleteClaimDocument removed custom document successfully`)
 
-  // 7. Test addClaimFollowup
   const followup = await addClaimFollowup(
     claim.id,
     {
@@ -81,14 +75,12 @@ async function runTests() {
   }
   console.log(`[PASS] addClaimFollowup created entry: '${followup.note}' by ${followup.createdByName}`)
 
-  // 8. Test listClaimFollowups
   const followups = await listClaimFollowups(claim.id)
   if (followups.length === 0 || !followups.some((f) => f.id === followup.id)) {
     throw new Error("listClaimFollowups does not contain newly created followup")
   }
   console.log(`[PASS] listClaimFollowups returned ${followups.length} entries`)
 
-  // 9. Test deleteClaimFollowup
   await deleteClaimFollowup(followup.id, user.id)
   const followupsAfterDelete = await listClaimFollowups(claim.id)
   if (followupsAfterDelete.some((f) => f.id === followup.id)) {
