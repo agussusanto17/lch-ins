@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-02
 - **Branch:** `fix/tarif-okupasi-lampiran-1`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#68](https://github.com/agussusanto17/lch-ins/pull/68)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
