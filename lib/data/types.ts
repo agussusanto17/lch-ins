@@ -210,8 +210,6 @@ export interface PlacingSlip {
   interestItems: LineItem[]
   sumInsuredSection1: LineItem[]
   sumInsuredSection2: LineItem[]
-  deductiblesSection1: string[]
-  deductiblesSection2: string[]
   specialConditions?: string
   clauseIds: string[]
   /**

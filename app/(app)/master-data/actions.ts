@@ -25,24 +25,29 @@ import {
   createBankAccount,
   createCoverType,
   createCurrency,
+  createDeductibleOption,
   createInsurer,
   createLookupValue,
   createWordingForm,
   deleteCoverType,
+  deleteDeductibleOption,
   deleteLookupValue,
   toggleAdjusterStatus,
   toggleBankAccountStatus,
   toggleCobStatus,
   toggleCoverTypeStatus,
   toggleCurrencyStatus,
+  toggleDeductibleOptionStatus,
   toggleInsurerStatus,
   toggleLookupValueStatus,
   toggleWordingFormStatus,
   updateAdjuster,
   updateBankAccount,
   updateCoverType,
+  updateDeductibleOption,
   updateInsurer,
   updateLookupValue,
+  type DeductibleOptionRecord,
 } from "@/lib/server/master-data"
 import { requireManage } from "@/lib/server/session"
 import {
@@ -121,6 +126,17 @@ const bankAccountSchema = z.object({
 
 const wordingFormSchema = z.object({
   name: z.string().trim().min(2, "Nama wording form minimal 2 karakter"),
+})
+
+const deductibleOptionSchema = z.object({
+  cobId: z.string().min(1, "Pilih COB"),
+  coverTypeId: z.string().min(1).nullable(),
+  // Batasnya sama dengan isian deductible per cover di placing slip.
+  text: z
+    .string()
+    .trim()
+    .min(2, "Teks deductible minimal 2 karakter")
+    .max(500, "Teks deductible maksimal 500 karakter"),
 })
 
 const lookupValueSchema = z.object({
@@ -716,4 +732,84 @@ export async function deleteVehicleTypeAction(id: string): Promise<ActionRespons
   return vehicleAction("Gagal menghapus tipe", (userId) =>
     deleteVehicleType(parseOrThrow(vehicleIdSchema, id, "Tipe tidak valid"), userId)
   )
+}
+
+export async function createDeductibleOptionAction(
+  data: z.infer<typeof deductibleOptionSchema>
+): Promise<ActionResponse<DeductibleOptionRecord>> {
+  try {
+    const session = await requireManage("/master-data")
+    const parsed = deductibleOptionSchema.parse(data)
+    const res = await createDeductibleOption(parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    unstable_rethrow(err)
+    return {
+      ok: false,
+      error: err instanceof z.ZodError
+        ? err.issues[0]?.message ?? "Data deductible tidak valid"
+        : err instanceof Error
+          ? err.message
+          : "Gagal menambah deductible",
+    }
+  }
+}
+
+export async function updateDeductibleOptionAction(
+  id: string,
+  data: z.infer<typeof deductibleOptionSchema>
+): Promise<ActionResponse<DeductibleOptionRecord>> {
+  try {
+    const session = await requireManage("/master-data")
+    const parsed = deductibleOptionSchema.parse(data)
+    const res = await updateDeductibleOption(id, parsed, session.id)
+    revalidatePath("/master-data")
+    return { ok: true, data: res }
+  } catch (err) {
+    unstable_rethrow(err)
+    return {
+      ok: false,
+      error: err instanceof z.ZodError
+        ? err.issues[0]?.message ?? "Data deductible tidak valid"
+        : err instanceof Error
+          ? err.message
+          : "Gagal mengubah deductible",
+    }
+  }
+}
+
+export async function toggleDeductibleOptionStatusAction(
+  id: string,
+  isActive: boolean
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireManage("/master-data")
+    await toggleDeductibleOptionStatus(id, isActive, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    unstable_rethrow(err)
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal mengubah status deductible",
+    }
+  }
+}
+
+export async function deleteDeductibleOptionAction(
+  id: string
+): Promise<ActionResponse<void>> {
+  try {
+    const session = await requireManage("/master-data")
+    await deleteDeductibleOption(id, session.id)
+    revalidatePath("/master-data")
+    return { ok: true }
+  } catch (err) {
+    unstable_rethrow(err)
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal menghapus deductible",
+    }
+  }
 }

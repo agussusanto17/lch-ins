@@ -32,6 +32,11 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
             orderBy: { code: "asc" },
             select: { id: true, code: true, name: true, abbreviation: true },
           },
+          deductibleOptions: {
+            where: { isActive: true },
+            orderBy: { text: "asc" },
+            select: { coverTypeId: true, text: true },
+          },
         },
       }),
       prisma.insurer.findMany({
@@ -69,6 +74,7 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
       code: c.code,
       label: normalizeCob(c.name),
       covers: c.coverTypes,
+      deductibles: c.deductibleOptions,
     })),
     insurers,
     currencies,
