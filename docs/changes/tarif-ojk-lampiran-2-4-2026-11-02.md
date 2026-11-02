@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-02
 - **Branch:** `fix/tarif-ojk-lampiran-2-4`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#69](https://github.com/agussusanto17/lch-ins/pull/69)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
