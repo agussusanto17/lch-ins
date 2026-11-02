@@ -252,7 +252,8 @@ export async function listOccupations(params?: {
           ],
         }
       : undefined,
-    take: params?.limit ?? 100,
+    // Tanpa limit, semua okupasi dimuat; halaman master data menyaring di klien.
+    take: params?.limit,
     orderBy: { code: "asc" },
     include: {
       tariffs: {

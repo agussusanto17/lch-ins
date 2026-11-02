@@ -172,7 +172,8 @@ function resolveOccupationId(
   occupationStr?: string | null
 ): string | null {
   if (!occupationStr || !occupationStr.trim()) return null
-  const match = occupationStr.trim().match(/^(\d+)/)
+  // Kode bisa berhuruf, misalnya 29313A dan 29313B untuk Grade A dan B.
+  const match = occupationStr.trim().match(/^([0-9A-Za-z]+)/)
   if (!match) return null
   const code = match[1].toLowerCase()
   return cache.occupationsByCode.get(code)?.id ?? null
