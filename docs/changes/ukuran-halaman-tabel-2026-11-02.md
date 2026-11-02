@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-02
 - **Branch:** `fix/ukuran-halaman-tabel`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #71
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
