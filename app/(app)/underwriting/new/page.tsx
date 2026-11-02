@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { FormOptionsBoundary } from "@/components/shared/form-options-boundary"
 import { NewSlip } from "@/components/underwriting/new-slip"
 import { canManage } from "@/lib/access"
-import { getClientById } from "@/lib/server/clients"
+import { getClientById, listInsuredOptions } from "@/lib/server/clients"
 import { currentUser } from "@/lib/server/session"
 import { getSppaById } from "@/lib/server/sppa"
 import { listVehicleOptions } from "@/lib/server/vehicles"
@@ -25,11 +25,13 @@ export default async function NewSlipPage({
 
   const { sppa, client } = await searchParams
 
-  const [initialSppa, initialClient, vehicleOptions] = await Promise.all([
-    sppa ? getSppaById(sppa) : null,
-    client ? getClientById(client) : null,
-    listVehicleOptions(),
-  ])
+  const [initialSppa, initialClient, vehicleOptions, clients] =
+    await Promise.all([
+      sppa ? getSppaById(sppa) : null,
+      client ? getClientById(client) : null,
+      listVehicleOptions(),
+      listInsuredOptions(),
+    ])
 
   let resolvedClient = initialClient
   if (initialSppa && !resolvedClient && initialSppa.clientId) {
@@ -44,6 +46,7 @@ export default async function NewSlipPage({
         initialSppa={initialSppa ?? undefined}
         initialClient={resolvedClient ?? undefined}
         vehicleOptions={vehicleOptions}
+        clients={clients}
       />
     </FormOptionsBoundary>
   )

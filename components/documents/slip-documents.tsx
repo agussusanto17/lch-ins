@@ -62,20 +62,31 @@ const unitOf = (slip: PlacingSlip) => (slip.cob === "Motor Vehicle" ? "%" : "‰
  * Instruction. Quotation Slip sengaja tanpa keduanya, sesuai instruksi LCH
  * 29 Oktober 2026.
  */
-const brokerageRows = (slip: PlacingSlip): PremiumRow[] => [
-  {
-    label: `Brokerage ${num(slip.brokeragePct, 2)}%`,
-    rate: "",
-    premium: brokerageAmount(slip),
-    emphasis: "brokerage",
-  },
-  {
-    label: "Net Premium (after Brokerage)",
-    rate: "",
-    premium: netPremium(slip),
-    emphasis: "net",
-  },
-]
+const documentBrokeragePct = (slip: PlacingSlip) =>
+  slip.cob === "Motor Vehicle"
+    ? Math.max(0, slip.brokeragePct - slip.discountPct)
+    : slip.brokeragePct
+
+const brokerageRows = (slip: PlacingSlip): PremiumRow[] => {
+  const brokeragePct = documentBrokeragePct(slip)
+  const vatLabel = slip.includeVat ? "INCL. VAT" : "EXCL. VAT"
+  const documentSlip = { ...slip, brokeragePct }
+
+  return [
+    {
+      label: `Brokerage ${num(brokeragePct, 2)}% (${vatLabel})`,
+      rate: "",
+      premium: brokerageAmount(documentSlip),
+      emphasis: "brokerage",
+    },
+    {
+      label: "Net Premium (after Brokerage)",
+      rate: "",
+      premium: netPremium(documentSlip),
+      emphasis: "net",
+    },
+  ]
+}
 
 export function PlacingSlipDocument(props: DocProps) {
   const slip = useSlip(props)

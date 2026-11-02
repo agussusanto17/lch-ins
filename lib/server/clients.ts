@@ -11,7 +11,7 @@ import type {
   ClientType,
 } from "@/lib/data/types"
 import { CLIENTS } from "@/lib/data/clients"
-import { normalizeCob } from "@/lib/format"
+import { maskMiddle, normalizeCob } from "@/lib/format"
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { cobLookupKeys } from "@/lib/server/cob"
@@ -379,6 +379,58 @@ export async function listClientOptions(): Promise<ClientOption[]> {
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   })
+}
+
+export interface InsuredOption
+  extends Pick<
+    Client,
+    "id" | "name" | "status" | "clientType" | "contactPerson" | "addresses"
+  > {
+  npwpMasked: string | null
+}
+
+/**
+ * Klien untuk pemilih tertanggung di placing slip. NPWP sudah disamarkan di
+ * server dan data KYC lain tidak ikut, karena daftar ini dikirim ke browser.
+ */
+export async function listInsuredOptions(): Promise<InsuredOption[]> {
+  await seedInitialClientsIfEmpty()
+  const rows = await prisma.client.findMany({
+    select: {
+      id: true,
+      name: true,
+      npwp: true,
+      contactPerson: true,
+      clientType: { select: { name: true } },
+      status: { select: { name: true } },
+      addresses: {
+        select: {
+          id: true,
+          address: true,
+          isPrimary: true,
+          addressType: { select: { name: true } },
+        },
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      },
+    },
+    orderBy: { name: "asc" },
+  })
+  return rows.map((c) => ({
+    id: c.id,
+    name: c.name,
+    npwpMasked: c.npwp ? maskMiddle(c.npwp, 2, 3) : null,
+    contactPerson: c.contactPerson || "",
+    clientType: (c.clientType?.name === "Perorangan"
+      ? "Perorangan"
+      : "Korporasi") as ClientType,
+    status: (c.status?.name || "Active") as ClientStatus,
+    addresses: c.addresses.map((a) => ({
+      id: a.id,
+      label: a.addressType?.name || "Alamat Korespondensi",
+      value: a.address,
+      isPrimary: a.isPrimary,
+    })),
+  }))
 }
 
 /**
