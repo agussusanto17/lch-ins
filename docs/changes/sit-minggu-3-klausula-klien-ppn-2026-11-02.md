@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-02
 - **Branch:** `fix/sit-minggu-3-klausula-klien-ppn`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #72
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
