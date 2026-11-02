@@ -103,7 +103,7 @@ export function DeductibleOptionsTab({ initialOptions, cobs }: DeductibleOptions
   }, [options, search, cobFilter])
 
   const { page, pageSize, totalItems, paginatedItems, setPage, setPageSize } =
-    usePagination(filtered, 15)
+    usePagination(filtered, 10)
 
   function openAddDialog() {
     setEditing(null)
