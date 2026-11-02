@@ -19,7 +19,7 @@ export default async function MasterDataTariffOjkPage() {
 
   const [initialOccupations, tariffEqProperty, tariffFlood, biScales] =
     await Promise.all([
-      listOccupations({ limit: 300 }),
+      listOccupations(),
       listTariffEqProperty(),
       listTariffFlood(),
       listBiScales(),
