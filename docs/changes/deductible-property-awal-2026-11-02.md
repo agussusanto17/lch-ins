@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-02
 - **Branch:** `chore/deductible-property-awal`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#77](https://github.com/agussusanto17/lch-ins/pull/77)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
