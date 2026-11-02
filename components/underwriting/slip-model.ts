@@ -16,6 +16,7 @@ import type { CoverOption } from "@/lib/form-options"
 import {
   findMotorTariffBounds,
   findMotorExtensionBounds,
+  matchMotorRegion,
 } from "@/lib/data/ojk-motor"
 import { todayIso, yearMonth } from "@/lib/date"
 import { normalizeCob, romanMonth } from "@/lib/format"
@@ -228,6 +229,7 @@ export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
       locationOrPlate,
       coverType,
     })
+    const region = matchMotorRegion(locationOrPlate)
 
     return slip.rateLines.map((l) => {
       if (l.min != null || l.max != null) return l
@@ -246,7 +248,7 @@ export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
           }
         }
       }
-      const extBounds = findMotorExtensionBounds(l.label, coverType)
+      const extBounds = findMotorExtensionBounds(l.label, coverType, region)
       if (extBounds) {
         return {
           ...l,

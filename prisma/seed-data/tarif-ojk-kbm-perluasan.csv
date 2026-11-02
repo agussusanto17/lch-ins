@@ -1,8 +1,16 @@
 jaminan,jenis_pertanggungan,dasar,batas_bawah,batas_atas,satuan,catatan
-Banjir termasuk angin topan,Comprehensive,Uang pertanggungan,0.075,0.125,persen,"Merujuk Lampiran II Tabel II.B, tergantung wilayah"
-Banjir termasuk angin topan,Total Loss Only,Uang pertanggungan,0.05,0.1,persen,"Merujuk Lampiran II Tabel II.B, tergantung wilayah"
-Gempa bumi dan tsunami,Comprehensive,Uang pertanggungan,0.075,0.135,persen,"Lampiran III Tabel III.E, tergantung wilayah"
-Gempa bumi dan tsunami,Total Loss Only,Uang pertanggungan,0.05,0.11,persen,"Lampiran III Tabel III.E, tergantung wilayah"
+Banjir termasuk angin topan,Comprehensive,"Uang pertanggungan, Wilayah 1: Sumatera dan kepulauannya",0.075,0.1,persen,"Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Banjir termasuk angin topan,Comprehensive,"Uang pertanggungan, Wilayah 2: DKI Jakarta, Jawa Barat, Banten",0.1,0.125,persen,"Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Banjir termasuk angin topan,Comprehensive,"Uang pertanggungan, Wilayah 3: selain Wilayah 1 dan 2",0.075,0.1,persen,"Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Banjir termasuk angin topan,Total Loss Only,"Uang pertanggungan, Wilayah 1: Sumatera dan kepulauannya",0.05,0.075,persen,"Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Banjir termasuk angin topan,Total Loss Only,"Uang pertanggungan, Wilayah 2: DKI Jakarta, Jawa Barat, Banten",0.075,0.1,persen,"Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Banjir termasuk angin topan,Total Loss Only,"Uang pertanggungan, Wilayah 3: selain Wilayah 1 dan 2",0.05,0.075,persen,"Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Gempa bumi dan tsunami,Comprehensive,"Uang pertanggungan, Wilayah 1: Sumatera dan kepulauannya",0.12,0.135,persen,"Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Gempa bumi dan tsunami,Comprehensive,"Uang pertanggungan, Wilayah 2: DKI Jakarta, Jawa Barat, Banten",0.1,0.125,persen,"Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Gempa bumi dan tsunami,Comprehensive,"Uang pertanggungan, Wilayah 3: selain Wilayah 1 dan 2",0.075,0.135,persen,"Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Gempa bumi dan tsunami,Total Loss Only,"Uang pertanggungan, Wilayah 1: Sumatera dan kepulauannya",0.085,0.11,persen,"Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Gempa bumi dan tsunami,Total Loss Only,"Uang pertanggungan, Wilayah 2: DKI Jakarta, Jawa Barat, Banten",0.075,0.1,persen,"Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
+Gempa bumi dan tsunami,Total Loss Only,"Uang pertanggungan, Wilayah 3: selain Wilayah 1 dan 2",0.05,0.075,persen,"Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian"
 Huru-hara dan kerusuhan (SRCC),Comprehensive,Uang pertanggungan,0.05,0.05,persen,
 Huru-hara dan kerusuhan (SRCC),Total Loss Only,Uang pertanggungan,0.035,0.035,persen,
 Terorisme dan sabotase,Comprehensive,Uang pertanggungan,0.05,0.05,persen,

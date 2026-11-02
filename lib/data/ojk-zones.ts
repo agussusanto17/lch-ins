@@ -217,13 +217,13 @@ export const EQ_ZONES: { province: string; regency: string; zone: number }[] = [
   { province: "Kalimantan Utara", regency: "Kab. Tana Tidung", zone: 1 },
   { province: "Kalimantan Utara", regency: "Kota Tarakan", zone: 2 },
   { province: "Kalimantan Utara", regency: "Kab. Bulungan", zone: 1 },
-  { province: "Kepulauan Bangka", regency: "Kab. Bangka", zone: 3 },
-  { province: "Kepulauan Bangka", regency: "Kab. Bangka Barat", zone: 3 },
-  { province: "Kepulauan Bangka", regency: "Kab. Bangka Tengah", zone: 2 },
-  { province: "Kepulauan Bangka", regency: "Kab. Belitung", zone: 1 },
-  { province: "Kepulauan Bangka", regency: "Kab. Belitung Timur", zone: 1 },
-  { province: "Kepulauan Bangka", regency: "Kota Pangkal Pinang", zone: 2 },
-  { province: "Kepulauan Bangka", regency: "Kab. Bangka Selatan", zone: 2 },
+  { province: "Kepulauan Bangka Belitung", regency: "Kab. Bangka", zone: 3 },
+  { province: "Kepulauan Bangka Belitung", regency: "Kab. Bangka Barat", zone: 3 },
+  { province: "Kepulauan Bangka Belitung", regency: "Kab. Bangka Tengah", zone: 2 },
+  { province: "Kepulauan Bangka Belitung", regency: "Kab. Belitung", zone: 1 },
+  { province: "Kepulauan Bangka Belitung", regency: "Kab. Belitung Timur", zone: 1 },
+  { province: "Kepulauan Bangka Belitung", regency: "Kota Pangkal Pinang", zone: 2 },
+  { province: "Kepulauan Bangka Belitung", regency: "Kab. Bangka Selatan", zone: 2 },
   { province: "Kepulauan Riau", regency: "Kab. Bintan", zone: 2 },
   { province: "Kepulauan Riau", regency: "Kab. Karimun", zone: 2 },
   { province: "Kepulauan Riau", regency: "Kab. Lingga", zone: 3 },
@@ -264,64 +264,64 @@ export const EQ_ZONES: { province: string; regency: string; zone: number }[] = [
   { province: "Maluku Utara", regency: "Kab. Halmahera Utara", zone: 5 },
   { province: "Maluku Utara", regency: "Kab. Kepulauan Sula", zone: 4 },
   { province: "Maluku Utara", regency: "Kota Ternate", zone: 5 },
-  { province: "Maluku Utara", regency: "Kota Tidore  Kepulauan", zone: 5 },
+  { province: "Maluku Utara", regency: "Kota Tidore Kepulauan", zone: 5 },
   { province: "Maluku Utara", regency: "Kab. Pulau Taliabu", zone: 4 },
   { province: "Maluku Utara", regency: "Kab. Pulau Morotai", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Utara", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kota Lhokseumawe", zone: 4 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Tamiang", zone: 4 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Tengah", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Timur", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Bener Meriah", zone: 4 },
-  { province: "Nanggroe Aceh", regency: "Kab. Bireuen", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kota Langsa", zone: 4 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Barat", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Barat Daya", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Besar", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Jaya", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Selatan", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Singkil", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Aceh Tenggara", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Gayo Lues", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Nagan Raya", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Pidie", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Pidie Jaya", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kab. Simeulue", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kota Banda Aceh", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kota Sabang", zone: 5 },
-  { province: "Nanggroe Aceh", regency: "Kota Subulussalam", zone: 5 },
-  { province: "Nusa Tenggara", regency: "Kab. Bima", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Lombok Tengah", zone: 4 },
-  { province: "Nusa Tenggara", regency: "Kab. Lombok Timur", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Sumbawa", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Sumbawa Barat", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kota Bima", zone: 4 },
-  { province: "Nusa Tenggara", regency: "Kab. Dompu", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Lombok Barat", zone: 4 },
-  { province: "Nusa Tenggara", regency: "Kota Mataram", zone: 5 },
-  { province: "Nusa Tenggara", regency: "Kab. Lombok Utara", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Ende", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Flores Timur", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Kupang", zone: 4 },
-  { province: "Nusa Tenggara", regency: "Kab. Manggarai", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Manggarai Barat", zone: 4 },
-  { province: "Nusa Tenggara", regency: "Kab. Manggarai Timur", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Ngada", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Rote Ndao", zone: 4 },
-  { province: "Nusa Tenggara", regency: "Kab. Sikka", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Sumba Timur", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kota Kupang", zone: 5 },
-  { province: "Nusa Tenggara", regency: "Kab. Alor", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Belu", zone: 4 },
-  { province: "Nusa Tenggara", regency: "Kab. Lembata", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Nagekeo", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Sumba Barat", zone: 4 },
-  { province: "Nusa Tenggara", regency: "Kab. Sumba Barat Daya", zone: 4 },
-  { province: "Nusa Tenggara", regency: "Kab. Sumba Tengah", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Timor Tengah Selatan", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Timor Tengah Utara", zone: 3 },
-  { province: "Nusa Tenggara", regency: "Kab. Malaka", zone: 4 },
-  { province: "Nusa Tenggara", regency: "Kab. Sabu Raijua", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Utara", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kota Lhokseumawe", zone: 4 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Tamiang", zone: 4 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Tengah", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Timur", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Bener Meriah", zone: 4 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Bireuen", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kota Langsa", zone: 4 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Barat", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Barat Daya", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Besar", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Jaya", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Selatan", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Singkil", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Aceh Tenggara", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Gayo Lues", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Nagan Raya", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Pidie", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Pidie Jaya", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kab. Simeulue", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kota Banda Aceh", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kota Sabang", zone: 5 },
+  { province: "Nanggroe Aceh Darussalam", regency: "Kota Subulussalam", zone: 5 },
+  { province: "Nusa Tenggara Barat", regency: "Kab. Bima", zone: 3 },
+  { province: "Nusa Tenggara Barat", regency: "Kab. Lombok Tengah", zone: 4 },
+  { province: "Nusa Tenggara Barat", regency: "Kab. Lombok Timur", zone: 3 },
+  { province: "Nusa Tenggara Barat", regency: "Kab. Sumbawa", zone: 3 },
+  { province: "Nusa Tenggara Barat", regency: "Kab. Sumbawa Barat", zone: 3 },
+  { province: "Nusa Tenggara Barat", regency: "Kota Bima", zone: 4 },
+  { province: "Nusa Tenggara Barat", regency: "Kab. Dompu", zone: 3 },
+  { province: "Nusa Tenggara Barat", regency: "Kab. Lombok Barat", zone: 4 },
+  { province: "Nusa Tenggara Barat", regency: "Kota Mataram", zone: 5 },
+  { province: "Nusa Tenggara Barat", regency: "Kab. Lombok Utara", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Ende", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Flores Timur", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Kupang", zone: 4 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Manggarai", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Manggarai Barat", zone: 4 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Manggarai Timur", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Ngada", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Rote Ndao", zone: 4 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Sikka", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Sumba Timur", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kota Kupang", zone: 5 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Alor", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Belu", zone: 4 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Lembata", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Nagekeo", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Sumba Barat", zone: 4 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Sumba Barat Daya", zone: 4 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Sumba Tengah", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Timor Tengah Selatan", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Timor Tengah Utara", zone: 3 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Malaka", zone: 4 },
+  { province: "Nusa Tenggara Timur", regency: "Kab. Sabu Raijua", zone: 5 },
   { province: "Papua", regency: "Kab. Merauke", zone: 1 },
   { province: "Papua", regency: "Kab. Asmat", zone: 3 },
   { province: "Papua", regency: "Kab. Boven Digoel", zone: 2 },
@@ -447,7 +447,7 @@ export const EQ_ZONES: { province: string; regency: string; zone: number }[] = [
   { province: "Sulawesi Utara", regency: "Kota Manado", zone: 4 },
   { province: "Sulawesi Utara", regency: "Kota Tomohon", zone: 5 },
   { province: "Sulawesi Utara", regency: "Kab. Bolaang Mongondow Selatan", zone: 4 },
-  { province: "Sulawesi Utara", regency: "Kab. Bolaang Mongondow  Timur", zone: 4 },
+  { province: "Sulawesi Utara", regency: "Kab. Bolaang Mongondow Timur", zone: 4 },
   { province: "Sumatera Barat", regency: "Kab. Dharmasraya", zone: 4 },
   { province: "Sumatera Barat", regency: "Kab. Pasaman", zone: 5 },
   { province: "Sumatera Barat", regency: "Kab. Lima Puluh Kota", zone: 5 },
@@ -525,14 +525,39 @@ export interface EqZoneEntry {
   zone: number
 }
 
-/** Cari zona gempa dari teks lokasi risiko, dicocokkan ke nama kabupaten atau kota. */
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+const hasWord = (text: string, term: string) =>
+  new RegExp(`(^|[^a-z0-9])${escapeRegExp(term)}($|[^a-z0-9])`).test(text)
+
+/**
+ * Cari zona gempa dari teks lokasi risiko, dicocokkan ke nama kabupaten atau
+ * kota. Nama lengkap ("Kota Bandung") menang atas nama tanpa awalan
+ * ("Bandung"), lalu nama yang lebih panjang menang. Tanpa urutan ini Kota
+ * Bandung jatuh ke Kab. Bandung, dan "Kab. Bungo, Jambi" ke Kota Jambi.
+ */
 export function matchEqZone(location: string): EqZoneEntry | null {
-  const q = location.toLowerCase()
+  const q = location
+    .toLowerCase()
+    .replace(/\bkabupaten\b/g, "kab.")
+    .replace(/\bkab\b\.?/g, "kab.")
+    .replace(/\s+/g, " ")
   if (q.trim().length < 4) return null
-  const hit = EQ_ZONES.find((z) =>
-    q.includes(z.regency.toLowerCase().replace(/^(kab\.|kota)\s*/, ""))
-  )
-  return hit ?? null
+  let best: EqZoneEntry | null = null
+  let bestScore = 0
+  for (const z of EQ_ZONES) {
+    const full = z.regency.toLowerCase()
+    const bare = full.replace(/^(kab\.|kota)\s*/, "")
+    const score = hasWord(q, full)
+      ? 1000 + full.length
+      : hasWord(q, bare)
+        ? bare.length
+        : 0
+    if (score > bestScore) {
+      best = z
+      bestScore = score
+    }
+  }
+  return best
 }
 
 const FLOOD_REGION_PROVINCES = ["Dki Jakarta", "Banten", "Jawa Barat"]

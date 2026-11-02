@@ -72,6 +72,8 @@ export interface MotorExtensionTariff {
   basis: string
   /** Kosong untuk jaminan berbasis limit, yang berlaku di Comprehensive maupun TLO. */
   policyType: string
+  /** Wilayah tarif (MOTOR_REGIONS); kosong bila tarifnya sama untuk semua wilayah. */
+  region: string
   /** persen, null bila tarifnya ditentukan underwriter */
   min: number | null
   max: number | null
@@ -79,28 +81,36 @@ export interface MotorExtensionTariff {
 }
 
 export const MOTOR_EXTENSION_TARIFFS: MotorExtensionTariff[] = [
-  { cover: "Banjir termasuk angin topan", policyType: "Comprehensive", basis: "Uang pertanggungan", min: 0.075, max: 0.125, note: "Merujuk Lampiran II Tabel II.B, tergantung wilayah" },
-  { cover: "Banjir termasuk angin topan", policyType: "Total Loss Only", basis: "Uang pertanggungan", min: 0.05, max: 0.1, note: "Merujuk Lampiran II Tabel II.B, tergantung wilayah" },
-  { cover: "Gempa bumi dan tsunami", policyType: "Comprehensive", basis: "Uang pertanggungan", min: 0.075, max: 0.135, note: "Lampiran III Tabel III.E, tergantung wilayah" },
-  { cover: "Gempa bumi dan tsunami", policyType: "Total Loss Only", basis: "Uang pertanggungan", min: 0.05, max: 0.11, note: "Lampiran III Tabel III.E, tergantung wilayah" },
-  { cover: "Huru-hara dan kerusuhan (SRCC)", policyType: "Comprehensive", basis: "Uang pertanggungan", min: 0.05, max: 0.05, note: "" },
-  { cover: "Huru-hara dan kerusuhan (SRCC)", policyType: "Total Loss Only", basis: "Uang pertanggungan", min: 0.035, max: 0.035, note: "" },
-  { cover: "Terorisme dan sabotase", policyType: "Comprehensive", basis: "Uang pertanggungan", min: 0.05, max: 0.05, note: "" },
-  { cover: "Terorisme dan sabotase", policyType: "Total Loss Only", basis: "Uang pertanggungan", min: 0.035, max: 0.035, note: "" },
-  { cover: "TJH pihak ketiga, kendaraan penumpang dan sepeda motor", policyType: "", basis: "Limit sampai Rp25 juta", min: 1.0, max: 1.0, note: "Dihitung progresif per lapisan" },
-  { cover: "TJH pihak ketiga, kendaraan penumpang dan sepeda motor", policyType: "", basis: "Limit di atas Rp25 juta sampai Rp50 juta", min: 0.5, max: 0.5, note: "Dihitung progresif per lapisan" },
-  { cover: "TJH pihak ketiga, kendaraan penumpang dan sepeda motor", policyType: "", basis: "Limit di atas Rp50 juta sampai Rp100 juta", min: 0.25, max: 0.25, note: "Dihitung progresif per lapisan" },
-  { cover: "TJH pihak ketiga, kendaraan penumpang dan sepeda motor", policyType: "", basis: "Limit di atas Rp100 juta", min: null, max: null, note: "Ditentukan underwriter" },
-  { cover: "TJH pihak ketiga, kendaraan niaga, truk, dan bus", policyType: "", basis: "Limit sampai Rp25 juta", min: 1.5, max: 1.5, note: "Dihitung progresif per lapisan" },
-  { cover: "TJH pihak ketiga, kendaraan niaga, truk, dan bus", policyType: "", basis: "Limit di atas Rp25 juta sampai Rp50 juta", min: 0.75, max: 0.75, note: "Dihitung progresif per lapisan" },
-  { cover: "TJH pihak ketiga, kendaraan niaga, truk, dan bus", policyType: "", basis: "Limit di atas Rp50 juta sampai Rp100 juta", min: 0.375, max: 0.375, note: "Dihitung progresif per lapisan" },
-  { cover: "TJH pihak ketiga, kendaraan niaga, truk, dan bus", policyType: "", basis: "Limit di atas Rp100 juta", min: null, max: null, note: "Ditentukan underwriter" },
-  { cover: "Kecelakaan diri pengemudi", policyType: "", basis: "Uang pertanggungan kecelakaan diri", min: 0.5, max: 0.5, note: "" },
-  { cover: "Kecelakaan diri penumpang", policyType: "", basis: "Uang pertanggungan per tempat duduk", min: 0.1, max: 0.1, note: "" },
-  { cover: "TJH terhadap penumpang", policyType: "", basis: "Limit sampai Rp25 juta", min: 0.5, max: 0.5, note: "Dihitung progresif per lapisan" },
-  { cover: "TJH terhadap penumpang", policyType: "", basis: "Limit di atas Rp25 juta sampai Rp50 juta", min: 0.25, max: 0.25, note: "Dihitung progresif per lapisan" },
-  { cover: "TJH terhadap penumpang", policyType: "", basis: "Limit di atas Rp50 juta sampai Rp100 juta", min: 0.125, max: 0.125, note: "Dihitung progresif per lapisan" },
-  { cover: "TJH terhadap penumpang", policyType: "", basis: "Limit di atas Rp100 juta", min: null, max: null, note: "Ditentukan underwriter" },
+  { cover: "Banjir termasuk angin topan", policyType: "Comprehensive", region: "Wilayah 1: Sumatera dan kepulauannya", basis: "Uang pertanggungan", min: 0.075, max: 0.1, note: "Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Banjir termasuk angin topan", policyType: "Comprehensive", region: "Wilayah 2: DKI Jakarta, Jawa Barat, Banten", basis: "Uang pertanggungan", min: 0.1, max: 0.125, note: "Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Banjir termasuk angin topan", policyType: "Comprehensive", region: "Wilayah 3: selain Wilayah 1 dan 2", basis: "Uang pertanggungan", min: 0.075, max: 0.1, note: "Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Banjir termasuk angin topan", policyType: "Total Loss Only", region: "Wilayah 1: Sumatera dan kepulauannya", basis: "Uang pertanggungan", min: 0.05, max: 0.075, note: "Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Banjir termasuk angin topan", policyType: "Total Loss Only", region: "Wilayah 2: DKI Jakarta, Jawa Barat, Banten", basis: "Uang pertanggungan", min: 0.075, max: 0.1, note: "Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Banjir termasuk angin topan", policyType: "Total Loss Only", region: "Wilayah 3: selain Wilayah 1 dan 2", basis: "Uang pertanggungan", min: 0.05, max: 0.075, note: "Lampiran II Tabel II.B. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Gempa bumi dan tsunami", policyType: "Comprehensive", region: "Wilayah 1: Sumatera dan kepulauannya", basis: "Uang pertanggungan", min: 0.12, max: 0.135, note: "Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Gempa bumi dan tsunami", policyType: "Comprehensive", region: "Wilayah 2: DKI Jakarta, Jawa Barat, Banten", basis: "Uang pertanggungan", min: 0.1, max: 0.125, note: "Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Gempa bumi dan tsunami", policyType: "Comprehensive", region: "Wilayah 3: selain Wilayah 1 dan 2", basis: "Uang pertanggungan", min: 0.075, max: 0.135, note: "Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Gempa bumi dan tsunami", policyType: "Total Loss Only", region: "Wilayah 1: Sumatera dan kepulauannya", basis: "Uang pertanggungan", min: 0.085, max: 0.11, note: "Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Gempa bumi dan tsunami", policyType: "Total Loss Only", region: "Wilayah 2: DKI Jakarta, Jawa Barat, Banten", basis: "Uang pertanggungan", min: 0.075, max: 0.1, note: "Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Gempa bumi dan tsunami", policyType: "Total Loss Only", region: "Wilayah 3: selain Wilayah 1 dan 2", basis: "Uang pertanggungan", min: 0.05, max: 0.075, note: "Lampiran III Tabel III.E. Risiko sendiri 10% dari ganti rugi, minimal Rp500.000 per kejadian" },
+  { cover: "Huru-hara dan kerusuhan (SRCC)", policyType: "Comprehensive", region: "", basis: "Uang pertanggungan", min: 0.05, max: 0.05, note: "" },
+  { cover: "Huru-hara dan kerusuhan (SRCC)", policyType: "Total Loss Only", region: "", basis: "Uang pertanggungan", min: 0.035, max: 0.035, note: "" },
+  { cover: "Terorisme dan sabotase", policyType: "Comprehensive", region: "", basis: "Uang pertanggungan", min: 0.05, max: 0.05, note: "" },
+  { cover: "Terorisme dan sabotase", policyType: "Total Loss Only", region: "", basis: "Uang pertanggungan", min: 0.035, max: 0.035, note: "" },
+  { cover: "TJH pihak ketiga, kendaraan penumpang dan sepeda motor", policyType: "", region: "", basis: "Limit sampai Rp25 juta", min: 1.0, max: 1.0, note: "Dihitung progresif per lapisan" },
+  { cover: "TJH pihak ketiga, kendaraan penumpang dan sepeda motor", policyType: "", region: "", basis: "Limit di atas Rp25 juta sampai Rp50 juta", min: 0.5, max: 0.5, note: "Dihitung progresif per lapisan" },
+  { cover: "TJH pihak ketiga, kendaraan penumpang dan sepeda motor", policyType: "", region: "", basis: "Limit di atas Rp50 juta sampai Rp100 juta", min: 0.25, max: 0.25, note: "Dihitung progresif per lapisan" },
+  { cover: "TJH pihak ketiga, kendaraan penumpang dan sepeda motor", policyType: "", region: "", basis: "Limit di atas Rp100 juta", min: null, max: null, note: "Ditentukan underwriter" },
+  { cover: "TJH pihak ketiga, kendaraan niaga, truk, dan bus", policyType: "", region: "", basis: "Limit sampai Rp25 juta", min: 1.5, max: 1.5, note: "Dihitung progresif per lapisan" },
+  { cover: "TJH pihak ketiga, kendaraan niaga, truk, dan bus", policyType: "", region: "", basis: "Limit di atas Rp25 juta sampai Rp50 juta", min: 0.75, max: 0.75, note: "Dihitung progresif per lapisan" },
+  { cover: "TJH pihak ketiga, kendaraan niaga, truk, dan bus", policyType: "", region: "", basis: "Limit di atas Rp50 juta sampai Rp100 juta", min: 0.375, max: 0.375, note: "Dihitung progresif per lapisan" },
+  { cover: "TJH pihak ketiga, kendaraan niaga, truk, dan bus", policyType: "", region: "", basis: "Limit di atas Rp100 juta", min: null, max: null, note: "Ditentukan underwriter" },
+  { cover: "Kecelakaan diri pengemudi", policyType: "", region: "", basis: "Uang pertanggungan kecelakaan diri", min: 0.5, max: 0.5, note: "" },
+  { cover: "Kecelakaan diri penumpang", policyType: "", region: "", basis: "Uang pertanggungan per tempat duduk", min: 0.1, max: 0.1, note: "" },
+  { cover: "TJH terhadap penumpang", policyType: "", region: "", basis: "Limit sampai Rp25 juta", min: 0.5, max: 0.5, note: "Dihitung progresif per lapisan" },
+  { cover: "TJH terhadap penumpang", policyType: "", region: "", basis: "Limit di atas Rp25 juta sampai Rp50 juta", min: 0.25, max: 0.25, note: "Dihitung progresif per lapisan" },
+  { cover: "TJH terhadap penumpang", policyType: "", region: "", basis: "Limit di atas Rp50 juta sampai Rp100 juta", min: 0.125, max: 0.125, note: "Dihitung progresif per lapisan" },
+  { cover: "TJH terhadap penumpang", policyType: "", region: "", basis: "Limit di atas Rp100 juta", min: null, max: null, note: "Ditentukan underwriter" },
 ]
 
 export const MOTOR_REGIONS = [
@@ -243,9 +253,43 @@ export function findMotorTariffBounds(params: {
   }
 }
 
+/**
+ * Batas tarif banjir dan gempa KBM bergantung wilayah. Bila wilayah belum
+ * diketahui, rentangnya gabungan semua wilayah.
+ */
+function regionalExtensionBounds(
+  coverPrefix: string,
+  policyType: string,
+  region: string | null | undefined,
+  sourceLabel: string
+): { min: number; max: number; source: string } | null {
+  const rows = MOTOR_EXTENSION_TARIFFS.filter(
+    (e) =>
+      e.cover.startsWith(coverPrefix) &&
+      e.policyType === policyType &&
+      e.min != null &&
+      e.max != null
+  )
+  const row = region ? rows.find((e) => e.region === region) : undefined
+  if (row) {
+    return {
+      min: row.min!,
+      max: row.max!,
+      source: `${sourceLabel} ${policyType} ${region!.split(":")[0]}`,
+    }
+  }
+  if (rows.length === 0) return null
+  return {
+    min: Math.min(...rows.map((e) => e.min!)),
+    max: Math.max(...rows.map((e) => e.max!)),
+    source: `${sourceLabel} ${policyType}`,
+  }
+}
+
 export function findMotorExtensionBounds(
   extensionLabel: string,
-  coverType: string = "Comprehensive"
+  coverType: string = "Comprehensive",
+  region?: string | null
 ): { min: number; max: number; source: string } | null {
   const hay = extensionLabel.toLowerCase()
   const isComprehensive =
@@ -259,16 +303,13 @@ export function findMotorExtensionBounds(
     hay.includes("windstorm") ||
     hay.includes("fwtwd")
   ) {
-    const entry = MOTOR_EXTENSION_TARIFFS.find(
-      (e) => e.cover.startsWith("Banjir") && e.policyType === policyType
+    const bounds = regionalExtensionBounds(
+      "Banjir",
+      policyType,
+      region,
+      "Perluasan Banjir KBM"
     )
-    if (entry && entry.min != null && entry.max != null) {
-      return {
-        min: entry.min,
-        max: entry.max,
-        source: `Perluasan Banjir KBM ${policyType}`,
-      }
-    }
+    if (bounds) return bounds
   }
 
   if (
@@ -277,16 +318,13 @@ export function findMotorExtensionBounds(
     hay.includes("tsunami") ||
     hay.includes("eqvet")
   ) {
-    const entry = MOTOR_EXTENSION_TARIFFS.find(
-      (e) => e.cover.startsWith("Gempa") && e.policyType === policyType
+    const bounds = regionalExtensionBounds(
+      "Gempa",
+      policyType,
+      region,
+      "Perluasan Gempa KBM"
     )
-    if (entry && entry.min != null && entry.max != null) {
-      return {
-        min: entry.min,
-        max: entry.max,
-        source: `Perluasan Gempa KBM ${policyType}`,
-      }
-    }
+    if (bounds) return bounds
   }
 
   if (

@@ -213,11 +213,19 @@ export async function releasePlacingSlipAction(
         errorDetails.push(...validation.releaseIssues)
       }
       if (validation.missingExceptions.length > 0) {
-        for (const item of validation.missingExceptions) {
+        // Rate Motor Vehicle dalam persen; Property dan COB lain per mil.
+        const unit = target.cob === "Motor Vehicle" ? "%" : "‰"
+        for (const { line, reason } of validation.missingExceptions) {
+          const range =
+            line.max == null
+              ? `minimal ${line.min}${unit}`
+              : line.min == null
+                ? `maksimal ${line.max}${unit}`
+                : `${line.min}${unit} sampai ${line.max}${unit}`
           errorDetails.push(
-            `Rate ${item.line.label} (${item.line.rate}%) berada ${
-              item.reason === "below" ? "di bawah batas minimal" : "di atas batas maksimal"
-            } OJK (${item.line.min ?? 0}% - ${item.line.max ?? 0}%) dan belum memiliki catatan justifikasi exception.`
+            `Rate ${line.label} (${line.rate}${unit}) berada ${
+              reason === "below" ? "di bawah batas minimal" : "di atas batas maksimal"
+            } OJK (${range}) dan belum memiliki catatan justifikasi exception.`
           )
         }
       }

@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils"
 
 /*
  * Isi panel referensi tarif OJK. Dimuat terpisah (next/dynamic) saat panel
- * dibuka, karena membawa tabel zona gempa 514 kabupaten/kota dan tarif
+ * dibuka, karena membawa tabel zona gempa 511 kabupaten/kota dan tarif
  * kendaraan bermotor yang tidak dibutuhkan saat form pertama tampil.
  */
 
@@ -531,9 +531,12 @@ export function MotorPanel({
     (t) => t.sumInsuredBand === band && t.region === region && t.cover === cover
   )
 
-  /** Perluasan berbasis uang pertanggungan, tarifnya beda antara Comprehensive dan TLO. */
+  /**
+   * Perluasan berbasis uang pertanggungan, tarifnya beda antara Comprehensive
+   * dan TLO. Banjir dan gempa juga beda per wilayah.
+   */
   const extensions = MOTOR_EXTENSION_TARIFFS.filter(
-    (e) => e.policyType === cover
+    (e) => e.policyType === cover && (!e.region || e.region === region)
   )
   /** TJH dan kecelakaan diri memakai limit, tarifnya sama untuk Comprehensive dan TLO. */
   const limitExtensions = MOTOR_EXTENSION_TARIFFS.filter((e) => !e.policyType)
@@ -687,7 +690,9 @@ export function MotorPanel({
                             onPickRate?.(line, value, {
                               min: e.min,
                               max: e.max,
-                              source: `${e.cover}, ${e.policyType}`,
+                              source: e.region
+                                ? `${e.cover}, ${e.policyType}, ${e.region.split(":")[0]}`
+                                : `${e.cover}, ${e.policyType}`,
                             })
                           }
                         >

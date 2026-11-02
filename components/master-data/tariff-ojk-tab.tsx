@@ -321,6 +321,9 @@ export function TariffOjkTab({
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {ext.basis}
+                          {ext.region ? (
+                            <div className="text-foreground">{ext.region}</div>
+                          ) : null}
                         </TableCell>
                         <TableCell className="text-center font-mono font-medium text-foreground">
                           {rateDisplay}
