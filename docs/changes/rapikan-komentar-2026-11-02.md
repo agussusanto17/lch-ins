@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-02
 - **Branch:** `chore/rapikan-komentar`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #75
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
