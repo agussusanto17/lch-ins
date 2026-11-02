@@ -27,6 +27,7 @@ import {
   SlipFormToolbar,
 } from "@/components/underwriting/slip-form-chrome"
 import { ClausePicker } from "@/components/underwriting/clause-picker"
+import { DeductibleInput } from "@/components/underwriting/deductible-input"
 import {
   LineItemList,
   StringList,
@@ -106,7 +107,12 @@ import {
   type VehicleBrandOption,
 } from "@/lib/data"
 import { BI_SCALE_OJK } from "@/lib/data/ojk-tariff"
-import { cobLabels, coversFor, withCurrent } from "@/lib/form-options"
+import {
+  cobLabels,
+  coversFor,
+  deductibleChoicesFor,
+  withCurrent,
+} from "@/lib/form-options"
 import { money, percent } from "@/lib/format"
 import type { InsuredOption } from "@/lib/server/clients"
 import { newId, store, useRecord } from "@/lib/store"
@@ -245,6 +251,11 @@ function SlipEditor({
     slip.currency
   ).map(toItem)
   const covers = coversFor(options, slip.cob)
+  const deductibleChoices = deductibleChoicesFor(
+    options,
+    slip.cob,
+    slip.typeOfCover
+  )
   const coverItems = withCurrent(
     covers.map((c) => c.name),
     slip.typeOfCover
@@ -936,7 +947,16 @@ function SlipEditor({
                * risiko sendiri motor berlaku untuk kendaraan dan perluasannya.
                */}
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">Deductible per cover</p>
+                <div>
+                  <p className="text-sm font-medium">Deductible per cover</p>
+                  <p className="text-xs text-muted-foreground">
+                    {!slip.typeOfCover
+                      ? "Pilih Type of Cover untuk memakai pilihan deductible dari master data."
+                      : deductibleChoices.length
+                        ? "Klik Pilih untuk mengisi dari master data, lalu ubah teksnya bila perlu."
+                        : `Belum ada pilihan deductible untuk ${slip.typeOfCover}. Tambahkan di Master Data > Deductible.`}
+                  </p>
+                </div>
                 <div className="overflow-hidden rounded-xl border">
                   {slip.rateLines.map((line) => (
                     <div
@@ -950,15 +970,15 @@ function SlipEditor({
                       >
                         {coverLabel(slip, line)}
                       </label>
-                      <Input
+                      <DeductibleInput
                         id={`deductible-${line.id}`}
+                        cover={coverLabel(slip, line)}
                         value={line.deductible ?? ""}
-                        onChange={(e) =>
+                        choices={deductibleChoices}
+                        onChange={(value) =>
                           set({
                             rateLines: slip.rateLines.map((l) =>
-                              l.id === line.id
-                                ? { ...l, deductible: e.target.value }
-                                : l
+                              l.id === line.id ? { ...l, deductible: value } : l
                             ),
                           })
                         }
@@ -972,43 +992,6 @@ function SlipEditor({
                   ))}
                 </div>
               </div>
-
-              {/*
-               * Deductible per section dari sebelum aturan per cover. Tidak
-               * bisa dipindah otomatis — "for Earthquake" harus masuk EQVET,
-               * bukan FLEXAS — jadi tetap ditampilkan sampai dipindah tangan.
-               * Slip baru tidak pernah melihat bagian ini.
-               */}
-              {slip.deductiblesSection1.length ||
-              slip.deductiblesSection2.length ? (
-                <div className="flex flex-col gap-3 rounded-xl border border-dashed p-4">
-                  <div>
-                    <p className="text-sm font-medium">
-                      Deductible lama (belum per cover)
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Pindahkan ke cover yang sesuai di atas, lalu hapus dari
-                      sini.
-                    </p>
-                  </div>
-                  {slip.deductiblesSection1.length ? (
-                    <StringList
-                      values={slip.deductiblesSection1}
-                      onChange={(v) => set({ deductiblesSection1: v })}
-                      placeholder="Contoh: 10% of claim minimum IDR 10,000,000"
-                      addLabel="Tambah deductible"
-                    />
-                  ) : null}
-                  {slip.deductiblesSection2.length ? (
-                    <StringList
-                      values={slip.deductiblesSection2}
-                      onChange={(v) => set({ deductiblesSection2: v })}
-                      placeholder="Contoh: 14 days waiting period"
-                      addLabel="Tambah deductible"
-                    />
-                  ) : null}
-                </div>
-              ) : null}
 
               <Field>
                 <FieldLabel htmlFor="special">Special Conditions</FieldLabel>

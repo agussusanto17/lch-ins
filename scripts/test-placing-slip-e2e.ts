@@ -89,16 +89,9 @@ async function runTests() {
     sumInsuredSection2: [
       { id: "si-2", description: "Business Interruption (Gross Profit)", amount: 10_000_000_000 },
     ],
-    deductiblesSection1: [
-      "FLEXAS: Nil",
-      "Earthquake: 2.5% of TSI",
-    ],
-    deductiblesSection2: [
-      "BI: 14 days",
-    ],
     rateLines: [
-      { id: "rl-1", label: "FLEXAS", rate: 0.125, premium: 50_000_000, min: 0.1, max: 0.2 },
-      { id: "rl-2", label: "EQVET Zone 2", rate: 0.085, premium: 34_000_000, min: 0.075, max: 0.12 },
+      { id: "rl-1", label: "FLEXAS", rate: 0.125, premium: 50_000_000, min: 0.1, max: 0.2, deductible: "Nil" },
+      { id: "rl-2", label: "EQVET Zone 2", rate: 0.085, premium: 34_000_000, min: 0.075, max: 0.12, deductible: "2.5% of TSI" },
     ],
     securityPanel: [
       { id: "sp-1", insurer: "PT Asuransi Tugu Pratama Indonesia Tbk", share: 60, role: "As Leader" },

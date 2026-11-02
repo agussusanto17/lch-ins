@@ -107,10 +107,11 @@ export const NAV_GROUPS: NavGroup[] = [
         // supaya masing-masing punya alamat sendiri: bisa ditautkan,
         // di-bookmark, dan dibuka tanpa memuat data bagian lain. Wording Form
         // dipisah dari Rekening & Mata Uang karena tidak berhubungan; letaknya
-        // dekat COB karena sama-sama acuan slip.
+        // dekat COB karena sama-sama acuan slip, begitu juga Deductible.
         items: [
           { title: "COB & Cover Type", href: "/master-data/cob" },
           { title: "Wording Form", href: "/master-data/wording-forms" },
+          { title: "Deductible", href: "/master-data/deductibles" },
           { title: "Tarif Baku OJK", href: "/master-data/tariff-ojk" },
           { title: "Klasifikasi OJK", href: "/master-data/ojk-classes" },
           { title: "Asuransi & Adjuster", href: "/master-data/partners" },

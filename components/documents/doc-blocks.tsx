@@ -263,17 +263,7 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
       text: l.deductible?.trim(),
     }))
     .filter((r) => r.text)
-  // Deductible per section dari sebelum aturan per cover tetap dicetak,
-  // supaya slip lama tidak kehilangan isinya sebelum dipindah ke cover.
-  const s1 = slip.deductiblesSection1.filter(Boolean)
-  const s2 = slip.deductiblesSection2.filter(Boolean)
-  if (
-    !perCover.length &&
-    !s1.length &&
-    !s2.length &&
-    !slip.specialConditions
-  )
-    return null
+  if (!perCover.length && !slip.specialConditions) return null
 
   return (
     <>
@@ -296,30 +286,6 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
               ))}
             </tbody>
           </table>
-        ) : null}
-        {s1.length ? (
-          <div>
-            <p className="font-semibold">
-              {slip.cob === "Property"
-                ? "Section 1 — Material Damage"
-                : "Deductible"}
-            </p>
-            <ul className="mt-1 list-disc pl-5 text-muted-foreground">
-              {s1.map((d, i) => (
-                <li key={i}>{d}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-        {s2.length ? (
-          <div>
-            <p className="font-semibold">Section 2 — Business Interruption</p>
-            <ul className="mt-1 list-disc pl-5 text-muted-foreground">
-              {s2.map((d, i) => (
-                <li key={i}>{d}</li>
-              ))}
-            </ul>
-          </div>
         ) : null}
         {slip.specialConditions ? (
           <div>

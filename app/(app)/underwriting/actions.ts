@@ -93,8 +93,6 @@ const placingSlipSchema = z.object({
   interestItems: z.array(lineItemSchema).optional(),
   sumInsuredSection1: z.array(lineItemSchema).optional(),
   sumInsuredSection2: z.array(lineItemSchema).optional(),
-  deductiblesSection1: z.array(z.string()).optional(),
-  deductiblesSection2: z.array(z.string()).optional(),
   clauseIds: z.array(z.string()).optional(),
   clauseOverrides: z
     .record(
@@ -343,8 +341,6 @@ export async function duplicatePlacingSlipAction(
       interestItems: source.interestItems,
       sumInsuredSection1: source.sumInsuredSection1,
       sumInsuredSection2: source.sumInsuredSection2,
-      deductiblesSection1: source.deductiblesSection1,
-      deductiblesSection2: source.deductiblesSection2,
       clauseIds: source.clauseIds,
       clauseOverrides: source.clauseOverrides,
       wordingForms: source.wordingForms,

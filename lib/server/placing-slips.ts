@@ -68,8 +68,6 @@ export interface PlacingSlipInput {
   interestItems?: LineItem[]
   sumInsuredSection1?: LineItem[]
   sumInsuredSection2?: LineItem[]
-  deductiblesSection1?: string[]
-  deductiblesSection2?: string[]
   clauseIds?: string[]
   clauseOverrides?: Record<string, ClauseOverride>
   wordingForms?: string[]
@@ -325,8 +323,6 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
   const interestItems: LineItem[] = []
   const sumInsuredSection1: LineItem[] = []
   const sumInsuredSection2: LineItem[] = []
-  const deductiblesSection1: string[] = []
-  const deductiblesSection2: string[] = []
 
   for (const it of raw.items) {
     if (it.kind === "Interest") {
@@ -358,10 +354,6 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
         description: it.description,
         amount: it.amount ? Number(it.amount) : 0,
       })
-    } else if (it.kind === "DeductibleSection1") {
-      deductiblesSection1.push(it.description)
-    } else if (it.kind === "DeductibleSection2") {
-      deductiblesSection2.push(it.description)
     }
   }
 
@@ -483,8 +475,6 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     interestItems,
     sumInsuredSection1,
     sumInsuredSection2,
-    deductiblesSection1,
-    deductiblesSection2,
     clauseIds,
     clauseOverrides: Object.keys(clauseOverrides).length > 0 ? clauseOverrides : undefined,
     clauseCopies,
@@ -833,34 +823,6 @@ export async function createPlacingSlip(
       }
     }
 
-    if (input.deductiblesSection1) {
-      for (const d of input.deductiblesSection1) {
-        if (d.trim()) {
-          itemsToCreate.push({
-            slipId: slip.id,
-            kind: "DeductibleSection1",
-            description: d.trim(),
-            amount: null,
-            sortOrder: sortIdx++,
-          })
-        }
-      }
-    }
-
-    if (input.deductiblesSection2) {
-      for (const d of input.deductiblesSection2) {
-        if (d.trim()) {
-          itemsToCreate.push({
-            slipId: slip.id,
-            kind: "DeductibleSection2",
-            description: d.trim(),
-            amount: null,
-            sortOrder: sortIdx++,
-          })
-        }
-      }
-    }
-
     if (itemsToCreate.length > 0) {
       await tx.slipItem.createMany({ data: itemsToCreate })
     }
@@ -1202,34 +1164,6 @@ export async function updatePlacingSlip(
             kind: "SumInsuredSection2",
             description: it.description.trim(),
             amount: new Prisma.Decimal(it.amount || 0),
-            sortOrder: sortIdx++,
-          })
-        }
-      }
-    }
-
-    if (input.deductiblesSection1) {
-      for (const d of input.deductiblesSection1) {
-        if (d.trim()) {
-          itemsToCreate.push({
-            slipId: id,
-            kind: "DeductibleSection1",
-            description: d.trim(),
-            amount: null,
-            sortOrder: sortIdx++,
-          })
-        }
-      }
-    }
-
-    if (input.deductiblesSection2) {
-      for (const d of input.deductiblesSection2) {
-        if (d.trim()) {
-          itemsToCreate.push({
-            slipId: id,
-            kind: "DeductibleSection2",
-            description: d.trim(),
-            amount: null,
             sortOrder: sortIdx++,
           })
         }
@@ -1713,24 +1647,6 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             kind: "SumInsuredSection2",
             description: it.description,
             amount: new Prisma.Decimal(it.amount || 0),
-            sortOrder: itIdx++,
-          })
-        }
-        for (const d of mock.deductiblesSection1 || []) {
-          itemsData.push({
-            slipId: slip.id,
-            kind: "DeductibleSection1",
-            description: d,
-            amount: null,
-            sortOrder: itIdx++,
-          })
-        }
-        for (const d of mock.deductiblesSection2 || []) {
-          itemsData.push({
-            slipId: slip.id,
-            kind: "DeductibleSection2",
-            description: d,
-            amount: null,
             sortOrder: itIdx++,
           })
         }

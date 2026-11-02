@@ -12,6 +12,7 @@ import type {
   Insurer,
   LookupValue,
   Occupation,
+  Prisma,
   TariffEqProperty,
   TariffFlood,
   TariffOccupation,
@@ -985,6 +986,173 @@ export async function deleteLookupValue(
       entityId: id,
       action: "Delete",
       before: lookup,
+    })
+  })
+}
+
+// ---------------------------------------------------------------------------
+// 7. Pilihan Deductible
+// ---------------------------------------------------------------------------
+
+export interface DeductibleOptionRecord {
+  id: string
+  cobId: string
+  cobCode: string
+  cobName: string
+  /** Kosong berarti berlaku untuk semua type of cover dalam COB itu. */
+  coverTypeId: string | null
+  coverTypeCode: string | null
+  coverTypeName: string | null
+  text: string
+  isActive: boolean
+}
+
+export interface DeductibleOptionInput {
+  cobId: string
+  coverTypeId: string | null
+  text: string
+}
+
+const deductibleOptionInclude = {
+  cob: { select: { code: true, name: true } },
+  coverType: { select: { code: true, name: true } },
+} as const
+
+function toDeductibleOptionRecord(row: {
+  id: string
+  cobId: string
+  coverTypeId: string | null
+  text: string
+  isActive: boolean
+  cob: { code: string; name: string }
+  coverType: { code: string; name: string } | null
+}): DeductibleOptionRecord {
+  return {
+    id: row.id,
+    cobId: row.cobId,
+    cobCode: row.cob.code,
+    cobName: row.cob.name,
+    coverTypeId: row.coverTypeId,
+    coverTypeCode: row.coverType?.code ?? null,
+    coverTypeName: row.coverType?.name ?? null,
+    text: row.text,
+    isActive: row.isActive,
+  }
+}
+
+export async function listDeductibleOptions(): Promise<DeductibleOptionRecord[]> {
+  const rows = await prisma.deductibleOption.findMany({
+    orderBy: [{ cob: { code: "asc" } }, { coverType: { code: "asc" } }, { text: "asc" }],
+    include: deductibleOptionInclude,
+  })
+  return rows.map(toDeductibleOptionRecord)
+}
+
+/** Type of cover yang dipilih harus milik COB yang dipilih. */
+async function assertCoverTypeInCob(
+  tx: Prisma.TransactionClient,
+  input: DeductibleOptionInput
+) {
+  if (!input.coverTypeId) return
+  const cover = await tx.coverType.findUnique({
+    where: { id: input.coverTypeId },
+    select: { cobId: true },
+  })
+  if (!cover || cover.cobId !== input.cobId) {
+    throw new Error("Type of cover tidak termasuk COB yang dipilih.")
+  }
+}
+
+export async function createDeductibleOption(
+  input: DeductibleOptionInput,
+  userId: string
+): Promise<DeductibleOptionRecord> {
+  return prisma.$transaction(async (tx) => {
+    await assertCoverTypeInCob(tx, input)
+    const created = await tx.deductibleOption.create({
+      data: {
+        cobId: input.cobId,
+        coverTypeId: input.coverTypeId,
+        text: input.text.trim(),
+      },
+      include: deductibleOptionInclude,
+    })
+    await recordAudit(tx, {
+      userId,
+      entity: "deductible_options",
+      entityId: created.id,
+      action: "Create",
+      after: created,
+    })
+    return toDeductibleOptionRecord(created)
+  })
+}
+
+export async function updateDeductibleOption(
+  id: string,
+  input: DeductibleOptionInput,
+  userId: string
+): Promise<DeductibleOptionRecord> {
+  return prisma.$transaction(async (tx) => {
+    await assertCoverTypeInCob(tx, input)
+    const before = await tx.deductibleOption.findUniqueOrThrow({ where: { id } })
+    const updated = await tx.deductibleOption.update({
+      where: { id },
+      data: {
+        cobId: input.cobId,
+        coverTypeId: input.coverTypeId,
+        text: input.text.trim(),
+      },
+      include: deductibleOptionInclude,
+    })
+    await recordAudit(tx, {
+      userId,
+      entity: "deductible_options",
+      entityId: id,
+      action: "Update",
+      before,
+      after: updated,
+    })
+    return toDeductibleOptionRecord(updated)
+  })
+}
+
+export async function toggleDeductibleOptionStatus(
+  id: string,
+  isActive: boolean,
+  userId: string
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const before = await tx.deductibleOption.findUniqueOrThrow({ where: { id } })
+    await tx.deductibleOption.update({ where: { id }, data: { isActive } })
+    await recordAudit(tx, {
+      userId,
+      entity: "deductible_options",
+      entityId: id,
+      action: "Update",
+      before: { isActive: before.isActive },
+      after: { isActive },
+    })
+  })
+}
+
+/**
+ * Pilihan deductible boleh dihapus kapan saja: slip menyimpan salinan teksnya,
+ * bukan relasi ke pilihan ini.
+ */
+export async function deleteDeductibleOption(
+  id: string,
+  userId: string
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const before = await tx.deductibleOption.findUniqueOrThrow({ where: { id } })
+    await tx.deductibleOption.delete({ where: { id } })
+    await recordAudit(tx, {
+      userId,
+      entity: "deductible_options",
+      entityId: id,
+      action: "Delete",
+      before,
     })
   })
 }

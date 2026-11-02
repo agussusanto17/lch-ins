@@ -16,12 +16,20 @@ export interface CoverOption {
   abbreviation: string | null
 }
 
+/** Pilihan deductible dari Master Data > Deductible. */
+export interface DeductibleChoice {
+  /** Kosong berarti berlaku untuk semua type of cover dalam COB itu. */
+  coverTypeId: string | null
+  text: string
+}
+
 export interface CobOption {
   id: string
   code: string
   /** Nama tampilan, hasil `normalizeCob` dari nama di master. */
   label: string
   covers: CoverOption[]
+  deductibles: DeductibleChoice[]
 }
 
 export interface NamedOption {
@@ -94,4 +102,23 @@ export function coverAbbreviation(
 ) {
   const cover = coversFor(options, cob).find((c) => c.name === typeOfCover)
   return cover?.abbreviation || null
+}
+
+/**
+ * Pilihan deductible untuk type of cover slip: yang khusus type of cover itu
+ * lebih dulu, lalu yang berlaku untuk semua type of cover di COB-nya.
+ */
+export function deductibleChoicesFor(
+  options: FormOptions,
+  cob: string,
+  typeOfCover: string
+): string[] {
+  const cobOption = options.cobs.find((c) => c.label === cob)
+  if (!cobOption) return []
+  const cover = cobOption.covers.find((c) => c.name === typeOfCover)
+  const specific = cover
+    ? cobOption.deductibles.filter((d) => d.coverTypeId === cover.id)
+    : []
+  const general = cobOption.deductibles.filter((d) => d.coverTypeId === null)
+  return Array.from(new Set([...specific, ...general].map((d) => d.text)))
 }

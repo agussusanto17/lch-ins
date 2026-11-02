@@ -30,11 +30,6 @@ const SEED: PlacingSlip[] = [
     ],
     sumInsuredSection1: [],
     sumInsuredSection2: [],
-    deductiblesSection1: [
-      "IDR 300.000 setiap kejadian untuk kerugian sebagian (partial loss)",
-      "5% dari nilai klaim minimum IDR 500.000 untuk risiko banjir & gempa bumi",
-    ],
-    deductiblesSection2: [],
     specialConditions:
       "Kendaraan digunakan untuk keperluan pribadi (non-komersial). Perbaikan pada bengkel resmi Toyota di wilayah Jabodetabek.",
     clauseIds: [
@@ -48,17 +43,28 @@ const SEED: PlacingSlip[] = [
       "cl-23",
     ],
     rateLines: [
-      { id: "r1", label: "Comprehensive Casco", rate: 1.2, premium: 5_400_000 },
+      {
+        id: "r1",
+        label: "Comprehensive Casco",
+        deductible:
+          "IDR 300.000 setiap kejadian untuk kerugian sebagian (partial loss)",
+        rate: 1.2,
+        premium: 5_400_000,
+      },
       { id: "r2", label: "Loading Rate Comprehensive", rate: null, premium: 0 },
       {
         id: "r3",
         label: "Flood, Windstorm, Tempest & Water Damage",
+        deductible:
+          "5% dari nilai klaim minimum IDR 500.000 untuk risiko banjir & gempa bumi",
         rate: 0.1,
         premium: 450_000,
       },
       {
         id: "r4",
         label: "Earthquake, Volcanic Eruption & Tsunami",
+        deductible:
+          "5% dari nilai klaim minimum IDR 500.000 untuk risiko banjir & gempa bumi",
         rate: 0.1,
         premium: 450_000,
       },
@@ -188,11 +194,6 @@ const SEED: PlacingSlip[] = [
         amount: 45_000_000_000,
       },
     ],
-    deductiblesSection1: [
-      "IDR 250,000,000 each and every loss for Material Damage",
-      "2.5% of Total Sum Insured at the time of loss, minimum IDR 500,000,000 for Earthquake",
-    ],
-    deductiblesSection2: ["14 (fourteen) days waiting period"],
     specialConditions:
       "Subject to satisfactory risk survey report and implementation of fire protection recommendations within 90 days from inception.",
     clauseIds: [
@@ -210,17 +211,31 @@ const SEED: PlacingSlip[] = [
       "cl-30",
     ],
     rateLines: [
-      { id: "r1", label: "FLEXAS", rate: 0.893, premium: 0 },
+      {
+        id: "r1",
+        label: "FLEXAS",
+        deductible: "IDR 250,000,000 each and every loss for Material Damage",
+        rate: 0.893,
+        premium: 0,
+      },
       { id: "r2", label: "FWTWD", rate: 0.035, premium: 12_792_500 },
       { id: "r3", label: "RSMDCC", rate: 0.042, premium: 15_351_000 },
       { id: "r4", label: "Other Losses", rate: 0.028, premium: 10_234_000 },
       {
         id: "r6",
         label: "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
+        deductible: "14 (fourteen) days waiting period",
         rate: 0.185,
         premium: 8_325_000,
       },
-      { id: "r7", label: "EQVET", rate: 0.75, premium: 274_125_000 },
+      {
+        id: "r7",
+        label: "EQVET",
+        deductible:
+          "2.5% of Total Sum Insured at the time of loss, minimum IDR 500,000,000 for Earthquake",
+        rate: 0.75,
+        premium: 274_125_000,
+      },
       { id: "r8", label: "BI EQVET", rate: 0.412, premium: 18_540_000 },
     ],
     tplLines: [],
@@ -295,15 +310,18 @@ const SEED: PlacingSlip[] = [
     ],
     sumInsuredSection1: [],
     sumInsuredSection2: [],
-    deductiblesSection1: [
-      "IDR 25,000,000 each and every claim for Third Party Property Damage",
-    ],
-    deductiblesSection2: [],
     specialConditions:
       "Medical malpractice excluded — dijamin terpisah di polis Professional Indemnity.",
     clauseIds: ["cl-09", "cl-12", "cl-21", "cl-22", "cl-27", "cl-29"],
     rateLines: [
-      { id: "r1", label: "Rate (‰)", rate: 0.85, premium: 8_500_000 },
+      {
+        id: "r1",
+        label: "Rate (‰)",
+        deductible:
+          "IDR 25,000,000 each and every claim for Third Party Property Damage",
+        rate: 0.85,
+        premium: 8_500_000,
+      },
     ],
     tplLines: [],
     paLines: [],
@@ -345,15 +363,19 @@ const SEED: PlacingSlip[] = [
     ],
     sumInsuredSection1: [],
     sumInsuredSection2: [],
-    deductiblesSection1: [
-      "USD 500 each and every claim",
-      "USD 1,000 each and every claim for electronics",
-    ],
-    deductiblesSection2: [],
     specialConditions:
       "Open cover — deklarasi per shipment paling lambat 7 hari sebelum keberangkatan. Limit any one conveyance USD 1,500,000.",
     clauseIds: ["cl-09", "cl-12", "cl-14", "cl-15", "cl-16", "cl-22", "cl-29"],
-    rateLines: [{ id: "r1", label: "Rate (‰)", rate: 1.35, premium: 6_075 }],
+    rateLines: [
+      {
+        id: "r1",
+        label: "Rate (‰)",
+        deductible:
+          "USD 500 each and every claim; USD 1,000 each and every claim for electronics",
+        rate: 1.35,
+        premium: 6_075,
+      },
+    ],
     tplLines: [],
     paLines: [],
     discountPct: 0,
@@ -418,16 +440,18 @@ const SEED: PlacingSlip[] = [
     ],
     sumInsuredSection1: [],
     sumInsuredSection2: [],
-    deductiblesSection1: [
-      "IDR 500,000,000 each and every loss for testing & commissioning",
-      "IDR 250,000,000 each and every loss for other perils",
-    ],
-    deductiblesSection2: [],
     specialConditions:
       "Maintenance visit cover 12 bulan. Periode konstruksi 15 bulan termasuk masa pemeliharaan.",
     clauseIds: ["cl-09", "cl-12", "cl-21", "cl-22", "cl-24", "cl-25", "cl-29"],
     rateLines: [
-      { id: "r1", label: "Rate (‰)", rate: 2.15, premium: 999_750_000 },
+      {
+        id: "r1",
+        label: "Rate (‰)",
+        deductible:
+          "IDR 500,000,000 each and every loss for testing & commissioning; IDR 250,000,000 each and every loss for other perils",
+        rate: 2.15,
+        premium: 999_750_000,
+      },
     ],
     tplLines: [],
     paLines: [],
@@ -487,10 +511,6 @@ const SEED: PlacingSlip[] = [
     ],
     sumInsuredSection1: [],
     sumInsuredSection2: [],
-    deductiblesSection1: [
-      "IDR 500.000 setiap kejadian untuk kerugian sebagian",
-    ],
-    deductiblesSection2: [],
     specialConditions:
       "Fleet policy — deklarasi unit per kuartal. Driver wajib memiliki SIM B1 Umum yang berlaku.",
     clauseIds: ["cl-09", "cl-17", "cl-20", "cl-21", "cl-22", "cl-23"],
@@ -498,6 +518,7 @@ const SEED: PlacingSlip[] = [
       {
         id: "r1",
         label: "Comprehensive Casco",
+        deductible: "IDR 500.000 setiap kejadian untuk kerugian sebagian",
         rate: 0.95,
         premium: 496_660_000,
       },
@@ -618,11 +639,6 @@ const SEED: PlacingSlip[] = [
         amount: 28_000_000_000,
       },
     ],
-    deductiblesSection1: [
-      "IDR 150,000,000 each and every loss",
-      "5% of claim minimum IDR 300,000,000 for machinery breakdown",
-    ],
-    deductiblesSection2: ["7 (seven) days waiting period"],
     specialConditions:
       "Wajib melampirkan sertifikat kalibrasi boiler dan hasil thermography panel listrik tahunan.",
     clauseIds: [
@@ -639,13 +655,21 @@ const SEED: PlacingSlip[] = [
       "cl-28",
     ],
     rateLines: [
-      { id: "r1", label: "FLEXAS", rate: 2.018, premium: 0 },
+      {
+        id: "r1",
+        label: "FLEXAS",
+        deductible:
+          "IDR 150,000,000 each and every loss; 5% of claim minimum IDR 300,000,000 for machinery breakdown",
+        rate: 2.018,
+        premium: 0,
+      },
       { id: "r2", label: "FWTWD", rate: 0.048, premium: 7_992_000 },
       { id: "r3", label: "RSMDCC", rate: 0.042, premium: 6_993_000 },
       { id: "r4", label: "Other Losses", rate: 0.035, premium: 5_827_500 },
       {
         id: "r6",
         label: "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
+        deductible: "7 (seven) days waiting period",
         rate: 0.24,
         premium: 6_720_000,
       },
@@ -730,8 +754,6 @@ const SEED: PlacingSlip[] = [
         amount: 19_000_000_000,
       },
     ],
-    deductiblesSection1: ["IDR 100,000,000 each and every loss"],
-    deductiblesSection2: ["14 (fourteen) days waiting period"],
     clauseIds: [
       "cl-01",
       "cl-04",
@@ -743,13 +765,20 @@ const SEED: PlacingSlip[] = [
       "cl-30",
     ],
     rateLines: [
-      { id: "r1", label: "FLEXAS", rate: 0.893, premium: 0 },
+      {
+        id: "r1",
+        label: "FLEXAS",
+        deductible: "IDR 100,000,000 each and every loss",
+        rate: 0.893,
+        premium: 0,
+      },
       { id: "r2", label: "FWTWD", rate: 0.035, premium: 2_117_500 },
       { id: "r3", label: "RSMDCC", rate: 0.042, premium: 2_541_000 },
       { id: "r4", label: "Other Losses", rate: null, premium: 0 },
       {
         id: "r6",
         label: "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
+        deductible: "14 (fourteen) days waiting period",
         rate: 0.19,
         premium: 3_610_000,
       },

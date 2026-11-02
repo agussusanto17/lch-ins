@@ -74,6 +74,7 @@ enum SlipItemKind {
   Interest
   SumInsuredSection1
   SumInsuredSection2
+  /// Tidak dipakai lagi sejak deductible ditulis per cover (2 Nov 2026).
   DeductibleSection1
   DeductibleSection2
 }
@@ -370,6 +371,7 @@ model ClassOfBusiness {
   policies           Policy[]
   claimPics          InsurerClaimPic[]
   claimDocumentTypes ClaimDocumentType[]
+  deductibleOptions  DeductibleOption[]
 
   @@map("classes_of_business")
 }
@@ -393,10 +395,11 @@ model CoverType {
 
   cob ClassOfBusiness @relation(fields: [cobId], references: [id])
 
-  clauses      Clause[]
-  sppa         Sppa[]
-  placingSlips PlacingSlip[]
-  policies     Policy[]
+  clauses           Clause[]
+  sppa              Sppa[]
+  placingSlips      PlacingSlip[]
+  policies          Policy[]
+  deductibleOptions DeductibleOption[]
 
   @@index([cobId])
   @@map("cover_types")
@@ -454,6 +457,26 @@ model CobRateLine {
 
   @@index([cobId, sortOrder])
   @@map("cob_rate_lines")
+}
+
+/// Pilihan deductible di placing slip, per type of cover. Muncul sebagai
+/// pilihan di isian deductible per cover; teksnya tetap bisa diubah di slip.
+model DeductibleOption {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cobId       String  @map("cob_id") @db.Uuid
+  /// Kosong berarti berlaku untuk semua type of cover dalam COB itu.
+  coverTypeId String? @map("cover_type_id") @db.Uuid
+  text        String
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cob       ClassOfBusiness @relation(fields: [cobId], references: [id])
+  coverType CoverType?      @relation(fields: [coverTypeId], references: [id], onDelete: Cascade)
+
+  @@index([cobId, coverTypeId])
+  @@map("deductible_options")
 }
 
 model Occupation {
