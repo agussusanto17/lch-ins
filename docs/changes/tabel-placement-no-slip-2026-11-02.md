@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-02
 - **Branch:** `fix/tabel-placement-no-slip`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #70
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
