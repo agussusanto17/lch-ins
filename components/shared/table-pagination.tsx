@@ -86,12 +86,12 @@ export function TablePagination({
   return (
     <div
       className={cn(
-        "no-print flex flex-col items-center justify-between gap-3 px-1 py-1 sm:flex-row text-xs text-muted-foreground",
+        "no-print flex flex-wrap items-center justify-center gap-3 px-1 py-1 text-xs text-muted-foreground sm:justify-between",
         className
       )}
     >
-      <div className="flex items-center gap-3">
-        <span>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <span className="whitespace-nowrap">
           {totalItems === 0 ? (
             `Tidak ada ${itemName}`
           ) : (
@@ -134,7 +134,7 @@ export function TablePagination({
         )}
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1 sm:ml-auto">
         <Button
           type="button"
           variant="outline"
@@ -158,7 +158,7 @@ export function TablePagination({
           <ChevronLeft className="size-4" />
         </Button>
 
-        <span className="px-2 font-medium text-foreground">
+        <span className="px-2 font-medium whitespace-nowrap text-foreground">
           Hal. {safePage} dari {totalPages}
         </span>
 

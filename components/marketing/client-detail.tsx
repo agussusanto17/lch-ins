@@ -17,6 +17,7 @@ import { useToday } from "@/components/layout/today-provider"
 import { ClientForm } from "@/components/marketing/client-form"
 import { SppaTable } from "@/components/marketing/sppa-table"
 import { SectionCard } from "@/components/shared/section-card"
+import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import { usePermission } from "@/components/auth/permission-provider"
 import { Button } from "@/components/ui/button"
@@ -89,6 +90,9 @@ export function ClientDetail({
   }, [client])
 
   const [editKey, setEditKey] = React.useState<number | null>(null)
+  const slipPaging = usePagination(clientSlips, 10)
+  const policyPaging = usePagination(clientPolicies, 10)
+  const claimPaging = usePagination(clientClaims, 10)
 
   if (!client) {
     return (
@@ -313,7 +317,7 @@ export function ClientDetail({
                   </TableCell>
                 </TableRow>
               ) : (
-                clientSlips.map((s) => (
+                slipPaging.paginatedItems.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="pl-5">
                       <Link
@@ -338,6 +342,15 @@ export function ClientDetail({
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            className="px-4 pt-3"
+            page={slipPaging.page}
+            pageSize={slipPaging.pageSize}
+            totalItems={slipPaging.totalItems}
+            onPageChange={slipPaging.setPage}
+            onPageSizeChange={slipPaging.setPageSize}
+            itemName="placing slip"
+          />
         </SectionCard>
 
         <SectionCard
@@ -364,7 +377,7 @@ export function ClientDetail({
                   </TableCell>
                 </TableRow>
               ) : (
-                clientPolicies.map((p) => (
+                policyPaging.paginatedItems.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="tabular pl-5 font-medium">
                       {p.policyNo}
@@ -386,6 +399,15 @@ export function ClientDetail({
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            className="px-4 pt-3"
+            page={policyPaging.page}
+            pageSize={policyPaging.pageSize}
+            totalItems={policyPaging.totalItems}
+            onPageChange={policyPaging.setPage}
+            onPageSizeChange={policyPaging.setPageSize}
+            itemName="polis"
+          />
         </SectionCard>
       </div>
 
@@ -413,7 +435,7 @@ export function ClientDetail({
                 </TableCell>
               </TableRow>
             ) : (
-              clientClaims.map((c) => (
+              claimPaging.paginatedItems.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="tabular pl-5 font-medium">
                     {c.claimNo}
@@ -432,6 +454,15 @@ export function ClientDetail({
             )}
           </TableBody>
         </Table>
+        <TablePagination
+          className="px-4 pt-3"
+          page={claimPaging.page}
+          pageSize={claimPaging.pageSize}
+          totalItems={claimPaging.totalItems}
+          onPageChange={claimPaging.setPage}
+          onPageSizeChange={claimPaging.setPageSize}
+          itemName="klaim"
+        />
       </SectionCard>
 
       {editKey ? (
