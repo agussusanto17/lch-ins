@@ -100,6 +100,13 @@ export function effectiveBrokeragePct(slip: PlacingSlip) {
   return slip.includeVat ? b / (1 + BROKERAGE_VAT_RATE) : b
 }
 
+/** VAT inside the brokerage amount; the entered rate already includes it, as in effectiveBrokeragePct. */
+export function brokerageVatAmount(slip: PlacingSlip) {
+  if (!slip.includeVat) return 0
+  const b = brokerageAmount(slip)
+  return roundCents(b - b / (1 + BROKERAGE_VAT_RATE))
+}
+
 export function slipRateBasis(slip: PlacingSlip) {
   return totalSumInsured(slip)
 }

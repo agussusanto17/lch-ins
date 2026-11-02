@@ -743,7 +743,7 @@ model Clause {
   /// Kelompok produk asal klausul di pustaka wording LCH: PAR, EQVET, Cargo,
   /// CIS, CIT, MB, MV, PA, PL, Fidelity. Kosong berarti dibuat langsung di
   /// aplikasi. Dipakai membedakan 66 judul yang dipakai beberapa produk dengan
-  /// wording berbeda, dan jadi dasar pemetaan ke COB setelah LCH menjawab.
+  /// wording berbeda, dan jadi dasar pemetaan ke COB (CLAUSE_GROUP_COB di seed).
   sourceGroup String  @default("") @map("source_group")
   isActive    Boolean @default(true) @map("is_active")
 

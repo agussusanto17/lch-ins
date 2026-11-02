@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Toggle } from "@/components/ui/toggle"
 import { correspondenceAddress as defaultAddress } from "@/lib/data"
-import { maskMiddle } from "@/lib/format"
-import { useCollection } from "@/lib/store"
+import type { InsuredOption } from "@/lib/server/clients"
 
 /**
  * Tertanggung dipilih dari data klien (PRD A-08). Nama dan alamat disalin ke
@@ -18,11 +17,13 @@ import { useCollection } from "@/lib/store"
  * "and/or Subsidiary Companies".
  */
 export function InsuredPicker({
+  clients,
   clientId,
   insuredName,
   correspondenceAddress,
   onChange,
 }: {
+  clients: InsuredOption[]
   clientId: string | null
   insuredName: string
   correspondenceAddress: string
@@ -32,7 +33,6 @@ export function InsuredPicker({
     correspondenceAddress?: string
   }) => void
 }) {
-  const clients = useCollection("clients")
   const client = clientId
     ? (clients.find((c) => c.id === clientId) ?? null)
     : null
@@ -74,8 +74,8 @@ export function InsuredPicker({
               <span>
                 {client.clientType} · {client.contactPerson || "—"}
               </span>
-              {client.npwp ? (
-                <span>NPWP {maskMiddle(client.npwp, 2, 3)}</span>
+              {client.npwpMasked ? (
+                <span>NPWP {client.npwpMasked}</span>
               ) : null}
               <Link
                 href={`/marketing/clients/${client.id}`}

@@ -873,14 +873,39 @@ function toHtml(text: string) {
 }
 
 /**
- * 607 klausul dari pustaka LCH. Dikelompokkan per produk (PAR, EQVET, Cargo,
- * dan seterusnya), tapi pemetaan kelompok itu ke COB dan type of cover masih
- * ditunggu dari LCH. Sampai itu datang, semua klausul berlaku untuk semua COB.
+ * Kelompok produk pustaka klausul ke kode COB dan type of cover, dari daftar
+ * COB dan TOC LCH. Sama dengan migrasi 20261102120000_clause_cob_mapping.
  */
+const CLAUSE_GROUP_COB: Record<string, { cob: string; cover?: string }> = {
+  PAR: { cob: "01" },
+  EQVET: { cob: "01" },
+  MV: { cob: "02" },
+  Cargo: { cob: "03" },
+  CIT: { cob: "03", cover: "0308" },
+  MB: { cob: "08", cover: "0803" },
+  PL: { cob: "09" },
+  PA: { cob: "10" },
+  CIS: { cob: "12", cover: "1203" },
+  Fidelity: { cob: "12", cover: "1202" },
+}
+
+/** 607 klausul dari pustaka LCH, dipetakan ke COB lewat CLAUSE_GROUP_COB. */
 async function seedClauses() {
   const rows = readCsv("clause-wording-lch.csv")
+  const [cobs, covers] = await Promise.all([
+    prisma.classOfBusiness.findMany({ select: { id: true, code: true } }),
+    prisma.coverType.findMany({ select: { id: true, code: true } }),
+  ])
+  const cobId = new Map(cobs.map((c) => [c.code, c.id]))
+  const coverTypeId = new Map(covers.map((c) => [c.code, c.id]))
   let skipped = 0
-  const data: { title: string; sourceGroup: string; wordingHtml: string }[] = []
+  const data: {
+    title: string
+    sourceGroup: string
+    wordingHtml: string
+    cobId: string | null
+    coverTypeId: string | null
+  }[] = []
 
   for (const r of rows) {
     const title = r.judul_klausul?.trim()
@@ -890,10 +915,14 @@ async function seedClauses() {
       skipped++
       continue
     }
+    const sourceGroup = r.produk?.trim() ?? ""
+    const map = CLAUSE_GROUP_COB[sourceGroup]
     data.push({
       title,
-      sourceGroup: r.produk?.trim() ?? "",
+      sourceGroup,
       wordingHtml: toHtml(r.wording.trim()),
+      cobId: map ? (cobId.get(map.cob) ?? null) : null,
+      coverTypeId: map?.cover ? (coverTypeId.get(map.cover) ?? null) : null,
     })
   }
 

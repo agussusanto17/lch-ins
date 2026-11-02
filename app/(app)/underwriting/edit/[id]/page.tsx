@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { FormOptionsBoundary } from "@/components/shared/form-options-boundary"
 import { PlacingSlipForm } from "@/components/underwriting/placing-slip-form"
 import { canManage } from "@/lib/access"
+import { listInsuredOptions } from "@/lib/server/clients"
 import { currentUser } from "@/lib/server/session"
 import { getPlacingSlipById } from "@/lib/server/placing-slips"
 import { listVehicleOptions } from "@/lib/server/vehicles"
@@ -24,9 +25,10 @@ export default async function EditSlipPage({
   }
 
   const { id } = await params
-  const [slip, vehicleOptions] = await Promise.all([
+  const [slip, vehicleOptions, clients] = await Promise.all([
     getPlacingSlipById(id).then((s) => s ?? slipById(id) ?? null),
     listVehicleOptions(),
+    listInsuredOptions(),
   ])
 
   return (
@@ -36,6 +38,7 @@ export default async function EditSlipPage({
         initial={slip}
         mode="edit"
         vehicleOptions={vehicleOptions}
+        clients={clients}
       />
     </FormOptionsBoundary>
   )

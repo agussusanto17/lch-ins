@@ -90,6 +90,7 @@ import {
   BI_BASE_LABELS,
   brokerageAmount,
   brokerageCapFor,
+  brokerageVatAmount,
   discountAmount,
   effectiveBrokeragePct,
   sumItems,
@@ -107,6 +108,7 @@ import {
 import { BI_SCALE_OJK } from "@/lib/data/ojk-tariff"
 import { cobLabels, coversFor, withCurrent } from "@/lib/form-options"
 import { money, percent } from "@/lib/format"
+import type { InsuredOption } from "@/lib/server/clients"
 import { newId, store, useRecord } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
@@ -141,11 +143,13 @@ export function PlacingSlipForm({
   initial,
   mode,
   vehicleOptions,
+  clients,
 }: {
   id?: string
   initial: PlacingSlip | null
   mode: "new" | "edit"
   vehicleOptions?: VehicleBrandOption[]
+  clients: InsuredOption[]
 }) {
   const stored = useRecord("slips", id ?? null)
   const source = stored ?? initial
@@ -175,6 +179,7 @@ export function PlacingSlipForm({
       initial={source}
       mode={mode}
       vehicleOptions={vehicleOptions}
+      clients={clients}
     />
   )
 }
@@ -183,10 +188,12 @@ function SlipEditor({
   initial,
   mode,
   vehicleOptions,
+  clients,
 }: {
   initial: PlacingSlip
   mode: "new" | "edit"
   vehicleOptions?: VehicleBrandOption[]
+  clients: InsuredOption[]
 }) {
   const router = useRouter()
   const today = useToday()
@@ -613,6 +620,7 @@ function SlipEditor({
               </Field>
 
               <InsuredPicker
+                clients={clients}
                 clientId={slip.clientId}
                 insuredName={slip.insuredName}
                 correspondenceAddress={slip.correspondenceAddress}
@@ -805,7 +813,11 @@ function SlipEditor({
 
           {/* ---------- Interest Insured ---------- */}
           <SectionCard
-            title="Interest Insured"
+            title={
+              usesSectionSumInsured(slip.cob)
+                ? "Interest Insured"
+                : "Interest Insured *"
+            }
             {...sectionProps("interest")}
             summary={
               usesSectionSumInsured(slip.cob)
@@ -864,7 +876,7 @@ function SlipEditor({
           {/* ---------- Sum Insured (Property) ---------- */}
           {usesSectionSumInsured(slip.cob) ? (
             <SectionCard
-              title="Sum Insured"
+              title="Sum Insured *"
               {...sectionProps("sumInsured")}
               summary={money(md + bi, slip.currency)}
             >
@@ -1256,6 +1268,29 @@ function SlipEditor({
                     {money(brokerageAmount(slip), slip.currency)}
                   </span>
                 </div>
+                {slip.includeVat ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        PPN 2,2% (termasuk)
+                      </span>
+                      <span className="tabular font-semibold">
+                        {money(brokerageVatAmount(slip), slip.currency)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Brokerage sebelum PPN
+                      </span>
+                      <span className="tabular font-semibold">
+                        {money(
+                          brokerageAmount(slip) - brokerageVatAmount(slip),
+                          slip.currency
+                        )}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
           </SectionCard>

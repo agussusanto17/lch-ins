@@ -17,6 +17,7 @@ import {
   CLAUSES,
   resolveSlipClauses,
   wordingHtml,
+  wordingText,
   type ClassOfBusiness,
   type ClauseOverride,
 } from "@/lib/data"
@@ -75,6 +76,11 @@ export function ClausePicker({
     }))
   }, [propMasterClauses, fetchedClauses])
 
+  const plainWording = React.useMemo(
+    () => new Map(pool.map((c) => [c.id, wordingText(c.wording)])),
+    [pool]
+  )
+
   const available = React.useMemo(() => {
     const q = query.trim().toLowerCase()
     return pool.filter((c) => {
@@ -90,10 +96,11 @@ export function ClausePicker({
       }
       if (!q) return true
       return (
-        c.title.toLowerCase().includes(q) || c.wording.toLowerCase().includes(q)
+        c.title.toLowerCase().includes(q) ||
+        (plainWording.get(c.id) ?? "").toLowerCase().includes(q)
       )
     })
-  }, [pool, cob, typeOfCover, query])
+  }, [pool, plainWording, cob, typeOfCover, query])
 
   const selectedClauses = React.useMemo(() => {
     return resolveSlipClauses(
@@ -193,11 +200,11 @@ export function ClausePicker({
                       {c.title}
                     </span>
                     <Badge variant="outline" className="shrink-0">
-                      {c.cobName ?? c.sourceGroup ?? "Umum"}
+                      {c.sourceGroup || c.cobName || "Umum"}
                     </Badge>
                   </span>
                   <span className="mt-1 line-clamp-2 block text-xs text-muted-foreground">
-                    {c.wording}
+                    {plainWording.get(c.id)}
                   </span>
                 </span>
               </button>
