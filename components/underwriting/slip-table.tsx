@@ -317,7 +317,7 @@ export function SlipTable({
                   <TableCell className={ACTION_COL_CLASS}>
                     <RowActions actions={actionsFor(s, today, canManage)} />
                   </TableCell>
-                  <TableCell className="max-w-full">
+                  <TableCell>
                     {s.slipNo ? (
                       <span className="tabular font-semibold text-primary">
                         {s.slipNo}
@@ -366,14 +366,6 @@ export function SlipTable({
         onPageSizeChange={setPageSize}
         itemName="placing slip"
       />
-
-      <p className="text-xs text-muted-foreground">
-        Pola nomor{" "}
-        <span className="tabular">
-          {"{seq}/LCH-PLCMT/PS[-{kode}]/{bulan romawi}/{tahun}"}
-        </span>{" "}
-        digenerate saat release
-      </p>
     </div>
   )
 }

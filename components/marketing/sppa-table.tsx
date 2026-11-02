@@ -87,7 +87,7 @@ export function SppaTable({
     paginatedItems: paginatedRows,
     setPage,
     setPageSize,
-  } = usePagination(rows, compact ? 5 : 10)
+  } = usePagination(rows, 10)
 
   // Slip yang dibuat dari SPPA ini. Tautan dari database didahulukan; store
   // sesi hanya cadangan untuk slip yang baru dibuat dan belum dimuat ulang.
@@ -310,7 +310,6 @@ export function SppaTable({
         totalItems={totalItems}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
-        pageSizeOptions={compact ? [5, 10, 20] : [10, 25, 50, 100]}
         itemName="SPPA"
       />
 

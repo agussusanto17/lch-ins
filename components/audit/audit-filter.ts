@@ -12,7 +12,7 @@ export interface AuditFilter {
   pageSize: number
 }
 
-export const AUDIT_PAGE_SIZES = [15, 25, 50, 100]
+export const AUDIT_PAGE_SIZES = [10, 25, 50, 100]
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
