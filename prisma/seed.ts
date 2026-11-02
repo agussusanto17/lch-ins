@@ -653,6 +653,37 @@ async function seedCobRateLines() {
   return n
 }
 
+// Pilihan deductible
+
+/**
+ * Deductible awal COB Property untuk semua type of cover, daftar dari Harry
+ * (2 November 2026). Sisanya LCH tambahkan sendiri di Master Data > Deductible.
+ */
+const PROPERTY_DEDUCTIBLES = [
+  "Fire, Lightning, Explosion, Impact by Falling Aircraft and Smoke Damage (FLEXAS) : NIL",
+  "Flood, Windstorm, Tempes, Water Damage (FWTWD) : 10% of Claim",
+  "Riots, Strikes, Malicious Damage, Civil Commotion: 5% of claim, minimum IDR 5,000,000",
+  "Vehicle Impact : NIL",
+  "Others Losses : IDR 1,000,000",
+  "Earthquake, Volcanic Eruption and Tsunami (EQVET) : 2.5% of Total Sum Insured / declare value any one risk at any one location",
+]
+
+async function seedDeductibleOptions() {
+  const cob = await prisma.classOfBusiness.findUnique({ where: { code: "01" } })
+  if (!cob) return 0
+  let n = 0
+  for (const text of PROPERTY_DEDUCTIBLES) {
+    // Teks yang sudah ada dilewati supaya seed ulang tidak membuat duplikat.
+    const exists = await prisma.deductibleOption.findFirst({
+      where: { cobId: cob.id, text },
+    })
+    if (exists) continue
+    await prisma.deductibleOption.create({ data: { cobId: cob.id, text } })
+    n++
+  }
+  return n
+}
+
 // Tarif OJK
 
 async function seedOccupations() {
@@ -1519,6 +1550,7 @@ async function main() {
     console.log(`  cover_types          ${cob.coverTypes}`)
     console.log(`  cob_rate_lines       ${await seedCobRateLines()}`)
     console.log(`  claim_doc_types      ${await seedClaimDocumentTypes()}`)
+    console.log(`  deductible_options   ${await seedDeductibleOptions()}`)
   }
 
   const occ = want("occupations") ? await seedOccupations() : null
