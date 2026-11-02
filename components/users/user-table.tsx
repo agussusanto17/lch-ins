@@ -76,7 +76,6 @@ export function UserTable({
   const [roleFilter, setRoleFilter] = React.useState("all")
   const [statusFilter, setStatusFilter] = React.useState("all")
 
-  // Dialog states
   const [formOpen, setFormOpen] = React.useState(false)
   const [editingUser, setEditingUser] = React.useState<UserSummary | null>(null)
 
@@ -91,7 +90,6 @@ export function UserTable({
     password: null,
   })
 
-  // Client-side filter logic
   const filteredUsers = React.useMemo(() => {
     return users.filter((u) => {
       if (search.trim()) {
@@ -285,7 +283,6 @@ export function UserTable({
         </Button>
       </div>
 
-      {/* User data table */}
       <Card className="gap-0 overflow-hidden py-0 border">
         <Table className="min-w-190">
           <TableHeader>
@@ -401,7 +398,6 @@ export function UserTable({
         itemName="pengguna"
       />
 
-      {/* Create / Edit modal dialog */}
       <UserFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
@@ -420,7 +416,6 @@ export function UserTable({
         }}
       />
 
-      {/* Temporary password modal dialog */}
       <TemporaryPasswordDialog
         open={tempPasswordModal.open}
         onOpenChange={(open) =>

@@ -64,7 +64,6 @@ export function InsurersAdjustersTab({
   const [query, setQuery] = React.useState("")
   const [isPending, startTransition] = React.useTransition()
 
-  // Modal State
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editingItem, setEditingItem] = React.useState<Insurer | Adjuster | null>(null)
   const [name, setName] = React.useState("")
@@ -273,7 +272,6 @@ export function InsurersAdjustersTab({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Informative Banner */}
       <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs text-amber-900 dark:text-amber-200">
         <Info className="size-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
         <div className="flex flex-col gap-0.5">
@@ -380,7 +378,6 @@ export function InsurersAdjustersTab({
         itemName={partnerType === "insurer" ? "asuransi" : "adjuster"}
       />
 
-      {/* Modal Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

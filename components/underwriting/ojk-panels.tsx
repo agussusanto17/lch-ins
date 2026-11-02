@@ -106,9 +106,7 @@ function PickButton({
   )
 }
 
-/* ---------------------------------------------------------------- */
-/* Harta benda                                                       */
-/* ---------------------------------------------------------------- */
+// Harta benda
 
 export function PropertyPanel({
   occupation,
@@ -187,7 +185,6 @@ export function PropertyPanel({
 
   return (
     <>
-      {/* ---------- FLEXAS per okupasi ---------- */}
       <Card
         title="Tarif Harta Benda (FLEXAS)"
         unit="‰"
@@ -253,7 +250,6 @@ export function PropertyPanel({
         )}
       </Card>
 
-      {/* ---------- Gempa bumi ---------- */}
       <Card
         title="Tarif Gempa Bumi (EQVET)"
         unit="‰"
@@ -341,7 +337,6 @@ export function PropertyPanel({
         </Table>
       </Card>
 
-      {/* ---------- Banjir ---------- */}
       <Card
         title="Tarif Jaminan Banjir"
         unit="%"
@@ -423,7 +418,6 @@ export function PropertyPanel({
         </div>
       </Card>
 
-      {/* ---------- Skala BI ---------- */}
       <Card
         title="Skala BI (Business Interruption)"
         note={
@@ -474,9 +468,7 @@ export function PropertyPanel({
   )
 }
 
-/* ---------------------------------------------------------------- */
-/* Kendaraan bermotor                                                */
-/* ---------------------------------------------------------------- */
+// Kendaraan bermotor
 
 const MOTOR_VEHICLES = [
   "Non bus dan non truk",

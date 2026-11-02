@@ -222,9 +222,6 @@ async function resolveClientId(clientIdOrMock: string, fallbackInsuredName?: str
   throw new Error("Klien tidak ditemukan di database.")
 }
 
-/**
- * Resolusi UUID COB.
- */
 async function resolveCob(cobNameOrCode: string) {
   const cache = await getLookupsCache()
   for (const key of cobLookupKeys(cobNameOrCode)) {
@@ -250,9 +247,7 @@ async function resolveCoverType(cobId: string, typeOfCover?: string | null) {
   return cache.coverTypesByName.get(key) ?? null
 }
 
-/**
- * Ekstraksi angka bulan dari string indemnity period (misal "12 months" -> 12).
- */
+/** "12 months" -> 12. */
 function parseIndemnityMonths(val?: string | null): number | null {
   if (!val) return null
   const m = val.match(/\d+/)
@@ -313,9 +308,6 @@ type PrismaPlacingSlipWithRelations = Prisma.PlacingSlipGetPayload<{
   }
 }>
 
-/**
- * Transformasi record Prisma PlacingSlip ke interface PlacingSlipRecord.
- */
 function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRecord {
   const normCob = normalizeCob(raw.cob.name as CobType)
 
@@ -502,9 +494,6 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
   }
 }
 
-/**
- * Mengambil daftar Placing Slip dari database PostgreSQL.
- */
 export async function listPlacingSlips(
   params: ListPlacingSlipsParams = {}
 ): Promise<PlacingSlipRecord[]> {
@@ -680,9 +669,6 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
   return toPlacingSlipRecord(record)
 }
 
-/**
- * Membuat Placing Slip baru di database PostgreSQL.
- */
 export async function createPlacingSlip(
   input: PlacingSlipInput,
   userId: string
@@ -692,7 +678,6 @@ export async function createPlacingSlip(
   const resolvedCob = await resolveCob(input.cob)
   const resolvedCoverType = await resolveCoverType(resolvedCob.id, input.typeOfCover)
 
-  // Resolusi occupation
   let occupationId: string | null = input.occupationId || null
   if (!occupationId && input.occupation) {
     const code = input.occupation.trim().split(/[^0-9A-Za-z]/)[0].toLowerCase()
@@ -700,28 +685,23 @@ export async function createPlacingSlip(
     if (foundOcc) occupationId = foundOcc.id
   }
 
-  // Resolusi currency
   const currencyCode = (input.currency || "IDR").toUpperCase()
   if (!cache.currencies.has(currencyCode)) {
     throw new Error(`Mata uang ${currencyCode} tidak didukung.`)
   }
 
-  // Resolusi construction class
   let constructionClassId: string | null = null
   if (input.constructionClass) {
     constructionClassId = cache.constructionClasses.get(input.constructionClass) || null
   }
 
-  // Parse indemnity months
   const indemnityMonths = parseIndemnityMonths(input.indemnityPeriod)
 
-  // Inception & expiry dates
   const inceptionDate = input.inceptionDate ? new Date(input.inceptionDate) : null
   const expiryDate = input.expiryDate ? new Date(input.expiryDate) : null
   const resolvedSppaId = await resolveSppaId(input.sppaId)
 
   const record = await prisma.$transaction(async (tx) => {
-    // 1. Buat master slip
     const slip = await tx.placingSlip.create({
       data: {
         clientId: resolvedClientId,
@@ -756,7 +736,7 @@ export async function createPlacingSlip(
       },
     })
 
-    // 2. Insert items
+    // Insert items
     let sortIdx = 0
     const itemsToCreate: {
       slipId: string
@@ -827,7 +807,7 @@ export async function createPlacingSlip(
       await tx.slipItem.createMany({ data: itemsToCreate })
     }
 
-    // 3. Insert rate lines
+    // Insert rate lines
     let rateSortIdx = 0
     const rateKindId = cache.rateLineKinds.get("rate")!
     const tplKindId = cache.rateLineKinds.get("tpl")!
@@ -911,7 +891,7 @@ export async function createPlacingSlip(
       await tx.slipRateLine.createMany({ data: rateLinesToCreate })
     }
 
-    // 4. Insert Security Panel
+    // Insert security panel
     if (input.securityPanel && input.securityPanel.length > 0) {
       const leaderRoleId = cache.securityRoles.get("leader")!
       const memberRoleId = cache.securityRoles.get("member")!
@@ -943,11 +923,10 @@ export async function createPlacingSlip(
       }
     }
 
-    // 5. Insert Clauses
+    // Insert clauses
     if (input.clauseIds && input.clauseIds.length > 0) {
       let clIdx = 0
       for (const clId of input.clauseIds) {
-        // Resolve clause in database
         const clause = await tx.clause.findUnique({
           where: { id: clId },
           select: { id: true, title: true, wordingHtml: true },
@@ -969,7 +948,7 @@ export async function createPlacingSlip(
       }
     }
 
-    // 6. Insert Wording Forms
+    // Insert wording forms
     if (input.wordingForms && input.wordingForms.length > 0) {
       for (const wf of input.wordingForms) {
         if (!wf.trim()) continue
@@ -993,7 +972,6 @@ export async function createPlacingSlip(
       }
     }
 
-    // 7. Audit log
     await recordAudit(tx, {
       userId,
       entity: "placing_slips",
@@ -1014,9 +992,6 @@ export async function createPlacingSlip(
   return full
 }
 
-/**
- * Memperbarui Placing Slip di database PostgreSQL.
- */
 export async function updatePlacingSlip(
   id: string,
   input: PlacingSlipInput,
@@ -1040,7 +1015,6 @@ export async function updatePlacingSlip(
   const resolvedCob = await resolveCob(input.cob)
   const resolvedCoverType = await resolveCoverType(resolvedCob.id, input.typeOfCover)
 
-  // Resolusi occupation
   let occupationId: string | null = input.occupationId || null
   if (!occupationId && input.occupation) {
     const code = input.occupation.trim().split(/[^0-9A-Za-z]/)[0].toLowerCase()
@@ -1048,13 +1022,11 @@ export async function updatePlacingSlip(
     if (foundOcc) occupationId = foundOcc.id
   }
 
-  // Resolusi currency
   const currencyCode = (input.currency || "IDR").toUpperCase()
   if (!cache.currencies.has(currencyCode)) {
     throw new Error(`Mata uang ${currencyCode} tidak didukung.`)
   }
 
-  // Resolusi construction class
   let constructionClassId: string | null = null
   if (input.constructionClass) {
     constructionClassId = cache.constructionClasses.get(input.constructionClass) || null
@@ -1067,7 +1039,6 @@ export async function updatePlacingSlip(
     input.sppaId !== undefined ? await resolveSppaId(input.sppaId) : existing.sppaId
 
   await prisma.$transaction(async (tx) => {
-    // 1. Update master slip
     await tx.placingSlip.update({
       where: { id },
       data: {
@@ -1102,7 +1073,7 @@ export async function updatePlacingSlip(
       },
     })
 
-    // 2. Refresh items
+    // Refresh items
     await tx.slipItem.deleteMany({ where: { slipId: id } })
     let sortIdx = 0
     const itemsToCreate: {
@@ -1174,7 +1145,7 @@ export async function updatePlacingSlip(
       await tx.slipItem.createMany({ data: itemsToCreate })
     }
 
-    // 3. Refresh rate lines
+    // Refresh rate lines
     await tx.slipRateLine.deleteMany({ where: { slipId: id } })
     let rateSortIdx = 0
     const rateKindId = cache.rateLineKinds.get("rate")!
@@ -1259,7 +1230,7 @@ export async function updatePlacingSlip(
       await tx.slipRateLine.createMany({ data: rateLinesToCreate })
     }
 
-    // 4. Refresh Security Panel
+    // Refresh security panel
     await tx.slipSecurityPanel.deleteMany({ where: { slipId: id } })
     if (input.securityPanel && input.securityPanel.length > 0) {
       const leaderRoleId = cache.securityRoles.get("leader")!
@@ -1291,7 +1262,7 @@ export async function updatePlacingSlip(
       }
     }
 
-    // 5. Refresh Clauses
+    // Refresh clauses
     await tx.slipClause.deleteMany({ where: { slipId: id } })
     if (input.clauseIds && input.clauseIds.length > 0) {
       let clIdx = 0
@@ -1317,7 +1288,7 @@ export async function updatePlacingSlip(
       }
     }
 
-    // 6. Refresh Wording Forms
+    // Refresh wording forms
     await tx.slipWordingForm.deleteMany({ where: { slipId: id } })
     if (input.wordingForms && input.wordingForms.length > 0) {
       for (const wf of input.wordingForms) {
@@ -1342,7 +1313,6 @@ export async function updatePlacingSlip(
       }
     }
 
-    // 7. Audit log
     await recordAudit(tx, {
       userId,
       entity: "placing_slips",
@@ -1395,7 +1365,6 @@ export async function releasePlacingSlip(
     throw new Error(`Placing Slip berstatus ${existing.status} tidak dapat di-release.`)
   }
 
-  // Lakukan rilis dalam transaksi
   await prisma.$transaction(async (tx) => {
     // Generate nomor slip dokumen jika belum ada
     let slipNo = existing.slipNo

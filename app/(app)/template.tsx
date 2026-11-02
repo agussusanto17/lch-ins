@@ -3,10 +3,8 @@ import { headers } from "next/headers"
 import { requireAccess } from "@/lib/server/session"
 
 /**
- * Berbeda dengan layout yang dipertahankan antar rute (layout persistence),
- * template di-render ulang pada setiap navigasi, termasuk navigasi client-side.
- * Ini memastikan pengecekan hak akses dan pembatasan mustChangePassword
- * selalu dievaluasi di server pada setiap perpindahan halaman.
+ * Template di-render ulang pada setiap navigasi, termasuk client-side (layout
+ * tidak), jadi hak akses dan mustChangePassword selalu diperiksa di server.
  */
 export default async function AppTemplate({
   children,

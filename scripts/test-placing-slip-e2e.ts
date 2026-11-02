@@ -31,7 +31,6 @@ async function runTests() {
     }
   }
 
-  // 1. Check user and client
   console.log("[TEST 1] Environment verification")
   const testUser = await prisma.user.findFirst({ select: { id: true, name: true } })
   if (!testUser) throw new Error("No user found in database.")
@@ -41,7 +40,6 @@ async function runTests() {
   assert(Boolean(testUser.id), `User ready: ${testUser.name}`)
   assert(Boolean(testClient.id), `Client ready: ${testClient.name}`)
 
-  // 2. Test listPlacingSlips() and seedInitialSlipsIfEmpty()
   console.log("\n[TEST 2] listPlacingSlips() & Seed Verification")
   const slips = await listPlacingSlips()
   assert(slips.length >= 3, `listPlacingSlips() returned ${slips.length} records (expected >= 3)`)
@@ -52,7 +50,6 @@ async function runTests() {
   const slipWithPanel = slips.find((s) => s.securityPanel && s.securityPanel.length > 0)
   assert(Boolean(slipWithPanel), "At least one slip has security panel rows populated")
 
-  // 3. Test getPlacingSlipById() by UUID and by legacy ID / slipNo
   console.log("\n[TEST 3] getPlacingSlipById() retrieval")
   const byUuid = await getPlacingSlipById(firstSlip.dbId)
   assert(Boolean(byUuid) && byUuid?.id === firstSlip.dbId, "Retrieved slip by UUID successfully")
@@ -60,7 +57,6 @@ async function runTests() {
   const byMock = await getPlacingSlipById("s-001")
   assert(Boolean(byMock), "Retrieved slip by mock legacy id 's-001'")
 
-  // 4. Test createPlacingSlip() with complete relational child tables
   console.log("\n[TEST 4] createPlacingSlip() with relational child tables")
   const masterClause = await prisma.clause.findFirst({ select: { id: true, title: true } })
   const newSlipInput: PlacingSlipInput = {
@@ -128,7 +124,6 @@ async function runTests() {
     assert(Boolean(created.clauseOverrides?.[masterClause.id]), "Clause override recorded")
   }
 
-  // 5. Test updatePlacingSlip()
   console.log("\n[TEST 5] updatePlacingSlip()")
   const updateInput: PlacingSlipInput = {
     ...newSlipInput,
@@ -148,7 +143,6 @@ async function runTests() {
   assert(updated.interestItems?.length === 3, `Updated interest items count: ${updated.interestItems?.length} (expected 3)`)
   assert(updated.rateLines?.length === 1, `Updated rate lines count: ${updated.rateLines?.length} (expected 1)`)
 
-  // 6. Test togglePlacingSlipStatus()
   console.log("\n[TEST 6] togglePlacingSlipStatus()")
   const toggled = await togglePlacingSlipStatus(created.id, "Quoted", testUser.id)
   assert(toggled.status === "Quoted", "Status updated to Quoted")
@@ -156,14 +150,12 @@ async function runTests() {
   const toggledBack = await togglePlacingSlipStatus(created.id, "Draft", testUser.id)
   assert(toggledBack.status === "Draft", "Status reverted back to Draft")
 
-  // 7. Test releasePlacingSlip() & Atomic Document Number Generation
   console.log("\n[TEST 7] releasePlacingSlip() & Atomic Document Numbering (PS/...)")
   const released = await releasePlacingSlip(created.id, testUser.id)
   assert(released.status === "Released", "Status updated to Released")
   assert(Boolean(released.slipNo), `Official slip number generated: ${released.slipNo}`)
   assert(Boolean(released.slipNo?.includes("/PS-") || released.slipNo?.includes("/PS/")), `Slip number format contains /PS- or /PS/: ${released.slipNo}`)
 
-  // 8. Test Status Guard: Released slip cannot be physically deleted
   console.log("\n[TEST 8] Protection Guard: Released slip cannot be deleted")
   let deleteBlocked = false
   try {
@@ -175,13 +167,11 @@ async function runTests() {
   }
   assert(deleteBlocked, "Physical deletion of Released placing slip correctly blocked by status guard")
 
-  // 9. Test Cancel Status Transition on Released Slip
   console.log("\n[TEST 9] Cancellation of Released Slip")
   const cancelled = await togglePlacingSlipStatus(created.id, "Cancelled", testUser.id)
   assert(cancelled.status === "Cancelled", "Slip status successfully changed to Cancelled")
   assert(cancelled.slipNo === released.slipNo, "Cancelled slip retains original official document number to prevent numbering gaps")
 
-  // 10. Clean up: Create a test draft and delete it to verify clean child deletion
   console.log("\n[TEST 10] deletePlacingSlip() cascade cleanup on Draft")
   const draftToClean = await createPlacingSlip(
     {

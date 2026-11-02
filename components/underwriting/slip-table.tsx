@@ -92,7 +92,6 @@ function actionsFor(
     label: "Duplikat jadi draft baru",
     icon: Copy,
     onSelect: async () => {
-      // Duplikasi via Server Action ke database
       const res = await duplicatePlacingSlipAction(slip.id)
       if (res.ok && res.data) {
         store.upsert("slips", res.data)

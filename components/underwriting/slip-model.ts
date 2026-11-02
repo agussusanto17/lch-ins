@@ -177,9 +177,7 @@ export function usesSectionSumInsured(cob: ClassOfBusiness) {
   return cob === "Property"
 }
 
-/* ---------------------------------------------------------------- */
-/* Batas tarif OJK dan validasi release                               */
-/* ---------------------------------------------------------------- */
+// Batas tarif OJK dan validasi release
 
 /** Batas FLEXAS dari tabel okupasi OJK untuk okupasi dan kelas konstruksi slip. */
 export function occupationBounds(
@@ -325,9 +323,7 @@ export function releaseIssues(slip: PlacingSlip) {
   return issues
 }
 
-/* ---------------------------------------------------------------- */
-/* Penomoran                                                          */
-/* ---------------------------------------------------------------- */
+// Penomoran
 
 /**
  * Nomor urut slip berikutnya untuk bulan berjalan. Pola sekarang direset per

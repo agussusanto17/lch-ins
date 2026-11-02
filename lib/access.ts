@@ -57,9 +57,6 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   direksi: "Direksi",
 }
 
-/**
- * Validate whether a code is one of the official LCH canonical roles.
- */
 export function isValidRoleCode(code: string): code is RoleCode {
   return (ALLOWED_ROLE_CODES as readonly string[]).includes(code)
 }

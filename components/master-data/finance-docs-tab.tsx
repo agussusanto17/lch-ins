@@ -73,7 +73,6 @@ export function FinanceDocsTab({
   const [query, setQuery] = React.useState("")
   const [isPending, startTransition] = React.useTransition()
 
-  // Modal Bank State
   const [bankDialogOpen, setBankDialogOpen] = React.useState(false)
   const [editingBankAcc, setEditingBankAcc] = React.useState<BankAccountRecord | null>(null)
   const [bankId, setBankId] = React.useState(banks[0]?.id ?? "")
@@ -83,7 +82,6 @@ export function FinanceDocsTab({
   const [isPremiumTrust, setIsPremiumTrust] = React.useState(false)
   const [bankIsActive, setBankIsActive] = React.useState(true)
 
-  // Modal Mata Uang State
   const [currencyDialogOpen, setCurrencyDialogOpen] = React.useState(false)
   const [newCurrencyCode, setNewCurrencyCode] = React.useState("")
   const [newCurrencyName, setNewCurrencyName] = React.useState("")
@@ -443,7 +441,6 @@ export function FinanceDocsTab({
         </>
       )}
 
-      {/* Dialog Bank Account */}
       <Dialog open={bankDialogOpen} onOpenChange={setBankDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -564,7 +561,6 @@ export function FinanceDocsTab({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Mata Uang */}
       <Dialog open={currencyDialogOpen} onOpenChange={setCurrencyDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

@@ -99,7 +99,6 @@ export function LookupValuesTab({
     value: t,
   }))
 
-  // Modal State
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editingLookup, setEditingLookup] = React.useState<LookupValue | null>(null)
   const [code, setCode] = React.useState("")
@@ -370,7 +369,6 @@ export function LookupValuesTab({
         itemName="pilihan"
       />
 
-      {/* Modal Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

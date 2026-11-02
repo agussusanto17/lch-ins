@@ -90,7 +90,6 @@ export function LineItemList({
             .filter((t) => t.isActive || t.id === item.vehicleTypeId)
             .map((t) => ({ label: t.name, value: t.id }))
 
-          // Parse existing item description if fields are empty
           const parsed = !item.licensePlate && !item.chassisNumber && item.description
             ? parseVehicleDescription(item.description)
             : {}
@@ -169,7 +168,6 @@ export function LineItemList({
                 />
               </div>
 
-              {/* Structured vehicle detail fields */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="text-[11px] font-medium text-muted-foreground mb-1 block">

@@ -53,7 +53,6 @@ export function terbilang(nominal: number | string, currency = "IDR"): string {
 
   let hasil = terbilangBulat(bagianBulat)
 
-  // Tambahkan mata uang
   if (currency === "IDR") {
     hasil = `${hasil} rupiah`.trim()
   } else if (currency === "USD") {
@@ -62,7 +61,6 @@ export function terbilang(nominal: number | string, currency = "IDR"): string {
     hasil = `${hasil} ${currency}`.trim()
   }
 
-  // Tambahkan sen bila ada desimal
   if (bagianSen > 0) {
     hasil = `${hasil} ${terbilangBulat(bagianSen)} sen`.trim()
   }

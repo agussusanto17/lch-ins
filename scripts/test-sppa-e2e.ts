@@ -50,7 +50,6 @@ const sppaInputSchema = z
 async function runTests() {
   console.log("=== STARTING SPPA E2E INTEGRATION TEST ===\n")
 
-  // 1. Check user and client
   const testUser = await prisma.user.findFirst({ select: { id: true, name: true } })
   if (!testUser) throw new Error("No user found in database.")
   const testClient = await prisma.client.findFirst({ select: { id: true, name: true, cobId: true } })
@@ -58,7 +57,6 @@ async function runTests() {
 
   console.log(`[PASS] Environment ready: User="${testUser.name}", Client="${testClient.name}"`)
 
-  // 2. Test listSppa()
   console.log("\n--- TEST 1: listSppa() ---")
   const sppaList = await listSppa()
   console.log(`[PASS] listSppa returned ${sppaList.length} records.`)
@@ -68,7 +66,6 @@ async function runTests() {
   const first = sppaList[0]
   console.log(`[PASS] Sample record: "${first.insuredName}" (${first.cob}) - ${first.currency} ${first.sumInsured}`)
 
-  // 3. Test getSppaById() with UUID and legacy ID
   console.log("\n--- TEST 2: getSppaById() ---")
   const byUuid = await getSppaById(first.id)
   if (!byUuid || byUuid.id !== first.id) {
@@ -82,7 +79,6 @@ async function runTests() {
   }
   console.log(`[PASS] getSppaById('sp-001') resolved to: ${byLegacyId.insuredName}`)
 
-  // 4. Test Schema Validation
   console.log("\n--- TEST 3: Zod Schema Validation ---")
   const validPayload: SppaInput = {
     clientId: testClient.id,
@@ -120,7 +116,6 @@ async function runTests() {
   }
   console.log(`[PASS] Negative sumInsured caught: "${parsedNegative.error.issues[0]?.message}"`)
 
-  // 5. Test createSppa()
   console.log("\n--- TEST 4: createSppa() ---")
   const created = await createSppa(validPayload, testUser.id)
   console.log(`[PASS] Created SPPA ID: ${created.id}`)
@@ -131,7 +126,6 @@ async function runTests() {
     throw new Error(`Created SPPA sumInsured mismatch: got ${created.sumInsured}`)
   }
 
-  // 6. Test updateSppa()
   console.log("\n--- TEST 5: updateSppa() ---")
   const updatePayload: SppaInput = {
     ...validPayload,
@@ -145,7 +139,6 @@ async function runTests() {
   }
   console.log(`[PASS] Updated SPPA successfully: "${updated.insuredName}" - Sum: ${updated.sumInsured}`)
 
-  // 7. Test toggleSppaStatus()
   console.log("\n--- TEST 6: toggleSppaStatus() ---")
   await toggleSppaStatus(created.id, "Submitted")
   let recheck = await getSppaById(created.id)
@@ -161,7 +154,6 @@ async function runTests() {
   }
   console.log("[PASS] Toggled status back to 'Draft'.")
 
-  // 8. Test Downstream Placing Slip Mapping
   console.log("\n--- TEST 7: Downstream Placing Slip Mapping ---")
   const mappedSlip = slipFromSppa(updated, CLIENTS[0])
   if (mappedSlip.sppaId !== created.id) {
@@ -176,7 +168,6 @@ async function runTests() {
   }
   console.log(`[PASS] Placing slip properly derived from SPPA: sppaId=${mappedSlip.sppaId}, insured=${mappedSlip.insuredName}, sum=${derivedSum}`)
 
-  // 9. Test Referential Integrity Guard on Deletion
   console.log("\n--- TEST 8: Referential Integrity Deletion Guard ---")
   // Create dummy placing slip in DB linked to this SPPA
   const dummySlip = await prisma.placingSlip.create({

@@ -4,7 +4,7 @@ import type { Prisma } from "@/lib/generated/prisma/client"
  * Penomoran dokumen resmi LCH (PRD A-16).
  *
  * Nomor dibuat saat dokumen di-release atau diterbitkan, bukan saat draft, dan
- * WAJIB diambil di transaksi yang sama dengan penyimpanan dokumen. Kalau
+ * Wajib diambil di transaksi yang sama dengan penyimpanan dokumen. Kalau
  * penyimpanan gagal, kenaikan counter ikut dibatalkan sehingga nomor tidak
  * bolong. Unique constraint di kolom nomor dokumen tetap jadi pengaman kedua.
  *

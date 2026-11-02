@@ -22,9 +22,7 @@ import type {
 import { prisma } from "@/lib/prisma"
 import { recordAudit } from "@/server/services/audit"
 
-// ---------------------------------------------------------------------------
-// 1. Interfaces & Types
-// ---------------------------------------------------------------------------
+// Interfaces & types
 
 export interface MasterCobRecord extends ClassOfBusiness {
   rateMode: LookupValue
@@ -139,9 +137,7 @@ export interface OccupationRecord extends Occupation {
   tariffs: TariffOccupationRow[]
 }
 
-// ---------------------------------------------------------------------------
-// 2. Query Functions
-// ---------------------------------------------------------------------------
+// Query functions
 
 export async function listMasterCob(): Promise<MasterCobRecord[]> {
   const cobs = await prisma.classOfBusiness.findMany({
@@ -297,9 +293,7 @@ export async function listBiScales(): Promise<BiScaleRow[]> {
   return rows.map((r) => ({ ...r, percentage: r.percentage.toNumber() }))
 }
 
-// ---------------------------------------------------------------------------
-// 3. Mutation Functions (COB & Cover Type)
-// ---------------------------------------------------------------------------
+// Mutation functions (COB & cover type)
 
 // createCob, updateCob, dan deleteCob tidak lagi dipanggil dari aplikasi
 // (lihat app/(app)/master-data/actions.ts). Yang memakainya skrip developer.
@@ -537,9 +531,7 @@ export async function deleteCoverType(id: string, userId: string): Promise<void>
   })
 }
 
-// ---------------------------------------------------------------------------
-// 4. Mutation Functions (Insurers & Adjusters)
-// ---------------------------------------------------------------------------
+// Mutation functions (insurers & adjusters)
 
 export async function createInsurer(
   input: InsurerInput,
@@ -697,9 +689,7 @@ export async function toggleAdjusterStatus(
   })
 }
 
-// ---------------------------------------------------------------------------
-// 5. Mutation Functions (Bank Accounts, Currencies, Wording Forms)
-// ---------------------------------------------------------------------------
+// Mutation functions (bank accounts, currencies, wording forms)
 
 export async function createBankAccount(
   input: BankAccountInput,
@@ -886,9 +876,7 @@ export async function toggleWordingFormStatus(
   })
 }
 
-// ---------------------------------------------------------------------------
-// 6. Mutation Functions (Lookup Values)
-// ---------------------------------------------------------------------------
+// Mutation functions (lookup values)
 
 export async function createLookupValue(
   input: LookupValueInput,
@@ -990,9 +978,7 @@ export async function deleteLookupValue(
   })
 }
 
-// ---------------------------------------------------------------------------
-// 7. Pilihan Deductible
-// ---------------------------------------------------------------------------
+// Pilihan deductible
 
 export interface DeductibleOptionRecord {
   id: string

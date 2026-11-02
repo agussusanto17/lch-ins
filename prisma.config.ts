@@ -30,7 +30,6 @@ export default defineConfig({
   },
   migrations: {
     path: "prisma/migrations",
-    // Seed belum ada. Nanti diisi lookup_values yang is_system, mata uang,
-    // COB, dan tarif OJK dari CSV hasil ekstraksi SE OJK.
+    // Seed tidak lewat Prisma CLI, jalankan `npm run db:seed` (prisma/seed.ts).
   },
 })

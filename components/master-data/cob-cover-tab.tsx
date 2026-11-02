@@ -63,7 +63,6 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
   const [expandedCobIds, setExpandedCobIds] = React.useState<Record<string, boolean>>({})
   const [isPending, startTransition] = React.useTransition()
 
-  // Modal Cover Type State
   const [coverDialogOpen, setCoverDialogOpen] = React.useState(false)
   const [parentCobId, setParentCobId] = React.useState("")
   const [editingCover, setEditingCover] = React.useState<CoverType | null>(null)
@@ -104,7 +103,6 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setExpandedCobIds((prev) => ({ ...prev, [cobId]: !prev[cobId] }))
   }
 
-  // Handle Cover Type Dialog Open
   function openAddCover(cobId: string, cobCodeVal: string) {
     setParentCobId(cobId)
     setEditingCover(null)
@@ -467,7 +465,6 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
         itemName="COB"
       />
 
-      {/* Dialog Cover Type */}
       <Dialog open={coverDialogOpen} onOpenChange={setCoverDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

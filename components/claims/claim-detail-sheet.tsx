@@ -276,7 +276,7 @@ export function ClaimDetailSheet({
                   </TabsTrigger>
                 </TabsList>
 
-                {/* TAB 1: RINGKASAN */}
+                {/* Ringkasan */}
                 <TabsContent value="overview" className="flex flex-col gap-6 pt-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={claim.status} />
@@ -399,9 +399,8 @@ export function ClaimDetailSheet({
                   ) : null}
                 </TabsContent>
 
-                {/* TAB 2: BERKAS DOKUMEN (PRD A-04) */}
+                {/* Berkas dokumen (PRD A-04) */}
                 <TabsContent value="documents" className="flex flex-col gap-5 pt-1">
-                  {/* Status Banner */}
                   {requiredDocs.length > 0 && (
                     <div
                       className={`flex items-start gap-2.5 rounded-lg border p-3 text-xs leading-relaxed ${
@@ -430,7 +429,6 @@ export function ClaimDetailSheet({
                     </div>
                   )}
 
-                  {/* Checklist List */}
                   {isLoadingDocs ? (
                     <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
                       <Loader2 className="mr-2 size-4 animate-spin" />
@@ -559,7 +557,7 @@ export function ClaimDetailSheet({
                   )}
                 </TabsContent>
 
-                {/* TAB 3: TINDAK LANJUT KLAIM (PRD A-18) */}
+                {/* Tindak lanjut klaim (PRD A-18) */}
                 <TabsContent value="followups" className="flex flex-col gap-5 pt-1">
                   {/* Add Follow-up Form */}
                   {canManage && (
@@ -610,7 +608,6 @@ export function ClaimDetailSheet({
                     </form>
                   )}
 
-                  {/* Followup Timeline */}
                   {isLoadingFollowups ? (
                     <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
                       <Loader2 className="mr-2 size-4 animate-spin" />

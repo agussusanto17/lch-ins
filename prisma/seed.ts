@@ -29,9 +29,7 @@ import { prisma } from "../lib/prisma"
 
 const SEED_DIR = join(import.meta.dirname, "seed-data")
 
-// ---------------------------------------------------------------------------
 // Pembaca CSV
-// ---------------------------------------------------------------------------
 
 /**
  * Parser CSV kecil yang paham kutip ganda dan baris baru di dalam sel.
@@ -93,9 +91,7 @@ const dec = (v: string): Prisma.Decimal | null => {
   return s === "" ? null : new Prisma.Decimal(s)
 }
 
-// ---------------------------------------------------------------------------
 // Daftar pilihan pendek
-// ---------------------------------------------------------------------------
 
 /**
  * Isi awal lookup_values. Baris is_system dipakai logika sistem: labelnya boleh
@@ -368,9 +364,7 @@ const lookupId = async (lookupType: string, code: string) => {
   return row.id
 }
 
-// ---------------------------------------------------------------------------
 // Referensi lain
-// ---------------------------------------------------------------------------
 
 async function seedCurrencies() {
   const list = [
@@ -659,9 +653,7 @@ async function seedCobRateLines() {
   return n
 }
 
-// ---------------------------------------------------------------------------
 // Tarif OJK
-// ---------------------------------------------------------------------------
 
 async function seedOccupations() {
   const rows = readCsv("tarif-ojk-okupasi.csv")
@@ -859,9 +851,7 @@ async function seedBiScales() {
   return rows.length
 }
 
-// ---------------------------------------------------------------------------
 // Klausula
-// ---------------------------------------------------------------------------
 
 /** Plain text jadi HTML, supaya rich text editor menampilkan paragrafnya. */
 function toHtml(text: string) {
@@ -946,9 +936,6 @@ async function seedClauses() {
  * menampilkannya sekali di akhir. Hash-nya dibuat memakai fungsi milik Better
  * Auth supaya cocok dengan yang dipakai saat login.
  */
-/**
- * Definisi akun pengguna awal untuk pengujian dan operasional LCH.
- */
 interface SeedUserRecord {
   email: string
   name: string
@@ -957,9 +944,7 @@ interface SeedUserRecord {
   mustChangePassword?: boolean
 }
 
-/**
- * 1. Akun contoh pengujian (dipertahankan agar alur pengujian tidak terputus).
- */
+/** Akun contoh pengujian, dipertahankan supaya alur pengujian tidak terputus. */
 const PRESERVED_MOCK_USERS: SeedUserRecord[] = [
   {
     email: "admin@lch.example",
@@ -999,9 +984,8 @@ const PRESERVED_MOCK_USERS: SeedUserRecord[] = [
 ]
 
 /**
- * 2. Akun operasional LCH sesuai lembar referensi:
- *    - Unifikasi akun multi-role untuk orang yang sama.
- *    - Akun tanpa konflik identitas di-seed langsung.
+ * Akun operasional LCH sesuai lembar referensi. Orang dengan beberapa role
+ * dapat satu akun; email yang konflik identitas tidak di-seed di sini.
  */
 const OPERATIONAL_USERS: SeedUserRecord[] = [
   // Super Admin ditunjuk LCH 29 Oktober 2026: Harry dan Tresna. Role bidangnya
@@ -1078,9 +1062,8 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
 ]
 
 /**
- * 3. Deteksi konflik identitas akun pada lembar referensi LCH:
- *    Dilewati secara terencana demi keamanan agar tidak terjadi account takeover
- *    atau duplikasi akun berbeda orang pada 1 alamat email.
+ * Konflik identitas pada lembar referensi LCH. Sengaja tidak di-seed supaya
+ * tidak terjadi account takeover atau satu email dipakai orang berbeda.
  */
 const IDENTITY_CONFLICTS = [
   {
@@ -1473,8 +1456,6 @@ async function seedVehicles() {
   }
   return { brands: brands.length, types: rows.length, created }
 }
-
-// ---------------------------------------------------------------------------
 
 /**
  * Bagian seed yang bisa dipilih: `npm run db:seed -- clauses tariffs`.
