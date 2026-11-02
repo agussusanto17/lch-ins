@@ -485,10 +485,7 @@ export function PolicyDatabase({
           </TabsContent>
         </Tabs>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>
-            Status dihitung dari tanggal berakhir per {dateShort(today)}
-          </span>
+        <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground">
           <span>
             Total premium (setara IDR):{" "}
             <span className="tabular font-medium text-foreground">
