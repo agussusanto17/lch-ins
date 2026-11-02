@@ -77,7 +77,8 @@ export function ClaimDetailSheet({
   const canManage = permission.canManage("/claims")
   const [activeTab, setActiveTab] = React.useState("overview")
   const [documents, setDocuments] = React.useState<ClaimDocumentRecord[]>([])
-  const [isLoadingDocs, setIsLoadingDocs] = React.useState(false)
+  // Loading diturunkan dari id klaim yang datanya sudah dimuat, tanpa setState sinkron di effect.
+  const [docsLoadedFor, setDocsLoadedFor] = React.useState<string | null>(null)
   const [togglingDocId, setTogglingDocId] = React.useState<string | null>(null)
 
   const [newDocName, setNewDocName] = React.useState("")
@@ -85,7 +86,7 @@ export function ClaimDetailSheet({
   const [isAddingDoc, setIsAddingDoc] = React.useState(false)
 
   const [followups, setFollowups] = React.useState<ClaimFollowupRecord[]>([])
-  const [isLoadingFollowups, setIsLoadingFollowups] = React.useState(false)
+  const [followupsLoadedFor, setFollowupsLoadedFor] = React.useState<string | null>(null)
   const [followupNote, setFollowupNote] = React.useState("")
   const [followupDate, setFollowupDate] = React.useState(
     () => new Date().toISOString().slice(0, 10)
@@ -95,29 +96,28 @@ export function ClaimDetailSheet({
 
   React.useEffect(() => {
     if (!claim?.id || !open) return
+    const claimId = claim.id
     let active = true
 
-    setIsLoadingDocs(true)
-    listClaimDocumentsAction(claim.id).then((res) => {
+    listClaimDocumentsAction(claimId).then((res) => {
       if (active) {
         if (res.ok && res.data) {
           setDocuments(res.data)
         } else {
           toast.error(res.error ?? "Gagal memuat dokumen klaim")
         }
-        setIsLoadingDocs(false)
+        setDocsLoadedFor(claimId)
       }
     })
 
-    setIsLoadingFollowups(true)
-    listClaimFollowupsAction(claim.id).then((res) => {
+    listClaimFollowupsAction(claimId).then((res) => {
       if (active) {
         if (res.ok && res.data) {
           setFollowups(res.data)
         } else {
           toast.error(res.error ?? "Gagal memuat tindak lanjut klaim")
         }
-        setIsLoadingFollowups(false)
+        setFollowupsLoadedFor(claimId)
       }
     })
 
@@ -125,6 +125,9 @@ export function ClaimDetailSheet({
       active = false
     }
   }, [claim?.id, open])
+
+  const isLoadingDocs = Boolean(claim?.id) && docsLoadedFor !== claim?.id
+  const isLoadingFollowups = Boolean(claim?.id) && followupsLoadedFor !== claim?.id
 
   const receivedCount = documents.filter((d) => d.isReceived).length
   const requiredDocs = documents.filter((d) => d.isRequired)
