@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/brokerage-cetak-sesuai-input`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#91](https://github.com/agussusanto17/lch-ins/pull/91)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
