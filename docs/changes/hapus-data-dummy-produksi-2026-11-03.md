@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `chore/hapus-data-dummy-produksi`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#81](https://github.com/agussusanto17/lch-ins/pull/81)
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
