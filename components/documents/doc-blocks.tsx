@@ -269,7 +269,8 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
 
 export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
   // Deductible texts already name their peril, so the cover column is not
-  // printed. Covers sharing the same text print it once.
+  // printed. Covers sharing the same text print it once, each as a "-" bullet
+  // like the rate list, with wrapped lines aligned to the text.
   const deductibles = [
     ...new Set(
       slip.rateLines
@@ -284,10 +285,11 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
       <SectionHeading>DEDUCTIBLE &amp; CONDITIONS</SectionHeading>
       <div className="flex flex-col gap-3 text-[13px]">
         {deductibles.length ? (
-          <ul className="text-[12.5px]">
+          <ul className="flex flex-col gap-1.5 text-[12.5px]">
             {deductibles.map((text) => (
-              <li key={text} className="border-b py-2 whitespace-pre-line">
-                {text}
+              <li key={text} className="flex gap-2">
+                <span aria-hidden>-</span>
+                <span className="whitespace-pre-line">{text}</span>
               </li>
             ))}
           </ul>
