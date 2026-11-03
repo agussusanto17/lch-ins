@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/report-notifikasi-dari-database`
-- **PR:** # (isi setelah PR dibuka)
+- **PR:** #83
 - **Dikerjakan oleh:** ZoD3V dengan Claude
 
 ## Latar belakang
