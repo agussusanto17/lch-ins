@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `feat/quotation-form-seperti-placing`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#100](https://github.com/agussusanto17/lch-ins/pull/100)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
