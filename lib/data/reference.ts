@@ -288,6 +288,31 @@ export const PROPERTY_RATE_LINES = [
   "BI EQVET",
 ]
 
+/** Full peril names displayed in the Property RATE document block. */
+export const PAR_EQVET_FULL_NAMES: Record<string, string> = {
+  FLEXAS:
+    "Fire, Lightning, Explosion, Impact by Falling Aircraft and Smoke Damage (FLEXAS)",
+  FWTWD: "Flood, Windstorm, Tempest and Water Damage (FWTWD)",
+  RSMDCC: "Riot, Strikes, Malicious Damage, Civil Commotion (RSMDCC)",
+  "Other Losses": "Others Losses",
+  OTHERS: "Others Losses",
+  "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)": "Business Interruption PAR",
+  EQVET: "Earthquake, Volcanic Eruption and Tsunami (EQVET)",
+  "BI EQVET": "Business Interruption EQVET",
+}
+
+/** Short acronym labels used in calculation formulas. */
+export const PAR_EQVET_FORMULA_NAMES: Record<string, string> = {
+  FLEXAS: "FLEXAS",
+  FWTWD: "FWTWD",
+  RSMDCC: "RSMDCC",
+  "Other Losses": "OTHERS",
+  OTHERS: "OTHERS",
+  "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)": "BI PAR",
+  EQVET: "EQVET",
+  "BI EQVET": "BI EQVET",
+}
+
 /** Baris rate default untuk COB Motor Vehicle. */
 export const MOTOR_RATE_LINES = [
   "Comprehensive Casco",
