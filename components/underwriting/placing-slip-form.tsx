@@ -141,6 +141,11 @@ const INDEMNITY_ITEMS = BI_SCALE_OJK.map((s) => ({
   value: `${s.months} months`,
 }))
 
+// Isian putih di panel abu ringkasan premi hanya 1,04:1 tanpa garis tepi.
+// Garis muted-foreground/80 memberi 3,32:1 (terang) dan 4,09:1 (gelap)
+// terhadap panel, memenuhi 3:1 untuk batas komponen (WCAG 1.4.11).
+const PANEL_INPUT = "border-muted-foreground/80 bg-background"
+
 /**
  * Form placing slip. Mengambil slip dari store sesi (termasuk slip yang baru
  * dibuat) dan jatuh ke data server bila belum ada di store.
@@ -1196,7 +1201,7 @@ function SlipEditor({
                     <NumberInput
                       id="disc"
                       preset="percent"
-                      className="bg-background"
+                      className={PANEL_INPUT}
                       min={0}
                       max={100}
                       invalid={slip.discountPct < 0 || slip.discountPct > 100}
@@ -1209,7 +1214,7 @@ function SlipEditor({
                     <NumberInput
                       id="admin"
                       preset="money"
-                      className="bg-background"
+                      className={PANEL_INPUT}
                       value={slip.adminCost || null}
                       onValueChange={(v) => set({ adminCost: v ?? 0 })}
                     />
@@ -1219,7 +1224,7 @@ function SlipEditor({
                     <NumberInput
                       id="stamp"
                       preset="money"
-                      className="bg-background"
+                      className={PANEL_INPUT}
                       value={slip.stampDuty || null}
                       onValueChange={(v) => set({ stampDuty: v ?? 0 })}
                     />
