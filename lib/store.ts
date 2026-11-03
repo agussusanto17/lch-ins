@@ -5,12 +5,8 @@ import * as React from "react"
 import type { Claim, Client, PlacingSlip, Policy, Sppa } from "@/lib/data"
 
 /**
- * Store sesi di browser.
- *
- * Mulai kosong dan diisi daftar dari server lewat `hydrate`, lalu setiap
- * tambah, ubah, dan hapus dari form langsung terlihat di tabel, halaman
- * detail, dan dokumen cetak selama tab browser terbuka. Tidak disimpan ke
- * localStorage karena berisi data KYC.
+ * Store sesi di browser, mulai kosong dan diisi daftar server lewat `hydrate`.
+ * Tidak disimpan ke localStorage karena berisi data KYC.
  */
 
 interface Collections {
@@ -50,9 +46,8 @@ function commit<K extends Key>(key: K, rows: Collections[K]) {
 }
 
 /**
- * Seluruh baris satu koleksi. `initial` adalah daftar dari server: dipakai
- * sampai koleksi dihidrasi, supaya render server dan render pertama di
- * browser sama dan tabel tidak berkedip.
+ * `initial` (daftar server) dipakai sampai koleksi dihidrasi, supaya render
+ * server dan render pertama di browser sama dan tabel tidak berkedip.
  */
 export function useCollection<K extends Key>(
   key: K,
@@ -99,10 +94,8 @@ export const store = {
   /**
    * Pasang daftar dari server ke sebuah koleksi.
    *
-   * Hidrasi pertama mengganti seisi koleksi. Hidrasi berikutnya hanya upsert,
-   * karena daftar yang datang belum tentu lengkap. Halaman detail klien,
-   * misalnya, cuma mengirim SPPA milik klien itu; kalau itu ikut mengganti
-   * seisi koleksi, SPPA klien lain hilang.
+   * Hidrasi pertama mengganti seisi koleksi; berikutnya hanya upsert karena
+   * daftarnya bisa parsial (detail klien hanya mengirim SPPA klien itu).
    */
   hydrate<K extends Key>(key: K, rows: Collections[K]) {
     if (hydrated.has(key)) {

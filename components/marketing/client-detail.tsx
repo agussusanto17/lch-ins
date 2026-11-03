@@ -90,6 +90,7 @@ export function ClientDetail({
   }, [client])
 
   const [editKey, setEditKey] = React.useState<number | null>(null)
+  const clientList = React.useMemo(() => (client ? [client] : []), [client])
   const slipPaging = usePagination(clientSlips, 10)
   const policyPaging = usePagination(clientPolicies, 10)
   const claimPaging = usePagination(clientClaims, 10)
@@ -290,7 +291,7 @@ export function ClientDetail({
         clientId={client.id}
         initialSppa={initialSppa}
         compact
-        clients={[client]}
+        clients={clientList}
         vehicleOptions={vehicleOptions}
       />
 

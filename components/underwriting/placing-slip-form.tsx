@@ -229,6 +229,7 @@ function SlipEditor({
   const [issues, setIssues] = React.useState<string[] | null>(null)
   const [confirmRelease, setConfirmRelease] = React.useState(false)
   const [releaseNoPreview, setReleaseNoPreview] = React.useState<string | null>(null)
+  const previewSeqRef = React.useRef(0)
   const [confirmDestroy, setConfirmDestroy] = React.useState(false)
 
   // Peringatan saat menutup tab dengan perubahan yang belum disimpan.
@@ -383,9 +384,11 @@ function SlipEditor({
       setIssues(found)
       return
     }
+    const seq = ++previewSeqRef.current
     setReleaseNoPreview(null)
     setConfirmRelease(true)
     previewSlipNumberAction(slip.coverCode).then((res) => {
+      if (seq !== previewSeqRef.current) return
       if (res.ok) setReleaseNoPreview(res.data ?? null)
     })
   }

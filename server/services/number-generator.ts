@@ -140,9 +140,8 @@ export async function nextDocumentNumber(
 }
 
 /**
- * Perkiraan nomor berikutnya untuk ditampilkan sebelum release. Hanya membaca
- * counter, tidak menaikkannya, jadi nomor resmi bisa berbeda kalau ada dokumen
- * lain yang terbit lebih dulu.
+ * Perkiraan nomor berikutnya tanpa menaikkan counter. Nomor resmi bisa berbeda
+ * kalau dokumen lain terbit lebih dulu.
  */
 export async function previewDocumentNumber(
   db: Prisma.TransactionClient,
