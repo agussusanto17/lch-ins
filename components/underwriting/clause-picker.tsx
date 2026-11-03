@@ -251,8 +251,19 @@ export function ClausePicker({
                       className="text-muted-foreground"
                       onClick={() => setEditing(open ? null : c.id)}
                     >
-                      <Pencil data-icon="inline-start" />
-                      {open ? "Tutup" : "Edit wording"}
+                      {/* Hasil edit sudah masuk ke slip saat diketik; Save hanya menutup
+                          editor. Ke database tetap lewat Simpan Draft. */}
+                      {open ? (
+                        <>
+                          <Check data-icon="inline-start" />
+                          Save
+                        </>
+                      ) : (
+                        <>
+                          <Pencil data-icon="inline-start" />
+                          Edit wording
+                        </>
+                      )}
                     </Button>
 
                     <Button
