@@ -2,10 +2,12 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 
 import { FormOptionsBoundary } from "@/components/shared/form-options-boundary"
-import { QuotationDraftForm } from "@/components/underwriting/quotation-draft-form"
+import { PlacingSlipForm } from "@/components/underwriting/placing-slip-form"
 import { canManage } from "@/lib/access"
+import { listInsuredOptions } from "@/lib/server/clients"
 import { currentUser } from "@/lib/server/session"
 import { getPlacingSlipById } from "@/lib/server/placing-slips"
+import { listVehicleOptions } from "@/lib/server/vehicles"
 
 export const metadata: Metadata = {
   title: "Quotation Slip — LCH Insurance Brokers",
@@ -22,10 +24,22 @@ export default async function QuotationDraftPage({
   }
 
   const { id } = await params
-  const slip = await getPlacingSlipById(id)
+  const [slip, vehicleOptions, clients] = await Promise.all([
+    getPlacingSlipById(id),
+    listVehicleOptions(),
+    listInsuredOptions(),
+  ])
+
   return (
     <FormOptionsBoundary>
-      <QuotationDraftForm id={id} initial={slip} />
+      <PlacingSlipForm
+        id={id}
+        initial={slip}
+        mode="edit"
+        stage="quotation"
+        vehicleOptions={vehicleOptions}
+        clients={clients}
+      />
     </FormOptionsBoundary>
   )
 }
