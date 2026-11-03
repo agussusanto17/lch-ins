@@ -28,6 +28,7 @@ import {
 } from "@/lib/data/ojk-motor"
 import { nextDocumentNumber } from "@/server/services/number-generator"
 import { recordAudit } from "@/server/services/audit"
+import { shouldSeedMockData } from "@/lib/server/mock-seed"
 
 const SLIP_ITEM_VEHICLE = {
   vehicleBrand: { select: { name: true } },
@@ -593,7 +594,7 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
     ? { id }
     : { slipNo: id }
 
-  let record = await prisma.placingSlip.findUnique({
+  const record = await prisma.placingSlip.findUnique({
     where: whereClause,
     include: {
       client: { select: { id: true, name: true } },
@@ -626,46 +627,6 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
       },
     },
   })
-
-  // Fallback pencocokan jika id yang dikirim adalah mock id seperti "s-001"
-  if (!record && !isUuid) {
-    const mock = MOCK_SLIPS.find((s) => s.id === id)
-    if (mock?.slipNo) {
-      record = await prisma.placingSlip.findUnique({
-        where: { slipNo: mock.slipNo },
-        include: {
-          client: { select: { id: true, name: true } },
-          cob: { select: { id: true, code: true, name: true } },
-          coverType: { select: { id: true, code: true, name: true, abbreviation: true } },
-          occupation: { select: { id: true, code: true, name: true } },
-          constructionClass: { select: { id: true, code: true, name: true } },
-          currency: { select: { code: true } },
-          creator: { select: { id: true, name: true } },
-          items: { include: SLIP_ITEM_VEHICLE, orderBy: { sortOrder: "asc" } },
-          rateLines: {
-            include: { kind: { select: { id: true, code: true, name: true } } },
-            orderBy: { sortOrder: "asc" },
-          },
-          securityPanel: {
-            include: {
-              insurer: { select: { id: true, name: true } },
-              position: { select: { id: true, code: true, name: true } },
-            },
-            orderBy: { createdAt: "asc" },
-          },
-          clauses: {
-            orderBy: { sortOrder: "asc" },
-          },
-          wordingForms: {
-            include: { wordingForm: { select: { id: true, name: true } } },
-          },
-          _count: {
-            select: { policies: true },
-          },
-        },
-      })
-    }
-  }
 
   if (!record) return null
   return toPlacingSlipRecord(record)
@@ -1510,6 +1471,7 @@ export async function deletePlacingSlip(id: string, userId: string): Promise<voi
  * Pembenihan data awal 3 Placing Slip mock LCH jika tabel placing_slips masih kosong.
  */
 export async function seedInitialSlipsIfEmpty(): Promise<number> {
+  if (!shouldSeedMockData()) return 0
   if (hasCheckedSeed) return 0
 
   const count = await prisma.placingSlip.count()

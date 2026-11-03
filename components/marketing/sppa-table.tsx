@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { Sppa, VehicleBrandOption } from "@/lib/data"
+import type { Client, Sppa, VehicleBrandOption } from "@/lib/data"
 import type { SppaRecord } from "@/lib/server/sppa"
 import type { ExportSpec } from "@/lib/export"
 import { dateShort, money } from "@/lib/format"
@@ -43,6 +43,8 @@ export interface SppaTableProps {
   clientId?: string
   /** Mode detail klien: card sendiri tanpa pencarian dan export. */
   compact?: boolean
+  /** Pilihan klien untuk form SPPA. */
+  clients: Client[]
   vehicleOptions?: VehicleBrandOption[]
 }
 
@@ -50,9 +52,10 @@ export function SppaTable({
   initialSppa,
   clientId,
   compact,
+  clients,
   vehicleOptions,
 }: SppaTableProps) {
-  const all = useCollection("sppa")
+  const all = useCollection("sppa", initialSppa)
   const slips = useCollection("slips")
   const permission = usePermission()
   const canManageMarketing = permission.canManage("/marketing")
@@ -61,8 +64,7 @@ export function SppaTable({
   const [isPending, startTransition] = React.useTransition()
 
   React.useEffect(() => {
-    if (!initialSppa?.length) return
-    store.hydrate("sppa", initialSppa)
+    if (initialSppa) store.hydrate("sppa", initialSppa)
   }, [initialSppa])
   const [form, setForm] = React.useState<{
     key: number
@@ -322,6 +324,7 @@ export function SppaTable({
           }}
           sppa={form.sppa}
           clientId={clientId}
+          clients={clients}
           vehicleOptions={vehicleOptions}
         />
       ) : null}

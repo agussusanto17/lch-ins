@@ -50,6 +50,7 @@ import {
   POLICY_TYPES,
   policyStatus,
   premiumIdr,
+  type PlacingSlip,
   type Policy,
   type PolicyType,
 } from "@/lib/data"
@@ -88,17 +89,22 @@ export function PolicyDatabase({
   initialPolicies,
   clientOptions,
   formOptions,
+  slips,
+  claimCounts,
 }: {
   initialPolicies: Policy[]
   clientOptions: ClientOption[]
   formOptions: PolicyFormOptions
+  /** Slip yang bisa ditautkan ke polis. */
+  slips: PlacingSlip[]
+  /** Jumlah klaim per id polis. */
+  claimCounts: Record<string, number>
 }) {
   const cobItems = useCobFilterItems()
   const today = useToday()
   const permission = usePermission()
   const canManage = permission.canManage("/policies")
   const sessionPolicies = useCollection("policies")
-  const claims = useCollection("claims")
   const [, startDelete] = React.useTransition()
 
   const policies = React.useMemo(
@@ -159,7 +165,7 @@ export function PolicyDatabase({
       ]
     }
 
-    const claimCount = claims.filter((c) => c.policyId === p.id).length
+    const claimCount = claimCounts[p.id] ?? 0
     const childCount = policies.filter((x) => x.parentPolicyId === p.id).length
     const blocked = claimCount > 0 || childCount > 0
     const renewable = p.type === "Baru" || p.type === "Renewal"
@@ -506,6 +512,8 @@ export function PolicyDatabase({
           preset={form.preset}
           clientOptions={clientOptions}
           formOptions={formOptions}
+          policies={policies}
+          slips={slips}
         />
       ) : null}
       <PolicyFilesSheet

@@ -8,7 +8,6 @@ import { listInsuredOptions } from "@/lib/server/clients"
 import { currentUser } from "@/lib/server/session"
 import { getPlacingSlipById } from "@/lib/server/placing-slips"
 import { listVehicleOptions } from "@/lib/server/vehicles"
-import { slipById } from "@/lib/data"
 
 export const metadata: Metadata = {
   title: "Edit Placing Slip — LCH Insurance Brokers",
@@ -26,7 +25,7 @@ export default async function EditSlipPage({
 
   const { id } = await params
   const [slip, vehicleOptions, clients] = await Promise.all([
-    getPlacingSlipById(id).then((s) => s ?? slipById(id) ?? null),
+    getPlacingSlipById(id),
     listVehicleOptions(),
     listInsuredOptions(),
   ])

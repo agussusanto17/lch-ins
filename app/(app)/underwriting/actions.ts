@@ -18,6 +18,7 @@ import {
 import { validatePlacingSlipForRelease } from "@/lib/server/tariffs"
 import { prisma } from "@/lib/prisma"
 import { requireManage } from "@/lib/server/session"
+import { previewDocumentNumber } from "@/server/services/number-generator"
 
 export interface ActionResponse<T = void> {
   ok: boolean
@@ -244,6 +245,21 @@ export async function releasePlacingSlipAction(
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Gagal merilis Placing Slip."
+    return { ok: false, error: message }
+  }
+}
+
+/** Perkiraan nomor slip untuk dialog konfirmasi release, dari counter database. */
+export async function previewSlipNumberAction(
+  coverCode: string | null
+): Promise<ActionResponse<string | null>> {
+  try {
+    await requireManage("/underwriting")
+    const slipNo = await previewDocumentNumber(prisma, { code: "PS", coverCode })
+    return { ok: true, data: slipNo }
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Gagal membaca nomor slip."
     return { ok: false, error: message }
   }
 }

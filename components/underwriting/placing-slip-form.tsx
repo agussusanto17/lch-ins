@@ -44,12 +44,10 @@ import {
   LimitRateTable,
 } from "@/components/underwriting/rate-tables"
 import {
-  buildSlipNo,
   coverCodeFor,
   coverLabel,
   occupationParts,
   isOutOfBounds,
-  nextSlipSeq,
   rateLinesWithBounds,
   recalc,
   releaseIssues,
@@ -59,6 +57,7 @@ import {
 } from "@/components/underwriting/slip-model"
 import {
   deletePlacingSlipAction,
+  previewSlipNumberAction,
   releasePlacingSlipAction,
   savePlacingSlipAction,
   togglePlacingSlipStatusAction,
@@ -229,6 +228,8 @@ function SlipEditor({
 
   const [issues, setIssues] = React.useState<string[] | null>(null)
   const [confirmRelease, setConfirmRelease] = React.useState(false)
+  const [releaseNoPreview, setReleaseNoPreview] = React.useState<string | null>(null)
+  const previewSeqRef = React.useRef(0)
   const [confirmDestroy, setConfirmDestroy] = React.useState(false)
 
   // Peringatan saat menutup tab dengan perubahan yang belum disimpan.
@@ -379,8 +380,17 @@ function SlipEditor({
 
   function startRelease() {
     const found = releaseIssues(slip)
-    if (found.length) setIssues(found)
-    else setConfirmRelease(true)
+    if (found.length) {
+      setIssues(found)
+      return
+    }
+    const seq = ++previewSeqRef.current
+    setReleaseNoPreview(null)
+    setConfirmRelease(true)
+    previewSlipNumberAction(slip.coverCode).then((res) => {
+      if (seq !== previewSeqRef.current) return
+      if (res.ok) setReleaseNoPreview(res.data ?? null)
+    })
   }
 
   function doRelease() {
@@ -1404,14 +1414,15 @@ function SlipEditor({
           <AlertDialogHeader>
             <AlertDialogTitle>Release placing slip?</AlertDialogTitle>
             <AlertDialogDescription>
-              Nomor slip dibuat sekarang dan tidak bisa diubah:{" "}
-              <span className="tabular font-semibold text-foreground">
-                {buildSlipNo(
-                  nextSlipSeq(store.all("slips"), today),
-                  slip.coverCode,
-                  today
-                )}
-              </span>
+              Nomor slip dibuat sekarang dan tidak bisa diubah
+              {releaseNoPreview ? (
+                <>
+                  , perkiraan:{" "}
+                  <span className="tabular font-semibold text-foreground">
+                    {releaseNoPreview}
+                  </span>
+                </>
+              ) : null}
               . Setelah release, slip bisa dilanjutkan ke Quotation Slip.
             </AlertDialogDescription>
           </AlertDialogHeader>

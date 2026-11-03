@@ -6,7 +6,6 @@ import { QuotationDraftForm } from "@/components/underwriting/quotation-draft-fo
 import { canManage } from "@/lib/access"
 import { currentUser } from "@/lib/server/session"
 import { getPlacingSlipById } from "@/lib/server/placing-slips"
-import { slipById } from "@/lib/data"
 
 export const metadata: Metadata = {
   title: "Quotation Slip — LCH Insurance Brokers",
@@ -23,7 +22,7 @@ export default async function QuotationDraftPage({
   }
 
   const { id } = await params
-  const slip = (await getPlacingSlipById(id)) ?? slipById(id) ?? null
+  const slip = await getPlacingSlipById(id)
   return (
     <FormOptionsBoundary>
       <QuotationDraftForm id={id} initial={slip} />
