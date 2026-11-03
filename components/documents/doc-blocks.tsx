@@ -1,7 +1,4 @@
-import {
-  coverLabel,
-  slipOccupationText,
-} from "@/components/underwriting/slip-model"
+import { slipOccupationText } from "@/components/underwriting/slip-model"
 import { sumItems, totalPremium, totalSumInsured } from "@/lib/calc"
 import { sanitizeHtml } from "@/lib/sanitize"
 import {
@@ -260,36 +257,29 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
 }
 
 export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
-  const perCover = slip.rateLines
-    .map((l) => ({
-      id: l.id,
-      cover: coverLabel(slip, l),
-      text: l.deductible?.trim(),
-    }))
-    .filter((r) => r.text)
-  if (!perCover.length && !slip.specialConditions) return null
+  // Deductible texts already name their peril, so the cover column is not
+  // printed. Covers sharing the same text print it once.
+  const deductibles = [
+    ...new Set(
+      slip.rateLines
+        .map((l) => l.deductible?.trim())
+        .filter((text): text is string => Boolean(text))
+    ),
+  ]
+  if (!deductibles.length && !slip.specialConditions) return null
 
   return (
     <>
       <SectionHeading>DEDUCTIBLE &amp; CONDITIONS</SectionHeading>
       <div className="flex flex-col gap-3 text-[13px]">
-        {perCover.length ? (
-          <table className="w-full text-[12.5px]">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="w-2/5 py-2 pr-4 font-semibold">Cover</th>
-                <th className="py-2 font-semibold">Deductible</th>
-              </tr>
-            </thead>
-            <tbody>
-              {perCover.map((r) => (
-                <tr key={r.id} className="border-b align-top">
-                  <td className="py-2 pr-4">{r.cover}</td>
-                  <td className="py-2 whitespace-pre-line">{r.text}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {deductibles.length ? (
+          <ul className="text-[12.5px]">
+            {deductibles.map((text) => (
+              <li key={text} className="border-b py-2 whitespace-pre-line">
+                {text}
+              </li>
+            ))}
+          </ul>
         ) : null}
         {slip.specialConditions ? (
           <div>
