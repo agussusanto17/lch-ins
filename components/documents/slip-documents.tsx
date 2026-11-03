@@ -133,13 +133,15 @@ export function PlacingSlipDocument(props: DocProps) {
 export function QuotationSlipDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
+  const number = derivedDocNumber(slip.slipNo, "QS")
+
   return (
     <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
       <Letterhead withAddress />
       <DocTitle
         title="QUOTATION SLIP"
-        number={slip.slipNo ? `No. ${slip.slipNo}` : "DRAFT"}
-        muted={!slip.slipNo}
+        number={number ? `No. ${number}` : "DRAFT"}
+        muted={!number}
       />
       <DetailTable slip={slip} />
       <InterestBlock slip={slip} />

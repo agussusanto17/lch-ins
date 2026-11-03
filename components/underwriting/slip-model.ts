@@ -359,17 +359,20 @@ export function releaseIssues(slip: PlacingSlip) {
 // Penomoran
 
 /**
- * Nomor Cover Note dan Closing Instruction diturunkan dari nomor slip supaya
- * tetap sama walau slip diedit: 002/LCH-PLCMT/PS-PAREQ/VIII/2026 menjadi
- * 002/LCH-PLCMT/CN-PAREQ/VIII/2026 dan 002/LCH-PLCMT/CI/VIII/2026. Format final
- * menunggu contoh dokumen dari LCH.
+ * Nomor Quotation Slip, Cover Note, dan Closing Instruction diturunkan dari
+ * nomor slip: nomor urut sama, hanya kode dokumennya yang berganti (Harry,
+ * 19 Oktober 2026). 002/LCH-PLCMT/PS-MV/XI/2026 menjadi QS-MV, CN-MV, dan
+ * CI-MV dengan nomor urut, bulan, dan tahun yang sama.
  */
-export function derivedDocNumber(slipNo: string | null, kind: "CN" | "CI") {
+export function derivedDocNumber(
+  slipNo: string | null,
+  kind: "QS" | "CN" | "CI"
+) {
   if (!slipNo) return null
   const parts = slipNo.split("/")
   if (parts.length < 5) return null
   const code = parts[2].replace(/^PS-?/, "")
-  parts[2] = kind === "CN" && code ? `CN-${code}` : kind
+  parts[2] = code ? `${kind}-${code}` : kind
   return parts.join("/")
 }
 

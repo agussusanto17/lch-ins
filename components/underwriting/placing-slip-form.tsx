@@ -98,8 +98,11 @@ import {
   brokerageLimitIssue,
   brokerageLimitText,
   brokerageVatAmount,
+  calculateParEqvet,
   discountAmount,
   effectiveBrokeragePct,
+  isParEqvetSlip,
+  parEqvetPolicyCharge,
   sumItems,
   sumPercent,
   totalPayable,
@@ -159,12 +162,12 @@ const ROLE_ITEMS = [
 
 export function panelIssues(panel: SecurityPanelRow[]): string[] {
   const issues: string[] = []
-  const valid = panel.filter((r) => r.insurer || r.share)
-  if (!valid.length) {
+  const filled = panel.filter((r) => r.insurer)
+  if (!filled.length) {
     issues.push("Tambahkan minimal 1 perusahaan asuransi.")
     return issues
   }
-  const totalShare = sumPercent(valid.map((r) => r.share))
+  const totalShare = sumPercent(panel.map((r) => r.share))
   if (totalShare !== 100) {
     issues.push(
       `Total share harus 100% (saat ini ${num(totalShare, 2)}%, ${
@@ -172,15 +175,16 @@ export function panelIssues(panel: SecurityPanelRow[]): string[] {
       } ${num(Math.abs(100 - totalShare), 2)}%).`
     )
   }
-  const leaders = valid.filter((r) => r.role === "As Leader")
-  if (leaders.length !== 1) {
-    issues.push("Tepat satu perusahaan asuransi harus menjadi Leader.")
+  // Satu asuransi 100% tidak punya leader atau member (LCH, 3 November 2026).
+  const leaders = filled.filter((r) => r.role === "As Leader").length
+  if (filled.length > 1 && leaders !== 1) {
+    issues.push("Panel wajib punya tepat satu leader.")
   }
-  const withoutInsurer = valid.filter((r) => !r.insurer)
+  const withoutInsurer = panel.filter((r) => r.share > 0 && !r.insurer)
   if (withoutInsurer.length) {
     issues.push("Ada baris panel yang belum memilih nama asuransi.")
   }
-  const duplicate = valid
+  const duplicate = filled
     .map((r) => r.insurer)
     .filter((name, i, all) => name && all.indexOf(name) !== i)
   if (duplicate.length) {
@@ -309,6 +313,7 @@ function SlipEditor({
   const [confirmClose, setConfirmClose] = React.useState(false)
 
   const panel = slip.securityPanel ?? []
+  const multiInsurer = panel.filter((r) => r.insurer).length > 1
   const totalShare = sumPercent(panel.map((r) => r.share))
   const pIssues = panelIssues(panel)
   const panelValid = pIssues.length === 0
@@ -317,6 +322,15 @@ function SlipEditor({
       .map((r) => r.insurer)
       .filter((name, i, all) => name && all.indexOf(name) !== i)
   )
+
+  function prepareSecurityPanel(p: SecurityPanelRow[] = panel) {
+    const isMulti = p.filter((r) => r.insurer).length > 1
+    return p
+      .filter((r) => r.insurer || r.share)
+      .map((r) =>
+        !isMulti && r.insurer ? { ...r, role: "As Leader" as const } : r
+      )
+  }
 
   function patchPanelRow(rowId: string, next: Partial<SecurityPanelRow>) {
     const nextPanel = (slip.securityPanel ?? []).map((r) =>
@@ -357,9 +371,7 @@ function SlipEditor({
         status: "Closed",
         rateLines: withBounds,
         rateExceptions: exceptions,
-        securityPanel: (slip.securityPanel ?? []).filter(
-          (r) => r.insurer || r.share
-        ),
+        securityPanel: prepareSecurityPanel(slip.securityPanel),
         updatedAt: today,
       }
       const res = await savePlacingSlipAction(toSend, "edit")
@@ -420,6 +432,13 @@ function SlipEditor({
   const premium = totalPremium(slip)
   const discount = discountAmount(slip)
   const payable = totalPayable(slip)
+  // Slip PAR + EQVET: Admin Cost dan Stamp Duty dikenakan per polis yang
+  // berpremi, jadi ringkasan menyebut jumlah polisnya.
+  const parEqvet = isParEqvetSlip(slip) ? calculateParEqvet(slip) : null
+  const policyCharge = parEqvetPolicyCharge(slip)
+  const chargedPolicies = parEqvet
+    ? [parEqvet.par, parEqvet.eqvet].filter((g) => g.policyCost > 0).length
+    : 0
   const unresolved = lines.filter(
     (l) => isOutOfBounds(l) && !slip.rateExceptions?.[l.id]
   ).length
@@ -494,9 +513,7 @@ function SlipEditor({
       id: next.id === "new" ? newId("s") : next.id,
       rateLines: withBounds,
       rateExceptions: exceptions,
-      securityPanel: (next.securityPanel ?? []).filter(
-        (r) => r.insurer || r.share
-      ),
+      securityPanel: prepareSecurityPanel(next.securityPanel),
       updatedAt: today,
     }
     store.upsert("slips", record)
@@ -523,9 +540,7 @@ function SlipEditor({
         status,
         rateLines: withBounds,
         rateExceptions: exceptions,
-        securityPanel: (slip.securityPanel ?? []).filter(
-          (r) => r.insurer || r.share
-        ),
+        securityPanel: prepareSecurityPanel(slip.securityPanel),
         updatedAt: today,
       }
       const res = await savePlacingSlipAction(toSend, isQuotation ? "edit" : mode)
@@ -582,9 +597,7 @@ function SlipEditor({
           ...slip,
           rateLines: withBounds,
           rateExceptions: exceptions,
-          securityPanel: (slip.securityPanel ?? []).filter(
-            (r) => r.insurer || r.share
-          ),
+          securityPanel: prepareSecurityPanel(slip.securityPanel),
           updatedAt: today,
         }
         const saveRes = await savePlacingSlipAction(
@@ -672,9 +685,7 @@ function SlipEditor({
           status,
           rateLines: withBounds,
           rateExceptions: exceptions,
-          securityPanel: (slip.securityPanel ?? []).filter(
-            (r) => r.insurer || r.share
-          ),
+          securityPanel: prepareSecurityPanel(slip.securityPanel),
           updatedAt: today,
         }
         const res = await savePlacingSlipAction(toSend, isQuotation ? "edit" : mode)
@@ -1438,6 +1449,17 @@ function SlipEditor({
                     </span>
                   </div>
                 ) : null}
+                {chargedPolicies > 0 ? (
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      Policy cost + stamp duty: {chargedPolicies} polis ×{" "}
+                      {money(policyCharge, slip.currency)}
+                    </span>
+                    <span className="tabular">
+                      {money(chargedPolicies * policyCharge, slip.currency)}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between border-t pt-3 text-[15px] font-bold text-primary">
                   <span>Total Payable</span>
                   <span className="tabular">
@@ -1571,7 +1593,7 @@ function SlipEditor({
                   <div className="hidden gap-3 text-xs text-muted-foreground lg:grid lg:grid-cols-[minmax(0,1fr)_120px_150px_40px]">
                     <span>Perusahaan Asuransi</span>
                     <span>Share (%)</span>
-                    <span>Peran</span>
+                    <span>{multiInsurer ? "Peran" : null}</span>
                     <span className="sr-only">Aksi</span>
                   </div>
 
@@ -1618,30 +1640,34 @@ function SlipEditor({
                           }
                         />
 
-                        <Select
-                          disabled={locked}
-                          value={row.role}
-                          onValueChange={(role) => {
-                            if (role === "As Leader") {
-                              setLeader(row.id)
-                            } else {
-                              patchPanelRow(row.id, { role: "As Member" })
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="w-full min-w-[130px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              {ROLE_ITEMS.map((r) => (
-                                <SelectItem key={r.value} value={r.value}>
-                                  {r.label}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
+                        {multiInsurer ? (
+                          <Select
+                            disabled={locked}
+                            value={row.role}
+                            onValueChange={(role) => {
+                              if (role === "As Leader") {
+                                setLeader(row.id)
+                              } else {
+                                patchPanelRow(row.id, { role: "As Member" })
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-full min-w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {ROLE_ITEMS.map((r) => (
+                                  <SelectItem key={r.value} value={r.value}>
+                                    {r.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span aria-hidden="true" />
+                        )}
 
                         <Button
                           type="button"
@@ -1698,12 +1724,17 @@ function SlipEditor({
                           >
                             <span className="w-40 truncate sm:w-64">
                               {r.insurer}
+                              {multiInsurer ? (
+                                <span className="ml-1 text-muted-foreground">
+                                  ({r.role.replace("As ", "")})
+                                </span>
+                              ) : null}
                             </span>
                             <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                               <span
                                 className={cn(
                                   "block h-full rounded-full",
-                                  r.role === "As Leader"
+                                  !multiInsurer || r.role === "As Leader"
                                     ? "bg-primary"
                                     : "bg-primary/45"
                                 )}
