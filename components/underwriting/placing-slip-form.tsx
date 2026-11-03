@@ -8,9 +8,14 @@ import {
   ArrowLeft,
   Ban,
   Check,
+  CircleCheck,
   Eye,
+  FileCheck2,
+  FileText,
   Info,
+  Plus,
   Save,
+  ScrollText,
   Send,
   Trash2,
 } from "lucide-react"
@@ -99,6 +104,7 @@ import {
   isParEqvetSlip,
   parEqvetPolicyCharge,
   sumItems,
+  sumPercent,
   totalPayable,
   totalPremium,
   totalSumInsured,
@@ -108,6 +114,7 @@ import {
   type ClassOfBusiness,
   type PlacingSlip,
   type RateException,
+  type SecurityPanelRow,
   type VehicleBrandOption,
 } from "@/lib/data"
 import { BI_SCALE_OJK } from "@/lib/data/ojk-tariff"
@@ -117,7 +124,7 @@ import {
   deductibleChoicesFor,
   withCurrent,
 } from "@/lib/form-options"
-import { money, percent } from "@/lib/format"
+import { money, num, percent } from "@/lib/format"
 import type { InsuredOption } from "@/lib/server/clients"
 import { newId, store, useRecord } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -131,6 +138,10 @@ const SECTION_KEYS = [
   "deductible",
   "rate",
   "brokerage",
+  "subjectivity",
+  "security",
+  "closing",
+  "coverNote",
 ] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
 
@@ -143,6 +154,53 @@ const INDEMNITY_ITEMS = BI_SCALE_OJK.map((s) => ({
   label: `${s.months} bulan · ${s.pct}% tarif dasar`,
   value: `${s.months} months`,
 }))
+
+const ROLE_ITEMS = [
+  { label: "As Leader", value: "As Leader" },
+  { label: "As Member", value: "As Member" },
+]
+
+export function panelIssues(panel: SecurityPanelRow[]): string[] {
+  const issues: string[] = []
+  const filled = panel.filter((r) => r.insurer)
+  if (!filled.length) {
+    issues.push("Tambahkan minimal 1 perusahaan asuransi.")
+    return issues
+  }
+  const totalShare = sumPercent(panel.map((r) => r.share))
+  if (totalShare !== 100) {
+    issues.push(
+      `Total share harus 100% (saat ini ${num(totalShare, 2)}%, ${
+        totalShare < 100 ? "kurang" : "lebih"
+      } ${num(Math.abs(100 - totalShare), 2)}%).`
+    )
+  }
+  // Satu asuransi 100% tidak punya leader atau member (LCH, 3 November 2026).
+  const leaders = filled.filter((r) => r.role === "As Leader").length
+  if (filled.length > 1 && leaders !== 1) {
+    issues.push("Panel wajib punya tepat satu leader.")
+  }
+  const withoutInsurer = panel.filter((r) => r.share > 0 && !r.insurer)
+  if (withoutInsurer.length) {
+    issues.push("Ada baris panel yang belum memilih nama asuransi.")
+  }
+  const duplicate = filled
+    .map((r) => r.insurer)
+    .filter((name, i, all) => name && all.indexOf(name) !== i)
+  if (duplicate.length) {
+    issues.push(
+      `Asuransi ganda: ${[...new Set(duplicate)].join(", ")}. Gabungkan share ke satu baris.`
+    )
+  }
+  return issues
+}
+
+const emptySecurityRow = (): SecurityPanelRow => ({
+  id: newId("sec"),
+  insurer: "",
+  share: 0,
+  role: "As Member",
+})
 
 // Isian putih di panel abu ringkasan premi hanya 1,04:1 tanpa garis tepi.
 // Garis muted-foreground/80 memberi 3,32:1 (terang) dan 4,09:1 (gelap)
@@ -162,7 +220,7 @@ export function PlacingSlipForm({
 }: {
   id?: string
   initial: PlacingSlip | null
-  mode: "new" | "edit"
+  mode: "new" | "edit" | "quotation"
   vehicleOptions?: VehicleBrandOption[]
   clients: InsuredOption[]
 }) {
@@ -206,7 +264,7 @@ function SlipEditor({
   clients,
 }: {
   initial: PlacingSlip
-  mode: "new" | "edit"
+  mode: "new" | "edit" | "quotation"
   vehicleOptions?: VehicleBrandOption[]
   clients: InsuredOption[]
 }) {
@@ -225,10 +283,22 @@ function SlipEditor({
     setSlip((s) => recalc({ ...s, ...patch }))
   }, [])
 
+  const isQuotation = mode === "quotation"
+  const showQuotationSections = isQuotation || slip.status !== "Draft"
+
+  const availableKeys = React.useMemo(() => {
+    if (showQuotationSections) {
+      return SECTION_KEYS
+    }
+    return SECTION_KEYS.filter(
+      (k) => !["subjectivity", "security", "closing", "coverNote"].includes(k)
+    )
+  }, [showQuotationSections])
+
   const [openSections, setOpenSections] = React.useState<
     Record<string, boolean>
   >(() => Object.fromEntries(SECTION_KEYS.map((k) => [k, true])))
-  const allOpen = SECTION_KEYS.every((k) => openSections[k])
+  const allOpen = availableKeys.every((k) => openSections[k])
   const sectionProps = (key: SectionKey) => ({
     collapsible: true as const,
     open: openSections[key],
@@ -240,6 +310,87 @@ function SlipEditor({
   const [releaseNoPreview, setReleaseNoPreview] = React.useState<string | null>(null)
   const previewSeqRef = React.useRef(0)
   const [confirmDestroy, setConfirmDestroy] = React.useState(false)
+  const [confirmClose, setConfirmClose] = React.useState(false)
+
+  const panel = slip.securityPanel ?? []
+  const multiInsurer = panel.filter((r) => r.insurer).length > 1
+  const totalShare = sumPercent(panel.map((r) => r.share))
+  const pIssues = panelIssues(panel)
+  const panelValid = pIssues.length === 0
+  const duplicateInsurerNames = new Set(
+    panel
+      .map((r) => r.insurer)
+      .filter((name, i, all) => name && all.indexOf(name) !== i)
+  )
+
+  function prepareSecurityPanel(p: SecurityPanelRow[] = panel) {
+    const isMulti = p.filter((r) => r.insurer).length > 1
+    return p
+      .filter((r) => r.insurer || r.share)
+      .map((r) =>
+        !isMulti && r.insurer ? { ...r, role: "As Leader" as const } : r
+      )
+  }
+
+  function patchPanelRow(rowId: string, next: Partial<SecurityPanelRow>) {
+    const nextPanel = (slip.securityPanel ?? []).map((r) =>
+      r.id === rowId ? { ...r, ...next } : r
+    )
+    set({ securityPanel: nextPanel })
+  }
+
+  function setLeader(rowId: string) {
+    const nextPanel = (slip.securityPanel ?? []).map((r) => ({
+      ...r,
+      role: (r.id === rowId ? "As Leader" : "As Member") as "As Leader" | "As Member",
+    }))
+    set({ securityPanel: nextPanel })
+  }
+
+  function removePanelRow(rowId: string) {
+    const nextPanel = (slip.securityPanel ?? []).filter((r) => r.id !== rowId)
+    set({ securityPanel: nextPanel })
+  }
+
+  function addPanelRow() {
+    const nextPanel = [...(slip.securityPanel ?? []), emptySecurityRow()]
+    set({ securityPanel: nextPanel })
+  }
+
+  function issueClosing() {
+    setConfirmClose(false)
+    startTransition(async () => {
+      const withBounds = rateLinesWithBounds(slip)
+      const exceptions = Object.fromEntries(
+        Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
+          withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
+        )
+      )
+      const toSend: PlacingSlip = {
+        ...slip,
+        status: "Closed",
+        rateLines: withBounds,
+        rateExceptions: exceptions,
+        securityPanel: prepareSecurityPanel(slip.securityPanel),
+        updatedAt: today,
+      }
+      const res = await savePlacingSlipAction(toSend, "edit")
+      if (!res.ok || !res.data) {
+        toast.error("Gagal menerbitkan closing instruction", {
+          description: res.error,
+        })
+        return
+      }
+      const record = res.data
+      store.upsert("slips", record)
+      setSlip(record)
+      setSavedJson(JSON.stringify(record))
+      toast.success("Closing instruction diterbitkan", {
+        description: `Placing slip ${record.slipNo ?? ""} selesai dan di-close.`,
+      })
+      router.push(`/underwriting/closing/${record.id}`)
+    })
+  }
 
   // Peringatan saat menutup tab dengan perubahan yang belum disimpan.
   React.useEffect(() => {
@@ -272,6 +423,7 @@ function SlipEditor({
     slip.typeOfCover
   ).map(toItem)
   const wordingNames = options.wordingForms.map((w) => w.name)
+  const insurerItems = options.insurers.map((ins) => ins.name)
 
   const lines = rateLinesWithBounds(slip)
   const md = sumItems(slip.sumInsuredSection1)
@@ -350,11 +502,18 @@ function SlipEditor({
         withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
       )
     )
+    const status =
+      isQuotation && next.status === "Released" && panelValid
+        ? "Quoted"
+        : next.status
+
     const record: PlacingSlip = {
       ...next,
+      status,
       id: next.id === "new" ? newId("s") : next.id,
       rateLines: withBounds,
       rateExceptions: exceptions,
+      securityPanel: prepareSecurityPanel(next.securityPanel),
       updatedAt: today,
     }
     store.upsert("slips", record)
@@ -371,13 +530,20 @@ function SlipEditor({
           withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
         )
       )
+      const status =
+        isQuotation && slip.status === "Released" && panelValid
+          ? "Quoted"
+          : slip.status
+
       const toSend: PlacingSlip = {
         ...slip,
+        status,
         rateLines: withBounds,
         rateExceptions: exceptions,
+        securityPanel: prepareSecurityPanel(slip.securityPanel),
         updatedAt: today,
       }
-      const res = await savePlacingSlipAction(toSend, mode)
+      const res = await savePlacingSlipAction(toSend, isQuotation ? "edit" : mode)
       if (!res.ok || !res.data) {
         toast.error("Gagal menyimpan slip", { description: res.error })
         return
@@ -386,11 +552,18 @@ function SlipEditor({
       store.upsert("slips", record)
       setSlip(record)
       setSavedJson(JSON.stringify(record))
-      toast.success("Draft tersimpan", {
-        description: record.slipNo ?? record.insuredName ?? undefined,
-      })
+      toast.success(
+        record.status === "Draft" ? "Draft tersimpan" : "Perubahan tersimpan",
+        {
+          description: record.slipNo ?? record.insuredName ?? undefined,
+        }
+      )
       if (mode === "new" || slip.id !== record.id) {
-        router.replace(`/underwriting/edit/${record.id}`)
+        router.replace(
+          isQuotation
+            ? `/underwriting/quotation/edit/${record.id}`
+            : `/underwriting/edit/${record.id}`
+        )
       }
     })
   }
@@ -424,9 +597,13 @@ function SlipEditor({
           ...slip,
           rateLines: withBounds,
           rateExceptions: exceptions,
+          securityPanel: prepareSecurityPanel(slip.securityPanel),
           updatedAt: today,
         }
-        const saveRes = await savePlacingSlipAction(toSend, mode)
+        const saveRes = await savePlacingSlipAction(
+          toSend,
+          isQuotation ? "edit" : mode
+        )
         if (!saveRes.ok || !saveRes.data) {
           toast.error("Gagal menyimpan slip sebelum rilis", { description: saveRes.error })
           return
@@ -448,7 +625,11 @@ function SlipEditor({
       setSavedJson(JSON.stringify(record))
       toast.success("Slip di-release", { description: `No. slip ${record.slipNo}` })
       if (mode === "new" || slip.id !== record.id) {
-        router.replace(`/underwriting/edit/${record.id}`)
+        router.replace(
+          isQuotation
+            ? `/underwriting/quotation/edit/${record.id}`
+            : `/underwriting/edit/${record.id}`
+        )
       }
     })
   }
@@ -494,13 +675,20 @@ function SlipEditor({
             withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
           )
         )
+        const status =
+          isQuotation && slip.status === "Released" && panelValid
+            ? "Quoted"
+            : slip.status
+
         const toSend: PlacingSlip = {
           ...slip,
+          status,
           rateLines: withBounds,
           rateExceptions: exceptions,
+          securityPanel: prepareSecurityPanel(slip.securityPanel),
           updatedAt: today,
         }
-        const res = await savePlacingSlipAction(toSend, mode)
+        const res = await savePlacingSlipAction(toSend, isQuotation ? "edit" : mode)
         if (res.ok && res.data) {
           store.upsert("slips", res.data)
           router.push(path(res.data.id))
@@ -516,22 +704,35 @@ function SlipEditor({
 
   const destroyLabel = slip.status === "Draft" ? "Hapus Draft" : "Batalkan Slip"
   const canDestroy =
-    mode === "edit" && slip.status !== "Cancelled" && slip.status !== "Closed"
+    (mode === "edit" || isQuotation) &&
+    slip.status !== "Cancelled" &&
+    slip.status !== "Closed"
 
   return (
     <PageShell className="gap-0 p-0">
       <SlipFormToolbar
-        title={mode === "new" ? "Buat Placing Slip Baru" : "Edit Placing Slip"}
+        title={
+          isQuotation
+            ? "Quotation Slip"
+            : mode === "new"
+              ? "Buat Placing Slip Baru"
+              : "Edit Placing Slip"
+        }
         subtitle={`${slip.cob}${slip.typeOfCover ? ` · ${slip.typeOfCover}` : ""}`}
         status={slip.status}
         slipNo={slip.slipNo}
         backHref="/underwriting"
         allOpen={allOpen}
-        onToggleAll={() =>
+        onToggleAll={() => {
+          const next = !allOpen
           setOpenSections(
-            Object.fromEntries(SECTION_KEYS.map((k) => [k, !allOpen]))
+            (prev) =>
+              ({
+                ...prev,
+                ...Object.fromEntries(availableKeys.map((k) => [k, next])),
+              }) as Record<SectionKey, boolean>
           )
-        }
+        }}
         meta={
           <>
             Total Sum Insured{" "}
@@ -1353,6 +1554,234 @@ function SlipEditor({
               </div>
             </div>
           </SectionCard>
+
+          {showQuotationSections ? (
+            <>
+              <SectionCard
+                title="Subjectivity"
+                description="Syarat yang harus dipenuhi sebelum polis diterbitkan."
+                {...sectionProps("subjectivity")}
+              >
+                <Textarea
+                  rows={5}
+                  aria-label="Subjectivity"
+                  value={slip.subjectivity ?? ""}
+                  placeholder="1. …&#10;2. …"
+                  disabled={locked}
+                  onChange={(e) => set({ subjectivity: e.target.value })}
+                />
+              </SectionCard>
+
+              <SectionCard
+                title="Security (Panel Asuransi)"
+                description="Struktur co-insurance — satu risiko dibagi ke beberapa insurer dengan share %."
+                {...sectionProps("security")}
+                action={
+                  <span
+                    className={cn(
+                      "tabular rounded-full px-3 py-1 text-xs font-semibold",
+                      totalShare === 100
+                        ? "bg-success/12 text-success"
+                        : "bg-warning/15 text-warning"
+                    )}
+                  >
+                    Total share {num(totalShare, 2)}%
+                  </span>
+                }
+              >
+                <div className="flex flex-col gap-2">
+                  <div className="hidden gap-3 text-xs text-muted-foreground lg:grid lg:grid-cols-[minmax(0,1fr)_120px_150px_40px]">
+                    <span>Perusahaan Asuransi</span>
+                    <span>Share (%)</span>
+                    <span>{multiInsurer ? "Peran" : null}</span>
+                    <span className="sr-only">Aksi</span>
+                  </div>
+
+                  {panel.map((row) => (
+                    <div
+                      key={row.id}
+                      className={cn(
+                        "flex flex-col gap-2 rounded-xl border bg-card p-3 lg:grid lg:grid-cols-[minmax(0,1fr)_120px_150px_40px] lg:items-center lg:gap-3 lg:p-0 lg:border-0 lg:bg-transparent",
+                        row.insurer && duplicateInsurerNames.has(row.insurer) && "border-destructive/60"
+                      )}
+                    >
+                      <Select
+                        disabled={locked}
+                        value={row.insurer || undefined}
+                        onValueChange={(insurer) =>
+                          patchPanelRow(row.id, { insurer: insurer ?? "" })
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Pilih asuransi…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {withCurrent(insurerItems, row.insurer).map((ins) => (
+                              <SelectItem key={ins} value={ins}>
+                                {ins}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 lg:contents">
+                        <NumberInput
+                          disabled={locked}
+                          preset="percent"
+                          min={0}
+                          max={100}
+                          value={row.share}
+                          invalid={row.share <= 0 || row.share > 100}
+                          aria-label={`Share ${row.insurer || "insurer"}`}
+                          onValueChange={(val) =>
+                            patchPanelRow(row.id, { share: val ?? 0 })
+                          }
+                        />
+
+                        {multiInsurer ? (
+                          <Select
+                            disabled={locked}
+                            value={row.role}
+                            onValueChange={(role) => {
+                              if (role === "As Leader") {
+                                setLeader(row.id)
+                              } else {
+                                patchPanelRow(row.id, { role: "As Member" })
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-full min-w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {ROLE_ITEMS.map((r) => (
+                                  <SelectItem key={r.value} value={r.value}>
+                                    {r.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span aria-hidden="true" />
+                        )}
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={locked || panel.length <= 1}
+                          aria-label={`Hapus ${row.insurer || "panel"}`}
+                          onClick={() => removePanelRow(row.id)}
+                        >
+                          <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={locked}
+                      onClick={addPanelRow}
+                    >
+                      <Plus data-icon="inline-start" />
+                      Tambah panel
+                    </Button>
+                    {panelValid ? (
+                      <p className="flex items-center gap-1.5 text-xs text-success">
+                        <CircleCheck className="size-3.5" />
+                        Panel lengkap — siap generate dokumen.
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {!panelValid ? (
+                    <ul className="mt-1 flex flex-col gap-1 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+                      {pIssues.map((i) => (
+                        <li key={i} className="flex gap-1.5">
+                          <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                          {i}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+
+                  {panel.some((r) => r.insurer) ? (
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      {panel
+                        .filter((r) => r.insurer)
+                        .map((r) => (
+                          <div
+                            key={`bar-${r.id}`}
+                            className="flex items-center gap-3 text-xs"
+                          >
+                            <span className="w-40 truncate sm:w-64">
+                              {r.insurer}
+                              {multiInsurer ? (
+                                <span className="ml-1 text-muted-foreground">
+                                  ({r.role.replace("As ", "")})
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                              <span
+                                className={cn(
+                                  "block h-full rounded-full",
+                                  !multiInsurer || r.role === "As Leader"
+                                    ? "bg-primary"
+                                    : "bg-primary/45"
+                                )}
+                                style={{ width: `${Math.min(100, r.share)}%` }}
+                              />
+                            </span>
+                            <span className="w-16 text-right tabular text-muted-foreground">
+                              {num(r.share, 2)}%
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  ) : null}
+                </div>
+              </SectionCard>
+
+              <SectionCard
+                title="Closing Instruction"
+                description="Instruksi penutupan untuk insurer saat slip di-close."
+                {...sectionProps("closing")}
+              >
+                <Textarea
+                  rows={4}
+                  aria-label="Closing instruction"
+                  value={slip.closingInstruction ?? ""}
+                  placeholder="Masukkan closing instruction…"
+                  disabled={locked}
+                  onChange={(e) => set({ closingInstruction: e.target.value })}
+                />
+              </SectionCard>
+
+              <SectionCard
+                title="Catatan Draft Cover Note"
+                description="Catatan tambahan untuk cover note (tanpa brokerage)."
+                {...sectionProps("coverNote")}
+              >
+                <Textarea
+                  rows={3}
+                  aria-label="Catatan cover note"
+                  value={slip.coverNoteRemarks ?? ""}
+                  placeholder="Catatan cover note…"
+                  disabled={locked}
+                  onChange={(e) => set({ coverNoteRemarks: e.target.value })}
+                />
+              </SectionCard>
+            </>
+          ) : null}
         </fieldset>
       </SlipFormBody>
 
@@ -1376,41 +1805,138 @@ function SlipEditor({
           >
             {dirty ? "Batal" : "Tutup"}
           </Button>
-          {mode === "edit" ? (
-            <Button
-              variant="outline"
-              onClick={() => goTo((id) => `/underwriting/slip/${id}`)}
-            >
-              <Eye data-icon="inline-start" />
-              Lihat Dokumen
-            </Button>
-          ) : null}
-          {!locked ? (
-            <Button
-              variant="outline"
-              onClick={handleSave}
-              disabled={!canSave || isPending}
-            >
-              <Save data-icon="inline-start" />
-              {isPending ? "Menyimpan…" : canSave ? "Simpan Draft" : "Tersimpan"}
-            </Button>
-          ) : null}
-          {slip.status === "Draft" ? (
-            <Button onClick={startRelease} disabled={isPending}>
-              <Send data-icon="inline-start" />
-              {isPending ? "Memproses…" : "Release & Generate No. Slip"}
-            </Button>
-          ) : slip.status === "Released" || slip.status === "Quoted" ? (
-            <Button
-              onClick={() => goTo((id) => `/underwriting/quotation/edit/${id}`)}
-              disabled={isPending}
-            >
-              <Send data-icon="inline-start" />
-              Lanjut ke Quotation Slip
-            </Button>
-          ) : null}
+
+          {isQuotation ? (
+            <>
+              <Button
+                variant="outline"
+                disabled={isPending}
+                onClick={() => goTo((id) => `/underwriting/slip/${id}`)}
+              >
+                <Eye data-icon="inline-start" />
+                Lihat Placing Slip
+              </Button>
+              {!locked ? (
+                <Button
+                  variant="outline"
+                  onClick={handleSave}
+                  disabled={!canSave || isPending}
+                >
+                  <Save data-icon="inline-start" />
+                  {isPending
+                    ? "Menyimpan…"
+                    : canSave
+                      ? slip.status === "Draft"
+                        ? "Simpan Draft"
+                        : "Simpan Perubahan"
+                      : "Tersimpan"}
+                </Button>
+              ) : null}
+              <Button
+                variant="outline"
+                disabled={!panelValid || slip.status === "Draft" || isPending}
+                title={!panelValid ? "Lengkapi panel asuransi dulu" : undefined}
+                onClick={() => goTo((id) => `/underwriting/quotation/${id}`)}
+              >
+                <FileText data-icon="inline-start" />
+                Quotation Slip
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!panelValid || slip.status === "Draft" || isPending}
+                title={!panelValid ? "Lengkapi panel asuransi dulu" : undefined}
+                onClick={() => goTo((id) => `/underwriting/cover-note/${id}`)}
+              >
+                <ScrollText data-icon="inline-start" />
+                Draft Cover Note
+              </Button>
+              {slip.status === "Closed" ? (
+                <Button
+                  disabled={isPending}
+                  onClick={() => router.push(`/underwriting/closing/${slip.id}`)}
+                >
+                  <FileCheck2 data-icon="inline-start" />
+                  Closing Instruction
+                </Button>
+              ) : (
+                <Button
+                  disabled={
+                    !panelValid || slip.status === "Draft" || locked || isPending
+                  }
+                  onClick={() => setConfirmClose(true)}
+                >
+                  <FileCheck2 data-icon="inline-start" />
+                  Terbitkan Closing Instruction
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              {mode === "edit" ? (
+                <Button
+                  variant="outline"
+                  onClick={() => goTo((id) => `/underwriting/slip/${id}`)}
+                >
+                  <Eye data-icon="inline-start" />
+                  Lihat Dokumen
+                </Button>
+              ) : null}
+              {!locked ? (
+                <Button
+                  variant="outline"
+                  onClick={handleSave}
+                  disabled={!canSave || isPending}
+                >
+                  <Save data-icon="inline-start" />
+                  {isPending
+                    ? "Menyimpan…"
+                    : canSave
+                      ? slip.status === "Draft"
+                        ? "Simpan Draft"
+                        : "Simpan Perubahan"
+                      : "Tersimpan"}
+                </Button>
+              ) : null}
+              {slip.status === "Draft" ? (
+                <Button onClick={startRelease} disabled={isPending}>
+                  <Send data-icon="inline-start" />
+                  {isPending ? "Memproses…" : "Release & Generate No. Slip"}
+                </Button>
+              ) : slip.status === "Released" || slip.status === "Quoted" ? (
+                <Button
+                  onClick={() =>
+                    goTo((id) => `/underwriting/quotation/edit/${id}`)
+                  }
+                  disabled={isPending}
+                >
+                  <Send data-icon="inline-start" />
+                  Lanjut ke Quotation Slip
+                </Button>
+              ) : null}
+            </>
+          )}
         </div>
       </SlipFormActions>
+
+      {/* Konfirmasi penerbitan closing instruction */}
+      <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Terbitkan Closing Instruction?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Penutupan akan di-close (status Closed) dan mengunci form dari
+              perubahan. Pastikan semua detail quotation dan panel asuransi
+              sudah disetujui klien.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={issueClosing}>
+              Terbitkan &amp; Buka Dokumen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Hal yang harus dilengkapi sebelum release */}
       <AlertDialog
