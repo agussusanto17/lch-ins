@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `feat/kop-surat-alamat`
-- **PR:** (menunggu nomor PR)
+- **PR:** #88
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
