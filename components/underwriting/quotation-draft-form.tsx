@@ -229,6 +229,11 @@ function QuotationEditor({ initialSlip }: { initialSlip: PlacingSlip }) {
   }
 
   function openDoc(path: string) {
+    // Slip Closed atau Cancelled ditolak server kalau disimpan, jadi langsung buka dokumennya.
+    if (locked) {
+      router.push(path)
+      return
+    }
     startTransition(async () => {
       const saved = await persistSlip()
       if (saved) {
