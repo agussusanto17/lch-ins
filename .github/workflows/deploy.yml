@@ -6,9 +6,16 @@ on:
       - main
   workflow_dispatch:
 
+# Merge yang berdekatan antre, bukan menjalankan next build bersamaan di VPS.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy to Production VPS
+    # Repo agussusanto17 dan fork vourdev memakai VPS yang sama; hanya fork yang deploy.
+    if: github.repository == 'vourdev/lch-ins'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
