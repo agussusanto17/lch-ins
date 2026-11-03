@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/cetak-deductible-tanpa-kolom-cover`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #84
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
@@ -44,7 +44,7 @@ Keputusan user:
 
 ## Verifikasi
 
-- `npx tsc --noEmit` dan ESLint untuk `doc-blocks.tsx` lolos.
+- `npx tsc --noEmit`, ESLint untuk `doc-blocks.tsx`, dan `npm run build` lolos.
 - Dev server lokal, akun admin, slip `001/LCH-PLCMT/PS/VIII/2026` yang punya
   tiga cover dengan deductible terisi dan dua teks yang sama: halaman print
   slip, quotation, cover note, dan closing menampilkan dua baris deductible
