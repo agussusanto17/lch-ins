@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `chore/deploy-vps-satu-repo`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #80
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
