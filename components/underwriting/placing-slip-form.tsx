@@ -90,7 +90,8 @@ import { Toggle } from "@/components/ui/toggle"
 import {
   BI_BASE_LABELS,
   brokerageAmount,
-  brokerageCapFor,
+  brokerageLimitIssue,
+  brokerageLimitText,
   brokerageVatAmount,
   discountAmount,
   effectiveBrokeragePct,
@@ -280,7 +281,8 @@ function SlipEditor({
     .filter((l) => BI_BASE_LABELS.includes(l.label))
     .reduce((a, l) => a + (l.rate ?? 0), 0)
   const eqRate = slip.rateLines.find((l) => l.label === "EQVET")?.rate ?? null
-  const brokerageCap = brokerageCapFor(slip.cob)
+  const brokerageLimit = brokerageLimitText(slip)
+  const brokerageIssue = brokerageLimitIssue(slip)
   const editedClauseCount = slip.clauseIds.filter(
     (id) => slip.clauseOverrides?.[id]
   ).length
@@ -1271,17 +1273,18 @@ function SlipEditor({
                   </FieldLabel>
                 </Field>
               </div>
-              {brokerageCap != null &&
-              effectiveBrokeragePct(slip) > brokerageCap ? (
-                <p className="flex items-start gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  Brokerage efektif {percent(
-                    effectiveBrokeragePct(slip),
-                    2
-                  )}{" "}
-                  melebihi batas biaya akuisisi OJK {brokerageCap}% untuk{" "}
-                  {slip.cob}.
-                </p>
+              {brokerageLimit ? (
+                brokerageIssue ? (
+                  <p className="flex items-start gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    {brokerageIssue} Slip belum bisa disimpan sebelum brokerage
+                    diperbaiki.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Batas OJK untuk {slip.cob}: {brokerageLimit}.
+                  </p>
+                )
               ) : null}
               <div className="grid grid-cols-1 gap-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2">
                 <div className="flex items-center justify-between text-sm">

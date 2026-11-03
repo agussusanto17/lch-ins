@@ -1,4 +1,4 @@
-import { recalcSlip, totalSumInsured } from "@/lib/calc"
+import { brokerageLimitIssue, recalcSlip, totalSumInsured } from "@/lib/calc"
 import {
   correspondenceAddress,
   MOTOR_RATE_LINES,
@@ -350,15 +350,8 @@ export function releaseIssues(slip: PlacingSlip) {
     }
   }
 
-  if (slip.cob === "Property" && (slip.brokeragePct ?? 0) > 15) {
-    issues.push(
-      `Brokerage ${slip.brokeragePct}% melebihi batas maksimal OJK 15% untuk Property.`
-    )
-  } else if (slip.cob === "Motor Vehicle" && (slip.brokeragePct ?? 0) > 25) {
-    issues.push(
-      `Brokerage ${slip.brokeragePct}% melebihi batas maksimal OJK 25% untuk Motor Vehicle.`
-    )
-  }
+  const brokerageIssue = brokerageLimitIssue(slip)
+  if (brokerageIssue) issues.push(brokerageIssue)
 
   return issues
 }

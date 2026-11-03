@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import type { SlipStatus } from "@/lib/generated/prisma/client"
 import type { PlacingSlip } from "@/lib/data/types"
+import { brokerageLimitIssue } from "@/lib/calc"
 import {
   createPlacingSlip,
   deletePlacingSlip,
@@ -159,6 +160,11 @@ export async function savePlacingSlipAction(
       }
     }
 
+    // Brokerage di atas batas OJK tidak boleh tersimpan, bukan hanya ditolak
+    // saat release (Harry, 3 November 2026).
+    const brokerageIssue = brokerageLimitIssue(slip)
+    if (brokerageIssue) return { ok: false, error: brokerageIssue }
+
     const input = parsed.data as PlacingSlipInput
 
     let result: PlacingSlipRecord
@@ -231,9 +237,7 @@ export async function releasePlacingSlipAction(
         }
       }
       if (validation.brokerageIssue) {
-        errorDetails.push(
-          `Brokerage ${validation.brokerageIssue.current}% melebihi batas maksimal OJK ${validation.brokerageIssue.max}% untuk ${target.cob}.`
-        )
+        errorDetails.push(validation.brokerageIssue.message)
       }
       if (validation.biIssues.length > 0) {
         for (const bi of validation.biIssues) {
