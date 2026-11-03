@@ -137,6 +137,9 @@ function revalidateUnderwritingPaths(id?: string) {
     revalidatePath(`/underwriting/edit/${id}`)
     revalidatePath(`/underwriting/quotation/edit/${id}`)
     revalidatePath(`/underwriting/slip/${id}`)
+    revalidatePath(`/underwriting/quotation/${id}`)
+    revalidatePath(`/underwriting/cover-note/${id}`)
+    revalidatePath(`/underwriting/closing/${id}`)
   }
 }
 
