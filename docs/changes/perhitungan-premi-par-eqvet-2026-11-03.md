@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `feat/premium-calculation-par-eqvet`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #92
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
