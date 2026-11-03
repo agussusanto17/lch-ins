@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/batas-brokerage-dikurangi-diskon`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#93](https://github.com/agussusanto17/lch-ins/pull/93)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
