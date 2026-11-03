@@ -13,11 +13,14 @@ import {
   DocTitle,
   InsurerSignatureGrid,
   InterestBlock,
+  ParEqvetCalculationBlock,
+  ParEqvetRateBlock,
   PayableTable,
   PremiumTable,
   SectionHeading,
   SecurityPanelBlock,
   SignatureGrid,
+  isParEqvetSlip,
   premiumRows,
 } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
@@ -65,6 +68,40 @@ const documentBrokeragePct = (slip: PlacingSlip) =>
     ? Math.max(0, slip.brokeragePct - slip.discountPct)
     : slip.brokeragePct
 
+function SlipRateAndPremium({
+  slip,
+  showBrokerageIndicator = false,
+}: {
+  slip: PlacingSlip
+  showBrokerageIndicator?: boolean
+}) {
+  if (isParEqvetSlip(slip)) {
+    return (
+      <>
+        <SectionHeading>RATE</SectionHeading>
+        <ParEqvetRateBlock slip={slip} />
+        <SectionHeading>PREMIUM CALCULATION</SectionHeading>
+        <ParEqvetCalculationBlock
+          slip={slip}
+          showBrokerage={showBrokerageIndicator}
+        />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <SectionHeading>RATE &amp; PREMIUM</SectionHeading>
+      <PremiumTable
+        slip={slip}
+        rows={premiumRows(slip)}
+        unitLabel={unitOf(slip)}
+      />
+      <PayableTable slip={slip} />
+    </>
+  )
+}
+
 export function PlacingSlipDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
@@ -87,13 +124,7 @@ export function PlacingSlipDocument(props: DocProps) {
       <DeductibleBlock slip={slip} />
       <ClausesBlock slip={slip} />
 
-      <SectionHeading>RATE &amp; PREMIUM</SectionHeading>
-      <PremiumTable
-        slip={slip}
-        rows={premiumRows(slip)}
-        unitLabel={unitOf(slip)}
-      />
-      <PayableTable slip={slip} />
+      <SlipRateAndPremium slip={slip} showBrokerageIndicator />
 
       <BrokerageBlock slip={slip} brokeragePct={documentBrokeragePct(slip)} />
 
@@ -134,13 +165,7 @@ export function QuotationSlipDocument(props: DocProps) {
 
       <ClausesBlock slip={slip} inline />
 
-      <SectionHeading>RATE &amp; PREMIUM CALCULATION</SectionHeading>
-      <PremiumTable
-        slip={slip}
-        rows={premiumRows(slip)}
-        unitLabel={unitOf(slip)}
-      />
-      <PayableTable slip={slip} />
+      <SlipRateAndPremium slip={slip} showBrokerageIndicator={false} />
 
       <SecurityPanelBlock slip={slip} />
 
@@ -176,13 +201,7 @@ export function CoverNoteDocument(props: DocProps) {
       <DeductibleBlock slip={slip} />
       <ClausesBlock slip={slip} inline />
 
-      <SectionHeading>RATE &amp; PREMIUM</SectionHeading>
-      <PremiumTable
-        slip={slip}
-        rows={premiumRows(slip)}
-        unitLabel={unitOf(slip)}
-      />
-      <PayableTable slip={slip} />
+      <SlipRateAndPremium slip={slip} showBrokerageIndicator={false} />
 
       <SecurityPanelBlock slip={slip} />
 
@@ -232,13 +251,7 @@ export function ClosingInstructionDocument(props: DocProps) {
 
       <ClausesBlock slip={slip} inline />
 
-      <SectionHeading>RATE &amp; PREMIUM</SectionHeading>
-      <PremiumTable
-        slip={slip}
-        rows={premiumRows(slip)}
-        unitLabel={unitOf(slip)}
-      />
-      <PayableTable slip={slip} />
+      <SlipRateAndPremium slip={slip} showBrokerageIndicator />
 
       <BrokerageBlock slip={slip} brokeragePct={documentBrokeragePct(slip)} />
       <p className="mt-2 text-[11px] text-muted-foreground">
