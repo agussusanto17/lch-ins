@@ -1,3 +1,7 @@
+import {
+  PAR_EQVET_FORMULA_NAMES,
+  PAR_EQVET_FULL_NAMES,
+} from "./data/reference"
 import type { PlacingSlip, RateLine } from "./data/types"
 import { num } from "./format"
 
@@ -70,12 +74,125 @@ export function discountAmount(slip: PlacingSlip) {
 }
 
 export function totalPayable(slip: PlacingSlip) {
+  if (isParEqvetSlip(slip)) {
+    return calculateParEqvet(slip).grandTotal
+  }
   return roundCents(
     totalPremium(slip) -
       discountAmount(slip) +
       (slip.adminCost || 0) +
       (slip.stampDuty || 0)
   )
+}
+
+/**
+ * Detects whether a slip uses PAR + EQVET rate calculation structure (Image 4 & 5).
+ * Property slips with FLEXAS or EQVET rate lines follow this grouped presentation.
+ */
+export function isParEqvetSlip(slip: PlacingSlip): boolean {
+  if (slip.cob !== "Property") return false
+  return (
+    slip.rateLines?.some((l) =>
+      /flexas|eqvet|fwtwd|rsmdcc/i.test(l.label)
+    ) ?? false
+  )
+}
+
+export interface ParEqvetLine {
+  id: string
+  label: string
+  formulaLabel: string
+  fullName: string
+  basis: number
+  ratePercent: number | null
+  rateText: string
+  premium: number
+}
+
+export interface ParEqvetGroup {
+  name: "PAR" | "EQVET"
+  lines: ParEqvetLine[]
+  subtotal: number
+  discountPct: number
+  discountAmount: number
+  afterDiscount: number
+  policyCost: number
+  total: number
+}
+
+export interface ParEqvetCalculation {
+  currency: string
+  par: ParEqvetGroup
+  eqvet: ParEqvetGroup
+  grandTotal: number
+  brokeragePct: number
+  includeVat: boolean
+}
+
+/** Standard statutory policy cost per group (PAR and EQVET are charged separately). */
+const PAR_EQVET_POLICY_COST = 50_000
+
+export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
+  const mdBasis =
+    sumItems(slip.sumInsuredSection1) || totalSumInsured(slip)
+  const biBasis = sumItems(slip.sumInsuredSection2) || mdBasis
+
+  // Property rates in rateLines are per mil (‰); divided by 10 to represent percent (%).
+  function mapLine(l: RateLine): ParEqvetLine {
+    const isBi = BI_RATE_LABELS.includes(l.label)
+    const basis = isBi ? biBasis : mdBasis
+    const ratePercent = l.rate != null ? l.rate / 10 : null
+    const premium = l.premium || (ratePercent != null ? roundCents((basis * ratePercent) / 100) : 0)
+
+    return {
+      id: l.id,
+      label: l.label,
+      formulaLabel: PAR_EQVET_FORMULA_NAMES[l.label] ?? l.label,
+      fullName: PAR_EQVET_FULL_NAMES[l.label] ?? l.label,
+      basis,
+      ratePercent,
+      rateText: ratePercent != null ? `${num(ratePercent, 5)}%` : "—",
+      premium,
+    }
+  }
+
+  const allLines = slip.rateLines.map(mapLine)
+  const parLines = allLines.filter((l) => !/eqvet/i.test(l.label))
+  const eqvetLines = allLines.filter((l) => /eqvet/i.test(l.label))
+
+  const discountPct = slip.discountPct || 0
+  const policyCost = slip.adminCost || PAR_EQVET_POLICY_COST
+
+  function buildGroup(name: "PAR" | "EQVET", lines: ParEqvetLine[]): ParEqvetGroup {
+    const subtotal = sumPremium(lines)
+    const discountAmount = roundCents((subtotal * discountPct) / 100)
+    const afterDiscount = roundCents(subtotal - discountAmount)
+    const total = roundCents(afterDiscount + policyCost)
+
+    return {
+      name,
+      lines,
+      subtotal,
+      discountPct,
+      discountAmount,
+      afterDiscount,
+      policyCost,
+      total,
+    }
+  }
+
+  const par = buildGroup("PAR", parLines)
+  const eqvet = buildGroup("EQVET", eqvetLines)
+  const grandTotal = roundCents(par.total + eqvet.total)
+
+  return {
+    currency: slip.currency || "IDR",
+    par,
+    eqvet,
+    grandTotal,
+    brokeragePct: slip.brokeragePct || 0,
+    includeVat: Boolean(slip.includeVat),
+  }
 }
 
 export function brokerageAmount(slip: PlacingSlip) {

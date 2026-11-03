@@ -56,6 +56,12 @@ export function percent(value: number, digits = 2) {
   return `${num(value, digits)}%`
 }
 
+/** Rate percentage formatted with 5 decimal places: 0.0385 -> "0,03850%". */
+export function ratePercent5(value: number | null | undefined) {
+  if (value == null) return "—"
+  return `${num(value, 5)}%`
+}
+
 const MONTHS_ID = [
   "Januari",
   "Februari",
