@@ -43,6 +43,12 @@ Keputusan user:
 - `npx tsc --noEmit` lolos tanpa error.
 - `npx eslint` lolos tanpa error pada file yang diubah.
 - `npm run build` lolos.
+- Verifikasi E2E via `ego-browser` pada server lokal (`http://localhost:3000`) untuk slip `530ec849-a92f-4392-83e8-46a39b888975`:
+  - **Placing Slip** (`/underwriting/slip/...`): header logo dan alamat lengkap dengan pemisah titik tengah ter-render sempurna.
+  - **Quotation Slip** (`/underwriting/quotation/...`): header logo dan alamat lengkap ter-render sempurna.
+  - **Cover Note** (`/underwriting/cover-note/...`): header logo dan alamat lengkap ter-render sempurna (sebelumnya tanpa kop surat).
+  - **Closing Instruction** (`/underwriting/closing/...`): header logo dan alamat lengkap ter-render sempurna.
+  - Teks alamat pada seluruh dokumen identik: `Springhill Office Tower 11th Floor Unit H · Jl. Benyamin Suaeb Block D6, Kemayoran, Jakarta Utara 14410 · Phone : +62 21 - 2605 1071, +62 21 - 2605 1072`.
 
 ## Catatan untuk yang melanjutkan
 
