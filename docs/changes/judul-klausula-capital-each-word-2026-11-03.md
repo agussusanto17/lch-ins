@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `feat/judul-klausula-capital-each-word`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #79
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
