@@ -113,7 +113,7 @@ export function QuotationSlipDocument(props: DocProps) {
   if (!slip) return <Missing />
   return (
     <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
-      <Letterhead />
+      <Letterhead withAddress />
       <DocTitle
         title="QUOTATION SLIP"
         number={slip.slipNo ? `No. ${slip.slipNo}` : "DRAFT"}
@@ -161,11 +161,7 @@ export function CoverNoteDocument(props: DocProps) {
   const number = derivedDocNumber(slip.slipNo, "CN")
   return (
     <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
-      {/*
-       * Draft Cover Note sengaja tanpa kop surat, cukup judulnya saja
-       * (instruksi LCH 29 Oktober 2026). Kop baru dipasang pada cover note
-       * final yang diterbitkan asuransi.
-       */}
+      <Letterhead withAddress />
       <DocTitle
         title="COVER NOTE"
         number={
@@ -215,7 +211,7 @@ export function ClosingInstructionDocument(props: DocProps) {
 
   return (
     <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
-      <Letterhead />
+      <Letterhead withAddress />
       <DocTitle
         title="CLOSING INSTRUCTION"
         number={number ? `No. ${number}` : "DRAFT"}
