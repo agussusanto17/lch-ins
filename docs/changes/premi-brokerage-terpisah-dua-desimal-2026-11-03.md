@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/premi-brokerage-terpisah-dua-desimal`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #85
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
