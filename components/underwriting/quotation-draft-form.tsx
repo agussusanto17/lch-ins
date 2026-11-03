@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
+import { savePlacingSlipAction } from "@/app/(app)/underwriting/actions"
 import { PageShell } from "@/components/layout/page-header"
 import { useFormOptions } from "@/components/shared/form-options-provider"
 import { SectionCard } from "@/components/shared/section-card"
@@ -119,21 +120,27 @@ export function QuotationDraftForm({
       </PageShell>
     )
   }
-  return <QuotationEditor key={slip.id} slip={slip} />
+  return <QuotationEditor key={slip.id} initialSlip={slip} />
 }
 
-function QuotationEditor({ slip }: { slip: PlacingSlip }) {
+function QuotationEditor({ initialSlip }: { initialSlip: PlacingSlip }) {
   const router = useRouter()
   const today = useToday()
   const insurerNames = useFormOptions().insurers.map((i) => i.name)
+  const [slip, setSlip] = React.useState<PlacingSlip>(initialSlip)
+  const [isPending, startTransition] = React.useTransition()
   const [subjectivity, setSubjectivity] = React.useState(
-    slip.subjectivity ?? ""
+    initialSlip.subjectivity ?? ""
   )
-  const [closing, setClosing] = React.useState(slip.closingInstruction ?? "")
-  const [coverNote, setCoverNote] = React.useState(slip.coverNoteRemarks ?? "")
+  const [closing, setClosing] = React.useState(
+    initialSlip.closingInstruction ?? ""
+  )
+  const [coverNote, setCoverNote] = React.useState(
+    initialSlip.coverNoteRemarks ?? ""
+  )
   const [panel, setPanel] = React.useState<SecurityPanelRow[]>(() =>
-    slip.securityPanel?.length
-      ? slip.securityPanel
+    initialSlip.securityPanel?.length
+      ? initialSlip.securityPanel
       : [emptyRow("As Leader"), emptyRow()]
   )
   const [confirmClose, setConfirmClose] = React.useState(false)
@@ -176,8 +183,10 @@ function QuotationEditor({ slip }: { slip: PlacingSlip }) {
     )
   }
 
-  /** Simpan quotation. Slip Released naik ke Quoted begitu panelnya lengkap. */
-  function save(extra: Partial<PlacingSlip> = {}) {
+  /** Simpan quotation ke database. Slip Released naik ke Quoted begitu panelnya lengkap. */
+  async function persistSlip(
+    extra: Partial<PlacingSlip> = {}
+  ): Promise<PlacingSlip | null> {
     const status =
       slip.status === "Released" && panelValid ? "Quoted" : slip.status
     const record: PlacingSlip = {
@@ -190,13 +199,42 @@ function QuotationEditor({ slip }: { slip: PlacingSlip }) {
       updatedAt: today,
       ...extra,
     }
-    store.upsert("slips", record)
-    return record
+
+    const res = await savePlacingSlipAction(record, "edit")
+    if (!res.ok || !res.data) {
+      toast.error("Gagal menyimpan quotation", {
+        description: res.error,
+      })
+      return null
+    }
+
+    const saved = res.data
+    store.upsert("slips", saved)
+    setSlip(saved)
+    return saved
+  }
+
+  function handleSave() {
+    startTransition(async () => {
+      const prevStatus = slip.status
+      const saved = await persistSlip()
+      if (!saved) return
+      toast.success("Quotation tersimpan", {
+        description:
+          saved.status === "Quoted" && prevStatus !== "Quoted"
+            ? "Status slip naik menjadi Quoted."
+            : undefined,
+      })
+    })
   }
 
   function openDoc(path: string) {
-    save()
-    router.push(path)
+    startTransition(async () => {
+      const saved = await persistSlip()
+      if (saved) {
+        router.push(path)
+      }
+    })
   }
 
   return (
@@ -500,6 +538,7 @@ function QuotationEditor({ slip }: { slip: PlacingSlip }) {
       <SlipFormActions className="justify-end">
         <Button
           variant="ghost"
+          disabled={isPending}
           render={<Link href="/underwriting" />}
           nativeButton={false}
         >
@@ -508,23 +547,16 @@ function QuotationEditor({ slip }: { slip: PlacingSlip }) {
         {!locked ? (
           <Button
             variant="outline"
-            onClick={() => {
-              const record = save()
-              toast.success("Quotation tersimpan", {
-                description:
-                  record.status === "Quoted" && slip.status !== "Quoted"
-                    ? "Status slip naik menjadi Quoted."
-                    : undefined,
-              })
-            }}
+            disabled={isPending}
+            onClick={handleSave}
           >
             <Save data-icon="inline-start" />
-            Simpan
+            {isPending ? "Menyimpan…" : "Simpan"}
           </Button>
         ) : null}
         <Button
           variant="outline"
-          disabled={!panelValid || notReleased}
+          disabled={!panelValid || notReleased || isPending}
           title={!panelValid ? "Lengkapi panel asuransi dulu" : undefined}
           onClick={() => openDoc(`/underwriting/quotation/${slip.id}`)}
         >
@@ -533,7 +565,7 @@ function QuotationEditor({ slip }: { slip: PlacingSlip }) {
         </Button>
         <Button
           variant="outline"
-          disabled={!panelValid || notReleased}
+          disabled={!panelValid || notReleased || isPending}
           onClick={() => openDoc(`/underwriting/cover-note/${slip.id}`)}
         >
           <ScrollText data-icon="inline-start" />
@@ -541,6 +573,7 @@ function QuotationEditor({ slip }: { slip: PlacingSlip }) {
         </Button>
         {slip.status === "Closed" ? (
           <Button
+            disabled={isPending}
             onClick={() => router.push(`/underwriting/closing/${slip.id}`)}
           >
             <FileCheck2 data-icon="inline-start" />
@@ -548,7 +581,7 @@ function QuotationEditor({ slip }: { slip: PlacingSlip }) {
           </Button>
         ) : (
           <Button
-            disabled={!panelValid || notReleased || locked}
+            disabled={!panelValid || notReleased || locked || isPending}
             onClick={() => setConfirmClose(true)}
           >
             <FileCheck2 data-icon="inline-start" />
@@ -567,18 +600,23 @@ function QuotationEditor({ slip }: { slip: PlacingSlip }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>Batal</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                save({ status: "Closed" })
-                setConfirmClose(false)
-                toast.success("Closing instruction diterbitkan", {
-                  description: "Slip berstatus Closed.",
+              disabled={!panelValid || isPending}
+              onClick={(e) => {
+                e.preventDefault()
+                startTransition(async () => {
+                  const saved = await persistSlip({ status: "Closed" })
+                  if (!saved) return
+                  setConfirmClose(false)
+                  toast.success("Closing instruction diterbitkan", {
+                    description: "Slip berstatus Closed.",
+                  })
+                  router.push(`/underwriting/closing/${slip.id}`)
                 })
-                router.push(`/underwriting/closing/${slip.id}`)
               }}
             >
-              Terbitkan
+              {isPending ? "Menerbitkan…" : "Terbitkan"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
