@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `feat/input-lengkap-draft-quotation`
-- **PR:** # (diisi setelah PR dibuka)
+- **PR:** #99
 - **Dikerjakan oleh:** Antigravity
 
 ## Latar belakang
