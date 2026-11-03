@@ -1197,6 +1197,9 @@ model SlipClause {
   /// Menandai wording yang sudah diubah dari master, supaya kelihatan saat
   /// review slip.
   isEdited    Boolean @default(false) @map("is_edited")
+  /// Slip Property: 1 Material Damage, 2 Business Interruption. Klausula yang
+  /// berlaku untuk keduanya punya satu baris per section. COB lain selalu 1.
+  section     Int     @default(1) @db.SmallInt
   sortOrder   Int     @default(0) @map("sort_order")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1205,7 +1208,7 @@ model SlipClause {
   slip   PlacingSlip @relation(fields: [slipId], references: [id], onDelete: Cascade)
   clause Clause      @relation(fields: [clauseId], references: [id])
 
-  @@unique([slipId, clauseId])
+  @@unique([slipId, section, clauseId])
   @@index([slipId, sortOrder])
   @@map("slip_clauses")
 }

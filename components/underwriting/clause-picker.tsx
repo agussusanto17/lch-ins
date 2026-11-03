@@ -27,6 +27,20 @@ import {
   type ClausePickerItem,
 } from "@/app/(app)/underwriting/actions"
 
+/**
+ * Slip Property memasang dua picker (Section 1 dan 2) sekaligus. Keduanya
+ * memakai satu permintaan daftar klausula (beserta wording, ratusan KB)
+ * selama permintaan itu berjalan; picker yang mount sesudahnya mengambil ulang.
+ */
+let pendingClauses: ReturnType<typeof getClausesForPickerAction> | null = null
+
+function loadPickerClauses() {
+  pendingClauses ??= getClausesForPickerAction().finally(() => {
+    pendingClauses = null
+  })
+  return pendingClauses
+}
+
 export function ClausePicker({
   cob,
   typeOfCover,
@@ -44,6 +58,8 @@ export function ClausePicker({
   onOverridesChange: (overrides: Record<string, ClauseOverride>) => void
   masterClauses?: ClausePickerItem[]
 }) {
+  /** Dua picker bisa membuka klausula yang sama, jadi id input dibuat unik per picker. */
+  const pickerId = React.useId()
   const [query, setQuery] = React.useState("")
   const [editing, setEditing] = React.useState<string | null>(null)
   /** Editor hanya membaca isi awalnya, jadi reset ke master perlu remount. */
@@ -53,7 +69,7 @@ export function ClausePicker({
   React.useEffect(() => {
     if (propMasterClauses && propMasterClauses.length > 0) return
     let active = true
-    getClausesForPickerAction().then((res) => {
+    loadPickerClauses().then((res) => {
       if (active && res.ok && res.data) {
         setFetchedClauses(res.data)
       }
@@ -281,13 +297,13 @@ export function ClausePicker({
                     <div className="flex flex-col gap-3 border-t px-3 py-3">
                       <div className="flex flex-col gap-1.5">
                         <label
-                          htmlFor={`clause-title-${c.id}`}
+                          htmlFor={`${pickerId}-title-${c.id}`}
                           className="text-xs text-muted-foreground"
                         >
                           Judul klausula di slip ini
                         </label>
                         <Input
-                          id={`clause-title-${c.id}`}
+                          id={`${pickerId}-title-${c.id}`}
                           value={c.title}
                           onChange={(e) =>
                             patchOverride(c.id, { title: e.target.value })

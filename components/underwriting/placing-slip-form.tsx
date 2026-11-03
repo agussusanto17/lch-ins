@@ -450,9 +450,14 @@ function SlipEditor({
   const eqRate = slip.rateLines.find((l) => l.label === "EQVET")?.rate ?? null
   const brokerageLimit = brokerageLimitText(slip)
   const brokerageIssue = brokerageLimitIssue(slip)
-  const editedClauseCount = slip.clauseIds.filter(
-    (id) => slip.clauseOverrides?.[id]
-  ).length
+  // Klausula Section 2 (Business Interruption) hanya berlaku untuk Property.
+  const clauseIds2 = usesSectionSumInsured(slip.cob)
+    ? (slip.clauseIdsSection2 ?? [])
+    : []
+  const clauseCount = slip.clauseIds.length + clauseIds2.length
+  const editedClauseCount =
+    slip.clauseIds.filter((id) => slip.clauseOverrides?.[id]).length +
+    clauseIds2.filter((id) => slip.clauseOverridesSection2?.[id]).length
   const customWording = slip.wordingForms.filter(
     (w) => w && !wordingNames.includes(w)
   )
@@ -1203,7 +1208,7 @@ function SlipEditor({
           <SectionCard
             title="Deductible & Clauses"
             {...sectionProps("deductible")}
-            summary={`${slip.clauseIds.length} klausula${
+            summary={`${clauseCount} klausula${
               editedClauseCount ? ` · ${editedClauseCount} diedit` : ""
             }`}
           >
@@ -1271,7 +1276,11 @@ function SlipEditor({
               </Field>
 
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">Clauses</p>
+                <p className="text-sm font-medium">
+                  {usesSectionSumInsured(slip.cob)
+                    ? "Clauses Section 1 — Material Damage"
+                    : "Clauses"}
+                </p>
                 <ClausePicker
                   cob={slip.cob}
                   typeOfCover={slip.typeOfCover}
@@ -1281,6 +1290,30 @@ function SlipEditor({
                   onOverridesChange={(o) => set({ clauseOverrides: o })}
                 />
               </div>
+
+              {usesSectionSumInsured(slip.cob) ? (
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <p className="text-sm font-medium">
+                      Clauses Section 2 — Business Interruption
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Klausula yang berlaku untuk kedua section dipilih juga
+                      di sini.
+                    </p>
+                  </div>
+                  <ClausePicker
+                    cob={slip.cob}
+                    typeOfCover={slip.typeOfCover}
+                    selected={clauseIds2}
+                    overrides={slip.clauseOverridesSection2 ?? {}}
+                    onChange={(ids) => set({ clauseIdsSection2: ids })}
+                    onOverridesChange={(o) =>
+                      set({ clauseOverridesSection2: o })
+                    }
+                  />
+                </div>
+              ) : null}
             </div>
           </SectionCard>
 

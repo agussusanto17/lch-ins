@@ -227,6 +227,14 @@ export interface PlacingSlip {
    * tidak mengubah slip yang sudah ada.
    */
   clauseCopies?: Record<string, ClauseOverride>
+  /**
+   * Klausula Section 2 (Business Interruption) slip Property. Field `clause*`
+   * di atas menjadi Section 1. Klausula yang berlaku untuk kedua section
+   * dipilih di keduanya, dengan wording masing-masing.
+   */
+  clauseIdsSection2?: string[]
+  clauseOverridesSection2?: Record<string, ClauseOverride>
+  clauseCopiesSection2?: Record<string, ClauseOverride>
   rateLines: RateLine[]
   tplLines: RateLine[]
   paLines: RateLine[]
