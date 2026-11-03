@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/batas-ojk-theft-by-driver`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#90](https://github.com/agussusanto17/lch-ins/pull/90)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
