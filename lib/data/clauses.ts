@@ -312,3 +312,35 @@ export function wordingText(wording: string) {
     .replace(/\s+/g, " ")
     .trim()
 }
+
+// Singkatan yang muncul di judul library klausula LCH; tetap kapital saat judul dirapikan.
+const CLAUSE_ACRONYMS = new Set([
+  "AAUI", "ALOP", "BI", "CC", "CIMB", "CL", "EDRC", "EQ", "FLEXAS", "IAR",
+  "IDR", "IT", "IUA", "JC", "JX", "KM", "KUHPER", "LMA", "MR", "NMA", "PAR",
+  "PSAKBI", "PSAKI", "PT", "RSMD", "RSMDCC", "SI", "SRCC", "TBK", "TPL", "TSI",
+  "USA", "USD", "XL",
+])
+
+// Bisa juga kata biasa ("it", "par"), jadi hanya dianggap singkatan kalau sudah kapital semua.
+const AMBIGUOUS_ACRONYMS = new Set(["IT", "PAR"])
+
+/** Judul klausula jadi Capital Each Word; huruf setelah angka (1ST) jadi kecil. */
+export function clauseTitleCase(title: string) {
+  return title
+    .replace(
+      /(^|[^A-Za-z])([A-Za-z]+(?:['’][A-Za-z]+)*)/g,
+      (_, before: string, word: string) => {
+        if (/\d$/.test(before)) return before + word.toLowerCase()
+        const upper = word.toUpperCase()
+        const allCaps = word === upper
+        if (
+          CLAUSE_ACRONYMS.has(upper) &&
+          (allCaps || (word[0] === upper[0] && !AMBIGUOUS_ACRONYMS.has(upper)))
+        )
+          return before + upper
+        const rest = allCaps ? word.slice(1).toLowerCase() : word.slice(1)
+        return before + word[0].toUpperCase() + rest
+      }
+    )
+    .replace(/([A-Za-z])\(S\)/g, "$1(s)")
+}
