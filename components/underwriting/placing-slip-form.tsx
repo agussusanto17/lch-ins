@@ -47,6 +47,7 @@ import {
   buildSlipNo,
   coverCodeFor,
   coverLabel,
+  occupationParts,
   isOutOfBounds,
   nextSlipSeq,
   rateLinesWithBounds,
@@ -73,7 +74,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Field, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { NumberInput } from "@/components/ui/number-input"
 import {
@@ -692,8 +693,51 @@ function SlipEditor({
                     </FieldLabel>
                     <OccupationCombobox
                       value={slip.occupation ?? ""}
-                      onValueChange={(v) => set({ occupation: v })}
+                      onValueChange={(v) =>
+                        set({ occupation: v, occupationLabel: undefined })
+                      }
                     />
+                  </Field>
+                  {/*
+                   * Nama okupasi OJK bisa sangat panjang (29371 berisi syarat
+                   * gudang). Seperti override klausul, teks ini hanya untuk
+                   * dokumen slip ini dan tidak mengubah master okupasi.
+                   */}
+                  <Field className="md:col-span-2">
+                    <FieldLabel htmlFor="occupation-label">
+                      Nama okupasi di slip
+                    </FieldLabel>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        id="occupation-label"
+                        value={
+                          slip.occupationLabel ??
+                          occupationParts(slip.occupation).name
+                        }
+                        disabled={!slip.occupation}
+                        placeholder={
+                          occupationParts(slip.occupation).name ||
+                          "Pilih okupasi OJK dulu"
+                        }
+                        onChange={(e) =>
+                          set({ occupationLabel: e.target.value })
+                        }
+                      />
+                      {slip.occupationLabel !== undefined ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => set({ occupationLabel: undefined })}
+                        >
+                          Sesuai OJK
+                        </Button>
+                      ) : null}
+                    </div>
+                    <FieldDescription>
+                      {slip.occupation
+                        ? `Hanya mengubah teks di dokumen slip ini. Kode ${occupationParts(slip.occupation).code} tetap tercetak, dan master okupasi tetap sesuai OJK.`
+                        : "Bisa diringkas setelah okupasi OJK dipilih."}
+                    </FieldDescription>
                   </Field>
                   <Field className="md:col-span-2">
                     <FieldLabel htmlFor="risk">
