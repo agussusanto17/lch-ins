@@ -51,7 +51,7 @@ import {
   MONTH_NAMES_ID,
   rupiah,
 } from "@/lib/format"
-import { useCollection } from "@/lib/store"
+import { store, useCollection } from "@/lib/store"
 
 type Period = "monthly" | "quarterly" | "yearly"
 
@@ -173,10 +173,24 @@ function BreakdownTable<T extends BreakdownRow>({
   )
 }
 
-export function ReportView() {
+export function ReportView({
+  policies: initialPolicies,
+  claims: initialClaims,
+}: {
+  policies?: Policy[]
+  claims?: Claim[]
+} = {}) {
   const today = useToday()
-  const allPolicies = useCollection("policies")
-  const allClaims = useCollection("claims")
+  const allPolicies = useCollection("policies", initialPolicies)
+  const allClaims = useCollection("claims", initialClaims)
+
+  React.useEffect(() => {
+    if (initialPolicies) store.hydrate("policies", initialPolicies)
+  }, [initialPolicies])
+
+  React.useEffect(() => {
+    if (initialClaims) store.hydrate("claims", initialClaims)
+  }, [initialClaims])
   const months = React.useMemo(() => monthOptions(today), [today])
 
   const [period, setPeriod] = React.useState<Period>("yearly")

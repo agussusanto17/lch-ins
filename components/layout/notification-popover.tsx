@@ -11,7 +11,6 @@ import {
   TriangleAlert,
 } from "lucide-react"
 
-import { useToday } from "@/components/layout/today-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,9 +20,8 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { policyStatus } from "@/lib/data"
 import { dateShort } from "@/lib/format"
-import { useCollection } from "@/lib/store"
+import type { TopbarData } from "@/lib/topbar-types"
 
 interface NotificationItem {
   id: string
@@ -76,9 +74,8 @@ function saveReadIds(ids: Set<string>) {
   readListeners.forEach((notify) => notify())
 }
 
-export function NotificationPopover() {
+export function NotificationPopover({ data }: { data?: TopbarData }) {
   const router = useRouter()
-  const today = useToday()
   const [open, setOpen] = React.useState(false)
   // Server snapshot is null so the hydrated markup matches; stored ids apply right after.
   const storedReadIds = React.useSyncExternalStore(
@@ -91,17 +88,10 @@ export function NotificationPopover() {
     [storedReadIds]
   )
 
-  const policies = useCollection("policies")
-  const slips = useCollection("slips")
-  const claims = useCollection("claims")
-
   const items = React.useMemo<NotificationItem[]>(() => {
     const list: NotificationItem[] = []
 
-    const expiringPolicies = policies.filter(
-      (p) => policyStatus(p.expiryDate, today) === "Expiring"
-    )
-    for (const p of expiringPolicies.slice(0, 5)) {
+    for (const p of data?.expiringPolicies ?? []) {
       list.push({
         id: `policy-${p.id}`,
         title: `Polis Mendekati Jatuh Tempo`,
@@ -113,11 +103,10 @@ export function NotificationPopover() {
       })
     }
 
-    const openClaims = claims.filter((c) => c.status === "Outstanding")
-    for (const c of openClaims.slice(0, 4)) {
+    for (const c of data?.openClaims ?? []) {
       list.push({
         id: `claim-${c.id}`,
-        title: `Klaim Outstanding`,
+        title: "Klaim Outstanding",
         description: `${c.claimNo} · ${c.insuredName}`,
         time: dateShort(c.lossDate),
         href: `/claims`,
@@ -126,13 +115,12 @@ export function NotificationPopover() {
       })
     }
 
-    const draftSlips = slips.filter((s) => s.status === "Draft")
-    for (const s of draftSlips.slice(0, 3)) {
+    for (const s of data?.draftSlips ?? []) {
       list.push({
         id: `slip-${s.id}`,
-        title: `Placing Slip Draft`,
+        title: "Placing Slip Draft",
         description: `${s.slipNo ?? "Draft"} · ${s.insuredName}`,
-        time: dateShort(s.updatedAt || s.createdAt),
+        time: s.date ? dateShort(s.date) : "",
         href: `/underwriting/edit/${s.id}`,
         icon: ShieldAlert,
         tone: "info",
@@ -140,7 +128,7 @@ export function NotificationPopover() {
     }
 
     return list
-  }, [policies, slips, claims, today])
+  }, [data])
 
   const unreadCount = items.filter((item) => !readIds.has(item.id)).length
 

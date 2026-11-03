@@ -10,6 +10,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/sonner"
 import { todayIso } from "@/lib/date"
 import { requireAccess } from "@/lib/server/session"
+import { getTopbarData } from "@/lib/server/topbar"
 
 export default async function AppLayout({
   children,
@@ -26,6 +27,7 @@ export default async function AppLayout({
   // tanpa pemeriksaan di sini, URL-nya masih bisa diketik langsung.
   const pathname = (await headers()).get("x-pathname") ?? "/"
   const user = await requireAccess(pathname)
+  const topbarData = await getTopbarData(user, today)
 
   return (
     <TodayProvider today={today}>
@@ -46,7 +48,7 @@ export default async function AppLayout({
             `overflow-x-auto` di tabel tidak pernah aktif.
           */}
           <SidebarInset className="min-w-0">
-            <AppTopbar user={user} />
+            <AppTopbar user={user} data={topbarData} />
             <div className="flex-1 bg-background">{children}</div>
           </SidebarInset>
           {user.mustChangePassword ? (

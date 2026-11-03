@@ -29,6 +29,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ROLE_LABELS, type RoleCode } from "@/lib/access"
 import { signOut } from "@/lib/auth-client"
 import type { CurrentUser } from "@/lib/server/session"
+import type { TopbarData } from "@/lib/topbar-types"
 
 const SEGMENT_LABELS: Record<string, string> = {
   marketing: "Marketing",
@@ -123,7 +124,13 @@ function getInitials(name?: string | null): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-export function AppTopbar({ user }: { user?: CurrentUser | null }) {
+export function AppTopbar({
+  user,
+  data,
+}: {
+  user?: CurrentUser | null
+  data?: TopbarData
+}) {
   const pathname = usePathname()
   const isChangePassword = pathname === "/change-password"
   const crumbs = isChangePassword ? [] : buildCrumbs(pathname)
@@ -174,8 +181,8 @@ export function AppTopbar({ user }: { user?: CurrentUser | null }) {
       </Breadcrumb>
 
       <div className="ml-auto flex items-center gap-2">
-        <CommandMenu />
-        <NotificationPopover />
+        <CommandMenu slips={data?.recentSlips} />
+        <NotificationPopover data={data} />
         <ThemeToggle />
         <Separator orientation="vertical" className="mx-1 h-4" />
 
