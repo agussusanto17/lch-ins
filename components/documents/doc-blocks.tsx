@@ -2,6 +2,7 @@ import { coverLabel } from "@/components/underwriting/slip-model"
 import { sumItems, totalPremium, totalSumInsured } from "@/lib/calc"
 import { sanitizeHtml } from "@/lib/sanitize"
 import {
+  clauseTitleCase,
   constructionClassLabel,
   parseVehicleDescription,
   resolveSlipClauses,
@@ -339,7 +340,8 @@ export function ClausesBlock({
         {clauses.map((c, i) => (
           <li key={c.id} className="avoid-break">
             <p className="font-semibold">
-              {slip.wordingForms.filter(Boolean).length + i + 1}. {c.title}
+              {slip.wordingForms.filter(Boolean).length + i + 1}.{" "}
+              {inline ? c.title : clauseTitleCase(c.title)}
             </p>
             {inline ? (
               <div
