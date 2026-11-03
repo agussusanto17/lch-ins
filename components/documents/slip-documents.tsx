@@ -56,15 +56,6 @@ function Missing() {
 
 const unitOf = (slip: PlacingSlip) => (slip.cob === "Motor Vehicle" ? "%" : "‰")
 
-/*
- * Blok brokerage hanya dicetak di Placing Slip dan Closing Instruction.
- * Quotation Slip sengaja tanpa brokerage, sesuai instruksi LCH 29 Oktober 2026.
- */
-const documentBrokeragePct = (slip: PlacingSlip) =>
-  slip.cob === "Motor Vehicle"
-    ? Math.max(0, slip.brokeragePct - slip.discountPct)
-    : slip.brokeragePct
-
 export function PlacingSlipDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
@@ -95,7 +86,7 @@ export function PlacingSlipDocument(props: DocProps) {
       />
       <PayableTable slip={slip} />
 
-      <BrokerageBlock slip={slip} brokeragePct={documentBrokeragePct(slip)} />
+      <BrokerageBlock slip={slip} />
 
       <SignatureGrid
         place={`Jakarta, ${dateLong(slip.updatedAt)}`}
@@ -240,11 +231,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       />
       <PayableTable slip={slip} />
 
-      <BrokerageBlock slip={slip} brokeragePct={documentBrokeragePct(slip)} />
-      <p className="mt-2 text-[11px] text-muted-foreground">
-        Net Premium = Total Premium − (Total Premium × brokerage %) — dihitung
-        dari Total Premium, bukan Total Payable.
-      </p>
+      <BrokerageBlock slip={slip} />
 
       <SecurityPanelBlock slip={slip} />
 

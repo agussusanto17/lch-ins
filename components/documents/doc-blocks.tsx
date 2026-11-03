@@ -2,7 +2,6 @@ import { slipOccupationText } from "@/components/underwriting/slip-model"
 import {
   brokerageAmount,
   discountAmount,
-  netPremium,
   sumItems,
   totalPayable,
   totalPremium,
@@ -639,18 +638,12 @@ export function SecurityPanelBlock({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Brokerage is printed apart from the premium calculation, per LCH. Net premium
- * is still Total Premium minus brokerage, not based on Total Payable.
+ * Brokerage is printed apart from the premium calculation, at the rate entered
+ * on the slip, so the document matches the form. Net premium is not printed,
+ * per LCH. Only the Placing Slip and Closing Instruction carry this block; the
+ * Quotation Slip leaves brokerage out, per LCH's instruction of 29 October 2026.
  */
-export function BrokerageBlock({
-  slip,
-  brokeragePct,
-}: {
-  slip: PlacingSlip
-  brokeragePct: number
-}) {
-  const documentSlip = { ...slip, brokeragePct }
-
+export function BrokerageBlock({ slip }: { slip: PlacingSlip }) {
   return (
     <>
       <SectionHeading>BROKERAGE</SectionHeading>
@@ -658,17 +651,11 @@ export function BrokerageBlock({
         <tbody>
           <tr className="border-b">
             <td className="py-2">
-              Brokerage {num(brokeragePct, 2)}% (
+              Brokerage {num(slip.brokeragePct, 2)}% (
               {slip.includeVat ? "INCL. VAT" : "EXCL. VAT"})
             </td>
             <td className="tabular py-2 text-right whitespace-nowrap">
-              {moneyCents(brokerageAmount(documentSlip), slip.currency)}
-            </td>
-          </tr>
-          <tr className="border-b font-bold">
-            <td className="py-2">Net Premium (after Brokerage)</td>
-            <td className="tabular py-2 text-right whitespace-nowrap">
-              {moneyCents(netPremium(documentSlip), slip.currency)}
+              {moneyCents(brokerageAmount(slip), slip.currency)}
             </td>
           </tr>
         </tbody>
