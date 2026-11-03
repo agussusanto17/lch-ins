@@ -1,7 +1,11 @@
 import "server-only"
 
 import type { PlacingSlip, RateLine } from "@/lib/data/types"
-import { totalSumInsured } from "@/lib/calc"
+import {
+  brokerageLimitIssue,
+  maxBrokeragePct,
+  totalSumInsured,
+} from "@/lib/calc"
 import {
   EQ_PROPERTY_TARIFFS,
   FLOOD_TARIFFS,
@@ -198,19 +202,6 @@ export function getMissingExceptions(
     }))
 }
 
-/** Brokerage caps per SE OJK No. 6/SEOJK.05/2017. */
-export function getMaxBrokeragePct(cob: string): number | null {
-  if (cob === "Property") return 15
-  if (cob === "Motor Vehicle") return 25
-  return null
-}
-
-export function brokerageExceedsCap(slip: PlacingSlip): boolean {
-  const cap = getMaxBrokeragePct(slip.cob)
-  if (!cap) return false
-  return (slip.brokeragePct ?? 0) > cap
-}
-
 export function validateBiRateScaling(
   slip: PlacingSlip
 ): Array<{ line: RateLine; message: string }> {
@@ -239,7 +230,7 @@ export interface PreReleaseValidation {
   canRelease: boolean
   releaseIssues: string[]
   missingExceptions: Array<{ line: RateLine; reason: "below" | "above" }>
-  brokerageIssue?: { max: number; current: number }
+  brokerageIssue?: { max: number; current: number; message: string }
   biIssues: Array<{ line: RateLine; message: string }>
 }
 
@@ -286,13 +277,14 @@ export async function validatePlacingSlipForRelease(
   const missingExceptions = getMissingExceptions(allLines, slip.rateExceptions)
 
   let brokerageIssue: PreReleaseValidation["brokerageIssue"]
-  if (brokerageExceedsCap(slip)) {
-    const maxCap = getMaxBrokeragePct(slip.cob)!
-    const current = slip.brokeragePct ?? 0
-    brokerageIssue = { max: maxCap, current }
-    releaseIssues.push(
-      `Brokerage ${current}% melebihi batas maksimal OJK ${maxCap}% untuk ${slip.cob}.`
-    )
+  const brokerageMessage = brokerageLimitIssue(slip)
+  if (brokerageMessage) {
+    brokerageIssue = {
+      max: maxBrokeragePct(slip)!,
+      current: slip.brokeragePct ?? 0,
+      message: brokerageMessage,
+    }
+    releaseIssues.push(brokerageMessage)
   }
 
   const biIssues = slip.cob === "Property" ? validateBiRateScaling(slip) : []

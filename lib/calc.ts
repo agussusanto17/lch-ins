@@ -1,4 +1,5 @@
 import type { PlacingSlip, RateLine } from "./data/types"
+import { num } from "./format"
 
 /** Demo exchange rates for report aggregation. */
 export const FX: Record<string, number> = {
@@ -145,6 +146,37 @@ export function brokerageCapFor(cob: string) {
   if (cob === "Property") return 15
   if (cob === "Motor Vehicle") return 25
   return null
+}
+
+/**
+ * Highest brokerage allowed on a slip. The OJK limit covers brokerage plus
+ * discount (Harry, 3 November 2026), so a discount lowers the broker's share:
+ * Motor Vehicle 25% with a 15% discount leaves at most 10%.
+ */
+export function maxBrokeragePct(slip: PlacingSlip) {
+  const cap = brokerageCapFor(slip.cob)
+  if (cap == null) return null
+  // Rounded so 25 - 12.3 compares equal to an entered 12.7.
+  return Math.max(0, Math.round((cap - (slip.discountPct || 0)) * 1e6) / 1e6)
+}
+
+/** "maksimal 10% (25% dikurangi diskon 15%)", or null where OJK sets no limit. */
+export function brokerageLimitText(slip: PlacingSlip) {
+  const cap = brokerageCapFor(slip.cob)
+  const max = maxBrokeragePct(slip)
+  if (cap == null || max == null) return null
+  const discount = slip.discountPct || 0
+  return discount > 0
+    ? `maksimal ${num(max, 0, 2)}% (${cap}% dikurangi diskon ${num(discount, 0, 2)}%)`
+    : `maksimal ${cap}%`
+}
+
+/** Release issue when the entered brokerage is above the OJK limit, else null. */
+export function brokerageLimitIssue(slip: PlacingSlip) {
+  const max = maxBrokeragePct(slip)
+  const current = slip.brokeragePct || 0
+  if (max == null || current <= max) return null
+  return `Brokerage ${num(current, 0, 2)}% melebihi batas OJK untuk ${slip.cob}: ${brokerageLimitText(slip)}.`
 }
 
 /**
