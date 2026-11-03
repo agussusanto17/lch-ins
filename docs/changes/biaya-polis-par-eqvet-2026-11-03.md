@@ -44,8 +44,7 @@ Payable IDR 100.000. Ada tiga sebab:
 - **Env:** tidak ada.
 - **Deploy:** tidak ada langkah tambahan; setelah merge, sinkronkan fork.
 - Slip Property yang Admin Cost-nya kosong tidak lagi mendapat tambahan Rp
-  100.000. Kalau LCH memang selalu memakai biaya polis dan materai standar,
-  isiannya perlu diisi, atau dibuat terisi otomatis setelah ada jawaban Harry.
+  100.000. Sesuai jawaban Harry, biaya polis dan materai diisi manual per slip.
 
 ## Verifikasi
 
@@ -69,8 +68,13 @@ Payable IDR 100.000. Ada tiga sebab:
 
 ## Catatan untuk yang melanjutkan
 
-- Menunggu jawaban Harry soal biaya polis dan materai standar per polis, dan
-  apakah perlu terisi otomatis di slip Property baru.
+- Jawaban Harry, 3 November 2026: biaya polis dan materai diisi manual, tidak
+  terisi otomatis. Sebagai acuan, biaya polis biasanya Rp 30.000 (PAR di MAG),
+  dan materai Rp 10.000 untuk nilai di bawah Rp 5 juta atau Rp 20.000 di
+  atasnya.
+- Satu isian Stamp Duty berlaku untuk kedua polis. Kalau PAR dan EQVET butuh
+  materai berbeda (misalnya PAR di atas Rp 5 juta, EQVET di bawahnya), form
+  belum bisa menampungnya.
 - Label isian di form tetap "Admin Cost" dan "Stamp Duty". Untuk slip PAR +
   EQVET keduanya berlaku per polis, dan itu dijelaskan oleh baris rincian.
 - **Aturan Wajib nomor 4 belum dijalankan:** graphify belum terpasang di mesin
