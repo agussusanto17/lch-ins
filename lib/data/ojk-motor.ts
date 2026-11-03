@@ -377,12 +377,27 @@ export function findMotorExtensionBounds(
     }
   }
 
-  if (
-    hay.includes("pengemudi") ||
-    hay.includes("driver") ||
-    hay.includes("pa pengemudi") ||
-    hay.includes("pa driver")
-  ) {
+  // Kecelakaan diri hanya kalau labelnya menyebut PA. "Theft by Driver"
+  // (penggelapan oleh pengemudi) tidak punya tarif OJK, jadi tidak boleh
+  // terbaca sebagai PA Pengemudi.
+  if (/\b(pa|personal accident|kecelakaan diri)\b/.test(hay)) {
+    return findMotorPaBounds(extensionLabel)
+  }
+
+  return null
+}
+
+/**
+ * Batas OJK kecelakaan diri pengemudi dan penumpang (Lampiran IV.B). Baris di
+ * bagian PA slip cukup berlabel "Driver" atau "Passenger", jadi fungsi ini
+ * dipakai untuk bagian itu, bukan untuk baris rate utama.
+ */
+export function findMotorPaBounds(
+  label: string
+): { min: number; max: number; source: string } | null {
+  const hay = label.toLowerCase()
+
+  if (hay.includes("pengemudi") || hay.includes("driver")) {
     const entry = MOTOR_EXTENSION_TARIFFS.find((e) =>
       e.cover.startsWith("Kecelakaan diri pengemudi")
     )
@@ -393,12 +408,7 @@ export function findMotorExtensionBounds(
     }
   }
 
-  if (
-    hay.includes("penumpang") ||
-    hay.includes("passenger") ||
-    hay.includes("pa penumpang") ||
-    hay.includes("pa passenger")
-  ) {
+  if (hay.includes("penumpang") || hay.includes("passenger")) {
     const entry = MOTOR_EXTENSION_TARIFFS.find((e) =>
       e.cover.startsWith("Kecelakaan diri penumpang")
     )

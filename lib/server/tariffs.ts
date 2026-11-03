@@ -12,6 +12,7 @@ import { matchEqZone, matchFloodRegion } from "@/lib/data/ojk-zones"
 import {
   findMotorTariffBounds,
   findMotorExtensionBounds,
+  findMotorPaBounds,
   matchMotorRegion,
 } from "@/lib/data/ojk-motor"
 
@@ -277,7 +278,7 @@ export async function validatePlacingSlipForRelease(
   })
   const boundedPa = (slip.paLines ?? []).map((l) => {
     if (l.min != null || l.max != null) return l
-    const b = findMotorExtensionBounds(l.label)
+    const b = findMotorPaBounds(l.label)
     return b ? { ...l, min: b.min, max: b.max, boundSource: b.source } : l
   })
 

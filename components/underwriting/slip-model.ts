@@ -16,6 +16,7 @@ import type { CoverOption } from "@/lib/form-options"
 import {
   findMotorTariffBounds,
   findMotorExtensionBounds,
+  findMotorPaBounds,
   matchMotorRegion,
 } from "@/lib/data/ojk-motor"
 import { todayIso } from "@/lib/date"
@@ -281,6 +282,20 @@ export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
   return slip.rateLines
 }
 
+/** Batas OJK untuk baris TPL atau PA; batas yang sudah tersimpan didahulukan. */
+function withSectionBounds(
+  line: RateLine,
+  bounds: { min: number; max: number; source: string } | null
+): RateLine {
+  if (line.min != null || line.max != null || !bounds) return line
+  return {
+    ...line,
+    min: bounds.min,
+    max: bounds.max,
+    boundSource: bounds.source,
+  }
+}
+
 export function isOutOfBounds(line: RateLine) {
   if (line.rate == null) return false
   return (
@@ -313,18 +328,22 @@ export function releaseIssues(slip: PlacingSlip) {
     issues.push("Isi minimal satu rate.")
   }
 
+  // Baris rate utama sudah diberi batas sesuai COB-nya oleh rateLinesWithBounds.
+  // TPL dan PA hanya ada di Motor Vehicle, dan baris PA cukup berlabel "Driver",
+  // jadi batasnya dibaca per bagian, bukan dari label saja.
   const allLines = rateLinesWithBounds(slip)
-    .concat(slip.tplLines ?? [])
-    .concat(slip.paLines ?? [])
+    .concat(
+      (slip.tplLines ?? []).map((l) =>
+        withSectionBounds(l, findMotorExtensionBounds(l.label))
+      )
+    )
+    .concat(
+      (slip.paLines ?? []).map((l) =>
+        withSectionBounds(l, findMotorPaBounds(l.label))
+      )
+    )
   for (const line of allLines) {
-    const bounded =
-      line.min != null || line.max != null
-        ? line
-        : {
-            ...line,
-            ...findMotorExtensionBounds(line.label),
-          }
-    if (isOutOfBounds(bounded) && !slip.rateExceptions?.[line.id]?.note?.trim()) {
+    if (isOutOfBounds(line) && !slip.rateExceptions?.[line.id]?.note?.trim()) {
       issues.push(
         `Rate ${line.label} di luar batas OJK dan belum ada alasannya.`
       )
