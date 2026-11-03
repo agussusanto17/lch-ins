@@ -56,9 +56,16 @@ tidak diubah.
 - `npm run lint`: tidak ada masalah.
 - `npx tsc --noEmit`: tidak ada error.
 - `npm run build`: lolos.
-- Belum dicek di browser karena dev server lokal sedang tidak berjalan. Yang
-  perlu dicek: buka preview Placing Slip yang punya klausula, pastikan daftar
-  CLAUSES Capital Each Word dan CLAUSE WORDING tetap seperti sebelumnya.
+- E2E di browser (ego-browser, dev server lokal, slip
+  002/LCH-PLCMT/PS-PAREQ/VIII/2026):
+  - Placing Slip, daftar CLAUSES: semua judul Capital Each Word, misalnya
+    "Industries Seepage, Pollution And Contamination Exclusion (NMA 1685)" dan
+    "Waiver Clause (Article 1266 & 1267 Indonesian Civil Code)"; wording form
+    tetap seperti semula.
+  - Placing Slip, CLAUSE WORDING: judul tetap seperti data asli, misalnya
+    "INDUSTRIES SEEPAGE, POLLUTION AND CONTAMINATION EXCLUSION (NMA 1685)".
+  - Quotation Slip: daftar CLAUSES tetap seperti data asli.
+  - Tidak ada error di log server.
 
 ## Catatan untuk yang melanjutkan
 
