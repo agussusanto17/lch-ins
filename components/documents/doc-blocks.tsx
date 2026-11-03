@@ -1,4 +1,7 @@
-import { slipOccupationText } from "@/components/underwriting/slip-model"
+import {
+  slipOccupationText,
+  usesSectionSumInsured,
+} from "@/components/underwriting/slip-model"
 import {
   brokerageAmount,
   calculateParEqvet,
@@ -17,7 +20,9 @@ import {
   constructionClassLabel,
   parseVehicleDescription,
   resolveSlipClauses,
+  type ClauseOverride,
   type PlacingSlip,
+  type ResolvedClause,
   type SecurityPanelRow,
 } from "@/lib/data"
 import { dateEn, money, moneyCents, num } from "@/lib/format"
@@ -312,12 +317,75 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
  * database dan id-nya tidak ada di data contoh, jadi tanpa salinan ini clause
  * yang tidak diedit di slip hilang dari dokumen.
  */
-function slipClauses(slip: PlacingSlip) {
-  const copies = Object.entries(slip.clauseCopies ?? {}).map(([id, c]) => ({
+function resolveClauses(
+  clauseIds: string[],
+  clauseOverrides: Record<string, ClauseOverride> | undefined,
+  clauseCopies: Record<string, ClauseOverride> | undefined
+) {
+  const copies = Object.entries(clauseCopies ?? {}).map(([id, c]) => ({
     id,
     ...c,
   }))
-  return resolveSlipClauses(slip, copies)
+  return resolveSlipClauses({ clauseIds, clauseOverrides }, copies)
+}
+
+interface ClauseGroup {
+  heading: string | null
+  clauses: ResolvedClause[]
+  /** Nomor klausula pertama; penomoran menyambung lintas section. */
+  start: number
+}
+
+/**
+ * Slip Property mencetak klausula per section dengan judul yang sama seperti
+ * INTEREST INSURED; COB lain satu daftar tanpa judul. Kelompok kosong dilewati.
+ */
+function clauseGroups(slip: PlacingSlip, firstNumber: number): ClauseGroup[] {
+  const section1 = resolveClauses(
+    slip.clauseIds,
+    slip.clauseOverrides,
+    slip.clauseCopies
+  )
+  const groups = usesSectionSumInsured(slip.cob)
+    ? [
+        { heading: "Section 1 — Material Damage", clauses: section1 },
+        {
+          heading: "Section 2 — Business Interruption",
+          clauses: resolveClauses(
+            slip.clauseIdsSection2 ?? [],
+            slip.clauseOverridesSection2,
+            slip.clauseCopiesSection2
+          ),
+        },
+      ]
+    : [{ heading: null, clauses: section1 }]
+
+  let start = firstNumber
+  return groups
+    .filter((g) => g.clauses.length > 0)
+    .map((g) => {
+      const group = { ...g, start }
+      start += g.clauses.length
+      return group
+    })
+}
+
+/**
+ * Judul section ikut di dalam butir klausula pertamanya, jadi tidak
+ * tertinggal sendirian di bawah halaman.
+ */
+function ClauseGroupHeading({
+  children,
+  first,
+}: {
+  children: string
+  first: boolean
+}) {
+  return (
+    <p className={cn("mb-1.5 text-[13px] font-semibold", !first && "mt-2")}>
+      {children}
+    </p>
+  )
 }
 
 /** inline = wording penuh langsung di daftar (Quotation/Cover Note/CI). */
@@ -328,14 +396,15 @@ export function ClausesBlock({
   slip: PlacingSlip
   inline?: boolean
 }) {
-  const clauses = slipClauses(slip)
-  if (!clauses.length) return null
+  const wordingForms = slip.wordingForms.filter(Boolean)
+  const groups = clauseGroups(slip, wordingForms.length + 1)
+  if (!groups.length) return null
 
   return (
     <>
       <SectionHeading>CLAUSES</SectionHeading>
       <ol className="flex flex-col gap-2 text-[12px]">
-        {slip.wordingForms.filter(Boolean).map((w, i) => (
+        {wordingForms.map((w, i) => (
           <li key={w} className="avoid-break">
             <p className="font-semibold">
               {i + 1}. {w}
@@ -343,20 +412,26 @@ export function ClausesBlock({
             <p className="ml-4 text-muted-foreground">As Attached</p>
           </li>
         ))}
-        {clauses.map((c, i) => (
-          <li key={c.id} className="avoid-break">
-            <p className="font-semibold">
-              {slip.wordingForms.filter(Boolean).length + i + 1}.{" "}
-              {inline ? c.title : clauseTitleCase(c.title)}
-            </p>
-            {inline ? (
-              <div
-                className="rte-prose mt-0.5 ml-4 text-[12px] text-muted-foreground"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
-              />
-            ) : null}
-          </li>
-        ))}
+        {groups.map((g, gi) =>
+          g.clauses.map((c, i) => (
+            <li key={`${gi}-${c.id}`} className="avoid-break">
+              {g.heading && i === 0 ? (
+                <ClauseGroupHeading first={gi === 0 && !wordingForms.length}>
+                  {g.heading}
+                </ClauseGroupHeading>
+              ) : null}
+              <p className="font-semibold">
+                {g.start + i}. {inline ? c.title : clauseTitleCase(c.title)}
+              </p>
+              {inline ? (
+                <div
+                  className="rte-prose mt-0.5 ml-4 text-[12px] text-muted-foreground"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
+                />
+              ) : null}
+            </li>
+          ))
+        )}
       </ol>
     </>
   )
@@ -364,24 +439,31 @@ export function ClausesBlock({
 
 /** Wording lengkap di akhir dokumen — dipakai Placing Slip. */
 export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
-  const clauses = slipClauses(slip)
-  if (!clauses.length) return null
+  const groups = clauseGroups(slip, 1)
+  if (!groups.length) return null
 
   return (
     <section className="print-break">
       <SectionHeading>CLAUSE WORDING</SectionHeading>
       <div className="flex flex-col gap-3 text-[12px]">
-        {clauses.map((c, i) => (
-          <div key={c.id} className="avoid-break">
-            <p className="font-semibold">
-              {i + 1}. {c.title}
-            </p>
-            <div
-              className="rte-prose mt-0.5 text-[12px] text-muted-foreground"
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
-            />
-          </div>
-        ))}
+        {groups.map((g, gi) =>
+          g.clauses.map((c, i) => (
+            <div key={`${gi}-${c.id}`} className="avoid-break">
+              {g.heading && i === 0 ? (
+                <ClauseGroupHeading first={gi === 0}>
+                  {g.heading}
+                </ClauseGroupHeading>
+              ) : null}
+              <p className="font-semibold">
+                {g.start + i}. {c.title}
+              </p>
+              <div
+                className="rte-prose mt-0.5 text-[12px] text-muted-foreground"
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
+              />
+            </div>
+          ))
+        )}
       </div>
     </section>
   )

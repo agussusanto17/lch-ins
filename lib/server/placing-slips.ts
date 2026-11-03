@@ -16,7 +16,10 @@ import type {
 } from "@/lib/data/types"
 import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
 import { CLIENTS } from "@/lib/data/clients"
-import { coverCodeFor } from "@/components/underwriting/slip-model"
+import {
+  coverCodeFor,
+  usesSectionSumInsured,
+} from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
 import { cobLookupKeys } from "@/lib/server/cob"
 import { prisma } from "@/lib/prisma"
@@ -72,6 +75,8 @@ export interface PlacingSlipInput {
   sumInsuredSection2?: LineItem[]
   clauseIds?: string[]
   clauseOverrides?: Record<string, ClauseOverride>
+  clauseIdsSection2?: string[]
+  clauseOverridesSection2?: Record<string, ClauseOverride>
   wordingForms?: string[]
   rateLines?: RateLine[]
   tplLines?: RateLine[]
@@ -400,20 +405,30 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     role: sp.position.name === "As Leader" ? "As Leader" : "As Member",
   }))
 
-  // Clauses & Overrides
-  const clauseIds: string[] = []
-  const clauseOverrides: Record<string, ClauseOverride> = {}
-  const clauseCopies: Record<string, ClauseOverride> = {}
-  for (const cl of raw.clauses) {
-    clauseIds.push(cl.clauseId)
-    clauseCopies[cl.clauseId] = { title: cl.title, wording: cl.wordingHtml }
-    if (cl.isEdited) {
-      clauseOverrides[cl.clauseId] = {
-        title: cl.title,
-        wording: cl.wordingHtml,
+  // Clauses & Overrides, per section. Section 2 hanya dipakai slip Property.
+  const clauseSet = (section: number) => {
+    const ids: string[] = []
+    const overrides: Record<string, ClauseOverride> = {}
+    const copies: Record<string, ClauseOverride> = {}
+    for (const cl of raw.clauses) {
+      if (cl.section !== section) continue
+      ids.push(cl.clauseId)
+      copies[cl.clauseId] = { title: cl.title, wording: cl.wordingHtml }
+      if (cl.isEdited) {
+        overrides[cl.clauseId] = {
+          title: cl.title,
+          wording: cl.wordingHtml,
+        }
       }
     }
+    return {
+      ids,
+      overrides: Object.keys(overrides).length > 0 ? overrides : undefined,
+      copies,
+    }
   }
+  const clauses1 = clauseSet(1)
+  const clauses2 = clauseSet(2)
 
   // Wording forms
   const wordingForms = raw.wordingForms.map((wf) => wf.wordingForm.name)
@@ -470,9 +485,12 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     interestItems,
     sumInsuredSection1,
     sumInsuredSection2,
-    clauseIds,
-    clauseOverrides: Object.keys(clauseOverrides).length > 0 ? clauseOverrides : undefined,
-    clauseCopies,
+    clauseIds: clauses1.ids,
+    clauseOverrides: clauses1.overrides,
+    clauseCopies: clauses1.copies,
+    clauseIdsSection2: clauses2.ids,
+    clauseOverridesSection2: clauses2.overrides,
+    clauseCopiesSection2: clauses2.copies,
     wordingForms,
     rateLines,
     tplLines,
@@ -630,6 +648,56 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
 
   if (!record) return null
   return toPlacingSlipRecord(record)
+}
+
+/**
+ * Salin klausula terpilih ke slip_clauses, wording dari override slip atau
+ * master. Section 2 (Business Interruption) hanya disimpan untuk slip
+ * Property; COB lain tidak punya section.
+ */
+async function insertSlipClauses(
+  tx: Prisma.TransactionClient,
+  slipId: string,
+  cobName: string,
+  input: Pick<
+    PlacingSlipInput,
+    "clauseIds" | "clauseOverrides" | "clauseIdsSection2" | "clauseOverridesSection2"
+  >
+) {
+  const sections = [
+    { section: 1, ids: input.clauseIds, overrides: input.clauseOverrides },
+  ]
+  if (usesSectionSumInsured(normalizeCob(cobName))) {
+    sections.push({
+      section: 2,
+      ids: input.clauseIdsSection2,
+      overrides: input.clauseOverridesSection2,
+    })
+  }
+  for (const { section, ids, overrides } of sections) {
+    let clIdx = 0
+    for (const clId of new Set(ids ?? [])) {
+      const clause = await tx.clause.findUnique({
+        where: { id: clId },
+        select: { id: true, title: true, wordingHtml: true },
+      })
+
+      if (clause) {
+        const override = overrides?.[clId]
+        await tx.slipClause.create({
+          data: {
+            slipId,
+            section,
+            clauseId: clause.id,
+            title: override?.title || clause.title,
+            wordingHtml: override?.wording || clause.wordingHtml,
+            isEdited: Boolean(override),
+            sortOrder: clIdx++,
+          },
+        })
+      }
+    }
+  }
 }
 
 export async function createPlacingSlip(
@@ -888,29 +956,7 @@ export async function createPlacingSlip(
     }
 
     // Insert clauses
-    if (input.clauseIds && input.clauseIds.length > 0) {
-      let clIdx = 0
-      for (const clId of input.clauseIds) {
-        const clause = await tx.clause.findUnique({
-          where: { id: clId },
-          select: { id: true, title: true, wordingHtml: true },
-        })
-
-        if (clause) {
-          const override = input.clauseOverrides?.[clId]
-          await tx.slipClause.create({
-            data: {
-              slipId: slip.id,
-              clauseId: clause.id,
-              title: override?.title || clause.title,
-              wordingHtml: override?.wording || clause.wordingHtml,
-              isEdited: Boolean(override),
-              sortOrder: clIdx++,
-            },
-          })
-        }
-      }
-    }
+    await insertSlipClauses(tx, slip.id, resolvedCob.name, input)
 
     // Insert wording forms
     if (input.wordingForms && input.wordingForms.length > 0) {
@@ -1229,29 +1275,7 @@ export async function updatePlacingSlip(
 
     // Refresh clauses
     await tx.slipClause.deleteMany({ where: { slipId: id } })
-    if (input.clauseIds && input.clauseIds.length > 0) {
-      let clIdx = 0
-      for (const clId of input.clauseIds) {
-        const clause = await tx.clause.findUnique({
-          where: { id: clId },
-          select: { id: true, title: true, wordingHtml: true },
-        })
-
-        if (clause) {
-          const override = input.clauseOverrides?.[clId]
-          await tx.slipClause.create({
-            data: {
-              slipId: id,
-              clauseId: clause.id,
-              title: override?.title || clause.title,
-              wordingHtml: override?.wording || clause.wordingHtml,
-              isEdited: Boolean(override),
-              sortOrder: clIdx++,
-            },
-          })
-        }
-      }
-    }
+    await insertSlipClauses(tx, id, resolvedCob.name, input)
 
     // Refresh wording forms
     await tx.slipWordingForm.deleteMany({ where: { slipId: id } })
