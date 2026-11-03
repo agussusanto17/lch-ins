@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `feat/klausula-per-section`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** [#101](https://github.com/agussusanto17/lch-ins/pull/101)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
