@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/simpan-draft-quotation`
-- **PR:** (menunggu nomor PR)
+- **PR:** #86
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
