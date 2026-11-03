@@ -93,8 +93,11 @@ import {
   brokerageLimitIssue,
   brokerageLimitText,
   brokerageVatAmount,
+  calculateParEqvet,
   discountAmount,
   effectiveBrokeragePct,
+  isParEqvetSlip,
+  parEqvetPolicyCharge,
   sumItems,
   totalPayable,
   totalPremium,
@@ -277,6 +280,13 @@ function SlipEditor({
   const premium = totalPremium(slip)
   const discount = discountAmount(slip)
   const payable = totalPayable(slip)
+  // Slip PAR + EQVET: Admin Cost dan Stamp Duty dikenakan per polis yang
+  // berpremi, jadi ringkasan menyebut jumlah polisnya.
+  const parEqvet = isParEqvetSlip(slip) ? calculateParEqvet(slip) : null
+  const policyCharge = parEqvetPolicyCharge(slip)
+  const chargedPolicies = parEqvet
+    ? [parEqvet.par, parEqvet.eqvet].filter((g) => g.policyCost > 0).length
+    : 0
   const unresolved = lines.filter(
     (l) => isOutOfBounds(l) && !slip.rateExceptions?.[l.id]
   ).length
@@ -1235,6 +1245,17 @@ function SlipEditor({
                     <span>Discount {percent(slip.discountPct)}</span>
                     <span className="tabular">
                       ({money(discount, slip.currency)})
+                    </span>
+                  </div>
+                ) : null}
+                {chargedPolicies > 0 ? (
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      Policy cost + stamp duty: {chargedPolicies} polis ×{" "}
+                      {money(policyCharge, slip.currency)}
+                    </span>
+                    <span className="tabular">
+                      {money(chargedPolicies * policyCharge, slip.currency)}
                     </span>
                   </div>
                 ) : null}

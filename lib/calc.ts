@@ -129,8 +129,13 @@ export interface ParEqvetCalculation {
   includeVat: boolean
 }
 
-/** Standard statutory policy cost per group (PAR and EQVET are charged separately). */
-const PAR_EQVET_POLICY_COST = 50_000
+/**
+ * Policy cost plus stamp duty for one PAR or EQVET policy, taken from the
+ * slip's Admin Cost and Stamp Duty fields. An empty field counts as zero.
+ */
+export function parEqvetPolicyCharge(slip: PlacingSlip) {
+  return roundCents((slip.adminCost || 0) + (slip.stampDuty || 0))
+}
 
 export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
   const mdBasis =
@@ -161,12 +166,14 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
   const eqvetLines = allLines.filter((l) => /eqvet/i.test(l.label))
 
   const discountPct = slip.discountPct || 0
-  const policyCost = slip.adminCost || PAR_EQVET_POLICY_COST
+  const policyCharge = parEqvetPolicyCharge(slip)
 
   function buildGroup(name: "PAR" | "EQVET", lines: ParEqvetLine[]): ParEqvetGroup {
     const subtotal = sumPremium(lines)
     const discountAmount = roundCents((subtotal * discountPct) / 100)
     const afterDiscount = roundCents(subtotal - discountAmount)
+    // A group without premium is not issued as a policy, so it carries no charge.
+    const policyCost = subtotal > 0 ? policyCharge : 0
     const total = roundCents(afterDiscount + policyCost)
 
     return {
