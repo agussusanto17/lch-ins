@@ -88,8 +88,11 @@ export function panelIssues(panel: SecurityPanelRow[]) {
   if (new Set(names).size !== names.length) {
     issues.push("Asuransi yang sama tercantum lebih dari sekali.")
   }
+  // Satu asuransi 100% tidak punya leader atau member (LCH, 3 November 2026).
   const leaders = filled.filter((r) => r.role === "As Leader").length
-  if (leaders !== 1) issues.push("Panel wajib punya tepat satu leader.")
+  if (filled.length > 1 && leaders !== 1) {
+    issues.push("Panel wajib punya tepat satu leader.")
+  }
   const total = sumPercent(panel.map((r) => r.share))
   if (total !== 100)
     issues.push(`Total share ${num(total, 2)}%, harus tepat 100%.`)
@@ -158,6 +161,8 @@ function QuotationEditor({ initialSlip }: { initialSlip: PlacingSlip }) {
   const totalShare = sumPercent(panel.map((r) => r.share))
   const issues = panelIssues(panel)
   const panelValid = issues.length === 0
+  // Peran leader/member baru berarti kalau asuransinya lebih dari satu.
+  const multiInsurer = panel.filter((r) => r.insurer).length > 1
   const premium = totalPremium(slip)
   const notReleased = slip.status === "Draft"
   const locked = slip.status === "Closed" || slip.status === "Cancelled"
@@ -194,7 +199,13 @@ function QuotationEditor({ initialSlip }: { initialSlip: PlacingSlip }) {
       subjectivity,
       closingInstruction: closing,
       coverNoteRemarks: coverNote,
-      securityPanel: panel.filter((r) => r.insurer || r.share),
+      // Asuransi tunggal disimpan sebagai leader supaya urutan tanda tangan
+      // dan data peran tetap konsisten, walaupun perannya tidak ditampilkan.
+      securityPanel: panel
+        .filter((r) => r.insurer || r.share)
+        .map((r) =>
+          !multiInsurer && r.insurer ? { ...r, role: "As Leader" as const } : r
+        ),
       status,
       updatedAt: today,
       ...extra,
@@ -345,7 +356,7 @@ function QuotationEditor({ initialSlip }: { initialSlip: PlacingSlip }) {
               <div className="hidden gap-3 text-xs text-muted-foreground lg:grid lg:grid-cols-[minmax(0,1fr)_120px_150px_40px]">
                 <span>Nama Asuransi</span>
                 <span>Share (%)</span>
-                <span>Role</span>
+                <span>{multiInsurer ? "Role" : null}</span>
                 <span />
               </div>
 
@@ -400,31 +411,36 @@ function QuotationEditor({ initialSlip }: { initialSlip: PlacingSlip }) {
                     onValueChange={(v) => patch(row.id, { share: v ?? 0 })}
                   />
 
-                  <Select
-                    items={ROLE_ITEMS}
-                    value={row.role}
-                    onValueChange={(v) =>
-                      v === "As Leader"
-                        ? setLeader(row.id)
-                        : patch(row.id, { role: "As Member" })
-                    }
-                  >
-                    <SelectTrigger
-                      className="w-full min-w-0"
-                      aria-label={`Role panel ${index + 1}`}
+                  {multiInsurer ? (
+                    <Select
+                      items={ROLE_ITEMS}
+                      value={row.role}
+                      onValueChange={(v) =>
+                        v === "As Leader"
+                          ? setLeader(row.id)
+                          : patch(row.id, { role: "As Member" })
+                      }
                     >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {ROLE_ITEMS.map((i) => (
-                          <SelectItem key={i.value} value={i.value}>
-                            {i.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                      <SelectTrigger
+                        className="w-full min-w-0"
+                        aria-label={`Role panel ${index + 1}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {ROLE_ITEMS.map((i) => (
+                            <SelectItem key={i.value} value={i.value}>
+                              {i.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    // Kolom tetap diisi supaya tombol hapus tidak bergeser.
+                    <span aria-hidden />
+                  )}
 
                   <Button
                     type="button"
@@ -488,7 +504,7 @@ function QuotationEditor({ initialSlip }: { initialSlip: PlacingSlip }) {
                           <span
                             className={cn(
                               "block h-full rounded-full",
-                              r.role === "As Leader"
+                              !multiInsurer || r.role === "As Leader"
                                 ? "bg-primary"
                                 : "bg-primary/45"
                             )}
@@ -501,7 +517,7 @@ function QuotationEditor({ initialSlip }: { initialSlip: PlacingSlip }) {
                           {num(r.share, 2)}%
                         </span>
                         <span className="w-16 text-muted-foreground">
-                          {r.role.replace("As ", "")}
+                          {multiInsurer ? r.role.replace("As ", "") : null}
                         </span>
                       </div>
                     ))}

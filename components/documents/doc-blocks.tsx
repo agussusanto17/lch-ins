@@ -701,7 +701,12 @@ export function InsurerSignatureGrid({
         <InsurerSignature caption={caption} />
       ) : (
         panel.map((p) => (
-          <InsurerSignature key={p.id} caption={caption} party={p} />
+          <InsurerSignature
+            key={p.id}
+            caption={caption}
+            party={p}
+            shared={panel.length > 1}
+          />
         ))
       )}
     </div>
@@ -711,9 +716,12 @@ export function InsurerSignatureGrid({
 function InsurerSignature({
   caption,
   party,
+  shared,
 }: {
   caption?: string
   party?: SecurityPanelRow
+  /** Lebih dari satu asuransi; hanya saat itu peran dan share dicetak. */
+  shared?: boolean
 }) {
   return (
     <div className="avoid-break">
@@ -726,7 +734,7 @@ function InsurerSignature({
         {party?.insurer ?? "Nama Perusahaan Asuransi"}
       </p>
       <p className="text-xs text-muted-foreground">Authorized Signatory</p>
-      {party ? (
+      {party && shared ? (
         <p className="text-xs text-muted-foreground">
           {party.role} · {num(party.share, 2)}%
         </p>
@@ -738,27 +746,31 @@ function InsurerSignature({
   )
 }
 
+/**
+ * Security tanpa judul kolom (LCH, 3 November 2026). Satu asuransi berarti
+ * share 100% tanpa leader atau member, jadi cukup namanya; share dan As Leader
+ * / As Member baru dicetak kalau asuransinya lebih dari satu.
+ */
 export function SecurityPanelBlock({ slip }: { slip: PlacingSlip }) {
-  if (!slip.securityPanel?.length) return null
+  const rows = (slip.securityPanel ?? []).filter((p) => p.insurer)
+  if (!rows.length) return null
+  const shared = rows.length > 1
   return (
     <>
       <SectionHeading>SECURITY</SectionHeading>
       <table className="w-full text-[12.5px]">
-        <thead>
-          <tr className="border-b text-left text-muted-foreground">
-            <th className="py-2 font-semibold">Insurer</th>
-            <th className="w-24 py-2 pr-6 text-right font-semibold">Share</th>
-            <th className="w-28 py-2 font-semibold">Role</th>
-          </tr>
-        </thead>
         <tbody>
-          {slip.securityPanel.map((p) => (
+          {rows.map((p) => (
             <tr key={p.id} className="border-b">
               <td className="py-2">{p.insurer}</td>
-              <td className="tabular py-2 pr-6 text-right">
-                {num(p.share, 2)}%
-              </td>
-              <td className="py-2">{p.role}</td>
+              {shared ? (
+                <>
+                  <td className="tabular w-24 py-2 pr-6 text-right">
+                    {num(p.share, 2)}%
+                  </td>
+                  <td className="w-28 py-2">{p.role}</td>
+                </>
+              ) : null}
             </tr>
           ))}
         </tbody>
