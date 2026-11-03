@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react"
 
 import { DocumentShell } from "@/components/documents/document-shell"
 import {
+  BrokerageBlock,
   ClauseWordingAppendix,
   ClausesBlock,
   DeductibleBlock,
@@ -18,15 +19,13 @@ import {
   SecurityPanelBlock,
   SignatureGrid,
   premiumRows,
-  type PremiumRow,
 } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
 import { PrintedAt } from "@/components/documents/printed-at"
 import { derivedDocNumber } from "@/components/underwriting/slip-model"
 import { Button } from "@/components/ui/button"
-import { brokerageAmount, netPremium } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data"
-import { dateLong, num } from "@/lib/format"
+import { dateLong } from "@/lib/format"
 import { useRecord } from "@/lib/store"
 
 /*
@@ -58,35 +57,13 @@ function Missing() {
 const unitOf = (slip: PlacingSlip) => (slip.cob === "Motor Vehicle" ? "%" : "‰")
 
 /*
- * Baris brokerage dan net premium. Dipakai Placing Slip dan Closing
- * Instruction. Quotation Slip sengaja tanpa keduanya, sesuai instruksi LCH
- * 29 Oktober 2026.
+ * Blok brokerage hanya dicetak di Placing Slip dan Closing Instruction.
+ * Quotation Slip sengaja tanpa brokerage, sesuai instruksi LCH 29 Oktober 2026.
  */
 const documentBrokeragePct = (slip: PlacingSlip) =>
   slip.cob === "Motor Vehicle"
     ? Math.max(0, slip.brokeragePct - slip.discountPct)
     : slip.brokeragePct
-
-const brokerageRows = (slip: PlacingSlip): PremiumRow[] => {
-  const brokeragePct = documentBrokeragePct(slip)
-  const vatLabel = slip.includeVat ? "INCL. VAT" : "EXCL. VAT"
-  const documentSlip = { ...slip, brokeragePct }
-
-  return [
-    {
-      label: `Brokerage ${num(brokeragePct, 2)}% (${vatLabel})`,
-      rate: "",
-      premium: brokerageAmount(documentSlip),
-      emphasis: "brokerage",
-    },
-    {
-      label: "Net Premium (after Brokerage)",
-      rate: "",
-      premium: netPremium(documentSlip),
-      emphasis: "net",
-    },
-  ]
-}
 
 export function PlacingSlipDocument(props: DocProps) {
   const slip = useSlip(props)
@@ -113,10 +90,12 @@ export function PlacingSlipDocument(props: DocProps) {
       <SectionHeading>RATE &amp; PREMIUM</SectionHeading>
       <PremiumTable
         slip={slip}
-        rows={[...premiumRows(slip), ...brokerageRows(slip)]}
+        rows={premiumRows(slip)}
         unitLabel={unitOf(slip)}
       />
       <PayableTable slip={slip} />
+
+      <BrokerageBlock slip={slip} brokeragePct={documentBrokeragePct(slip)} />
 
       <SignatureGrid
         place={`Jakarta, ${dateLong(slip.updatedAt)}`}
@@ -233,7 +212,6 @@ export function ClosingInstructionDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
   const number = derivedDocNumber(slip.slipNo, "CI")
-  const rows: PremiumRow[] = [...premiumRows(slip), ...brokerageRows(slip)]
 
   return (
     <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
@@ -259,12 +237,18 @@ export function ClosingInstructionDocument(props: DocProps) {
       <ClausesBlock slip={slip} inline />
 
       <SectionHeading>RATE &amp; PREMIUM</SectionHeading>
-      <PremiumTable slip={slip} rows={rows} unitLabel={unitOf(slip)} />
+      <PremiumTable
+        slip={slip}
+        rows={premiumRows(slip)}
+        unitLabel={unitOf(slip)}
+      />
+      <PayableTable slip={slip} />
+
+      <BrokerageBlock slip={slip} brokeragePct={documentBrokeragePct(slip)} />
       <p className="mt-2 text-[11px] text-muted-foreground">
         Net Premium = Total Premium − (Total Premium × brokerage %) — dihitung
         dari Total Premium, bukan Total Payable.
       </p>
-      <PayableTable slip={slip} />
 
       <SecurityPanelBlock slip={slip} />
 

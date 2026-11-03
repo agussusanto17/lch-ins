@@ -1,5 +1,13 @@
 import { slipOccupationText } from "@/components/underwriting/slip-model"
-import { sumItems, totalPremium, totalSumInsured } from "@/lib/calc"
+import {
+  brokerageAmount,
+  discountAmount,
+  netPremium,
+  sumItems,
+  totalPayable,
+  totalPremium,
+  totalSumInsured,
+} from "@/lib/calc"
 import { sanitizeHtml } from "@/lib/sanitize"
 import {
   clauseTitleCase,
@@ -9,7 +17,7 @@ import {
   type PlacingSlip,
   type SecurityPanelRow,
 } from "@/lib/data"
-import { dateEn, money, num } from "@/lib/format"
+import { dateEn, money, moneyCents, num } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 export function DocTitle({
@@ -378,29 +386,32 @@ export interface PremiumRow {
   label: string
   rate: string
   premium: number
-  emphasis?: "total" | "brokerage" | "net"
+  emphasis?: "total"
 }
+
+// Rates keep their full precision so the printed premium can be rechecked.
+const rateText = (rate: number) => num(rate, 2, 6)
 
 export function premiumRows(slip: PlacingSlip): PremiumRow[] {
   const rows: PremiumRow[] = slip.rateLines
     .filter((l) => l.rate !== null || l.premium > 0)
     .map((l) => ({
       label: l.label,
-      rate: l.rate !== null ? num(l.rate, 6) : "—",
+      rate: l.rate !== null ? rateText(l.rate) : "—",
       premium: l.premium,
     }))
 
   slip.tplLines.forEach((l) => {
     rows.push({
       label: `Third Party Liability (Limit ${money(Number(l.basis ?? 0), slip.currency)})`,
-      rate: l.rate !== null ? num(l.rate, 6) : "—",
+      rate: l.rate !== null ? rateText(l.rate) : "—",
       premium: l.premium,
     })
   })
   slip.paLines.forEach((l) => {
     rows.push({
       label: `Personal Accident — ${l.label} (Limit ${money(Number(l.basis ?? 0), slip.currency)})`,
-      rate: l.rate !== null ? num(l.rate, 6) : "—",
+      rate: l.rate !== null ? rateText(l.rate) : "—",
       premium: l.premium,
     })
   })
@@ -441,17 +452,13 @@ export function PremiumTable({
             key={`${r.label}-${i}`}
             className={cn(
               "border-b",
-              r.emphasis === "total" && "bg-muted/60 font-bold",
-              r.emphasis === "brokerage" && "text-warning",
-              r.emphasis === "net" && "font-bold text-warning"
+              r.emphasis === "total" && "bg-muted/60 font-bold"
             )}
           >
             <td className="py-2 pr-2">{r.label}</td>
             <td className="tabular py-2 text-right">{r.rate}</td>
             <td className="tabular py-2 text-right whitespace-nowrap">
-              {r.emphasis === "brokerage"
-                ? `(${money(r.premium, slip.currency)})`
-                : money(r.premium, slip.currency)}
+              {moneyCents(r.premium, slip.currency)}
             </td>
           </tr>
         ))}
@@ -461,10 +468,6 @@ export function PremiumTable({
 }
 
 export function PayableTable({ slip }: { slip: PlacingSlip }) {
-  const premium = totalPremium(slip)
-  const discount = (premium * slip.discountPct) / 100
-  const payable = premium - discount + slip.adminCost + slip.stampDuty
-
   return (
     <table className="mt-4 w-full text-[12.5px]">
       <tbody>
@@ -472,7 +475,7 @@ export function PayableTable({ slip }: { slip: PlacingSlip }) {
           <tr className="border-b">
             <td className="py-2">Discount ({num(slip.discountPct, 2)}%)</td>
             <td className="tabular py-2 text-right">
-              ({money(discount, slip.currency)})
+              ({moneyCents(discountAmount(slip), slip.currency)})
             </td>
           </tr>
         ) : null}
@@ -480,7 +483,7 @@ export function PayableTable({ slip }: { slip: PlacingSlip }) {
           <tr className="border-b">
             <td className="py-2">Admin Cost</td>
             <td className="tabular py-2 text-right">
-              {money(slip.adminCost, slip.currency)}
+              {moneyCents(slip.adminCost, slip.currency)}
             </td>
           </tr>
         ) : null}
@@ -488,14 +491,14 @@ export function PayableTable({ slip }: { slip: PlacingSlip }) {
           <tr className="border-b">
             <td className="py-2">Stamp Duty</td>
             <td className="tabular py-2 text-right">
-              {money(slip.stampDuty, slip.currency)}
+              {moneyCents(slip.stampDuty, slip.currency)}
             </td>
           </tr>
         ) : null}
         <tr className="bg-primary/8 text-primary">
           <td className="px-2 py-2.5 font-bold">Total Payable</td>
           <td className="tabular px-2 py-2.5 text-right font-bold">
-            {money(payable, slip.currency)}
+            {moneyCents(totalPayable(slip), slip.currency)}
           </td>
         </tr>
       </tbody>
@@ -629,6 +632,45 @@ export function SecurityPanelBlock({ slip }: { slip: PlacingSlip }) {
               <td className="py-2">{p.role}</td>
             </tr>
           ))}
+        </tbody>
+      </table>
+    </>
+  )
+}
+
+/**
+ * Brokerage is printed apart from the premium calculation, per LCH. Net premium
+ * is still Total Premium minus brokerage, not based on Total Payable.
+ */
+export function BrokerageBlock({
+  slip,
+  brokeragePct,
+}: {
+  slip: PlacingSlip
+  brokeragePct: number
+}) {
+  const documentSlip = { ...slip, brokeragePct }
+
+  return (
+    <>
+      <SectionHeading>BROKERAGE</SectionHeading>
+      <table className="w-full text-[12.5px]">
+        <tbody>
+          <tr className="border-b">
+            <td className="py-2">
+              Brokerage {num(brokeragePct, 2)}% (
+              {slip.includeVat ? "INCL. VAT" : "EXCL. VAT"})
+            </td>
+            <td className="tabular py-2 text-right whitespace-nowrap">
+              {moneyCents(brokerageAmount(documentSlip), slip.currency)}
+            </td>
+          </tr>
+          <tr className="border-b font-bold">
+            <td className="py-2">Net Premium (after Brokerage)</td>
+            <td className="tabular py-2 text-right whitespace-nowrap">
+              {moneyCents(netPremium(documentSlip), slip.currency)}
+            </td>
+          </tr>
         </tbody>
       </table>
     </>
