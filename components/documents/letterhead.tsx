@@ -31,7 +31,7 @@ export function LchLogo({
   )
 }
 
-export function Letterhead({ withAddress = false }: { withAddress?: boolean }) {
+export function Letterhead({ withAddress = true }: { withAddress?: boolean }) {
   return (
     <header className="mb-8 border-b-2 border-primary pb-3">
       <LchLogo className="h-14 w-auto" />
