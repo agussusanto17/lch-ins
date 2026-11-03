@@ -27,6 +27,7 @@ import {
   POLICY_TYPES,
   POLICY_TYPES_WITH_PARENT,
   type ClassOfBusiness,
+  type PlacingSlip,
   type Policy,
   type PolicyFile,
   type PolicyType,
@@ -36,7 +37,7 @@ import { cobLabels, coversFor } from "@/lib/form-options"
 import { dateShort, money } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
 import type { PolicyFormOptions, PolicyInput } from "@/lib/server/policies"
-import { newId, store, useCollection } from "@/lib/store"
+import { newId, store } from "@/lib/store"
 import { requiredText, validate, type FieldErrors } from "@/lib/validation"
 
 type Draft = Omit<Policy, "id" | "files"> & { id: string | null }
@@ -138,6 +139,8 @@ export function PolicyForm({
   preset,
   clientOptions,
   formOptions,
+  policies,
+  slips,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -147,10 +150,11 @@ export function PolicyForm({
   preset?: Partial<Draft>
   clientOptions: ClientOption[]
   formOptions: PolicyFormOptions
+  /** Daftar polis untuk pilihan polis induk dan cek nomor ganda. */
+  policies: Policy[]
+  /** Slip berstatus Quoted atau Closed dari database. */
+  slips: PlacingSlip[]
 }) {
-  const clients = useCollection("clients")
-  const policies = useCollection("policies")
-  const slips = useCollection("slips")
 
   // Parent memberi `key` baru setiap drawer dibuka, jadi state awal cukup
   // diambil dari props di sini tanpa effect.
@@ -163,10 +167,8 @@ export function PolicyForm({
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
 
   const clientItems = clientOptions.map((c) => ({ label: c.name, value: c.id }))
-  // Slips in the session store may still point at mock client ids; match those by name.
   const clientOptionFor = (id: string | null) =>
-    clientOptions.find((c) => c.id === id) ??
-    clientOptions.find((c) => c.name === clients.find((x) => x.id === id)?.name)
+    clientOptions.find((c) => c.id === id)
   const parentItems = policies
     .filter((p) => p.id !== draft.id && p.type !== "Cancellation")
     .map((p) => ({ label: `${p.policyNo} — ${p.insuredName}`, value: p.id }))

@@ -7,6 +7,7 @@ import { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { recordAudit } from "@/server/services/audit"
 import { nextDocumentNumber } from "@/server/services/number-generator"
+import { shouldSeedMockData } from "@/lib/server/mock-seed"
 
 export interface ClaimRecord extends Claim {
   dbId: string
@@ -218,6 +219,15 @@ export async function listClaims(
   })
 
   return records.map(toClaimRecord)
+}
+
+/** Jumlah klaim per id polis, untuk menahan tombol hapus polis yang sudah berklaim. */
+export async function countClaimsByPolicy(): Promise<Record<string, number>> {
+  const rows = await prisma.claim.groupBy({
+    by: ["policyId"],
+    _count: { _all: true },
+  })
+  return Object.fromEntries(rows.map((r) => [r.policyId, r._count._all]))
 }
 
 export async function getClaimById(id: string): Promise<ClaimRecord | null> {
@@ -488,6 +498,7 @@ export async function deleteClaim(id: string, userId: string): Promise<void> {
 }
 
 export async function seedInitialClaimsIfEmpty(): Promise<number> {
+  if (!shouldSeedMockData()) return 0
   const count = await prisma.claim.count()
   if (count > 0) return 0
 

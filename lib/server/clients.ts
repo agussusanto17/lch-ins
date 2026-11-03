@@ -22,6 +22,7 @@ import {
   storedFileUrl,
 } from "@/lib/server/stored-files"
 import { recordAudit } from "@/server/services/audit"
+import { shouldSeedMockData } from "@/lib/server/mock-seed"
 
 export interface ClientRecord extends Client {
   dbId: string
@@ -258,6 +259,7 @@ function mapPrismaClientToRecord(
  * Auto-seed 12 default mock clients to PostgreSQL if the clients table is empty.
  */
 export async function seedInitialClientsIfEmpty(): Promise<number> {
+  if (!shouldSeedMockData()) return 0
   if (hasCheckedSeed) return 0
 
   const count = await prisma.client.count()

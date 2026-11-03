@@ -18,8 +18,8 @@ import {
   findMotorExtensionBounds,
   matchMotorRegion,
 } from "@/lib/data/ojk-motor"
-import { todayIso, yearMonth } from "@/lib/date"
-import { normalizeCob, romanMonth } from "@/lib/format"
+import { todayIso } from "@/lib/date"
+import { normalizeCob } from "@/lib/format"
 
 let seq = 0
 export const uid = (prefix: string) =>
@@ -345,30 +345,6 @@ export function releaseIssues(slip: PlacingSlip) {
 }
 
 // Penomoran
-
-/**
- * Nomor urut slip berikutnya untuk bulan berjalan. Pola sekarang direset per
- * bulan; di backend diambil dari number_counters dengan SELECT ... FOR UPDATE.
- */
-export function nextSlipSeq(slips: PlacingSlip[], today: string) {
-  const { year, month } = yearMonth(today)
-  const suffix = `/${romanMonth(month - 1)}/${year}`
-  return (
-    slips
-      .filter((s) => s.slipNo?.endsWith(suffix))
-      .reduce((max, s) => Math.max(max, s.seq), 0) + 1
-  )
-}
-
-export function buildSlipNo(
-  seq: number,
-  coverCode: string | null,
-  today: string
-) {
-  const { year, month } = yearMonth(today)
-  const kind = coverCode ? `PS-${coverCode}` : "PS"
-  return `${String(seq).padStart(3, "0")}/LCH-PLCMT/${kind}/${romanMonth(month - 1)}/${year}`
-}
 
 /**
  * Nomor Cover Note dan Closing Instruction diturunkan dari nomor slip supaya

@@ -16,6 +16,7 @@ import { prisma } from "@/lib/prisma"
 import { cobLookupKeys } from "@/lib/server/cob"
 import { checkVehiclePair } from "@/lib/server/vehicles"
 import { recordAudit } from "@/server/services/audit"
+import { shouldSeedMockData } from "@/lib/server/mock-seed"
 
 export interface SppaRecord extends Sppa {
   dbId: string
@@ -271,6 +272,7 @@ function mapPrismaSppaToRecord(raw: PrismaSppaWithRelations): SppaRecord {
  * Auto-seed initial 3 mock SPPA records into PostgreSQL if table is empty.
  */
 export async function seedInitialSppaIfEmpty(): Promise<number> {
+  if (!shouldSeedMockData()) return 0
   if (hasCheckedSeed) return 0
 
   const count = await prisma.sppa.count()

@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma"
 import { MAX_RENEWAL_DAYS } from "@/lib/renewal"
 import { seedInitialClientsIfEmpty } from "@/lib/server/clients"
 import { recordAudit } from "@/server/services/audit"
+import { shouldSeedMockData } from "@/lib/server/mock-seed"
 
 export type PolicyRecord = Policy
 export type PolicyInput = Omit<Policy, "id" | "files" | "endorsementSeq" | "placingSlipNo">
@@ -448,6 +449,7 @@ export async function deletePolicy(id: string, userId: string): Promise<void> {
 }
 
 export async function seedInitialPoliciesIfEmpty(): Promise<number> {
+  if (!shouldSeedMockData()) return 0
   if ((await prisma.policy.count()) > 0) return 0
   await seedInitialClientsIfEmpty()
   const uploader = await prisma.user.findFirst({

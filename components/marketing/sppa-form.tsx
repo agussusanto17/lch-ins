@@ -21,6 +21,7 @@ import { FieldGroup, FieldSeparator } from "@/components/ui/field"
 import {
   SPPA_QUESTIONS,
   type ClassOfBusiness,
+  type Client,
   type Sppa,
   type SppaStatus,
   type VehicleBrandOption,
@@ -29,7 +30,7 @@ import { OCCUPATION_TARIFFS } from "@/lib/data/ojk-tariff"
 import { cobLabels, coversFor, withCurrent } from "@/lib/form-options"
 import { addMonths, todayIso } from "@/lib/date"
 import type { SppaInput, SppaRecord } from "@/lib/server/sppa"
-import { store, useCollection } from "@/lib/store"
+import { store } from "@/lib/store"
 import { requiredText, validate, type FieldErrors } from "@/lib/validation"
 
 type Draft = Omit<Sppa, "id"> & { id: string | null }
@@ -85,6 +86,7 @@ export function SppaForm({
   onOpenChange,
   sppa,
   clientId,
+  clients,
   vehicleOptions = [],
 }: {
   open: boolean
@@ -92,9 +94,10 @@ export function SppaForm({
   sppa?: Sppa | null
   /** Klien terpilih saat SPPA dibuat dari halaman detail klien. */
   clientId?: string | null
+  /** Pilihan klien dari database. */
+  clients: Client[]
   vehicleOptions?: VehicleBrandOption[]
 }) {
-  const clients = useCollection("clients")
   const [draft, setDraft] = React.useState<Draft>(() => {
     if (sppa) return { ...sppa }
     const client = clients.find((c) => c.id === clientId)

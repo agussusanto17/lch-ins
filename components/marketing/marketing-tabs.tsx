@@ -37,12 +37,12 @@ export function MarketingTabs({
   renewalCob,
 }: MarketingTabsProps) {
   React.useEffect(() => {
-    if (!initialSppa?.length) return
-    store.hydrate("sppa", initialSppa)
+    if (initialSppa) store.hydrate("sppa", initialSppa)
   }, [initialSppa])
 
-  const sppa = useCollection("sppa")
-  const sppaCount = sppa.length > 0 ? sppa.length : (initialSppa?.length ?? 0)
+  const sppaCount = useCollection("sppa", initialSppa).length
+  // ClientTable menghidrasi koleksi ini, jadi klien yang baru ditambah ikut muncul.
+  const clients = useCollection("clients", initialClients)
   const permission = usePermission()
   const canManageMarketing = permission.canManage("/marketing")
   const [form, setForm] = React.useState<{
@@ -86,6 +86,7 @@ export function MarketingTabs({
         <TabsContent value="sppa">
           <SppaTable
             initialSppa={initialSppa}
+            clients={clients}
             vehicleOptions={vehicleOptions}
           />
         </TabsContent>

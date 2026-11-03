@@ -181,12 +181,10 @@ export function SlipTable({
   const cobItems = useCobFilterItems()
 
   React.useEffect(() => {
-    if (initialSlips && initialSlips.length > 0) {
-      store.hydrate("slips", initialSlips)
-    }
+    store.hydrate("slips", initialSlips ?? [])
   }, [initialSlips])
 
-  const slips = useCollection("slips")
+  const slips = useCollection("slips", initialSlips)
   const permission = usePermission()
   const canManage = permission.canManage("/underwriting")
   const [query, setQuery] = React.useState("")

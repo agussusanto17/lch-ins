@@ -140,6 +140,40 @@ export async function nextDocumentNumber(
 }
 
 /**
+ * Perkiraan nomor berikutnya untuk ditampilkan sebelum release. Hanya membaca
+ * counter, tidak menaikkannya, jadi nomor resmi bisa berbeda kalau ada dokumen
+ * lain yang terbit lebih dulu.
+ */
+export async function previewDocumentNumber(
+  db: Prisma.TransactionClient,
+  {
+    code,
+    date = new Date(),
+    coverCode,
+  }: { code: DocumentTypeCode; date?: Date; coverCode?: string | null }
+) {
+  const docType = await db.documentType.findUnique({
+    where: { code },
+    select: { numberPattern: true, resetPeriod: { select: { code: true } } },
+  })
+  if (!docType) return null
+
+  const { year, month } = wibYearMonth(date)
+  const period = counterPeriod(docType.resetPeriod.code, { year, month })
+  const counter = await db.numberCounter.findUnique({
+    where: { documentTypeCode_period: { documentTypeCode: code, period } },
+    select: { lastNumber: true },
+  })
+
+  return formatDocumentNumber(docType.numberPattern, {
+    seq: (counter?.lastNumber ?? 0) + 1,
+    year,
+    month,
+    coverCode,
+  })
+}
+
+/**
  * Nomor Credit Note per cicilan memakai satu nomor dasar yang sama:
  * 0581/CNLCH/08/2026-1, 0581/CNLCH/08/2026-2, dan seterusnya (PRD B-03).
  * Ambil nomor dasar sekali dengan nextDocumentNumber(tx, { code: "CN" }).

@@ -63,15 +63,10 @@ interface ClientTableProps {
 export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
   const cobItems = useCobFilterItems()
   React.useEffect(() => {
-    if (initialClients && initialClients.length > 0) {
-      store.hydrate("clients", initialClients)
-    }
+    store.hydrate("clients", initialClients ?? [])
   }, [initialClients])
 
-  const clients = useCollection("clients")
-  const slips = useCollection("slips")
-  const policies = useCollection("policies")
-  const sppa = useCollection("sppa")
+  const clients = useCollection("clients", initialClients)
   const permission = usePermission()
   const canManage = permission.canManage("/marketing")
   const [query, setQuery] = React.useState("")
@@ -101,11 +96,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
 
   function actionsFor(c: Client): RowAction[] {
     // Klien yang sudah dipakai dokumen tidak dihapus, cukup dinonaktifkan (ERD).
-    const used =
-      Boolean((c as ClientWithUsage).isUsedInDocuments) ||
-      slips.some((s) => s.clientId === c.id) ||
-      policies.some((p) => p.clientId === c.id) ||
-      sppa.some((s) => s.clientId === c.id)
+    const used = Boolean((c as ClientWithUsage).isUsedInDocuments)
 
     const actions: RowAction[] = [
       {

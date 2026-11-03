@@ -290,6 +290,7 @@ export function ClientDetail({
         clientId={client.id}
         initialSppa={initialSppa}
         compact
+        clients={[client]}
         vehicleOptions={vehicleOptions}
       />
 
