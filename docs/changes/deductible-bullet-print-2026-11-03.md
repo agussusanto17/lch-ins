@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/deductible-bullet-print`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#98](https://github.com/agussusanto17/lch-ins/pull/98)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
