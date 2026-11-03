@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/panel-asuransi-satu-insurer`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#97](https://github.com/agussusanto17/lch-ins/pull/97)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
