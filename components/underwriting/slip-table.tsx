@@ -33,6 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useToday } from "@/components/layout/today-provider"
+import { slipOccupationText } from "@/components/underwriting/slip-model"
 import { totalPremium, totalSumInsured } from "@/lib/calc"
 import { useCobFilterItems } from "@/components/shared/form-options-provider"
 import { SLIP_STATUSES, type PlacingSlip } from "@/lib/data"
@@ -203,6 +204,7 @@ export function SlipTable({
         s.insuredName,
         s.typeOfCover,
         s.occupation ?? "",
+        s.occupationLabel ?? "",
       ].some((v) => v.toLowerCase().includes(q))
     })
   }, [slips, query, status, cob])
@@ -337,7 +339,7 @@ export function SlipTable({
                     <p className="truncate">{s.typeOfCover}</p>
                     {s.occupation ? (
                       <p className="truncate text-xs text-muted-foreground">
-                        {s.occupation}
+                        {slipOccupationText(s)}
                       </p>
                     ) : null}
                   </TableCell>

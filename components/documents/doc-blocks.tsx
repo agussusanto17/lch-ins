@@ -1,4 +1,7 @@
-import { coverLabel } from "@/components/underwriting/slip-model"
+import {
+  coverLabel,
+  slipOccupationText,
+} from "@/components/underwriting/slip-model"
 import { sumItems, totalPremium, totalSumInsured } from "@/lib/calc"
 import { sanitizeHtml } from "@/lib/sanitize"
 import {
@@ -58,7 +61,7 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
     ["Correspondence Address", slip.correspondenceAddress || "—"],
     ["Period of Insurance", period]
   )
-  if (slip.occupation) rows.push(["Occupation", slip.occupation])
+  if (slip.occupation) rows.push(["Occupation", slipOccupationText(slip)])
   if (slip.riskLocation) rows.push(["Risk Location", slip.riskLocation])
   if (slip.cob === "Property" && slip.constructionClass)
     rows.push([

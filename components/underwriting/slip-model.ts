@@ -48,6 +48,27 @@ export function makeRateLines(cob: ClassOfBusiness): RateLine[] {
 /** Label baris rate tunggal di COB selain Property dan Motor Vehicle. */
 export const GENERIC_RATE_LABEL = "Rate (‰)"
 
+/** Okupasi slip dipecah jadi kode OJK dan namanya ("29371 - Private …"). */
+export function occupationParts(occupation: string | undefined) {
+  const text = occupation ?? ""
+  const i = text.indexOf(" - ")
+  return i < 0
+    ? { code: text.trim(), name: "" }
+    : { code: text.slice(0, i).trim(), name: text.slice(i + 3).trim() }
+}
+
+/**
+ * Okupasi yang tampil di dokumen slip: kode OJK ditambah nama yang diedit khusus
+ * slip ini, atau nama OJK bila tidak diedit. Kodenya selalu ikut.
+ */
+export function slipOccupationText(
+  slip: Pick<PlacingSlip, "occupation" | "occupationLabel">
+) {
+  if (!slip.occupation) return ""
+  const label = slip.occupationLabel?.trim()
+  return label ? `${occupationParts(slip.occupation).code} - ${label}` : slip.occupation
+}
+
 /**
  * Nama cover sebuah baris rate, untuk deductible per cover. Baris tunggal
  * "Rate (‰)" bukan nama cover, jadi diganti type of cover slipnya; tanpa itu

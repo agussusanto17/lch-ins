@@ -1043,6 +1043,9 @@ model PlacingSlip {
   expiryDate    DateTime? @map("expiry_date") @db.Date
 
   occupationId        String? @map("occupation_id") @db.Uuid
+  /// Nama okupasi yang dicetak di dokumen slip, tanpa kode. Kosong berarti
+  /// nama sesuai OJK. Seperti override klausul, master okupasi tidak berubah.
+  occupationLabel     String? @map("occupation_label")
   riskLocation        String? @map("risk_location")
   coverage            String?
   /// lookup construction_class: K1, K2, K3.

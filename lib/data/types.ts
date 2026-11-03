@@ -202,6 +202,8 @@ export interface PlacingSlip {
   inceptionDate: string | null
   expiryDate: string | null
   occupation?: string
+  /** Nama okupasi di dokumen slip ini, tanpa kode. Kosong berarti nama OJK. */
+  occupationLabel?: string
   riskLocation?: string
   wordingForms: string[]
   coverage?: string

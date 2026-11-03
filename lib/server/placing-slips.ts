@@ -59,6 +59,7 @@ export interface PlacingSlipInput {
   occupation?: string | null
   occupationId?: string | null
   riskLocation?: string | null
+  occupationLabel?: string | null
   coverage?: string | null
   constructionClass?: string | null
   indemnityPeriod?: string | null
@@ -457,6 +458,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     occupation: raw.occupation
       ? `${raw.occupation.code} - ${raw.occupation.name}`
       : undefined,
+    occupationLabel: raw.occupationLabel || undefined,
     riskLocation: raw.riskLocation || undefined,
     coverage: raw.coverage || undefined,
     constructionClass: raw.constructionClass?.code || undefined,
@@ -717,6 +719,7 @@ export async function createPlacingSlip(
         inceptionDate,
         expiryDate,
         occupationId,
+        occupationLabel: input.occupationLabel?.trim() || null,
         riskLocation: input.riskLocation?.trim() || null,
         coverage: input.coverage?.trim() || null,
         constructionClassId,
@@ -1055,6 +1058,7 @@ export async function updatePlacingSlip(
         inceptionDate,
         expiryDate,
         occupationId,
+        occupationLabel: input.occupationLabel?.trim() || null,
         riskLocation: input.riskLocation?.trim() || null,
         coverage: input.coverage?.trim() || null,
         constructionClassId,
