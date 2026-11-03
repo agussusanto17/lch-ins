@@ -8,10 +8,14 @@ export const CURRENCY_SYMBOL: Record<string, string> = {
 }
 
 /** 13440000 -> "13.440.000" */
-export function num(value: number, fractionDigits = 0) {
+export function num(
+  value: number,
+  fractionDigits = 0,
+  maxFractionDigits = fractionDigits
+) {
   return new Intl.NumberFormat("id-ID", {
     minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
+    maximumFractionDigits: maxFractionDigits,
   }).format(value ?? 0)
 }
 
@@ -23,6 +27,11 @@ export function money(value: number, currency = "IDR") {
   const cents = Math.round(Math.abs(value ?? 0) * 100) % 100 !== 0
   const digits = currency !== "IDR" || cents ? 2 : 0
   return `${CURRENCY_SYMBOL[currency] ?? currency} ${num(value, digits)}`
+}
+
+/** Document amounts always print cents: 5200000 -> "IDR 5.200.000,00". */
+export function moneyCents(value: number, currency = "IDR") {
+  return `${CURRENCY_SYMBOL[currency] ?? currency} ${num(value, 2)}`
 }
 
 /** 13440000 -> "Rp 13.440.000" */
