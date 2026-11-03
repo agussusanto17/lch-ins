@@ -132,6 +132,7 @@ const placingSlipSchema = z.object({
 function revalidateUnderwritingPaths(id?: string) {
   revalidatePath("/underwriting")
   revalidatePath("/underwriting/new")
+  revalidatePath("/", "layout")
   if (id) {
     revalidatePath(`/underwriting/edit/${id}`)
     revalidatePath(`/underwriting/quotation/edit/${id}`)

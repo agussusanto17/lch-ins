@@ -17,15 +17,12 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command"
-import { useCollection } from "@/lib/store"
+import type { TopbarSlipItem } from "@/lib/topbar-types"
 
-export function CommandMenu() {
+export function CommandMenu({ slips = [] }: { slips?: TopbarSlipItem[] }) {
   const [open, setOpen] = React.useState(false)
   const router = useRouter()
   const { canAccess, canManage } = usePermission()
-  // Dari store sesi, bukan dari data contoh statis: begitu sebuah halaman
-  // memuat slip dari database, palet ikut menampilkan slip yang sama.
-  const slips = useCollection("slips")
 
   React.useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

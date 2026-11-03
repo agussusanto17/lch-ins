@@ -74,7 +74,8 @@ export async function createClaimAction(
 
     const record = await createClaim(parsed.data, session.id)
     revalidatePath("/claims")
-    revalidatePath("/")
+    revalidatePath("/reports")
+    revalidatePath("/", "layout")
     return { ok: true, data: record }
   } catch (err) {
     unstable_rethrow(err)
@@ -98,7 +99,8 @@ export async function updateClaimAction(
 
     const record = await updateClaim(id, parsed.data, session.id)
     revalidatePath("/claims")
-    revalidatePath("/")
+    revalidatePath("/reports")
+    revalidatePath("/", "layout")
     return { ok: true, data: record }
   } catch (err) {
     unstable_rethrow(err)
@@ -115,7 +117,8 @@ export async function updateClaimStatusAction(
     const session = await requireManage("/claims")
     const record = await updateClaimStatus(id, status, session.id)
     revalidatePath("/claims")
-    revalidatePath("/")
+    revalidatePath("/reports")
+    revalidatePath("/", "layout")
     return { ok: true, data: record }
   } catch (err) {
     unstable_rethrow(err)
@@ -129,7 +132,8 @@ export async function deleteClaimAction(id: string): Promise<ActionResponse<void
     const session = await requireManage("/claims")
     await deleteClaim(id, session.id)
     revalidatePath("/claims")
-    revalidatePath("/")
+    revalidatePath("/reports")
+    revalidatePath("/", "layout")
     return { ok: true }
   } catch (err) {
     unstable_rethrow(err)

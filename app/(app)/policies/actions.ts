@@ -91,6 +91,8 @@ export async function createPolicyAction(
     if (!parsed.data) return { ok: false, error: parsed.error }
     const data = await createPolicy(parsed.data, user.id)
     revalidatePath("/policies")
+    revalidatePath("/reports")
+    revalidatePath("/", "layout")
     return { ok: true, data }
   } catch (err) {
     return fail(err, "Gagal menyimpan polis")
@@ -109,6 +111,8 @@ export async function updatePolicyAction(
     if (!parsed.data) return { ok: false, error: parsed.error }
     const data = await updatePolicy(policyId.data, parsed.data, user.id)
     revalidatePath("/policies")
+    revalidatePath("/reports")
+    revalidatePath("/", "layout")
     return { ok: true, data }
   } catch (err) {
     return fail(err, "Gagal memperbarui polis")
@@ -122,6 +126,8 @@ export async function deletePolicyAction(id: string): Promise<ActionResponse<voi
     if (!policyId.success) return { ok: false, error: "ID polis tidak valid" }
     await deletePolicy(policyId.data, user.id)
     revalidatePath("/policies")
+    revalidatePath("/reports")
+    revalidatePath("/", "layout")
     return { ok: true }
   } catch (err) {
     return fail(err, "Gagal menghapus polis")
