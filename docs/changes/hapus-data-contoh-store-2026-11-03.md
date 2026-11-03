@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/hapus-data-contoh-store`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#82](https://github.com/agussusanto17/lch-ins/pull/82)
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
