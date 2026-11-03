@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/biaya-polis-par-eqvet`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#95](https://github.com/agussusanto17/lch-ins/pull/95)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
