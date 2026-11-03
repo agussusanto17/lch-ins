@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-03
 - **Branch:** `fix/nomor-quotation-closing`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#96](https://github.com/agussusanto17/lch-ins/pull/96)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
