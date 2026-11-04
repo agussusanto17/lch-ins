@@ -46,8 +46,9 @@ const SEED: PlacingSlip[] = [
       {
         id: "r1",
         label: "Comprehensive Casco",
-        deductible:
+        deductibles: [
           "IDR 300.000 setiap kejadian untuk kerugian sebagian (partial loss)",
+        ],
         rate: 1.2,
         premium: 5_400_000,
       },
@@ -55,16 +56,18 @@ const SEED: PlacingSlip[] = [
       {
         id: "r3",
         label: "Flood, Windstorm, Tempest & Water Damage",
-        deductible:
+        deductibles: [
           "5% dari nilai klaim minimum IDR 500.000 untuk risiko banjir & gempa bumi",
+        ],
         rate: 0.1,
         premium: 450_000,
       },
       {
         id: "r4",
         label: "Earthquake, Volcanic Eruption & Tsunami",
-        deductible:
+        deductibles: [
           "5% dari nilai klaim minimum IDR 500.000 untuk risiko banjir & gempa bumi",
+        ],
         rate: 0.1,
         premium: 450_000,
       },
@@ -214,7 +217,9 @@ const SEED: PlacingSlip[] = [
       {
         id: "r1",
         label: "FLEXAS",
-        deductible: "IDR 250,000,000 each and every loss for Material Damage",
+        deductibles: [
+          "IDR 250,000,000 each and every loss for Material Damage",
+        ],
         rate: 0.893,
         premium: 0,
       },
@@ -224,15 +229,16 @@ const SEED: PlacingSlip[] = [
       {
         id: "r6",
         label: "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
-        deductible: "14 (fourteen) days waiting period",
+        deductibles: ["14 (fourteen) days waiting period"],
         rate: 0.185,
         premium: 8_325_000,
       },
       {
         id: "r7",
         label: "EQVET",
-        deductible:
+        deductibles: [
           "2.5% of Total Sum Insured at the time of loss, minimum IDR 500,000,000 for Earthquake",
+        ],
         rate: 0.75,
         premium: 274_125_000,
       },
@@ -317,8 +323,9 @@ const SEED: PlacingSlip[] = [
       {
         id: "r1",
         label: "Rate (%)",
-        deductible:
+        deductibles: [
           "IDR 25,000,000 each and every claim for Third Party Property Damage",
+        ],
         rate: 0.085,
         premium: 8_500_000,
       },
@@ -370,8 +377,9 @@ const SEED: PlacingSlip[] = [
       {
         id: "r1",
         label: "Rate (%)",
-        deductible:
+        deductibles: [
           "USD 500 each and every claim; USD 1,000 each and every claim for electronics",
+        ],
         rate: 0.135,
         premium: 6_075,
       },
@@ -447,8 +455,9 @@ const SEED: PlacingSlip[] = [
       {
         id: "r1",
         label: "Rate (%)",
-        deductible:
+        deductibles: [
           "IDR 500,000,000 each and every loss for testing & commissioning; IDR 250,000,000 each and every loss for other perils",
+        ],
         rate: 0.215,
         premium: 999_750_000,
       },
@@ -518,7 +527,7 @@ const SEED: PlacingSlip[] = [
       {
         id: "r1",
         label: "Comprehensive Casco",
-        deductible: "IDR 500.000 setiap kejadian untuk kerugian sebagian",
+        deductibles: ["IDR 500.000 setiap kejadian untuk kerugian sebagian"],
         rate: 0.95,
         premium: 496_660_000,
       },
@@ -658,8 +667,9 @@ const SEED: PlacingSlip[] = [
       {
         id: "r1",
         label: "FLEXAS",
-        deductible:
+        deductibles: [
           "IDR 150,000,000 each and every loss; 5% of claim minimum IDR 300,000,000 for machinery breakdown",
+        ],
         rate: 2.018,
         premium: 0,
       },
@@ -669,7 +679,7 @@ const SEED: PlacingSlip[] = [
       {
         id: "r6",
         label: "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
-        deductible: "7 (seven) days waiting period",
+        deductibles: ["7 (seven) days waiting period"],
         rate: 0.24,
         premium: 6_720_000,
       },
@@ -768,7 +778,7 @@ const SEED: PlacingSlip[] = [
       {
         id: "r1",
         label: "FLEXAS",
-        deductible: "IDR 100,000,000 each and every loss",
+        deductibles: ["IDR 100,000,000 each and every loss"],
         rate: 0.893,
         premium: 0,
       },
@@ -778,7 +788,7 @@ const SEED: PlacingSlip[] = [
       {
         id: "r6",
         label: "BI PAR (FLEXAS + FWTWD + RSMDCC + Others)",
-        deductible: "14 (fourteen) days waiting period",
+        deductibles: ["14 (fourteen) days waiting period"],
         rate: 0.19,
         premium: 3_610_000,
       },

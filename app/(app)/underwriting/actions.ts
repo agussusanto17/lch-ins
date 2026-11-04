@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 import type { SlipStatus } from "@/lib/generated/prisma/client"
-import type { PlacingSlip } from "@/lib/data/types"
+import { MAX_DEDUCTIBLES, type PlacingSlip } from "@/lib/data/types"
 import { brokerageLimitIssue, rateUnitFor } from "@/lib/calc"
 import {
   createPlacingSlip,
@@ -52,16 +52,27 @@ const lineItemSchema = z.object({
   vehicleModel: z.string().nullish(),
 })
 
-const rateLineSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  rate: z.coerce.number().nullable().optional(),
-  premium: z.coerce.number(),
-  basis: z.string().optional(),
-  min: z.coerce.number().nullable().optional(),
-  max: z.coerce.number().nullable().optional(),
-  deductible: z.string().max(500).optional(),
-})
+const rateLineSchema = z
+  .object({
+    id: z.string(),
+    label: z.string(),
+    rate: z.coerce.number().nullable().optional(),
+    premium: z.coerce.number(),
+    basis: z.string().optional(),
+    min: z.coerce.number().nullable().optional(),
+    max: z.coerce.number().nullable().optional(),
+    deductibles: z
+      .array(z.string().max(500, "Teks deductible maksimal 500 karakter."))
+      .max(MAX_DEDUCTIBLES, `Deductible per cover maksimal ${MAX_DEDUCTIBLES}.`)
+      .optional(),
+    // Forms opened before the 4 Nov 2026 deploy still send a single string;
+    // without this it would be stripped and the deductible silently lost.
+    deductible: z.string().max(500).optional(),
+  })
+  .transform(({ deductible, ...line }) => ({
+    ...line,
+    deductibles: line.deductibles ?? (deductible ? [deductible] : undefined),
+  }))
 
 const securityPanelRowSchema = z.object({
   id: z.string(),

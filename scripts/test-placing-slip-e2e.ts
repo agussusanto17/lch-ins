@@ -86,8 +86,8 @@ async function runTests() {
       { id: "si-2", description: "Business Interruption (Gross Profit)", amount: 10_000_000_000 },
     ],
     rateLines: [
-      { id: "rl-1", label: "FLEXAS", rate: 0.125, premium: 50_000_000, min: 0.1, max: 0.2, deductible: "Nil" },
-      { id: "rl-2", label: "EQVET Zone 2", rate: 0.085, premium: 34_000_000, min: 0.075, max: 0.12, deductible: "2.5% of TSI" },
+      { id: "rl-1", label: "FLEXAS", rate: 0.125, premium: 50_000_000, min: 0.1, max: 0.2, deductibles: ["Nil"] },
+      { id: "rl-2", label: "EQVET Zone 2", rate: 0.085, premium: 34_000_000, min: 0.075, max: 0.12, deductibles: ["2.5% of TSI"] },
     ],
     securityPanel: [
       { id: "sp-1", insurer: "PT Asuransi Tugu Pratama Indonesia Tbk", share: 60, role: "As Leader" },

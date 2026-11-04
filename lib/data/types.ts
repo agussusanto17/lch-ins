@@ -161,9 +161,12 @@ export interface RateLine {
   min?: number | null
   max?: number | null
   boundSource?: string
-  /** Deductible untuk cover ini, teks bebas. */
-  deductible?: string
+  /** Deductible untuk cover ini, teks bebas, paling banyak MAX_DEDUCTIBLES. */
+  deductibles?: string[]
 }
+
+/** Batas isian deductible per cover (permintaan 4 November 2026). */
+export const MAX_DEDUCTIBLES = 5
 
 export const RATE_EXCEPTION_REASONS = [
   "Potongan sesuai nilai pertanggungan",
