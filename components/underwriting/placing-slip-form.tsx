@@ -61,12 +61,15 @@ import {
   usesPropertyBlocks,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
+import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
   deletePlacingSlipAction,
+  getClausesForPickerAction,
   previewSlipNumberAction,
   releasePlacingSlipAction,
   savePlacingSlipAction,
   togglePlacingSlipStatusAction,
+  type ClausePickerItem,
 } from "@/app/(app)/underwriting/actions"
 import {
   AlertDialog,
@@ -111,6 +114,7 @@ import {
   totalSumInsured,
 } from "@/lib/calc"
 import {
+  CLAUSES,
   CONSTRUCTION_CLASSES,
   type ClassOfBusiness,
   type PlacingSlip,
@@ -312,6 +316,30 @@ function SlipEditor({
   const previewSeqRef = React.useRef(0)
   const [confirmDestroy, setConfirmDestroy] = React.useState(false)
   const [confirmClose, setConfirmClose] = React.useState(false)
+  const [masterClauses, setMasterClauses] = React.useState<ClausePickerItem[]>([])
+
+  React.useEffect(() => {
+    let active = true
+    getClausesForPickerAction().then((res) => {
+      if (active && res.ok && res.data) {
+        setMasterClauses(res.data)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const clauseTitleLookup = React.useCallback(
+    (id: string) => {
+      return (
+        masterClauses.find((c) => c.id === id)?.title ||
+        CLAUSES.find((c) => c.id === id)?.title ||
+        undefined
+      )
+    },
+    [masterClauses]
+  )
 
   const panel = slip.securityPanel ?? []
   const multiInsurer = panel.filter((r) => r.insurer).length > 1
@@ -500,35 +528,17 @@ function SlipEditor({
     set({ rateExceptions: next })
   }
 
-  /** Simpan ke store lokal. Batas OJK ikut disalin dan alasan yang tidak perlu dibuang. */
-  function persistLocal(next: PlacingSlip = slip) {
-    const withBounds = rateLinesWithBounds(next)
-    const exceptions = Object.fromEntries(
-      Object.entries(next.rateExceptions ?? {}).filter(([lineId]) =>
-        withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
-      )
-    )
-    const status =
-      isQuotation && next.status === "Released" && panelValid
-        ? "Quoted"
-        : next.status
-
-    const record: PlacingSlip = {
-      ...next,
-      status,
-      id: next.id === "new" ? newId("s") : next.id,
-      rateLines: withBounds,
-      rateExceptions: exceptions,
-      securityPanel: prepareSecurityPanel(next.securityPanel),
-      updatedAt: today,
-    }
-    store.upsert("slips", record)
-    setSlip(record)
-    setSavedJson(JSON.stringify(record))
-    return record
-  }
-
   function handleSave() {
+    if (usesSectionSumInsured(slip.cob)) {
+      const clauseIssues = validateClauseUniquenessAcrossSections(
+        slip,
+        clauseTitleLookup
+      )
+      if (clauseIssues.length > 0) {
+        toast.error("Klausula tidak valid", { description: clauseIssues[0] })
+        return
+      }
+    }
     startTransition(async () => {
       const withBounds = rateLinesWithBounds(slip)
       const exceptions = Object.fromEntries(
@@ -674,6 +684,16 @@ function SlipEditor({
   /** Buka dokumen atau quotation; perubahan disimpan dulu supaya dokumen sama dengan form. */
   function goTo(path: (id: string) => string) {
     if (dirty || mode === "new") {
+      if (usesSectionSumInsured(slip.cob)) {
+        const clauseIssues = validateClauseUniquenessAcrossSections(
+          slip,
+          clauseTitleLookup
+        )
+        if (clauseIssues.length > 0) {
+          toast.error("Klausula tidak valid", { description: clauseIssues[0] })
+          return
+        }
+      }
       startTransition(async () => {
         const withBounds = rateLinesWithBounds(slip)
         const exceptions = Object.fromEntries(
@@ -699,8 +719,8 @@ function SlipEditor({
           store.upsert("slips", res.data)
           router.push(path(res.data.id))
         } else {
-          const fallback = persistLocal()
-          router.push(path(fallback.id))
+          toast.error("Gagal menyimpan slip", { description: res.error })
+          return
         }
       })
     } else {
@@ -1289,6 +1309,7 @@ function SlipEditor({
                   overrides={slip.clauseOverrides ?? {}}
                   onChange={(ids) => set({ clauseIds: ids })}
                   onOverridesChange={(o) => set({ clauseOverrides: o })}
+                  masterClauses={masterClauses}
                 />
               </div>
 
@@ -1299,8 +1320,7 @@ function SlipEditor({
                       Clauses Section 2 — Business Interruption
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Klausula yang berlaku untuk kedua section dipilih juga
-                      di sini.
+                      Pilih klausula khusus Section 2. Setiap klausula hanya boleh dipilih di salah satu section.
                     </p>
                   </div>
                   <ClausePicker
@@ -1312,9 +1332,36 @@ function SlipEditor({
                     onOverridesChange={(o) =>
                       set({ clauseOverridesSection2: o })
                     }
+                    masterClauses={masterClauses}
                   />
                 </div>
               ) : null}
+
+              {/* Validation warning for duplicate clauses */}
+              {usesSectionSumInsured(slip.cob) && (
+                <div className="flex flex-col gap-2">
+                  {(() => {
+                    const issues = validateClauseUniquenessAcrossSections(
+                      {
+                        clauseIds: slip.clauseIds ?? [],
+                        clauseIdsSection2: slip.clauseIdsSection2 ?? [],
+                      },
+                      clauseTitleLookup
+                    )
+                    if (issues.length > 0) {
+                      return (
+                        <div className="flex flex-col gap-1 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+                          <div className="flex gap-1.5">
+                            <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                            {issues[0]}
+                          </div>
+                        </div>
+                      )
+                    }
+                    return null
+                  })()}
+                </div>
+              )}
             </div>
           </SectionCard>
 

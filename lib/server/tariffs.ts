@@ -1,6 +1,8 @@
 import "server-only"
 
 import type { PlacingSlip, RateLine } from "@/lib/data/types"
+import { usesSectionSumInsured } from "@/components/underwriting/slip-model"
+import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
   brokerageLimitIssue,
   maxBrokeragePct,
@@ -253,6 +255,10 @@ export async function validatePlacingSlipForRelease(
     if (!slip.occupation) releaseIssues.push("Pilih okupasi OJK.")
     if (!slip.constructionClass) releaseIssues.push("Pilih kelas konstruksi.")
     if (!slip.riskLocation?.trim()) releaseIssues.push("Isi risk location.")
+  }
+  if (usesSectionSumInsured(slip.cob)) {
+    const clauseIssues = validateClauseUniquenessAcrossSections(slip)
+    if (clauseIssues.length) releaseIssues.push(...clauseIssues)
   }
   if (totalSumInsured(slip) <= 0) {
     releaseIssues.push("Isi sum insured.")
