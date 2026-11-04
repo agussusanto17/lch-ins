@@ -642,6 +642,20 @@ model BiScale {
   @@map("bi_scales")
 }
 
+/// Skala premi polis loss limit OJK: Lampiran I Tabel I.B (FLEXAS), sama
+/// dengan Tabel II.C (banjir) dan III.B (gempa). Loss limit sebagai persen
+/// nilai penuh menentukan persen premi full value. Salinan yang dipakai
+/// perhitungan ada di lib/data/loss-limit.ts; keduanya harus identik.
+model LossLimitScale {
+  valuesPct  Decimal @id @map("values_pct") @db.Decimal(5, 2)
+  premiumPct Decimal @map("premium_pct") @db.Decimal(5, 2)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("loss_limit_scales")
+}
+
 model Insurer {
   id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name          String
@@ -1068,6 +1082,12 @@ model PlacingSlip {
   /// Fee di luar brokerage untuk produksi, hanya slip Property dan Motor
   /// Vehicle. Tidak dicetak di dokumen slip; ikut ke polis yang dibuat dari slip.
   additionalFee Decimal @default(0) @map("additional_fee") @db.Decimal(18, 2)
+
+  /// Loss limit slip Property: batas ganti rugi di bawah nilai penuh Section 1.
+  /// Kosong berarti full value. Persen premi dari skala OJK disimpan saat
+  /// premi dihitung, supaya dokumen lama tetap sama dengan preminya.
+  lossLimit           Decimal? @map("loss_limit") @db.Decimal(18, 2)
+  lossLimitPremiumPct Decimal? @map("loss_limit_premium_pct") @db.Decimal(5, 2)
 
   subjectivity       String?
   quotationNo        String? @unique @map("quotation_no")

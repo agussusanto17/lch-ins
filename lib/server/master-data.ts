@@ -133,6 +133,11 @@ export type BiScaleRow = Omit<BiScale, "percentage"> & {
   percentage: number
 }
 
+export interface LossLimitScaleRow {
+  valuesPct: number
+  premiumPct: number
+}
+
 export interface OccupationRecord extends Occupation {
   tariffs: TariffOccupationRow[]
 }
@@ -291,6 +296,17 @@ export async function listBiScales(): Promise<BiScaleRow[]> {
     orderBy: { indemnityMonths: "asc" },
   })
   return rows.map((r) => ({ ...r, percentage: r.percentage.toNumber() }))
+}
+
+/** Skala premi loss limit OJK, urut dari 100% nilai penuh ke bawah. */
+export async function listLossLimitScales(): Promise<LossLimitScaleRow[]> {
+  const rows = await prisma.lossLimitScale.findMany({
+    orderBy: { valuesPct: "desc" },
+  })
+  return rows.map((r) => ({
+    valuesPct: r.valuesPct.toNumber(),
+    premiumPct: r.premiumPct.toNumber(),
+  }))
 }
 
 // Mutation functions (COB & cover type)
