@@ -1,5 +1,7 @@
 import * as z from "zod"
 
+import type { PlacingSlip } from "@/lib/data/types"
+
 export type FieldErrors = Record<string, string>
 
 /**
@@ -68,3 +70,20 @@ export const nik = z
 
 export const money = (label: string) =>
   z.number(`${label} wajib diisi`).nonnegative(`${label} tidak boleh negatif`)
+
+/** Satu klausula tidak boleh ada di kedua section. */
+export function validateClauseUniquenessAcrossSections(
+  slip: Pick<PlacingSlip, "clauseIds" | "clauseIdsSection2">
+): string[] {
+  const issues: string[] = []
+  const section1Clauses = new Set(slip.clauseIds ?? [])
+  const section2Clauses = new Set(slip.clauseIdsSection2 ?? [])
+
+  const duplicates = [...section1Clauses].filter(id => section2Clauses.has(id))
+  if (duplicates.length) {
+    issues.push(
+      `Klausula "${duplicates.join(", ")}" muncul di kedua section. Pilih klausula terpisah untuk Section 1 dan Section 2.`
+    )
+  }
+  return issues
+}

@@ -3,6 +3,7 @@ import "server-only"
 import { cache } from "react"
 
 import { Prisma, type SlipItemKind, type SlipStatus } from "@/lib/generated/prisma/client"
+import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 
 import type {
   ClassOfBusiness as CobType,
@@ -664,6 +665,18 @@ async function insertSlipClauses(
     "clauseIds" | "clauseOverrides" | "clauseIdsSection2" | "clauseOverridesSection2"
   >
 ) {
+  // Validasi: satu klausula tidak boleh ada di kedua section
+  const cob = normalizeCob(cobName)
+  if (usesSectionSumInsured(cob)) {
+    const issues = validateClauseUniquenessAcrossSections({
+      clauseIds: input.clauseIds ?? [],
+      clauseIdsSection2: input.clauseIdsSection2 ?? [],
+    })
+    if (issues.length > 0) {
+      throw new Error(issues[0])
+    }
+  }
+
   const sections = [
     { section: 1, ids: input.clauseIds, overrides: input.clauseOverrides },
   ]

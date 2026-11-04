@@ -60,6 +60,7 @@ import {
   usesPropertyBlocks,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
+import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
   deletePlacingSlipAction,
   previewSlipNumberAction,
@@ -1314,6 +1315,29 @@ function SlipEditor({
                   />
                 </div>
               ) : null}
+
+              {/* Validation warning for duplicate clauses */}
+              {usesSectionSumInsured(slip.cob) && (
+                <div className="flex flex-col gap-2">
+                  {(() => {
+                    const issues = validateClauseUniquenessAcrossSections({
+                      clauseIds: slip.clauseIds ?? [],
+                      clauseIdsSection2: slip.clauseIdsSection2 ?? [],
+                    })
+                    if (issues.length > 0) {
+                      return (
+                        <div className="flex flex-col gap-1 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+                          <div className="flex gap-1.5">
+                            <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                            {issues[0]}
+                          </div>
+                        </div>
+                      )
+                    }
+                    return null
+                  })()}
+                </div>
+              )}
             </div>
           </SectionCard>
 
