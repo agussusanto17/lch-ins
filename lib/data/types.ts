@@ -285,6 +285,11 @@ export interface Policy {
   /** Tambahan premi positif, pengembalian premi negatif (endorsement dan pembatalan). */
   premium: number
   brokeragePct: number
+  /**
+   * Fee di luar brokerage dalam mata uang polis, ikut report produksi.
+   * Kosong sama dengan 0; pengembalian fee bernilai negatif.
+   */
+  additionalFee?: number
   type: PolicyType
   riskLocation: string
   /** Nomor urut endorsement pada polis induk, ditentukan server. */

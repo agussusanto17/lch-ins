@@ -22,6 +22,11 @@ export function brokerageIdr(p: {
   return (premiumIdr(p) * p.brokeragePct) / 100
 }
 
+/** Additional fee polis dalam IDR; polis tanpa fee bernilai 0. */
+export function feeIdr(p: { additionalFee?: number; currency: string }) {
+  return toIdr(p.additionalFee ?? 0, p.currency)
+}
+
 /** Polis yang masih berjalan pada tanggal tertentu. */
 export function inForcePolicies(policies: Policy[], today: string) {
   return policies.filter((p) => policyStatus(p.expiryDate, today) !== "Expired")
@@ -112,6 +117,7 @@ export type MonthlyProductionRow = ReturnType<typeof monthlyProduction>[number]
 interface Breakdown {
   premium: number
   brokerage: number
+  fee: number
   policies: number
   sumInsured: number
 }
@@ -123,11 +129,13 @@ function groupPolicies(policies: Policy[], keyOf: (p: Policy) => string) {
     const cur = map.get(key) ?? {
       premium: 0,
       brokerage: 0,
+      fee: 0,
       policies: 0,
       sumInsured: 0,
     }
     cur.premium += premiumIdr(p)
     cur.brokerage += brokerageIdr(p)
+    cur.fee += feeIdr(p)
     cur.sumInsured += toIdr(p.sumInsured, p.currency)
     cur.policies += 1
     map.set(key, cur)

@@ -36,6 +36,7 @@ import {
   breakdownByCob,
   breakdownByInsurer,
   brokerageIdr,
+  feeIdr,
   monthlyProduction,
   policyStatus,
   premiumIdr,
@@ -105,6 +106,7 @@ type BreakdownRow = {
   sumInsured: number
   premium: number
   brokerage: number
+  fee: number
 }
 
 function breakdownColumns<T extends BreakdownRow>(
@@ -120,6 +122,7 @@ function breakdownColumns<T extends BreakdownRow>(
     },
     { header: "Premium (IDR)", value: (r) => r.premium, type: "money" },
     { header: "Brokerage (IDR)", value: (r) => r.brokerage, type: "money" },
+    { header: "Additional Fee (IDR)", value: (r) => r.fee, type: "money" },
   ]
 }
 
@@ -140,13 +143,14 @@ function BreakdownTable<T extends BreakdownRow>({
           <TableHead className="text-right">Polis</TableHead>
           <TableHead className="text-right">Total Sum Insured</TableHead>
           <TableHead className="text-right">Premium</TableHead>
-          <TableHead className="pr-5 text-right">Brokerage</TableHead>
+          <TableHead className="text-right">Brokerage</TableHead>
+          <TableHead className="pr-5 text-right">Additional Fee</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows.length === 0 ? (
           <TableEmpty
-            colSpan={5}
+            colSpan={6}
             message="Tidak ada produksi pada periode ini"
           />
         ) : (
@@ -162,8 +166,11 @@ function BreakdownTable<T extends BreakdownRow>({
               <TableCell className="tabular text-right">
                 {rupiah(r.premium)}
               </TableCell>
-              <TableCell className="tabular pr-5 text-right">
+              <TableCell className="tabular text-right">
                 {rupiah(r.brokerage)}
+              </TableCell>
+              <TableCell className="tabular pr-5 text-right">
+                {rupiah(r.fee)}
               </TableCell>
             </TableRow>
           ))
@@ -225,6 +232,7 @@ export function ReportView({
   const insurers = breakdownByInsurer(policies)
   const totalPremium = policies.reduce((a, p) => a + premiumIdr(p), 0)
   const totalBrokerage = policies.reduce((a, p) => a + brokerageIdr(p), 0)
+  const totalFee = policies.reduce((a, p) => a + feeIdr(p), 0)
   const totalSumInsured = policies.reduce(
     (a, p) => a + toIdr(p.sumInsured, p.currency),
     0
@@ -240,6 +248,8 @@ export function ReportView({
     ["Polis diproduksi", String(policies.length)],
     ["Total Premium", rupiah(totalPremium)],
     ["Total Brokerage", rupiah(totalBrokerage)],
+    ["Total Additional Fee", rupiah(totalFee)],
+    ["Pendapatan (Brokerage + Fee)", rupiah(totalBrokerage + totalFee)],
     ["Total Sum Insured", rupiah(totalSumInsured)],
     ["Klaim dilaporkan", String(claims.length)],
     ["Nilai Klaim", rupiah(claimValue)],
@@ -318,6 +328,11 @@ export function ReportView({
         <StatCard
           label="Brokerage Income"
           value={`Rp ${compactMoney(totalBrokerage)}`}
+          sub={
+            totalFee
+              ? `+ Additional Fee Rp ${compactMoney(totalFee)}`
+              : undefined
+          }
           icon={FileText}
         />
         <StatCard
@@ -459,6 +474,11 @@ export function ReportView({
                   type: "money",
                 },
                 {
+                  header: "Additional Fee (IDR)",
+                  value: (p) => feeIdr(p),
+                  type: "money",
+                },
+                {
                   header: "Status",
                   value: (p) => policyStatus(p.expiryDate, today),
                 },
@@ -475,13 +495,14 @@ export function ReportView({
                   <TableHead>Berakhir</TableHead>
                   <TableHead className="text-right">Premium</TableHead>
                   <TableHead className="text-right">Brokerage</TableHead>
+                  <TableHead className="text-right">Additional Fee</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {policies.length === 0 ? (
                   <TableEmpty
-                    colSpan={7}
+                    colSpan={8}
                     message="Tidak ada polis pada periode ini"
                   />
                 ) : (
@@ -504,6 +525,9 @@ export function ReportView({
                       </TableCell>
                       <TableCell className="tabular text-right whitespace-nowrap">
                         {rupiah(brokerageIdr(p))}
+                      </TableCell>
+                      <TableCell className="tabular text-right whitespace-nowrap">
+                        {rupiah(feeIdr(p))}
                       </TableCell>
                       <TableCell>
                         <StatusBadge
