@@ -107,7 +107,7 @@ export function InfoTable({
           <tr key={k} className="align-top">
             <td className={cn("w-[190px] text-muted-foreground", cell)}>{k}</td>
             <td className={cn("w-3", cell)}>:</td>
-            <td className={cell}>{v || "—"}</td>
+            <td className={cn("whitespace-pre-line", cell)}>{v || "—"}</td>
           </tr>
         ))}
       </tbody>
@@ -127,7 +127,7 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
           {slip.interestSection1 ? (
             <div>
               <p className="font-semibold">Section 1 — Material Damage</p>
-              <p className="mt-1 leading-relaxed text-muted-foreground">
+              <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
                 {slip.interestSection1}
               </p>
               <ul className="mt-2 flex flex-col gap-1">
@@ -155,7 +155,7 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
           {slip.interestSection2 ? (
             <div>
               <p className="font-semibold">Section 2 — Business Interruption</p>
-              <p className="mt-1 leading-relaxed text-muted-foreground">
+              <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
                 {slip.interestSection2}
               </p>
               <ul className="mt-2 flex flex-col gap-1">
@@ -317,7 +317,7 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
         {slip.specialConditions ? (
           <div>
             <p className="font-semibold">Special Conditions</p>
-            <p className="mt-1 leading-relaxed text-muted-foreground">
+            <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
               {slip.specialConditions}
             </p>
           </div>
