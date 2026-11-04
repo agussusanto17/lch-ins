@@ -452,8 +452,9 @@ async function seedSources() {
  * COB dan type of cover dari sheet FIX milik LCH. Kode COB adalah dua digit
  * pertama kode type of cover.
  *
- * Satuan rate dan tampilan form mengikuti SE OJK: harta benda per mil,
- * kendaraan bermotor persen, sisanya per mil dengan form standar.
+ * Satuan rate: Property per mil, COB lain persen (permintaan 4 November
+ * 2026). Tampilan form: Property dan Motor punya form sendiri, sisanya form
+ * standar.
  */
 const COB_FORM: Record<string, { rateMode: string; formVariant: string }> = {
   "01": { rateMode: "permil", formVariant: "property" },
@@ -497,7 +498,7 @@ async function seedCobAndCoverTypes() {
   for (const r of rows) {
     if (cobs.has(r.kode_cob)) continue
     const form = COB_FORM[r.kode_cob] ?? {
-      rateMode: "permil",
+      rateMode: "percent",
       formVariant: "standard",
     }
     const cob = await prisma.classOfBusiness.upsert({
