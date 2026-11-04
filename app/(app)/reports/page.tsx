@@ -10,10 +10,12 @@ import { requireAccess } from "@/lib/server/session"
 export const metadata: Metadata = { title: "Report — LCH Insurance Brokers" }
 
 export default async function ReportsPage() {
-  await requireAccess("/reports")
+  const user = await requireAccess("/reports")
+  const isPlacementOnly =
+    user.roles.includes("placement") && !user.roles.includes("admin")
   const [policies, claims] = await Promise.all([
     listPolicies(),
-    listClaims(),
+    isPlacementOnly ? Promise.resolve([]) : listClaims(),
   ])
 
   return (
@@ -23,7 +25,11 @@ export default async function ReportsPage() {
         description="Laporan periodik produksi, polis, dan klaim"
         actions={<ExportButtons />}
       />
-      <ReportView policies={policies} claims={claims} />
+      <ReportView
+        policies={policies}
+        claims={claims}
+        showClaims={!isPlacementOnly}
+      />
     </PageShell>
   )
 }
