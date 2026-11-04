@@ -32,7 +32,7 @@ import {
   SlipFormToolbar,
 } from "@/components/underwriting/slip-form-chrome"
 import { ClausePicker } from "@/components/underwriting/clause-picker"
-import { DeductibleList } from "@/components/underwriting/deductible-input"
+import { DeductiblePerCover } from "@/components/underwriting/deductible-input"
 import {
   LineItemList,
   StringList,
@@ -50,9 +50,9 @@ import {
 } from "@/components/underwriting/rate-tables"
 import {
   coverCodeFor,
-  coverLabel,
   occupationParts,
   isOutOfBounds,
+  keepGroupDeductibles,
   rateLinesWithBounds,
   recalc,
   releaseIssues,
@@ -1258,9 +1258,9 @@ function SlipEditor({
             <div className="flex flex-col gap-5">
               {/*
                * Deductible per cover untuk tiap baris rate (instruksi LCH 29
-               * Oktober 2026), sampai lima isian per cover (4 November 2026).
-               * Baris TPL dan PA tidak ikut: risiko sendiri motor berlaku untuk
-               * kendaraan dan perluasannya.
+               * Oktober 2026), sampai lima isian per cover. Slip Motor Vehicle
+               * bisa menambah baris Personal Accident dan Third Party Liability
+               * (keduanya 4 November 2026).
                */}
               <div className="flex flex-col gap-2">
                 <div>
@@ -1273,42 +1273,11 @@ function SlipEditor({
                         : `Belum ada pilihan deductible untuk ${slip.typeOfCover}. Tambahkan di Master Data > Deductible.`}
                   </p>
                 </div>
-                <div className="overflow-hidden rounded-xl border">
-                  {slip.rateLines.map((line) => (
-                    <div
-                      key={line.id}
-                      className="grid grid-cols-1 items-start gap-x-4 gap-y-1.5 border-b px-3 py-2.5 last:border-0 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]"
-                    >
-                      <label
-                        htmlFor={`deductible-${line.id}`}
-                        className="truncate text-sm text-muted-foreground sm:pt-2"
-                        title={coverLabel(slip, line)}
-                      >
-                        {coverLabel(slip, line)}
-                      </label>
-                      <DeductibleList
-                        id={`deductible-${line.id}`}
-                        cover={coverLabel(slip, line)}
-                        values={line.deductibles ?? []}
-                        choices={deductibleChoices}
-                        onChange={(values) =>
-                          set({
-                            rateLines: slip.rateLines.map((l) =>
-                              l.id === line.id
-                                ? { ...l, deductibles: values }
-                                : l
-                            ),
-                          })
-                        }
-                        placeholder={
-                          line.label.startsWith("BI")
-                            ? "Contoh: 14 days waiting period"
-                            : "Contoh: 10% of claim minimum IDR 10,000,000"
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
+                <DeductiblePerCover
+                  slip={slip}
+                  choices={deductibleChoices}
+                  onChange={set}
+                />
               </div>
 
               <Field>
@@ -1466,7 +1435,9 @@ function SlipEditor({
                     currency={slip.currency}
                     totalLabel="Total TPL"
                     readOnly={locked}
-                    onChange={(l) => set({ tplLines: l })}
+                    onChange={(l) =>
+                      set({ tplLines: keepGroupDeductibles(slip.tplLines, l) })
+                    }
                   />
                   <LimitRateTable
                     title="Personal Accident"
@@ -1475,7 +1446,9 @@ function SlipEditor({
                     totalLabel="Total PA"
                     showCoverColumn
                     readOnly={locked}
-                    onChange={(l) => set({ paLines: l })}
+                    onChange={(l) =>
+                      set({ paLines: keepGroupDeductibles(slip.paLines, l) })
+                    }
                   />
                   <p className="text-xs text-muted-foreground">
                     Limit PA: IDR 5.000.000/orang, maks. 4 orang (selain truck

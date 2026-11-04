@@ -85,6 +85,87 @@ export function coverLabel(
     : line.label
 }
 
+export type DeductibleGroup = "rateLines" | "tplLines" | "paLines"
+
+/** One row of "Deductible per cover", with the line that stores its deductibles. */
+export interface DeductibleRow {
+  group: DeductibleGroup
+  lineId: string
+  cover: string
+  deductibles: string[]
+  /** Motor PA or TPL row added from the "Tambah cover" menu; it can be removed. */
+  extra: boolean
+}
+
+/**
+ * Motor covers outside the rate list that can carry deductibles (permintaan 4
+ * November 2026). Their deductibles live on the first line of their table.
+ */
+const MOTOR_EXTRA_COVERS: {
+  group: Exclude<DeductibleGroup, "rateLines">
+  cover: string
+}[] = [
+  { group: "paLines", cover: "Personal Accident" },
+  { group: "tplLines", cover: "Third Party Liability" },
+]
+
+/** Extra motor rows follow this cover; without it they go last. */
+const MOTOR_EXTRA_AFTER = "Terrorism & Sabotage"
+
+/** Motor PA and TPL covers this slip has, i.e. whose table has a line. */
+export function extraDeductibleCovers(
+  slip: Pick<PlacingSlip, "cob" | "tplLines" | "paLines">
+) {
+  if (slip.cob !== "Motor Vehicle") return []
+  return MOTOR_EXTRA_COVERS.filter((c) => slip[c.group].length > 0)
+}
+
+/**
+ * Deductible rows in form and print order: one per rate line, with motor PA
+ * and TPL after Terrorism & Sabotage once they hold deductibles or were added
+ * from the form (`added`).
+ */
+export function deductibleRows(
+  slip: PlacingSlip,
+  added: DeductibleGroup[] = []
+): DeductibleRow[] {
+  const rows: DeductibleRow[] = slip.rateLines.map((l) => ({
+    group: "rateLines",
+    lineId: l.id,
+    cover: coverLabel(slip, l),
+    deductibles: l.deductibles ?? [],
+    extra: false,
+  }))
+  const extras = extraDeductibleCovers(slip).flatMap((c): DeductibleRow[] => {
+    const line = slip[c.group][0]
+    const deductibles = line.deductibles ?? []
+    return deductibles.length || added.includes(c.group)
+      ? [
+          {
+            group: c.group,
+            lineId: line.id,
+            cover: c.cover,
+            deductibles,
+            extra: true,
+          },
+        ]
+      : []
+  })
+  const after = slip.rateLines.findIndex((l) => l.label === MOTOR_EXTRA_AFTER)
+  rows.splice(after < 0 ? rows.length : after + 1, 0, ...extras)
+  return rows
+}
+
+/**
+ * PA and TPL deductibles live on the first line of their table. Removing that
+ * line hands them to the line that becomes first, so they are not lost.
+ */
+export function keepGroupDeductibles(prev: RateLine[], next: RateLine[]) {
+  const kept = prev[0]?.deductibles
+  if (!kept?.length || !next.length || next[0].id === prev[0].id) return next
+  return next.map((l, i) => (i === 0 ? { ...l, deductibles: kept } : l))
+}
+
 export function makeMotorSubLines(): {
   tplLines: RateLine[]
   paLines: RateLine[]
