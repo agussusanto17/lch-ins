@@ -5,6 +5,8 @@ import { ArrowLeft, Printer } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { LchLogo } from "@/components/documents/letterhead"
+import { PrintedAt } from "@/components/documents/printed-at"
 
 export function DocumentShell({
   backHref,
@@ -40,7 +42,36 @@ export function DocumentShell({
       </div>
 
       <article className="print-sheet rounded-2xl border bg-card p-8 text-card-foreground shadow-sm md:p-12">
-        {children}
+        {/* Header berulang di setiap halaman cetak */}
+        <div className="print-header-fixed hidden print:block">
+          <LchLogo className="h-14 w-auto" />
+        </div>
+
+        {/* Footer navy berulang di setiap halaman cetak */}
+        <div className="print-footer-fixed hidden print:block">
+          <PrintedAt isPrintFixed />
+        </div>
+
+        {/* Tabel layout cetak: thead/tfoot spacer otomatis memberi ruang kosong di setiap halaman */}
+        <table className="print-page-table w-full border-collapse">
+          <thead className="hidden print:table-header-group">
+            <tr>
+              <td className="print-header-spacer border-0 p-0"></td>
+            </tr>
+          </thead>
+          <tfoot className="hidden print:table-footer-group">
+            <tr>
+              <td className="print-footer-spacer border-0 p-0"></td>
+            </tr>
+          </tfoot>
+          <tbody className="print:table-row-group">
+            <tr>
+              <td className="border-0 p-0 align-top print:px-[12mm]">
+                {children}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </article>
 
       <p className="no-print pb-6 text-center text-xs text-muted-foreground">

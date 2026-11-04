@@ -267,7 +267,7 @@ function PurposeRow({ no, client }: { no: number; client: KycClient }) {
 function KycFooter() {
   return (
     <footer
-      className="avoid-break mt-10 flex items-center justify-between gap-6 px-4 py-3 text-[10px] leading-relaxed text-white"
+      className="avoid-break mt-10 flex items-center justify-between gap-6 px-4 py-3 text-[10px] leading-relaxed text-white print:hidden"
       style={{ backgroundColor: KYC_NAVY }}
     >
       <p>
@@ -314,7 +314,9 @@ function KycForm({
   return (
     <section className="text-[12px]">
       <header className="flex items-center justify-between gap-6">
-        <LchLogo className="h-14 w-auto" />
+        <div className="print:hidden">
+          <LchLogo className="h-14 w-auto" />
+        </div>
         <div className="text-right">
           <p className="text-[17px] font-bold italic">
             Know Your Customer Form:

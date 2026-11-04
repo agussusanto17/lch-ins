@@ -9,7 +9,11 @@ function noopSubscribe() {
 }
 
 /** Waktu cetak diambil saat halaman dibuka di browser, bukan saat build. */
-export function PrintedAt() {
+export function PrintedAt({
+  isPrintFixed = false,
+}: {
+  isPrintFixed?: boolean
+} = {}) {
   const label = React.useSyncExternalStore(
     noopSubscribe,
     () =>
@@ -20,5 +24,10 @@ export function PrintedAt() {
       }).format(new Date(Math.floor(Date.now() / 60_000) * 60_000)),
     () => ""
   )
-  return <DocumentFooter printedAt={label ? `${label} WIB` : "—"} />
+  return (
+    <DocumentFooter
+      isPrintFixed={isPrintFixed}
+      printedAt={label ? `${label} WIB` : "—"}
+    />
+  )
 }
