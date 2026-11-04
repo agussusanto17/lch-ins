@@ -19,8 +19,9 @@ import { Button } from "@/components/ui/button"
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
 import {
   brokerageCapFor,
+  slipPolicyParts,
+  slipPolicyPremium,
   sumPercent,
-  totalPremium,
   totalSumInsured,
 } from "@/lib/calc"
 import {
@@ -31,6 +32,7 @@ import {
   type Policy,
   type PolicyFile,
   type PolicyType,
+  type SlipPart,
 } from "@/lib/data"
 import { addMonths, todayIso } from "@/lib/date"
 import { cobLabels, coversFor } from "@/lib/form-options"
@@ -61,6 +63,7 @@ function emptyDraft(): Draft {
     premium: 0,
     brokeragePct: 0,
     additionalFee: 0,
+    slipPart: null,
     type: "Baru",
     riskLocation: "",
     cobOjkClassId: null,
@@ -184,8 +187,24 @@ export function PolicyForm({
   const parentItems = policies
     .filter((p) => p.id !== draft.id && p.type !== "Cancellation")
     .map((p) => ({ label: `${p.policyNo} — ${p.insuredName}`, value: p.id }))
+  // Slip yang sudah menjadi polis tidak muncul lagi; slip PAR + EQVET muncul
+  // sampai kedua bagiannya punya polis. Polis lama tanpa bagian memakai seluruh
+  // slip. Hasil kosong berarti slip habis; [null] berarti slip utuh tersedia.
+  function freeSlipParts(slip: PlacingSlip): (SlipPart | null)[] {
+    const used = policies.filter(
+      (p) => p.placingSlipId === slip.id && p.id !== draft.id
+    )
+    const parts = slipPolicyParts(slip)
+    if (!parts.length) return used.length ? [] : [null]
+    if (used.some((p) => !p.slipPart)) return []
+    return parts.filter((part) => !used.some((p) => p.slipPart === part))
+  }
   const slipItems = slips
-    .filter((s) => s.status === "Quoted" || s.status === "Closed")
+    .filter(
+      (s) =>
+        (s.status === "Quoted" || s.status === "Closed") &&
+        (s.id === draft.placingSlipId || freeSlipParts(s).length > 0)
+    )
     .map((s) => ({
       label: `${s.slipNo ?? "Draft"} — ${s.insuredName}`,
       value: s.id,
@@ -231,17 +250,13 @@ export function PolicyForm({
     .filter((c) => c.isActive || c.id === draft.cobOjkClassId)
     .map((c) => ({ label: c.name, value: c.id }))
 
-  function fromSlip(slipId: string | null) {
-    const slip = slipId ? slips.find((s) => s.id === slipId) : null
-    if (!slip) {
-      set({ placingSlipId: null })
-      return
-    }
+  function slipPatch(slip: PlacingSlip, part: SlipPart | null): Partial<Draft> {
     const panel = slip.securityPanel?.filter((r) => r.insurer) ?? []
     const leader = panel.find((r) => r.role === "As Leader") ?? panel[0]
     const client = clientOptionFor(slip.clientId)
-    set({
+    return {
       placingSlipId: slip.id,
+      slipPart: part,
       clientId: client?.id ?? slip.clientId,
       insuredName: client?.name ?? slip.insuredName,
       cob: slip.cob,
@@ -250,13 +265,23 @@ export function PolicyForm({
       inceptionDate: slip.inceptionDate ?? "",
       expiryDate: slip.expiryDate ?? "",
       sumInsured: totalSumInsured(slip),
-      premium: totalPremium(slip),
+      // Slip PAR + EQVET: premi per bagian, additional fee ikut polis PAR.
+      premium: slipPolicyPremium(slip, part),
       brokeragePct: slip.brokeragePct,
-      additionalFee: slip.additionalFee ?? 0,
+      additionalFee: part === "EQVET" ? 0 : (slip.additionalFee ?? 0),
       riskLocation: slip.riskLocation ?? "",
       insurer: leader?.insurer ?? "",
       insurers: panel,
-    })
+    }
+  }
+
+  function fromSlip(slipId: string | null) {
+    const slip = slipId ? slips.find((s) => s.id === slipId) : null
+    if (!slip) {
+      set({ placingSlipId: null, slipPart: null })
+      return
+    }
+    set(slipPatch(slip, freeSlipParts(slip)[0] ?? null))
   }
 
   function fromParent(parentId: string | null) {
@@ -371,7 +396,7 @@ export function PolicyForm({
             value={draft.placingSlipId}
             onValueChange={fromSlip}
             placeholder="Pilih slip Quoted atau Closed (opsional)"
-            emptyMessage="Belum ada slip yang Quoted atau Closed"
+            emptyMessage="Tidak ada slip Quoted atau Closed yang belum menjadi polis"
             description={
               slipLocked
                 ? "Data dari slip dikunci. Kosongkan pilihan slip untuk mengisi manual."
@@ -382,9 +407,23 @@ export function PolicyForm({
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Link2 className="size-3.5" />
             Terhubung ke placing slip{" "}
-            {linkedSlip?.slipNo ?? policy.placingSlipNo}. Data dari slip
-            dikunci; perubahan sesudah polis terbit lewat endorsement.
+            {linkedSlip?.slipNo ?? policy.placingSlipNo}
+            {draft.slipPart ? `, bagian ${draft.slipPart}` : ""}. Data dari
+            slip dikunci; perubahan sesudah polis terbit lewat endorsement.
           </p>
+        ) : null}
+
+        {!policy && linkedSlip && slipPolicyParts(linkedSlip).length ? (
+          <SelectInput
+            label="Bagian Slip"
+            required
+            items={freeSlipParts(linkedSlip).filter(
+              (p): p is SlipPart => p !== null
+            )}
+            value={draft.slipPart ?? ""}
+            onValueChange={(v) => set(slipPatch(linkedSlip, v as SlipPart))}
+            description="Slip PAR + EQVET terbit sebagai dua polis. Premium terisi sesuai bagian; additional fee ikut polis PAR."
+          />
         ) : null}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

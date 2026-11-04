@@ -49,6 +49,7 @@ const policyInputSchema = z
     premium: z.number(),
     brokeragePct: z.number().min(0).max(100),
     additionalFee: z.number().optional(),
+    slipPart: z.enum(["PAR", "EQVET"]).nullable().optional(),
     type: z.enum(POLICY_TYPES),
     riskLocation: z.string(),
     cobOjkClassId: z.uuid("Klasifikasi OJK tidak valid").nullable().optional(),

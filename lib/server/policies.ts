@@ -5,12 +5,19 @@ import { CLIENTS } from "@/lib/data/clients"
 import { POLICIES as MOCK_POLICIES } from "@/lib/data/policies"
 import { POLICY_TYPES } from "@/lib/data/reference"
 import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
-import type { ClassOfBusiness, Policy, SecurityPanelRow } from "@/lib/data/types"
+import type {
+  ClassOfBusiness,
+  Policy,
+  SecurityPanelRow,
+  SlipPart,
+} from "@/lib/data/types"
+import { slipPolicyParts } from "@/lib/calc"
 import { addDays } from "@/lib/date"
 import { normalizeCob } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 import { MAX_RENEWAL_DAYS } from "@/lib/renewal"
 import { seedInitialClientsIfEmpty } from "@/lib/server/clients"
+import { getPlacingSlipById } from "@/lib/server/placing-slips"
 import { recordAudit } from "@/server/services/audit"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
 
@@ -60,6 +67,8 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
     clientId: row.clientId,
     placingSlipId: row.placingSlipId,
     placingSlipNo: row.placingSlip?.slipNo ?? null,
+    slipPart:
+      row.slipPart === "PAR" || row.slipPart === "EQVET" ? row.slipPart : null,
     parentPolicyId: row.parentPolicyId,
     insuredName: row.insuredName,
     insurer: leader?.insurer ?? "",
@@ -100,6 +109,7 @@ function auditSnapshot(p: PolicyRecord) {
     premium: p.premium,
     brokeragePct: p.brokeragePct,
     additionalFee: p.additionalFee ?? 0,
+    slipPart: p.slipPart ?? null,
     endorsementSeq: p.endorsementSeq,
     cobOjkClassId: p.cobOjkClassId,
     placementLocationId: p.placementLocationId,
@@ -275,8 +285,59 @@ async function checkedPolicyData(tx: Tx, input: PolicyInput, selfId?: string) {
   }
   return {
     ...data,
+    slipPart: await checkedSlipPart(tx, data.placingSlipId, input.slipPart, selfId),
     endorsementSeq: await endorsementSeqFor(tx, input.type, data.parentPolicyId, selfId),
   }
+}
+
+/**
+ * Satu placing slip menjadi satu polis; slip PAR + EQVET satu polis per bagian.
+ * Mencegah produksi dari slip yang sama terhitung dua kali. Tautan yang tidak
+ * berubah saat polis diedit tidak diperiksa ulang, jadi polis lama tetap bisa
+ * disimpan.
+ */
+async function checkedSlipPart(
+  tx: Tx,
+  slipId: string | null,
+  part: SlipPart | null | undefined,
+  selfId?: string
+): Promise<SlipPart | null> {
+  if (!slipId) return null
+  if (selfId) {
+    const current = await tx.policy.findUnique({
+      where: { id: selfId },
+      select: { placingSlipId: true, slipPart: true },
+    })
+    if (current?.placingSlipId === slipId) {
+      return current.slipPart === "PAR" || current.slipPart === "EQVET"
+        ? current.slipPart
+        : null
+    }
+  }
+  const slip = await getPlacingSlipById(slipId)
+  if (!slip) throw new Error("Placing slip tidak ditemukan.")
+  const parts = slipPolicyParts(slip)
+  const slipPart = parts.length ? (part ?? null) : null
+  if (parts.length && !(slipPart && parts.includes(slipPart))) {
+    throw new Error("Pilih bagian slip: PAR atau EQVET.")
+  }
+  const others = await tx.policy.findMany({
+    where: { placingSlipId: slipId, ...(selfId ? { id: { not: selfId } } : {}) },
+    select: { policyNo: true, slipPart: true },
+  })
+  // Polis lama tanpa bagian dianggap memakai seluruh slip.
+  const clash = others.find(
+    (p) => !slipPart || !p.slipPart || p.slipPart === slipPart
+  )
+  if (clash) {
+    const slipNo = slip.slipNo ?? "ini"
+    throw new Error(
+      slipPart
+        ? `Bagian ${slipPart} slip ${slipNo} sudah dipakai polis ${clash.policyNo}.`
+        : `Placing slip ${slipNo} sudah dipakai polis ${clash.policyNo}.`
+    )
+  }
+  return slipPart
 }
 
 async function writeInsurers(tx: Tx, policyId: string, input: PolicyInput) {

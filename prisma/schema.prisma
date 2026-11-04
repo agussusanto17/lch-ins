@@ -1245,6 +1245,10 @@ model Policy {
   id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   policyNo            String   @unique @map("policy_no")
   placingSlipId       String?  @map("placing_slip_id") @db.Uuid
+  /// Bagian slip PAR + EQVET yang menjadi polis ini: PAR atau EQVET. Kosong
+  /// untuk slip yang terbit sebagai satu polis. Satu slip satu polis, slip
+  /// PAR + EQVET satu polis per bagian (dicek di server).
+  slipPart            String?  @map("slip_part")
   clientId            String?  @map("client_id") @db.Uuid
   cobId               String   @map("cob_id") @db.Uuid
   coverTypeId         String?  @map("cover_type_id") @db.Uuid
