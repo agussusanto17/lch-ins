@@ -2,7 +2,7 @@ import {
   PAR_EQVET_FORMULA_NAMES,
   PAR_EQVET_FULL_NAMES,
 } from "./data/reference"
-import type { PlacingSlip, RateLine } from "./data/types"
+import type { PlacingSlip, RateLine, SlipPart } from "./data/types"
 import { num } from "./format"
 
 /** Demo exchange rates for report aggregation. */
@@ -89,6 +89,24 @@ export function totalPayable(slip: PlacingSlip) {
  * Detects whether a slip uses PAR + EQVET rate calculation structure (Image 4 & 5).
  * Property slips with FLEXAS or EQVET rate lines follow this grouped presentation.
  */
+/**
+ * Bagian slip yang terbit sebagai polis terpisah. Slip PAR + EQVET dengan premi
+ * di kedua kelompok menjadi dua polis (Harry, 3 November 2026); slip lain satu
+ * polis, ditandai daftar kosong.
+ */
+export function slipPolicyParts(slip: PlacingSlip): SlipPart[] {
+  if (!isParEqvetSlip(slip)) return []
+  const { par, eqvet } = calculateParEqvet(slip)
+  return par.subtotal > 0 && eqvet.subtotal > 0 ? ["PAR", "EQVET"] : []
+}
+
+/** Premi polis dari slip: per bagian untuk slip PAR + EQVET, selain itu total. */
+export function slipPolicyPremium(slip: PlacingSlip, part: SlipPart | null) {
+  if (!part) return totalPremium(slip)
+  const { par, eqvet } = calculateParEqvet(slip)
+  return part === "PAR" ? par.subtotal : eqvet.subtotal
+}
+
 export function isParEqvetSlip(slip: PlacingSlip): boolean {
   if (slip.cob !== "Property") return false
   return (

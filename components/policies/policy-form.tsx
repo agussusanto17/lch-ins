@@ -19,8 +19,9 @@ import { Button } from "@/components/ui/button"
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
 import {
   brokerageCapFor,
+  slipPolicyParts,
+  slipPolicyPremium,
   sumPercent,
-  totalPremium,
   totalSumInsured,
 } from "@/lib/calc"
 import {
@@ -31,6 +32,7 @@ import {
   type Policy,
   type PolicyFile,
   type PolicyType,
+  type SlipPart,
 } from "@/lib/data"
 import { addMonths, todayIso } from "@/lib/date"
 import { cobLabels, coversFor } from "@/lib/form-options"
@@ -61,6 +63,7 @@ function emptyDraft(): Draft {
     premium: 0,
     brokeragePct: 0,
     additionalFee: 0,
+    slipPart: null,
     type: "Baru",
     riskLocation: "",
     cobOjkClassId: null,
@@ -184,13 +187,39 @@ export function PolicyForm({
   const parentItems = policies
     .filter((p) => p.id !== draft.id && p.type !== "Cancellation")
     .map((p) => ({ label: `${p.policyNo} — ${p.insuredName}`, value: p.id }))
+  // Slip yang sudah menjadi polis tidak muncul lagi; slip PAR + EQVET muncul
+  // sampai kedua bagiannya punya polis. Polis lama tanpa bagian memakai seluruh
+  // slip. Hasil kosong berarti slip habis; [null] berarti slip utuh tersedia.
+  function freeSlipParts(slip: PlacingSlip): (SlipPart | null)[] {
+    const used = policies.filter(
+      (p) => p.placingSlipId === slip.id && p.id !== draft.id
+    )
+    const parts = slipPolicyParts(slip)
+    if (!parts.length) return used.length ? [] : [null]
+    if (used.some((p) => !p.slipPart)) return []
+    return parts.filter((part) => !used.some((p) => p.slipPart === part))
+  }
   const slipItems = slips
-    .filter((s) => s.status === "Quoted" || s.status === "Closed")
+    .filter(
+      (s) =>
+        (s.status === "Quoted" || s.status === "Closed") &&
+        (s.id === draft.placingSlipId || freeSlipParts(s).length > 0)
+    )
     .map((s) => ({
       label: `${s.slipNo ?? "Draft"} — ${s.insuredName}`,
       value: s.id,
     }))
   const needsParent = POLICY_TYPES_WITH_PARENT.includes(draft.type)
+  // Polis dari placing slip: data penempatan mengikuti slip dan dikunci.
+  // Polis baru bisa dilepas dari slip untuk diisi manual; perubahan sesudah
+  // polis terbit lewat endorsement. Periode slip yang TBA tetap diisi di sini.
+  const linkedSlip = draft.placingSlipId
+    ? (slips.find((s) => s.id === draft.placingSlipId) ?? null)
+    : null
+  const slipLocked = Boolean(draft.placingSlipId)
+  const periodLocked = Boolean(
+    linkedSlip?.inceptionDate && linkedSlip.expiryDate
+  )
   // COB dan type of cover dari master data. Nilai polis lama yang sudah tidak
   // ada di master tetap tampil supaya tidak hilang saat diedit.
   const masterOptions = useFormOptions()
@@ -221,17 +250,13 @@ export function PolicyForm({
     .filter((c) => c.isActive || c.id === draft.cobOjkClassId)
     .map((c) => ({ label: c.name, value: c.id }))
 
-  function fromSlip(slipId: string | null) {
-    const slip = slipId ? slips.find((s) => s.id === slipId) : null
-    if (!slip) {
-      set({ placingSlipId: null })
-      return
-    }
+  function slipPatch(slip: PlacingSlip, part: SlipPart | null): Partial<Draft> {
     const panel = slip.securityPanel?.filter((r) => r.insurer) ?? []
     const leader = panel.find((r) => r.role === "As Leader") ?? panel[0]
     const client = clientOptionFor(slip.clientId)
-    set({
+    return {
       placingSlipId: slip.id,
+      slipPart: part,
       clientId: client?.id ?? slip.clientId,
       insuredName: client?.name ?? slip.insuredName,
       cob: slip.cob,
@@ -240,19 +265,34 @@ export function PolicyForm({
       inceptionDate: slip.inceptionDate ?? "",
       expiryDate: slip.expiryDate ?? "",
       sumInsured: totalSumInsured(slip),
-      premium: totalPremium(slip),
+      // Slip PAR + EQVET: premi per bagian, additional fee ikut polis PAR.
+      premium: slipPolicyPremium(slip, part),
       brokeragePct: slip.brokeragePct,
-      additionalFee: slip.additionalFee ?? 0,
+      additionalFee: part === "EQVET" ? 0 : (slip.additionalFee ?? 0),
       riskLocation: slip.riskLocation ?? "",
       insurer: leader?.insurer ?? "",
       insurers: panel,
-    })
+    }
+  }
+
+  function fromSlip(slipId: string | null) {
+    const slip = slipId ? slips.find((s) => s.id === slipId) : null
+    if (!slip) {
+      set({ placingSlipId: null, slipPart: null })
+      return
+    }
+    set(slipPatch(slip, freeSlipParts(slip)[0] ?? null))
   }
 
   function fromParent(parentId: string | null) {
     const parent = parentId ? policies.find((p) => p.id === parentId) : null
     if (!parent) {
       set({ parentPolicyId: null })
+      return
+    }
+    // Polis dari slip hanya menautkan polis induk; datanya tetap dari slip.
+    if (draft.placingSlipId) {
+      set({ parentPolicyId: parent.id })
       return
     }
     const renewal = draft.type === "Renewal"
@@ -356,16 +396,34 @@ export function PolicyForm({
             value={draft.placingSlipId}
             onValueChange={fromSlip}
             placeholder="Pilih slip Quoted atau Closed (opsional)"
-            emptyMessage="Belum ada slip yang Quoted atau Closed"
-            description="Tertanggung, COB, periode, nilai, dan panel asuransi terisi dari slip."
+            emptyMessage="Tidak ada slip Quoted atau Closed yang belum menjadi polis"
+            description={
+              slipLocked
+                ? "Data dari slip dikunci. Kosongkan pilihan slip untuk mengisi manual."
+                : "Tertanggung, COB, periode, nilai, dan panel asuransi terisi dari slip."
+            }
           />
         ) : draft.placingSlipId ? (
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Link2 className="size-3.5" />
             Terhubung ke placing slip{" "}
-            {slips.find((s) => s.id === draft.placingSlipId)?.slipNo ??
-              policy.placingSlipNo}
+            {linkedSlip?.slipNo ?? policy.placingSlipNo}
+            {draft.slipPart ? `, bagian ${draft.slipPart}` : ""}. Data dari
+            slip dikunci; perubahan sesudah polis terbit lewat endorsement.
           </p>
+        ) : null}
+
+        {!policy && linkedSlip && slipPolicyParts(linkedSlip).length ? (
+          <SelectInput
+            label="Bagian Slip"
+            required
+            items={freeSlipParts(linkedSlip).filter(
+              (p): p is SlipPart => p !== null
+            )}
+            value={draft.slipPart ?? ""}
+            onValueChange={(v) => set(slipPatch(linkedSlip, v as SlipPart))}
+            description="Slip PAR + EQVET terbit sebagai dua polis. Premium terisi sesuai bagian; additional fee ikut polis PAR."
+          />
         ) : null}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -414,152 +472,163 @@ export function PolicyForm({
         <FieldSeparator />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <SearchSelect
-            className="sm:col-span-2"
-            label="Klien"
-            required
-            items={clientItems}
-            value={draft.clientId}
-            onValueChange={(id) => {
-              const client = clientOptions.find((c) => c.id === id)
-              set({
-                clientId: id,
-                insuredName: client?.name ?? draft.insuredName,
-              })
-            }}
-            placeholder="Cari nama klien"
-            emptyMessage="Klien belum terdaftar. Tambahkan dulu di menu Marketing."
-            error={errors.clientId}
-          />
-          <TextField
-            className="sm:col-span-2"
-            label="Nama Tertanggung"
-            required
-            placeholder="PT Nama Klien / Perorangan"
-            value={draft.insuredName}
-            onChange={(v) => set({ insuredName: v })}
-            description="Disalin dari klien, boleh ditambah misalnya “and/or Subsidiary Companies”."
-            error={errors.insuredName}
-          />
-          <SelectInput
-            className="sm:col-span-2"
-            label="Asuransi (Leader)"
-            required
-            items={insurerItems}
-            value={draft.insurer}
-            onValueChange={(v) => set({ insurer: v })}
-            error={errors.insurer}
-          />
-          {draft.insurers.length > 1 ? (
-            <div className="rounded-lg bg-muted/60 px-3 py-2 text-xs sm:col-span-2">
-              <p className="mb-1 font-medium">
-                Co-insurance dari slip · total {coShare}%
-              </p>
-              {draft.insurers.map((r) => (
-                <p key={r.id} className="flex justify-between gap-3">
-                  <span className="truncate">{r.insurer}</span>
-                  <span className="tabular shrink-0">
-                    {r.share}% · {r.role.replace("As ", "")}
-                  </span>
+          <fieldset disabled={slipLocked} className="contents">
+            <SearchSelect
+              className="sm:col-span-2"
+              label="Klien"
+              required
+              disabled={slipLocked}
+              items={clientItems}
+              value={draft.clientId}
+              onValueChange={(id) => {
+                const client = clientOptions.find((c) => c.id === id)
+                set({
+                  clientId: id,
+                  insuredName: client?.name ?? draft.insuredName,
+                })
+              }}
+              placeholder="Cari nama klien"
+              emptyMessage="Klien belum terdaftar. Tambahkan dulu di menu Marketing."
+              error={errors.clientId}
+            />
+            <TextField
+              className="sm:col-span-2"
+              label="Nama Tertanggung"
+              required
+              placeholder="PT Nama Klien / Perorangan"
+              value={draft.insuredName}
+              onChange={(v) => set({ insuredName: v })}
+              description={
+                slipLocked
+                  ? undefined
+                  : "Disalin dari klien, boleh ditambah misalnya “and/or Subsidiary Companies”."
+              }
+              error={errors.insuredName}
+            />
+            <SelectInput
+              className="sm:col-span-2"
+              label="Asuransi (Leader)"
+              required
+              items={insurerItems}
+              value={draft.insurer}
+              onValueChange={(v) => set({ insurer: v })}
+              error={errors.insurer}
+            />
+            {draft.insurers.length > 1 ? (
+              <div className="rounded-lg bg-muted/60 px-3 py-2 text-xs sm:col-span-2">
+                <p className="mb-1 font-medium">
+                  Co-insurance dari slip · total {coShare}%
                 </p>
-              ))}
-            </div>
-          ) : null}
-          <SelectInput
-            label="Class of Business"
-            required
-            items={cobItems}
-            value={draft.cob}
-            onValueChange={(v) =>
-              set({ cob: v as ClassOfBusiness, typeOfCover: "" })
-            }
-          />
-          <SelectInput
-            label="Type of Cover"
-            items={coverItems}
-            value={draft.typeOfCover ?? ""}
-            onValueChange={(v) => set({ typeOfCover: v })}
-          />
-          <TextField
-            label="Tanggal Mulai"
-            required
-            type="date"
-            value={draft.inceptionDate}
-            onChange={(v) => set({ inceptionDate: v })}
-            error={errors.inceptionDate}
-          />
-          <TextField
-            label="Tanggal Berakhir"
-            required
-            type="date"
-            value={draft.expiryDate}
-            onChange={(v) => set({ expiryDate: v })}
-            error={errors.expiryDate}
-          />
+                {draft.insurers.map((r) => (
+                  <p key={r.id} className="flex justify-between gap-3">
+                    <span className="truncate">{r.insurer}</span>
+                    <span className="tabular shrink-0">
+                      {r.share}% · {r.role.replace("As ", "")}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            ) : null}
+            <SelectInput
+              label="Class of Business"
+              required
+              items={cobItems}
+              value={draft.cob}
+              onValueChange={(v) =>
+                set({ cob: v as ClassOfBusiness, typeOfCover: "" })
+              }
+            />
+            <SelectInput
+              label="Type of Cover"
+              items={coverItems}
+              value={draft.typeOfCover ?? ""}
+              onValueChange={(v) => set({ typeOfCover: v })}
+            />
+          </fieldset>
+          <fieldset disabled={periodLocked} className="contents">
+            <TextField
+              label="Tanggal Mulai"
+              required
+              type="date"
+              value={draft.inceptionDate}
+              onChange={(v) => set({ inceptionDate: v })}
+              error={errors.inceptionDate}
+            />
+            <TextField
+              label="Tanggal Berakhir"
+              required
+              type="date"
+              value={draft.expiryDate}
+              onChange={(v) => set({ expiryDate: v })}
+              error={errors.expiryDate}
+            />
+          </fieldset>
         </div>
 
         <FieldSeparator />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <SelectInput
-            label="Mata Uang"
-            required
-            items={currencyItems}
-            value={draft.currency}
-            onValueChange={(v) => set({ currency: v })}
-          />
-          <NumberField
-            label="Total Sum Insured"
-            value={draft.sumInsured}
-            onValueChange={(v) => set({ sumInsured: v ?? 0 })}
-            error={errors.sumInsured}
-          />
-          <NumberField
-            label="Premium"
-            required
-            value={draft.premium}
-            onValueChange={(v) => set({ premium: v ?? 0 })}
-            error={errors.premium}
-            description={
-              draft.type === "Endorsement" || draft.type === "Cancellation"
-                ? "Tambahan premi positif, pengembalian premi negatif."
-                : money(draft.premium, draft.currency)
-            }
-          />
-          <NumberField
-            label="Brokerage (%)"
-            preset="percent"
-            value={draft.brokeragePct}
-            onValueChange={(v) => set({ brokeragePct: v ?? 0 })}
-            error={errors.brokeragePct}
-            description={
-              brokerageCap != null && draft.brokeragePct > brokerageCap
-                ? `Melebihi batas biaya akuisisi OJK ${brokerageCap}% untuk ${draft.cob}.`
-                : undefined
-            }
-          />
-          <NumberField
-            label="Additional Fee"
-            value={draft.additionalFee ?? 0}
-            onValueChange={(v) => set({ additionalFee: v ?? 0 })}
-            error={errors.additionalFee}
-            description={
-              draft.type === "Endorsement" || draft.type === "Cancellation"
-                ? "Tambahan fee positif, pengembalian fee negatif."
-                : draft.additionalFee
-                  ? money(draft.additionalFee, draft.currency)
-                  : "Opsional, fee di luar brokerage."
-            }
-          />
-          <TextField
-            className="sm:col-span-2"
-            label="Risk Location"
-            multiline
-            rows={2}
-            placeholder="Alamat objek / lokasi pertanggungan"
-            value={draft.riskLocation}
-            onChange={(v) => set({ riskLocation: v })}
-          />
+          <fieldset disabled={slipLocked} className="contents">
+            <SelectInput
+              label="Mata Uang"
+              required
+              items={currencyItems}
+              value={draft.currency}
+              onValueChange={(v) => set({ currency: v })}
+            />
+            <NumberField
+              label="Total Sum Insured"
+              value={draft.sumInsured}
+              onValueChange={(v) => set({ sumInsured: v ?? 0 })}
+              error={errors.sumInsured}
+            />
+            <NumberField
+              label="Premium"
+              required
+              value={draft.premium}
+              onValueChange={(v) => set({ premium: v ?? 0 })}
+              error={errors.premium}
+              description={
+                draft.type === "Endorsement" || draft.type === "Cancellation"
+                  ? "Tambahan premi positif, pengembalian premi negatif."
+                  : money(draft.premium, draft.currency)
+              }
+            />
+            <NumberField
+              label="Brokerage (%)"
+              preset="percent"
+              value={draft.brokeragePct}
+              onValueChange={(v) => set({ brokeragePct: v ?? 0 })}
+              error={errors.brokeragePct}
+              description={
+                brokerageCap != null && draft.brokeragePct > brokerageCap
+                  ? `Melebihi batas biaya akuisisi OJK ${brokerageCap}% untuk ${draft.cob}.`
+                  : undefined
+              }
+            />
+            <NumberField
+              label="Additional Fee"
+              value={draft.additionalFee ?? 0}
+              onValueChange={(v) => set({ additionalFee: v ?? 0 })}
+              error={errors.additionalFee}
+              description={
+                draft.type === "Endorsement" || draft.type === "Cancellation"
+                  ? "Tambahan fee positif, pengembalian fee negatif."
+                  : draft.additionalFee
+                    ? money(draft.additionalFee, draft.currency)
+                    : "Opsional, fee di luar brokerage."
+              }
+            />
+            <TextField
+              className="sm:col-span-2"
+              label="Risk Location"
+              multiline
+              rows={2}
+              placeholder="Alamat objek / lokasi pertanggungan"
+              value={draft.riskLocation}
+              onChange={(v) => set({ riskLocation: v })}
+            />
+          </fieldset>
         </div>
 
         <FieldSeparator />

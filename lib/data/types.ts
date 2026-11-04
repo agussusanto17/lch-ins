@@ -21,6 +21,8 @@ export type SlipStatus =
 /** Dihitung dari tanggal berakhir polis, tidak disimpan (PRD A-17). */
 export type PolicyStatus = "Active" | "Expiring" | "Expired"
 export type PolicyType = "Baru" | "Renewal" | "Endorsement" | "Cancellation"
+/** Kelompok perhitungan slip PAR + EQVET yang masing-masing terbit sebagai polis. */
+export type SlipPart = "PAR" | "EQVET"
 /**
  * Status siklus hidup klaim sesuai ERD (lookup claim_status). Tahapan
  * dokumennya dicatat terpisah di ClaimStage.
@@ -295,6 +297,11 @@ export interface Policy {
    * Kosong sama dengan 0; pengembalian fee bernilai negatif.
    */
   additionalFee?: number
+  /**
+   * Bagian slip PAR + EQVET yang menjadi polis ini. Kosong untuk slip yang
+   * terbit sebagai satu polis dan polis tanpa slip.
+   */
+  slipPart?: SlipPart | null
   type: PolicyType
   riskLocation: string
   /** Nomor urut endorsement pada polis induk, ditentukan server. */

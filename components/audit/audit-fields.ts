@@ -96,6 +96,7 @@ const FIELD_LABELS: Record<string, string> = {
   sppaId: "SPPA",
   slipNo: "Nomor slip",
   placingSlipId: "Placing slip",
+  slipPart: "Bagian slip",
   slipId: "Placing slip",
   placingSlips: "Placing slip",
   policyNo: "Nomor polis",
