@@ -21,7 +21,7 @@ export function DocumentShell({
   return (
     <div
       className={cn(
-        "mx-auto flex w-full flex-col gap-4 px-4 pb-4 md:px-6 md:pb-6",
+        "mx-auto flex w-full flex-col gap-4 px-4 pb-4 md:px-6 md:pb-6 print:m-0 print:p-0 print:max-w-none print:w-full",
         wide ? "max-w-[1100px]" : "max-w-[900px]"
       )}
     >
@@ -41,7 +41,7 @@ export function DocumentShell({
         </Button>
       </div>
 
-      <article className="print-sheet rounded-2xl border bg-card p-8 text-card-foreground shadow-sm md:p-12">
+      <article className="print-sheet rounded-2xl border bg-card p-8 text-card-foreground shadow-sm md:p-12 overflow-hidden print:overflow-visible">
         {/* Header berulang di setiap halaman cetak */}
         <div className="print-header-fixed hidden print:block">
           <LchLogo className="h-14 w-auto" />
@@ -66,7 +66,7 @@ export function DocumentShell({
           </tfoot>
           <tbody className="print:table-row-group">
             <tr>
-              <td className="border-0 p-0 align-top print:px-[12mm]">
+              <td className="border-0 p-0 align-top print:px-[18mm]">
                 {children}
               </td>
             </tr>

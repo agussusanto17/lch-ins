@@ -177,11 +177,12 @@
 }
 
 /* ---------- Print ---------- */
+@page {
+  size: A4;
+  margin: 0;
+}
+
 @media print {
-  @page {
-    size: A4;
-    margin: 0;
-  }
   html,
   body {
     background: #fff !important;
@@ -207,6 +208,7 @@
     padding: 0 !important;
     max-width: none !important;
     width: 100% !important;
+    overflow: visible !important;
     background: transparent !important;
     /* Pita navy form KYC ikut tercetak tanpa harus mencentang "Background graphics". */
     print-color-adjust: exact;
@@ -215,8 +217,8 @@
   .print-header-fixed {
     position: fixed;
     top: 10mm;
-    left: 12mm;
-    right: 12mm;
+    left: 18mm;
+    right: 18mm;
     z-index: 1000;
   }
   .print-footer-fixed {
@@ -224,6 +226,7 @@
     bottom: 0;
     left: 0;
     right: 0;
+    width: 100%;
     z-index: 1000;
   }
   .print-header-spacer {

@@ -422,7 +422,7 @@ export function ClausesBlock({
       <ol className="flex flex-col gap-2 text-[12px]">
         {wordingForms.map((w, i) => (
           <li key={w} className="avoid-break">
-            <p className="font-semibold">
+            <p className={inline ? "font-semibold" : undefined}>
               {i + 1}. {w}
             </p>
             <p className="ml-4 text-muted-foreground">As Attached</p>
@@ -436,7 +436,7 @@ export function ClausesBlock({
                   {g.heading}
                 </ClauseGroupHeading>
               ) : null}
-              <p className="font-semibold">
+              <p className={inline ? "font-semibold" : undefined}>
                 {g.start + i}. {inline ? c.title : clauseTitleCase(c.title)}
               </p>
               {inline ? (
