@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-04
 - **Branch:** `feat/additional-fee-polis`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** [#102](https://github.com/agussusanto17/lch-ins/pull/102)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
