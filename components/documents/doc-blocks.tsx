@@ -293,8 +293,9 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
   const deductibles = [
     ...new Set(
       slip.rateLines
-        .map((l) => l.deductible?.trim())
-        .filter((text): text is string => Boolean(text))
+        .flatMap((l) => l.deductibles ?? [])
+        .map((text) => text.trim())
+        .filter(Boolean)
     ),
   ]
   if (!deductibles.length && !slip.specialConditions) return null

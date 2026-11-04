@@ -32,7 +32,7 @@ import {
   SlipFormToolbar,
 } from "@/components/underwriting/slip-form-chrome"
 import { ClausePicker } from "@/components/underwriting/clause-picker"
-import { DeductibleInput } from "@/components/underwriting/deductible-input"
+import { DeductibleList } from "@/components/underwriting/deductible-input"
 import {
   LineItemList,
   StringList,
@@ -1257,9 +1257,10 @@ function SlipEditor({
           >
             <div className="flex flex-col gap-5">
               {/*
-               * Deductible per cover, satu isian untuk tiap baris rate
-               * (instruksi LCH 29 Oktober 2026). Baris TPL dan PA tidak ikut:
-               * risiko sendiri motor berlaku untuk kendaraan dan perluasannya.
+               * Deductible per cover untuk tiap baris rate (instruksi LCH 29
+               * Oktober 2026), sampai lima isian per cover (4 November 2026).
+               * Baris TPL dan PA tidak ikut: risiko sendiri motor berlaku untuk
+               * kendaraan dan perluasannya.
                */}
               <div className="flex flex-col gap-2">
                 <div>
@@ -1276,24 +1277,26 @@ function SlipEditor({
                   {slip.rateLines.map((line) => (
                     <div
                       key={line.id}
-                      className="grid grid-cols-1 items-center gap-x-4 gap-y-1.5 border-b px-3 py-2.5 last:border-0 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]"
+                      className="grid grid-cols-1 items-start gap-x-4 gap-y-1.5 border-b px-3 py-2.5 last:border-0 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]"
                     >
                       <label
                         htmlFor={`deductible-${line.id}`}
-                        className="truncate text-sm text-muted-foreground"
+                        className="truncate text-sm text-muted-foreground sm:pt-2"
                         title={coverLabel(slip, line)}
                       >
                         {coverLabel(slip, line)}
                       </label>
-                      <DeductibleInput
+                      <DeductibleList
                         id={`deductible-${line.id}`}
                         cover={coverLabel(slip, line)}
-                        value={line.deductible ?? ""}
+                        values={line.deductibles ?? []}
                         choices={deductibleChoices}
-                        onChange={(value) =>
+                        onChange={(values) =>
                           set({
                             rateLines: slip.rateLines.map((l) =>
-                              l.id === line.id ? { ...l, deductible: value } : l
+                              l.id === line.id
+                                ? { ...l, deductibles: values }
+                                : l
                             ),
                           })
                         }

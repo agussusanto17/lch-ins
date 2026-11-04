@@ -1173,9 +1173,13 @@ model SlipRateLine {
   rateMax           Decimal? @map("rate_max") @db.Decimal(12, 6)
   /// Alasan bila rate keluar dari batas OJK.
   outOfBoundsReason String?  @map("out_of_bounds_reason")
-  /// Deductible untuk cover baris ini, teks bebas. Instruksi LCH 29 Oktober
-  /// 2026: deductible dibuat per cover, bukan per section.
+  /// Tidak dipakai lagi sejak satu cover bisa punya beberapa deductible
+  /// (4 Nov 2026); isinya disalin ke `deductibles`.
   deductible        String?
+  /// Deductible untuk cover baris ini, teks bebas, paling banyak lima.
+  /// Instruksi LCH 29 Oktober 2026: deductible dibuat per cover, bukan per
+  /// section.
+  deductibles       String[] @default([])
   sortOrder         Int      @default(0) @map("sort_order")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

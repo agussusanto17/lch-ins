@@ -5,15 +5,16 @@ import { cache } from "react"
 import { Prisma, type SlipItemKind, type SlipStatus } from "@/lib/generated/prisma/client"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 
-import type {
-  ClassOfBusiness as CobType,
-  ClauseOverride,
-  LineItem,
-  PlacingSlip,
-  RateException,
-  RateExceptionReason,
-  RateLine,
-  SecurityPanelRow,
+import {
+  MAX_DEDUCTIBLES,
+  type ClassOfBusiness as CobType,
+  type ClauseOverride,
+  type LineItem,
+  type PlacingSlip,
+  type RateException,
+  type RateExceptionReason,
+  type RateLine,
+  type SecurityPanelRow,
 } from "@/lib/data/types"
 import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
 import { CLIENTS } from "@/lib/data/clients"
@@ -377,7 +378,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
       basis: rl.limitAmount != null ? String(Number(rl.limitAmount)) : undefined,
       min: rl.rateMin != null ? Number(rl.rateMin) : null,
       max: rl.rateMax != null ? Number(rl.rateMax) : null,
-      deductible: rl.deductible ?? undefined,
+      deductibles: rl.deductibles,
     }
 
     if (kindCode === "tpl") {
@@ -659,6 +660,14 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
   return toPlacingSlipRecord(record)
 }
 
+/** Filled-in deductibles only, trimmed and capped at MAX_DEDUCTIBLES. */
+function cleanDeductibles(deductibles: string[] | undefined) {
+  return (deductibles ?? [])
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .slice(0, MAX_DEDUCTIBLES)
+}
+
 /** Additional fee hanya disimpan untuk Property dan Motor Vehicle; COB lain 0. */
 function slipAdditionalFee(cobName: string, fee: number | undefined) {
   return new Prisma.Decimal(
@@ -903,7 +912,7 @@ export async function createPlacingSlip(
       premium: Prisma.Decimal
       rateMin: Prisma.Decimal | null
       rateMax: Prisma.Decimal | null
-      deductible: string | null
+      deductibles: string[]
       outOfBoundsReason: string | null
       sortOrder: number
     }[] = []
@@ -921,7 +930,7 @@ export async function createPlacingSlip(
           premium: new Prisma.Decimal(rl.premium || 0),
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
-          deductible: rl.deductible?.trim() || null,
+          deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
         })
@@ -941,7 +950,7 @@ export async function createPlacingSlip(
           premium: new Prisma.Decimal(rl.premium || 0),
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
-          deductible: rl.deductible?.trim() || null,
+          deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
         })
@@ -961,7 +970,7 @@ export async function createPlacingSlip(
           premium: new Prisma.Decimal(rl.premium || 0),
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
-          deductible: rl.deductible?.trim() || null,
+          deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
         })
@@ -1223,7 +1232,7 @@ export async function updatePlacingSlip(
       premium: Prisma.Decimal
       rateMin: Prisma.Decimal | null
       rateMax: Prisma.Decimal | null
-      deductible: string | null
+      deductibles: string[]
       outOfBoundsReason: string | null
       sortOrder: number
     }[] = []
@@ -1241,7 +1250,7 @@ export async function updatePlacingSlip(
           premium: new Prisma.Decimal(rl.premium || 0),
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
-          deductible: rl.deductible?.trim() || null,
+          deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
         })
@@ -1261,7 +1270,7 @@ export async function updatePlacingSlip(
           premium: new Prisma.Decimal(rl.premium || 0),
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
-          deductible: rl.deductible?.trim() || null,
+          deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
         })
@@ -1281,7 +1290,7 @@ export async function updatePlacingSlip(
           premium: new Prisma.Decimal(rl.premium || 0),
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
-          deductible: rl.deductible?.trim() || null,
+          deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
         })
@@ -1679,7 +1688,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
           premium: Prisma.Decimal
           rateMin: Prisma.Decimal | null
           rateMax: Prisma.Decimal | null
-          deductible: string | null
+          deductibles: string[]
           outOfBoundsReason: string | null
           sortOrder: number
         }[] = []
@@ -1694,7 +1703,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             premium: new Prisma.Decimal(rl.premium || 0),
             rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
             rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
-            deductible: rl.deductible?.trim() || null,
+            deductibles: cleanDeductibles(rl.deductibles),
             outOfBoundsReason: null,
             sortOrder: rIdx++,
           })
@@ -1709,7 +1718,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             premium: new Prisma.Decimal(rl.premium || 0),
             rateMin: null,
             rateMax: null,
-            deductible: rl.deductible?.trim() || null,
+            deductibles: cleanDeductibles(rl.deductibles),
             outOfBoundsReason: null,
             sortOrder: rIdx++,
           })
@@ -1724,7 +1733,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             premium: new Prisma.Decimal(rl.premium || 0),
             rateMin: null,
             rateMax: null,
-            deductible: rl.deductible?.trim() || null,
+            deductibles: cleanDeductibles(rl.deductibles),
             outOfBoundsReason: null,
             sortOrder: rIdx++,
           })
