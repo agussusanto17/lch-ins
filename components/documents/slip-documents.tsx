@@ -27,6 +27,7 @@ import { Letterhead } from "@/components/documents/letterhead"
 import { PrintedAt } from "@/components/documents/printed-at"
 import { derivedDocNumber } from "@/components/underwriting/slip-model"
 import { Button } from "@/components/ui/button"
+import { rateUnitFor } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data"
 import { dateLong } from "@/lib/format"
 import { useRecord } from "@/lib/store"
@@ -57,8 +58,6 @@ function Missing() {
   )
 }
 
-const unitOf = (slip: PlacingSlip) => (slip.cob === "Motor Vehicle" ? "%" : "‰")
-
 function SlipRateAndPremium({
   slip,
   showBrokerageIndicator = false,
@@ -86,7 +85,7 @@ function SlipRateAndPremium({
       <PremiumTable
         slip={slip}
         rows={premiumRows(slip)}
-        unitLabel={unitOf(slip)}
+        unitLabel={rateUnitFor(slip.cob)}
       />
       <PayableTable slip={slip} />
     </>

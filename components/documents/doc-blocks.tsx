@@ -1,4 +1,5 @@
 import {
+  coverLabel,
   slipOccupationText,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
@@ -501,7 +502,7 @@ export function premiumRows(slip: PlacingSlip): PremiumRow[] {
       label:
         lossLimitPct != null && !BI_RATE_LABELS.includes(l.label)
           ? `${l.label} (Loss Limit ${num(lossLimitPct, 2)}%)`
-          : l.label,
+          : coverLabel(slip, l),
       rate: l.rate !== null ? rateText(l.rate) : "—",
       premium: l.premium,
     }))
