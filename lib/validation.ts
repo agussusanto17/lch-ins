@@ -73,16 +73,35 @@ export const money = (label: string) =>
 
 /** Satu klausula tidak boleh ada di kedua section. */
 export function validateClauseUniquenessAcrossSections(
-  slip: Pick<PlacingSlip, "clauseIds" | "clauseIdsSection2">
+  slip: Pick<
+    PlacingSlip,
+    | "clauseIds"
+    | "clauseIdsSection2"
+    | "clauseOverrides"
+    | "clauseCopies"
+    | "clauseOverridesSection2"
+    | "clauseCopiesSection2"
+  >,
+  titleLookup?: (id: string) => string | undefined
 ): string[] {
   const issues: string[] = []
   const section1Clauses = new Set(slip.clauseIds ?? [])
   const section2Clauses = new Set(slip.clauseIdsSection2 ?? [])
 
-  const duplicates = [...section1Clauses].filter(id => section2Clauses.has(id))
+  const duplicates = [...section1Clauses].filter((id) => section2Clauses.has(id))
   if (duplicates.length) {
+    const names = duplicates.map((id) => {
+      const fromLookup = titleLookup?.(id)
+      if (fromLookup) return fromLookup
+      const fromSlip =
+        slip.clauseOverrides?.[id]?.title ||
+        slip.clauseOverridesSection2?.[id]?.title ||
+        slip.clauseCopies?.[id]?.title ||
+        slip.clauseCopiesSection2?.[id]?.title
+      return fromSlip || id
+    })
     issues.push(
-      `Klausula "${duplicates.join(", ")}" muncul di kedua section. Pilih klausula terpisah untuk Section 1 dan Section 2.`
+      `Klausula "${names.join(", ")}" muncul di kedua section. Pilih klausula terpisah untuk Section 1 dan Section 2.`
     )
   }
   return issues

@@ -1,4 +1,5 @@
 import { brokerageLimitIssue, recalcSlip, totalSumInsured } from "@/lib/calc"
+import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
   correspondenceAddress,
   MOTOR_RATE_LINES,
@@ -322,6 +323,10 @@ export function releaseIssues(slip: PlacingSlip) {
     if (!slip.occupation) issues.push("Pilih okupasi OJK.")
     if (!slip.constructionClass) issues.push("Pilih kelas konstruksi.")
     if (!slip.riskLocation?.trim()) issues.push("Isi risk location.")
+  }
+  if (usesSectionSumInsured(slip.cob)) {
+    const clauseIssues = validateClauseUniquenessAcrossSections(slip)
+    if (clauseIssues.length) issues.push(...clauseIssues)
   }
   if (totalSumInsured(slip) <= 0) issues.push("Isi sum insured.")
   if (!slip.rateLines.some((l) => (l.rate ?? 0) > 0)) {
