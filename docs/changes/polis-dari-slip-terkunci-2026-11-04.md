@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-04
 - **Branch:** `fix/polis-dari-slip-terkunci`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** [#103](https://github.com/agussusanto17/lch-ins/pull/103)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
