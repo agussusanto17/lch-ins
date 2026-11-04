@@ -135,6 +135,10 @@ const placingSlipSchema = z.object({
   stampDuty: z.coerce.number().optional(),
   brokeragePct: z.coerce.number().optional(),
   includeVat: z.boolean().optional(),
+  additionalFee: z.coerce
+    .number()
+    .min(0, "Additional fee tidak boleh negatif")
+    .optional(),
   subjectivity: z.string().nullish(),
   closingInstruction: z.string().nullish(),
   coverNoteRemarks: z.string().nullish(),
@@ -386,6 +390,7 @@ export async function duplicatePlacingSlipAction(
       stampDuty: source.stampDuty,
       brokeragePct: source.brokeragePct,
       includeVat: source.includeVat,
+      additionalFee: source.additionalFee,
     }
 
     const created = await createPlacingSlip(duplicateInput, user.id)

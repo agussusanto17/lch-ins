@@ -85,6 +85,7 @@ const FIELD_LABELS: Record<string, string> = {
   rate: "Rate",
   rateModeId: "Mode rate",
   brokeragePct: "Brokerage (%)",
+  additionalFee: "Additional fee",
   adminCost: "Biaya admin",
   stampDuty: "Bea meterai",
   periodStart: "Periode mulai",

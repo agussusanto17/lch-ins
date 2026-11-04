@@ -18,6 +18,7 @@ import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
 import { CLIENTS } from "@/lib/data/clients"
 import {
   coverCodeFor,
+  usesAdditionalFee,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
@@ -88,6 +89,7 @@ export interface PlacingSlipInput {
   stampDuty?: number
   brokeragePct?: number
   includeVat?: boolean
+  additionalFee?: number
   subjectivity?: string | null
   closingInstruction?: string | null
   coverNoteRemarks?: string | null
@@ -502,6 +504,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     stampDuty: Number(raw.stampDuty),
     brokeragePct: Number(raw.brokeragePct),
     includeVat: raw.includeVat,
+    additionalFee: Number(raw.additionalFee),
     subjectivity: raw.subjectivity || undefined,
     closingInstruction: raw.closingInstruction || undefined,
     coverNoteRemarks: raw.coverNoteRemarks || undefined,
@@ -650,6 +653,13 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
   return toPlacingSlipRecord(record)
 }
 
+/** Additional fee hanya disimpan untuk Property dan Motor Vehicle; COB lain 0. */
+function slipAdditionalFee(cobName: string, fee: number | undefined) {
+  return new Prisma.Decimal(
+    usesAdditionalFee(normalizeCob(cobName)) ? (fee ?? 0) : 0
+  )
+}
+
 /**
  * Salin klausula terpilih ke slip_clauses, wording dari override slip atau
  * master. Section 2 (Business Interruption) hanya disimpan untuk slip
@@ -761,6 +771,7 @@ export async function createPlacingSlip(
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
         includeVat: input.includeVat ?? false,
+        additionalFee: slipAdditionalFee(resolvedCob.name, input.additionalFee),
         subjectivity: input.subjectivity?.trim() || null,
         closingInstruction: input.closingInstruction?.trim() || null,
         coverNoteRemarks: input.coverNoteRemarks?.trim() || null,
@@ -1078,6 +1089,7 @@ export async function updatePlacingSlip(
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
         includeVat: input.includeVat ?? false,
+        additionalFee: slipAdditionalFee(resolvedCob.name, input.additionalFee),
         subjectivity: input.subjectivity?.trim() || null,
         closingInstruction: input.closingInstruction?.trim() || null,
         coverNoteRemarks: input.coverNoteRemarks?.trim() || null,

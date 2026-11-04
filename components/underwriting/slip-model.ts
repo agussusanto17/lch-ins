@@ -199,6 +199,11 @@ export function usesSectionSumInsured(cob: ClassOfBusiness) {
   return cob === "Property"
 }
 
+/** COB yang punya isian Additional Fee untuk produksi (4 November 2026). */
+export function usesAdditionalFee(cob: ClassOfBusiness) {
+  return cob === "Property" || cob === "Motor Vehicle"
+}
+
 // Batas tarif OJK dan validasi release
 
 /** Batas FLEXAS dari tabel okupasi OJK untuk okupasi dan kelas konstruksi slip. */

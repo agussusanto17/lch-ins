@@ -245,6 +245,11 @@ export interface PlacingSlip {
   stampDuty: number
   brokeragePct: number
   includeVat: boolean
+  /**
+   * Fee di luar brokerage untuk produksi, hanya Property dan Motor Vehicle.
+   * Tidak dicetak di slip; disalin ke polis yang dibuat dari slip.
+   */
+  additionalFee?: number
   createdAt: string
   updatedAt: string
   /* pasca-release */
@@ -285,6 +290,11 @@ export interface Policy {
   /** Tambahan premi positif, pengembalian premi negatif (endorsement dan pembatalan). */
   premium: number
   brokeragePct: number
+  /**
+   * Fee di luar brokerage dalam mata uang polis, ikut report produksi.
+   * Kosong sama dengan 0; pengembalian fee bernilai negatif.
+   */
+  additionalFee?: number
   type: PolicyType
   riskLocation: string
   /** Nomor urut endorsement pada polis induk, ditentukan server. */

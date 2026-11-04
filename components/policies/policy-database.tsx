@@ -278,6 +278,11 @@ export function PolicyDatabase({
         value: (p) => p.brokeragePct,
         type: "percent",
       },
+      {
+        header: "Additional Fee",
+        value: (p) => p.additionalFee ?? 0,
+        type: "money",
+      },
       { header: "Status", value: (p) => policyStatus(p.expiryDate, today) },
       { header: "Lokasi Risiko", value: (p) => p.riskLocation, width: 40 },
     ],

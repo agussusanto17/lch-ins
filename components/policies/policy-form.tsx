@@ -60,6 +60,7 @@ function emptyDraft(): Draft {
     sumInsured: 0,
     premium: 0,
     brokeragePct: 0,
+    additionalFee: 0,
     type: "Baru",
     riskLocation: "",
     cobOjkClassId: null,
@@ -99,6 +100,7 @@ const schema = z
       .number()
       .min(0, "Brokerage tidak boleh negatif")
       .max(100, "Brokerage maksimal 100%"),
+    additionalFee: z.number().optional(),
   })
   .superRefine((d, ctx) => {
     if (d.expiryDate && d.inceptionDate && d.expiryDate <= d.inceptionDate) {
@@ -120,6 +122,16 @@ const schema = z
         code: "custom",
         path: ["premium"],
         message: "Premi polis baru dan renewal harus lebih dari 0",
+      })
+    }
+    if (
+      (d.type === "Baru" || d.type === "Renewal") &&
+      (d.additionalFee ?? 0) < 0
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["additionalFee"],
+        message: "Additional fee polis baru dan renewal tidak boleh negatif",
       })
     }
     if (d.type === "Cancellation" && d.premium > 0) {
@@ -230,6 +242,7 @@ export function PolicyForm({
       sumInsured: totalSumInsured(slip),
       premium: totalPremium(slip),
       brokeragePct: slip.brokeragePct,
+      additionalFee: slip.additionalFee ?? 0,
       riskLocation: slip.riskLocation ?? "",
       insurer: leader?.insurer ?? "",
       insurers: panel,
@@ -523,6 +536,19 @@ export function PolicyForm({
               brokerageCap != null && draft.brokeragePct > brokerageCap
                 ? `Melebihi batas biaya akuisisi OJK ${brokerageCap}% untuk ${draft.cob}.`
                 : undefined
+            }
+          />
+          <NumberField
+            label="Additional Fee"
+            value={draft.additionalFee ?? 0}
+            onValueChange={(v) => set({ additionalFee: v ?? 0 })}
+            error={errors.additionalFee}
+            description={
+              draft.type === "Endorsement" || draft.type === "Cancellation"
+                ? "Tambahan fee positif, pengembalian fee negatif."
+                : draft.additionalFee
+                  ? money(draft.additionalFee, draft.currency)
+                  : "Opsional, fee di luar brokerage."
             }
           />
           <TextField
