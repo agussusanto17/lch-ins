@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-04
 - **Branch:** `feat/penyesuaian-kop-surat-a4`
-- **PR:** #107 (isi setelah PR dibuka)
+- **PR:** #107
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
