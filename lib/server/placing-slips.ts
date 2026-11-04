@@ -91,6 +91,8 @@ export interface PlacingSlipInput {
   brokeragePct?: number
   includeVat?: boolean
   additionalFee?: number
+  lossLimit?: number | null
+  lossLimitPremiumPct?: number | null
   subjectivity?: string | null
   closingInstruction?: string | null
   coverNoteRemarks?: string | null
@@ -506,6 +508,9 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     brokeragePct: Number(raw.brokeragePct),
     includeVat: raw.includeVat,
     additionalFee: Number(raw.additionalFee),
+    lossLimit: raw.lossLimit != null ? Number(raw.lossLimit) : null,
+    lossLimitPremiumPct:
+      raw.lossLimitPremiumPct != null ? Number(raw.lossLimitPremiumPct) : null,
     subjectivity: raw.subjectivity || undefined,
     closingInstruction: raw.closingInstruction || undefined,
     coverNoteRemarks: raw.coverNoteRemarks || undefined,
@@ -662,6 +667,27 @@ function slipAdditionalFee(cobName: string, fee: number | undefined) {
 }
 
 /**
+ * Loss limit hanya untuk slip Property; COB lain dan full value disimpan
+ * kosong. Persen premi ikut dari perhitungan premi di form.
+ */
+function slipLossLimitData(
+  cobName: string,
+  input: Pick<PlacingSlipInput, "lossLimit" | "lossLimitPremiumPct">
+) {
+  const lossLimit =
+    usesSectionSumInsured(normalizeCob(cobName)) && input.lossLimit
+      ? input.lossLimit
+      : null
+  return {
+    lossLimit: lossLimit != null ? new Prisma.Decimal(lossLimit) : null,
+    lossLimitPremiumPct:
+      lossLimit != null && input.lossLimitPremiumPct != null
+        ? new Prisma.Decimal(input.lossLimitPremiumPct)
+        : null,
+  }
+}
+
+/**
  * Salin klausula terpilih ke slip_clauses, wording dari override slip atau
  * master. Section 2 (Business Interruption) hanya disimpan untuk slip
  * Property; COB lain tidak punya section.
@@ -785,6 +811,7 @@ export async function createPlacingSlip(
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
         includeVat: input.includeVat ?? false,
         additionalFee: slipAdditionalFee(resolvedCob.name, input.additionalFee),
+        ...slipLossLimitData(resolvedCob.name, input),
         subjectivity: input.subjectivity?.trim() || null,
         closingInstruction: input.closingInstruction?.trim() || null,
         coverNoteRemarks: input.coverNoteRemarks?.trim() || null,
@@ -1103,6 +1130,7 @@ export async function updatePlacingSlip(
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
         includeVat: input.includeVat ?? false,
         additionalFee: slipAdditionalFee(resolvedCob.name, input.additionalFee),
+        ...slipLossLimitData(resolvedCob.name, input),
         subjectivity: input.subjectivity?.trim() || null,
         closingInstruction: input.closingInstruction?.trim() || null,
         coverNoteRemarks: input.coverNoteRemarks?.trim() || null,

@@ -3,9 +3,11 @@ import {
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
 import {
+  BI_RATE_LABELS,
   brokerageAmount,
   calculateParEqvet,
   discountAmount,
+  slipLossLimit,
   sumItems,
   totalPayable,
   totalPremium,
@@ -114,6 +116,7 @@ export function InfoTable({
 
 export function InterestBlock({ slip }: { slip: PlacingSlip }) {
   const isProperty = slip.cob === "Property"
+  const lossLimit = slipLossLimit(slip)
 
   return (
     <>
@@ -268,6 +271,16 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
           {money(totalSumInsured(slip), slip.currency)}
         </span>
       </p>
+      {lossLimit ? (
+        <p className="mt-1.5 flex justify-between gap-6 px-3 text-[13px] font-semibold">
+          <span>
+            Loss Limit ({num(lossLimit.valuesPct, 2)}% of Section 1 values)
+          </span>
+          <span className="tabular">
+            {money(slip.lossLimit ?? 0, slip.currency)}
+          </span>
+        </p>
+      ) : null}
     </>
   )
 }
@@ -480,10 +493,15 @@ export interface PremiumRow {
 const rateText = (rate: number) => num(rate, 2, 6)
 
 export function premiumRows(slip: PlacingSlip): PremiumRow[] {
+  // Premi baris non-BI slip loss limit sudah dikali persen skala OJK.
+  const lossLimitPct = slip.lossLimitPremiumPct
   const rows: PremiumRow[] = slip.rateLines
     .filter((l) => l.rate !== null || l.premium > 0)
     .map((l) => ({
-      label: l.label,
+      label:
+        lossLimitPct != null && !BI_RATE_LABELS.includes(l.label)
+          ? `${l.label} (Loss Limit ${num(lossLimitPct, 2)}%)`
+          : l.label,
       rate: l.rate !== null ? rateText(l.rate) : "—",
       premium: l.premium,
     }))
@@ -634,7 +652,8 @@ function ParEqvetGroupSection({
           {group.lines.map((l, i) => (
             <tr key={l.id} className="border-b/40 border-b">
               <td className="py-1 pr-2">
-                {l.formulaLabel} : {moneyCents(l.basis, currency)} x {l.rateText} =
+                {l.formulaLabel} : {moneyCents(l.basis, currency)} x {l.rateText}
+                {l.lossLimitPct != null ? ` x ${num(l.lossLimitPct, 2)}%` : ""} =
               </td>
               <td className="tabular py-1 text-right whitespace-nowrap">
                 {moneyCents(l.premium, currency)}
