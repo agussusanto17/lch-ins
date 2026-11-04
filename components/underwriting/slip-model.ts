@@ -338,9 +338,8 @@ export function releaseIssues(slip: PlacingSlip) {
     issues.push("Isi minimal satu rate.")
   }
 
-  // Baris rate utama sudah diberi batas sesuai COB-nya oleh rateLinesWithBounds.
-  // TPL dan PA hanya ada di Motor Vehicle, dan baris PA cukup berlabel "Driver",
-  // jadi batasnya dibaca per bagian, bukan dari label saja.
+  // Primary rate lines receive bounds based on COB. TPL and PA apply only to
+  // Motor Vehicle, where bounds are resolved per section rather than raw labels alone.
   const allLines = rateLinesWithBounds(slip)
     .concat(
       (slip.tplLines ?? []).map((l) =>
@@ -386,9 +385,7 @@ export function derivedDocNumber(
   return parts.join("/")
 }
 
-/* ---------------------------------------------------------------- */
-/* Slip baru dari klien atau SPPA                                     */
-/* ---------------------------------------------------------------- */
+// Factory functions for creating new placing slips from client or SPPA.
 
 export function slipForClient(client: Client): PlacingSlip {
   const base = switchCob(emptySlip(), client.cob)

@@ -138,7 +138,7 @@ const placingSlipSchema = z.object({
   additionalFee: z.coerce
     .number()
     .min(0, "Additional fee tidak boleh negatif")
-    .optional(),
+    .nullish(),
   subjectivity: z.string().nullish(),
   closingInstruction: z.string().nullish(),
   coverNoteRemarks: z.string().nullish(),
@@ -167,15 +167,21 @@ export async function savePlacingSlipAction(
 
     const parsed = placingSlipSchema.safeParse(slip)
     if (!parsed.success) {
+      console.error(
+        "[savePlacingSlipAction] validation failed:",
+        JSON.stringify(parsed.error.issues, null, 2)
+      )
       const firstIssue = parsed.error.issues[0]
+      const pathStr = firstIssue ? ` (${firstIssue.path.join(".")})` : ""
       return {
         ok: false,
-        error: firstIssue ? firstIssue.message : "Data Placing Slip tidak valid.",
+        error: firstIssue
+          ? `${firstIssue.message}${pathStr}`
+          : "Data Placing Slip tidak valid.",
       }
     }
 
-    // Brokerage di atas batas OJK tidak boleh tersimpan, bukan hanya ditolak
-    // saat release (Harry, 3 November 2026).
+    // Brokerage exceeding OJK statutory cap cannot be saved, not merely blocked at release.
     const brokerageIssue = brokerageLimitIssue(slip)
     if (brokerageIssue) return { ok: false, error: brokerageIssue }
 
@@ -190,7 +196,7 @@ export async function savePlacingSlipAction(
       slip.id.startsWith("s-")
 
     if (isNew) {
-      // Periksa apakah slip dengan ID mock ini sudah pernah di-seed/dibuat di database
+      // Check whether slip with mock ID already exists in database
       const existing = slip.id ? await getPlacingSlipById(slip.id) : null
       if (existing) {
         result = await updatePlacingSlip(existing.dbId, input, user.id)
@@ -211,7 +217,7 @@ export async function savePlacingSlipAction(
 }
 
 /**
- * Merilis Placing Slip dan menerbitkan nomor resmi dokumen (PS/COB/YYYY/MM/XXXX).
+ * Releases placing slip and issues official document number (PS/COB/YYYY/MM/XXXX).
  */
 export async function releasePlacingSlipAction(
   id: string
@@ -234,7 +240,7 @@ export async function releasePlacingSlipAction(
         errorDetails.push(...validation.releaseIssues)
       }
       if (validation.missingExceptions.length > 0) {
-        // Rate Motor Vehicle dalam persen; Property dan COB lain per mil.
+        // Motor Vehicle rates are percentage; Property and other COBs are permille.
         const unit = target.cob === "Motor Vehicle" ? "%" : "‰"
         for (const { line, reason } of validation.missingExceptions) {
           const range =
@@ -271,7 +277,7 @@ export async function releasePlacingSlipAction(
   }
 }
 
-/** Perkiraan nomor slip untuk dialog konfirmasi release, dari counter database. */
+/** Estimated slip number for release confirmation dialog, fetched from DB sequence. */
 export async function previewSlipNumberAction(
   coverCode: string | null
 ): Promise<ActionResponse<string | null>> {
@@ -312,7 +318,7 @@ export async function togglePlacingSlipStatusAction(
 }
 
 /**
- * Menghapus Placing Slip berstatus Draft.
+ * Deletes a placing slip with Draft status.
  */
 export async function deletePlacingSlipAction(
   id: string
@@ -339,7 +345,7 @@ export async function deletePlacingSlipAction(
 }
 
 /**
- * Menduplikasi Placing Slip yang ada menjadi Draft baru tanpa nomor dokumen.
+ * Duplicates an existing placing slip into a new Draft without document number.
  */
 export async function duplicatePlacingSlipAction(
   id: string

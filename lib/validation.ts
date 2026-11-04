@@ -71,7 +71,7 @@ export const nik = z
 export const money = (label: string) =>
   z.number(`${label} wajib diisi`).nonnegative(`${label} tidak boleh negatif`)
 
-/** Satu klausula tidak boleh ada di kedua section. */
+/** Ensures a clause does not appear concurrently in both Section 1 and Section 2. */
 export function validateClauseUniquenessAcrossSections(
   slip: Pick<
     PlacingSlip,
