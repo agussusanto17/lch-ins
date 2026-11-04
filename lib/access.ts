@@ -125,7 +125,7 @@ export const ACCESS_MATRIX: Record<string, readonly AccessLevel[]> = {
   "/": [K, L, L, L, L, L, L],
   "/marketing": [K, K, K, L, T, T, L],
   "/underwriting": [K, L, K, L, L, L, L],
-  "/underwriting/master-clauses": [K, T, K, T, T, T, L],
+  "/underwriting/master-clauses": [K, T, T, T, T, T, T],
   "/policies": [K, L, K, L, L, L, L],
   "/claims": [K, L, K, K, L, L, L],
   "/finance/notes": [K, L, L, L, K, L, L],
@@ -133,8 +133,8 @@ export const ACCESS_MATRIX: Record<string, readonly AccessLevel[]> = {
   "/finance/receivables": [K, L, L, L, K, K, L],
   "/accounting/journal": [K, T, T, T, K, K, L],
   "/accounting/statements": [K, T, T, T, L, K, L],
-  "/master-data": [K, T, K, T, T, T, L],
-  "/reports": [K, L, K, K, K, K, L],
+  "/master-data": [K, T, T, T, T, T, T],
+  "/reports": [K, T, K, T, T, T, T],
   "/users": [K, T, T, T, T, T, L],
 
   // Dua menu berikut tidak ada di sheet LCH; mereka menghapusnya dari usulan

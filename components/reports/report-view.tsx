@@ -183,9 +183,11 @@ function BreakdownTable<T extends BreakdownRow>({
 export function ReportView({
   policies: initialPolicies,
   claims: initialClaims,
+  showClaims = true,
 }: {
   policies?: Policy[]
   claims?: Claim[]
+  showClaims?: boolean
 } = {}) {
   const today = useToday()
   const allPolicies = useCollection("policies", initialPolicies)
@@ -251,8 +253,12 @@ export function ReportView({
     ["Total Additional Fee", rupiah(totalFee)],
     ["Pendapatan (Brokerage + Fee)", rupiah(totalBrokerage + totalFee)],
     ["Total Sum Insured", rupiah(totalSumInsured)],
-    ["Klaim dilaporkan", String(claims.length)],
-    ["Nilai Klaim", rupiah(claimValue)],
+    ...(showClaims
+      ? [
+          ["Klaim dilaporkan", String(claims.length)] as [string, string],
+          ["Nilai Klaim", rupiah(claimValue)] as [string, string],
+        ]
+      : []),
     ["Polis Baru", String(countType("Baru"))],
     ["Polis Renewal", String(countType("Renewal"))],
     [
@@ -335,12 +341,14 @@ export function ReportView({
           }
           icon={FileText}
         />
-        <StatCard
-          label="Klaim Dilaporkan"
-          value={claims.length}
-          sub={`Rp ${compactMoney(claimValue)}`}
-          icon={TriangleAlert}
-        />
+        {showClaims ? (
+          <StatCard
+            label="Klaim Dilaporkan"
+            value={claims.length}
+            sub={`Rp ${compactMoney(claimValue)}`}
+            icon={TriangleAlert}
+          />
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
@@ -376,7 +384,9 @@ export function ReportView({
         <TabsList className="no-print">
           <TabsTrigger value="production">Produksi Polis</TabsTrigger>
           <TabsTrigger value="policies">Polis ({policies.length})</TabsTrigger>
-          <TabsTrigger value="claims">Klaim ({claims.length})</TabsTrigger>
+          {showClaims ? (
+            <TabsTrigger value="claims">Klaim ({claims.length})</TabsTrigger>
+          ) : null}
         </TabsList>
 
         <TabsContent value="production" className="flex flex-col gap-4">
@@ -550,100 +560,102 @@ export function ReportView({
           />
         </TabsContent>
 
-        <TabsContent value="claims" className="flex flex-col gap-3">
-          <ExportButtons
-            className="justify-end"
-            spec={{
-              filename: `klaim-${periodSlug}`,
-              sheet: "Klaim",
-              rows: claims,
-              columns: [
-                { header: "No. Klaim", value: (c: Claim) => c.claimNo },
-                { header: "No. Polis", value: (c) => c.policyNo },
-                {
-                  header: "Tertanggung",
-                  value: (c) => c.insuredName,
-                  width: 36,
-                },
-                { header: "COB", value: (c) => c.cob },
-                {
-                  header: "Tgl Kejadian",
-                  value: (c) => c.lossDate,
-                  type: "date",
-                },
-                { header: "Mata Uang", value: (c) => c.currency },
-                {
-                  header: "Estimasi",
-                  value: (c) => c.estimatedLoss,
-                  type: "money",
-                },
-                {
-                  header: "Dibayar",
-                  value: (c) => c.paidAmount,
-                  type: "money",
-                },
-                { header: "Status", value: (c) => c.status },
-              ],
-            }}
-          />
-          <Card className="overflow-hidden py-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>No. Klaim</TableHead>
-                  <TableHead>Tertanggung</TableHead>
-                  <TableHead>COB</TableHead>
-                  <TableHead>Tgl Kejadian</TableHead>
-                  <TableHead className="text-right">Estimasi</TableHead>
-                  <TableHead className="text-right">Dibayar</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {claims.length === 0 ? (
-                  <TableEmpty
-                    colSpan={7}
-                    message="Tidak ada klaim pada periode ini"
-                  />
-                ) : (
-                  paginatedClaims.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="tabular font-medium">
-                        {c.claimNo}
-                      </TableCell>
-                      <TableCell className="max-w-52.5 truncate">
-                        {c.insuredName}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {c.cob}
-                      </TableCell>
-                      <TableCell className="tabular whitespace-nowrap">
-                        {dateShort(c.lossDate)}
-                      </TableCell>
-                      <TableCell className="tabular text-right whitespace-nowrap">
-                        {rupiah(toIdr(c.estimatedLoss, c.currency))}
-                      </TableCell>
-                      <TableCell className="tabular text-right whitespace-nowrap">
-                        {rupiah(toIdr(c.paidAmount, c.currency))}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={c.status} />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </Card>
-          <TablePagination
-            page={claimPage}
-            pageSize={claimPageSize}
-            totalItems={totalClaimItems}
-            onPageChange={setClaimPage}
-            onPageSizeChange={setClaimPageSize}
-            itemName="klaim"
-          />
-        </TabsContent>
+        {showClaims ? (
+          <TabsContent value="claims" className="flex flex-col gap-3">
+            <ExportButtons
+              className="justify-end"
+              spec={{
+                filename: `klaim-${periodSlug}`,
+                sheet: "Klaim",
+                rows: claims,
+                columns: [
+                  { header: "No. Klaim", value: (c: Claim) => c.claimNo },
+                  { header: "No. Polis", value: (c) => c.policyNo },
+                  {
+                    header: "Tertanggung",
+                    value: (c) => c.insuredName,
+                    width: 36,
+                  },
+                  { header: "COB", value: (c) => c.cob },
+                  {
+                    header: "Tgl Kejadian",
+                    value: (c) => c.lossDate,
+                    type: "date",
+                  },
+                  { header: "Mata Uang", value: (c) => c.currency },
+                  {
+                    header: "Estimasi",
+                    value: (c) => c.estimatedLoss,
+                    type: "money",
+                  },
+                  {
+                    header: "Dibayar",
+                    value: (c) => c.paidAmount,
+                    type: "money",
+                  },
+                  { header: "Status", value: (c) => c.status },
+                ],
+              }}
+            />
+            <Card className="overflow-hidden py-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>No. Klaim</TableHead>
+                    <TableHead>Tertanggung</TableHead>
+                    <TableHead>COB</TableHead>
+                    <TableHead>Tgl Kejadian</TableHead>
+                    <TableHead className="text-right">Estimasi</TableHead>
+                    <TableHead className="text-right">Dibayar</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {claims.length === 0 ? (
+                    <TableEmpty
+                      colSpan={7}
+                      message="Tidak ada klaim pada periode ini"
+                    />
+                  ) : (
+                    paginatedClaims.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="tabular font-medium">
+                          {c.claimNo}
+                        </TableCell>
+                        <TableCell className="max-w-52.5 truncate">
+                          {c.insuredName}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                          {c.cob}
+                        </TableCell>
+                        <TableCell className="tabular whitespace-nowrap">
+                          {dateShort(c.lossDate)}
+                        </TableCell>
+                        <TableCell className="tabular text-right whitespace-nowrap">
+                          {rupiah(toIdr(c.estimatedLoss, c.currency))}
+                        </TableCell>
+                        <TableCell className="tabular text-right whitespace-nowrap">
+                          {rupiah(toIdr(c.paidAmount, c.currency))}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={c.status} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
+            <TablePagination
+              page={claimPage}
+              pageSize={claimPageSize}
+              totalItems={totalClaimItems}
+              onPageChange={setClaimPage}
+              onPageSizeChange={setClaimPageSize}
+              itemName="klaim"
+            />
+          </TabsContent>
+        ) : null}
       </Tabs>
     </div>
   )
