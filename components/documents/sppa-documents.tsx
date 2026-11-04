@@ -267,7 +267,7 @@ function PurposeRow({ no, client }: { no: number; client: KycClient }) {
 function KycFooter() {
   return (
     <footer
-      className="avoid-break mt-10 flex items-center justify-between gap-6 px-4 py-3 text-[10px] leading-relaxed text-white print:hidden"
+      className="avoid-break mt-10 -mx-8 md:-mx-12 w-[calc(100%+4rem)] md:w-[calc(100%+6rem)] flex items-center justify-between gap-6 px-8 py-3 md:px-12 text-[10px] leading-relaxed text-white print:hidden"
       style={{ backgroundColor: KYC_NAVY }}
     >
       <p>

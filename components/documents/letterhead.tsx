@@ -54,7 +54,7 @@ export function DocumentFooter({
 }) {
   if (isPrintFixed) {
     return (
-      <footer className="w-full bg-[#2e243e] px-[12mm] py-2.5 text-white">
+      <footer className="w-full bg-[#2e243e] px-[18mm] py-2.5 text-white">
         <div className="flex items-center justify-between gap-4">
           <div className="text-[10px] sm:text-[10.5px] leading-snug font-normal text-white">
             <p className="font-medium text-white/95">
@@ -86,7 +86,7 @@ export function DocumentFooter({
   }
 
   return (
-    <footer className="avoid-break mt-12 w-full overflow-hidden rounded-md bg-[#2e243e] px-5 py-3 text-white shadow-sm print:hidden">
+    <footer className="avoid-break mt-12 -mx-8 -mb-8 md:-mx-12 md:-mb-12 w-[calc(100%+4rem)] md:w-[calc(100%+6rem)] rounded-b-2xl rounded-t-none bg-[#2e243e] px-8 py-4 md:px-12 text-white shadow-sm print:hidden">
       <div className="flex items-center justify-between gap-4">
         <div className="text-[10px] sm:text-[10.5px] leading-snug font-normal text-white">
           <p className="font-medium text-white/95">

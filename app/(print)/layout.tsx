@@ -12,5 +12,5 @@ export default async function PrintLayout({
   const pathname = (await headers()).get("x-pathname") ?? "/"
   await requireAccess(pathname)
 
-  return <div className="min-h-svh bg-muted/50">{children}</div>
+  return <div className="min-h-svh bg-muted/50 print:bg-white print:min-h-0">{children}</div>
 }
