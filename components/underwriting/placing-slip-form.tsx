@@ -57,6 +57,7 @@ import {
   recalc,
   releaseIssues,
   switchCob,
+  usesAdditionalFee,
   usesPropertyBlocks,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
@@ -1545,6 +1546,26 @@ function SlipEditor({
                     Batas OJK untuk {slip.cob}: {brokerageLimit}.
                   </p>
                 )
+              ) : null}
+              {usesAdditionalFee(slip.cob) ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="additional-fee">
+                      Additional Fee ({slip.currency})
+                    </FieldLabel>
+                    <NumberInput
+                      id="additional-fee"
+                      preset="money"
+                      min={0}
+                      value={slip.additionalFee || null}
+                      onValueChange={(v) => set({ additionalFee: v ?? 0 })}
+                    />
+                    <FieldDescription>
+                      Kosongkan kalau tidak ada. Hanya untuk produksi, tidak
+                      dicetak di slip.
+                    </FieldDescription>
+                  </Field>
+                </div>
               ) : null}
               <div className="grid grid-cols-1 gap-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2">
                 <div className="flex items-center justify-between text-sm">

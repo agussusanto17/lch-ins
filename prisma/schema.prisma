@@ -1065,6 +1065,10 @@ model PlacingSlip {
   brokeragePct Decimal @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
   includeVat   Boolean @default(false) @map("include_vat")
 
+  /// Fee di luar brokerage untuk produksi, hanya slip Property dan Motor
+  /// Vehicle. Tidak dicetak di dokumen slip; ikut ke polis yang dibuat dari slip.
+  additionalFee Decimal @default(0) @map("additional_fee") @db.Decimal(18, 2)
+
   subjectivity       String?
   quotationNo        String? @unique @map("quotation_no")
   coverNoteNo        String? @unique @map("cover_note_no")

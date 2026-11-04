@@ -245,6 +245,11 @@ export interface PlacingSlip {
   stampDuty: number
   brokeragePct: number
   includeVat: boolean
+  /**
+   * Fee di luar brokerage untuk produksi, hanya Property dan Motor Vehicle.
+   * Tidak dicetak di slip; disalin ke polis yang dibuat dari slip.
+   */
+  additionalFee?: number
   createdAt: string
   updatedAt: string
   /* pasca-release */

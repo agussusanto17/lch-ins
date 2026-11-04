@@ -242,6 +242,7 @@ export function PolicyForm({
       sumInsured: totalSumInsured(slip),
       premium: totalPremium(slip),
       brokeragePct: slip.brokeragePct,
+      additionalFee: slip.additionalFee ?? 0,
       riskLocation: slip.riskLocation ?? "",
       insurer: leader?.insurer ?? "",
       insurers: panel,
