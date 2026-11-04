@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-04
 - **Branch:** `fix/rbac-admin-only-master-data-clauses-reports`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #112
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
