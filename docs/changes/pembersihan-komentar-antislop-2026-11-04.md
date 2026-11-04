@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-04
 - **Branch:** `chore/antislop-comment-cleanup`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #106
 - **Dikerjakan oleh:** Claude Code
 
 ## Latar belakang
