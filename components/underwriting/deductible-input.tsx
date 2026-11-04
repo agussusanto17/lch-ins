@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { ChevronDown, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -16,7 +17,13 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
-import { MAX_DEDUCTIBLES } from "@/lib/data/types"
+import {
+  deductibleRows,
+  extraDeductibleCovers,
+  type DeductibleGroup,
+  type DeductibleRow,
+} from "@/components/underwriting/slip-model"
+import { MAX_DEDUCTIBLES, type PlacingSlip } from "@/lib/data/types"
 
 /**
  * Isian deductible satu cover. Tombol Pilih mengisi teks dari Master Data >
@@ -149,6 +156,113 @@ export function DeductibleList({
           <Plus data-icon="inline-start" />
           Tambah deductible
         </Button>
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * Kotak "Deductible per cover": satu baris per cover dengan isian deductible
+ * di kanan. Slip Motor Vehicle punya tombol Tambah cover di kiri untuk baris
+ * Personal Accident dan Third Party Liability (permintaan 4 November 2026).
+ */
+export function DeductiblePerCover({
+  slip,
+  choices,
+  onChange,
+}: {
+  slip: PlacingSlip
+  choices: string[]
+  onChange: (patch: Partial<PlacingSlip>) => void
+}) {
+  const [added, setAdded] = React.useState<DeductibleGroup[]>([])
+  const rows = deductibleRows(slip, added)
+  const addable = extraDeductibleCovers(slip).filter(
+    (c) => !rows.some((r) => r.group === c.group)
+  )
+
+  const setDeductibles = (row: DeductibleRow, deductibles: string[]) =>
+    onChange({
+      [row.group]: slip[row.group].map((l) =>
+        l.id === row.lineId ? { ...l, deductibles } : l
+      ),
+    })
+
+  return (
+    <div className="overflow-hidden rounded-xl border">
+      {rows.map((row) => (
+        <div
+          key={`${row.group}-${row.lineId}`}
+          className="grid grid-cols-1 items-start gap-x-4 gap-y-1.5 border-b px-3 py-2.5 last:border-0 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]"
+        >
+          <div className="flex min-w-0 items-start gap-1">
+            <label
+              htmlFor={`deductible-${row.lineId}`}
+              className="min-w-0 truncate text-sm text-muted-foreground sm:pt-2"
+              title={row.cover}
+            >
+              {row.cover}
+            </label>
+            {row.extra ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={`Hapus deductible ${row.cover}`}
+                className="shrink-0 text-muted-foreground hover:text-destructive sm:mt-1.5"
+                onClick={() => {
+                  setAdded((groups) => groups.filter((g) => g !== row.group))
+                  setDeductibles(row, [])
+                }}
+              >
+                <Trash2 />
+              </Button>
+            ) : null}
+          </div>
+          <DeductibleList
+            id={`deductible-${row.lineId}`}
+            cover={row.cover}
+            values={row.deductibles}
+            choices={choices}
+            onChange={(values) => setDeductibles(row, values)}
+            placeholder={
+              row.cover.startsWith("BI")
+                ? "Contoh: 14 days waiting period"
+                : "Contoh: 10% of claim minimum IDR 10,000,000"
+            }
+          />
+        </div>
+      ))}
+      {addable.length ? (
+        <div className="px-3 py-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className="text-muted-foreground"
+                />
+              }
+            >
+              <Plus data-icon="inline-start" />
+              Tambah cover
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuGroup>
+                {addable.map((c) => (
+                  <DropdownMenuItem
+                    key={c.group}
+                    onClick={() => setAdded((groups) => [...groups, c.group])}
+                  >
+                    {c.cover}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ) : null}
     </div>
   )

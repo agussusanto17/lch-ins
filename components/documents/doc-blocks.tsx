@@ -1,5 +1,6 @@
 import {
   coverLabel,
+  deductibleRows,
   slipOccupationText,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
@@ -292,8 +293,8 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
   // like the rate list, with wrapped lines aligned to the text.
   const deductibles = [
     ...new Set(
-      slip.rateLines
-        .flatMap((l) => l.deductibles ?? [])
+      deductibleRows(slip)
+        .flatMap((r) => r.deductibles)
         .map((text) => text.trim())
         .filter(Boolean)
     ),
