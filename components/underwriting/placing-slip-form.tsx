@@ -107,6 +107,7 @@ import {
   effectiveBrokeragePct,
   isParEqvetSlip,
   parEqvetPolicyCharge,
+  slipLossLimit,
   sumItems,
   sumPercent,
   totalPayable,
@@ -458,6 +459,7 @@ function SlipEditor({
   const md = sumItems(slip.sumInsuredSection1)
   const bi = sumItems(slip.sumInsuredSection2)
   const tsi = totalSumInsured(slip)
+  const lossLimit = slipLossLimit(slip)
   const premium = totalPremium(slip)
   const discount = discountAmount(slip)
   const payable = totalPayable(slip)
@@ -1201,6 +1203,25 @@ function SlipEditor({
                     value={money(md, slip.currency)}
                     tone="muted"
                   />
+                  <Field className="mt-2 md:max-w-sm">
+                    <FieldLabel htmlFor="loss-limit">
+                      Loss Limit ({slip.currency})
+                    </FieldLabel>
+                    <NumberInput
+                      id="loss-limit"
+                      preset="money"
+                      min={0}
+                      value={slip.lossLimit || null}
+                      onValueChange={(v) => set({ lossLimit: v || null })}
+                    />
+                    <FieldDescription>
+                      {!slip.lossLimit
+                        ? "Kosongkan untuk full value."
+                        : lossLimit
+                          ? `${percent(lossLimit.valuesPct, 2)} dari nilai Section 1. Premi Material Damage ${percent(lossLimit.premiumPct, 2)} dari premi full value (skala OJK Tabel I.B).`
+                          : "Loss limit tidak di bawah nilai Section 1, jadi dihitung full value."}
+                    </FieldDescription>
+                  </Field>
                 </div>
                 <div className="flex flex-col gap-2">
                   <p className="text-sm font-medium">
@@ -1378,6 +1399,15 @@ function SlipEditor({
             }
           >
             <div className="flex flex-col gap-4">
+              {lossLimit ? (
+                <p className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                  <Info className="mt-0.5 size-3.5 shrink-0" />
+                  Premi Material Damage dihitung{" "}
+                  {percent(lossLimit.premiumPct, 2)} dari premi full value,
+                  karena loss limit {percent(lossLimit.valuesPct, 2)} dari
+                  nilai Section 1. Premi BI tetap penuh.
+                </p>
+              ) : null}
               {(isProperty || isMotor) && !locked ? (
                 <OjkReference
                   mode={isMotor ? "motor" : "property"}

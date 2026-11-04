@@ -21,8 +21,10 @@ import {
   MOTOR_EXTENSION_TARIFFS,
   MOTOR_ACQUISITION_CAP_PCT,
 } from "@/lib/data/ojk-motor"
+import { num } from "@/lib/format"
 import type {
   BiScaleRow,
+  LossLimitScaleRow,
   OccupationRecord,
   TariffEqPropertyRow,
   TariffFloodRow,
@@ -33,6 +35,7 @@ export interface TariffOjkTabProps {
   tariffEqProperty: TariffEqPropertyRow[]
   tariffFlood: TariffFloodRow[]
   biScales: BiScaleRow[]
+  lossLimitScales: LossLimitScaleRow[]
 }
 
 interface GroupedMotorTariff {
@@ -51,11 +54,23 @@ export function TariffOjkTab({
   tariffEqProperty,
   tariffFlood,
   biScales,
+  lossLimitScales,
 }: TariffOjkTabProps) {
   const [activeSubTab, setActiveSubTab] = React.useState<
-    "occupation" | "motor" | "earthquake" | "flood" | "biscale"
+    "occupation" | "motor" | "earthquake" | "flood" | "biscale" | "losslimit"
   >("occupation")
   const [query, setQuery] = React.useState("")
+
+  // Empat kolom seperti tabel di PDF OJK: tiga kolom sama panjang, sisanya di
+  // kolom terakhir (34, 34, 34, 35 baris).
+  const lossLimitColumns = React.useMemo(() => {
+    const size = Math.floor(lossLimitScales.length / 4) || lossLimitScales.length
+    return [0, 1, 2, 3]
+      .map((i) =>
+        lossLimitScales.slice(i * size, i === 3 ? undefined : (i + 1) * size)
+      )
+      .filter((rows) => rows.length > 0)
+  }, [lossLimitScales])
 
   const formatZone = (zone: string) => {
     if (!zone) return "—"
@@ -114,7 +129,7 @@ export function TariffOjkTab({
         value={activeSubTab}
         onValueChange={(val) =>
           setActiveSubTab(
-            val as "occupation" | "motor" | "earthquake" | "flood" | "biscale"
+            val as "occupation" | "motor" | "earthquake" | "flood" | "biscale" | "losslimit"
           )
         }
       >
@@ -124,6 +139,7 @@ export function TariffOjkTab({
           <TabsTrigger value="flood">Banjir (Lamp. II)</TabsTrigger>
           <TabsTrigger value="earthquake">Gempa Bumi (Lamp. III)</TabsTrigger>
           <TabsTrigger value="biscale">Skala BI</TabsTrigger>
+          <TabsTrigger value="losslimit">Loss Limit</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -446,6 +462,48 @@ export function TariffOjkTab({
               )}
             </TableBody>
           </Table>
+        </Card>
+      )}
+      {activeSubTab === "losslimit" && (
+        <Card className="gap-3 p-4">
+          <p className="text-sm text-muted-foreground">
+            Skala premi polis yang tidak dipertanggungkan secara nilai penuh,
+            dari SE OJK 6/SEOJK.05/2017 Lampiran I Tabel I.B (sama dengan Tabel
+            II.C dan III.B). Persentase loss limit terhadap nilai penuh yang
+            jatuh di antara baris memakai baris berikutnya ke atas.
+          </p>
+          {lossLimitScales.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Belum ada data skala loss limit.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {lossLimitColumns.map((rows, i) => (
+                <Table key={i}>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="text-right">% of Values</TableHead>
+                      <TableHead className="text-right">
+                        % of Total Premium
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((r) => (
+                      <TableRow key={r.valuesPct}>
+                        <TableCell className="text-right font-mono">
+                          {num(r.valuesPct, 2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-semibold text-foreground">
+                          {num(r.premiumPct, 2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ))}
+            </div>
+          )}
         </Card>
       )}
     </div>

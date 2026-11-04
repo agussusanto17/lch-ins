@@ -2,6 +2,7 @@ import {
   PAR_EQVET_FORMULA_NAMES,
   PAR_EQVET_FULL_NAMES,
 } from "./data/reference"
+import { lossLimitPremiumPct } from "./data/loss-limit"
 import type { PlacingSlip, RateLine, SlipPart } from "./data/types"
 import { num } from "./format"
 
@@ -124,6 +125,8 @@ export interface ParEqvetLine {
   basis: number
   ratePercent: number | null
   rateText: string
+  /** Persen premi loss limit OJK, kosong untuk full value dan baris BI. */
+  lossLimitPct: number | null
   premium: number
 }
 
@@ -165,7 +168,12 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
     const isBi = BI_RATE_LABELS.includes(l.label)
     const basis = isBi ? biBasis : mdBasis
     const ratePercent = l.rate != null ? l.rate / 10 : null
-    const premium = l.premium || (ratePercent != null ? roundCents((basis * ratePercent) / 100) : 0)
+    const lossLimitPct = isBi ? null : (slip.lossLimitPremiumPct ?? null)
+    const premium =
+      l.premium ||
+      (ratePercent != null
+        ? roundCents((basis * ratePercent * (lossLimitPct ?? 100)) / 10_000)
+        : 0)
 
     return {
       id: l.id,
@@ -175,6 +183,7 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
       basis,
       ratePercent,
       rateText: ratePercent != null ? `${num(ratePercent, 5)}%` : "—",
+      lossLimitPct,
       premium,
     }
   }
@@ -263,12 +272,13 @@ export function rateModeFor(cob: string): RateMode {
 export function premiumFromRate(
   basis: number,
   rate: number | null,
-  mode: RateMode
+  mode: RateMode,
+  /** Persen premi loss limit OJK; 100 berarti full value. */
+  lossLimitPct = 100
 ) {
   if (!rate) return 0
-  return roundCents(
-    mode === "percent" ? (basis * rate) / 100 : (basis * rate) / 1000
-  )
+  const full = mode === "percent" ? (basis * rate) / 100 : (basis * rate) / 1000
+  return roundCents((full * lossLimitPct) / 100)
 }
 
 /** Property rate line items calculated against Business Interruption sum insured. */
@@ -332,13 +342,17 @@ export function recalcSlip(slip: PlacingSlip): PlacingSlip {
       ? sumItems(slip.sumInsuredSection1)
       : sumItems(slip.interestItems)
   const biBasis = sumItems(slip.sumInsuredSection2)
+  // Loss limit hanya mengurangi premi Material Damage; BI tetap penuh.
+  const lossLimitPct = slipLossLimit(slip)?.premiumPct ?? null
 
   const rateLines = slip.rateLines.map((l) => {
-    const basis =
-      slip.cob === "Property" && BI_RATE_LABELS.includes(l.label)
-        ? biBasis
-        : mdBasis
-    return { ...l, premium: premiumFromRate(basis, l.rate, mode) }
+    const isBi = slip.cob === "Property" && BI_RATE_LABELS.includes(l.label)
+    return {
+      ...l,
+      premium: isBi
+        ? premiumFromRate(biBasis, l.rate, mode)
+        : premiumFromRate(mdBasis, l.rate, mode, lossLimitPct ?? 100),
+    }
   })
 
   const withBasis = (lines: RateLine[]) =>
@@ -349,8 +363,34 @@ export function recalcSlip(slip: PlacingSlip): PlacingSlip {
 
   return {
     ...slip,
+    lossLimitPremiumPct: lossLimitPct,
     rateLines,
     tplLines: withBasis(slip.tplLines),
     paLines: withBasis(slip.paLines),
   }
+}
+
+/**
+ * Loss limit slip Property terhadap nilai penuh Section 1, dengan persen premi
+ * dari skala OJK (Tabel I.B). Null untuk full value: tanpa loss limit, bukan
+ * Property, atau loss limit tidak di bawah nilai penuh.
+ */
+export function slipLossLimit(slip: PlacingSlip) {
+  if (slip.cob !== "Property" || !slip.lossLimit || slip.lossLimit <= 0) {
+    return null
+  }
+  const values = sumItems(slip.sumInsuredSection1)
+  if (values <= 0 || slip.lossLimit >= values) return null
+  const valuesPct = (slip.lossLimit / values) * 100
+  return { valuesPct, premiumPct: lossLimitPremiumPct(valuesPct) }
+}
+
+/**
+ * Harga pertanggungan untuk polis: dengan loss limit, Section 1 diganti nilai
+ * loss limit (SE OJK: loss limit adalah harga pertanggungan); Section 2 tetap.
+ */
+export function insuredAmount(slip: PlacingSlip) {
+  return slipLossLimit(slip)
+    ? (slip.lossLimit ?? 0) + sumItems(slip.sumInsuredSection2)
+    : totalSumInsured(slip)
 }

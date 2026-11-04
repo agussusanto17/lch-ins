@@ -4,6 +4,7 @@ import { PageHeader, PageShell } from "@/components/layout/page-header"
 import { TariffOjkTab } from "@/components/master-data/tariff-ojk-tab"
 import {
   listBiScales,
+  listLossLimitScales,
   listOccupations,
   listTariffEqProperty,
   listTariffFlood,
@@ -17,13 +18,19 @@ export const metadata: Metadata = {
 export default async function MasterDataTariffOjkPage() {
   await requireAccess("/master-data")
 
-  const [initialOccupations, tariffEqProperty, tariffFlood, biScales] =
-    await Promise.all([
-      listOccupations(),
-      listTariffEqProperty(),
-      listTariffFlood(),
-      listBiScales(),
-    ])
+  const [
+    initialOccupations,
+    tariffEqProperty,
+    tariffFlood,
+    biScales,
+    lossLimitScales,
+  ] = await Promise.all([
+    listOccupations(),
+    listTariffEqProperty(),
+    listTariffFlood(),
+    listBiScales(),
+    listLossLimitScales(),
+  ])
 
   return (
     <PageShell>
@@ -36,6 +43,7 @@ export default async function MasterDataTariffOjkPage() {
         tariffEqProperty={tariffEqProperty}
         tariffFlood={tariffFlood}
         biScales={biScales}
+        lossLimitScales={lossLimitScales}
       />
     </PageShell>
   )
