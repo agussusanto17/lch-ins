@@ -507,7 +507,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     stampDuty: Number(raw.stampDuty),
     brokeragePct: Number(raw.brokeragePct),
     includeVat: raw.includeVat,
-    additionalFee: Number(raw.additionalFee),
+    additionalFee: Number(raw.additionalFee ?? 0),
     lossLimit: raw.lossLimit != null ? Number(raw.lossLimit) : null,
     lossLimitPremiumPct:
       raw.lossLimitPremiumPct != null ? Number(raw.lossLimitPremiumPct) : null,
@@ -667,8 +667,7 @@ function slipAdditionalFee(cobName: string, fee: number | undefined) {
 }
 
 /**
- * Loss limit hanya untuk slip Property; COB lain dan full value disimpan
- * kosong. Persen premi ikut dari perhitungan premi di form.
+ * Loss limit applies only to Property slips; other COBs and full value are stored as null.
  */
 function slipLossLimitData(
   cobName: string,
@@ -688,9 +687,8 @@ function slipLossLimitData(
 }
 
 /**
- * Salin klausula terpilih ke slip_clauses, wording dari override slip atau
- * master. Section 2 (Business Interruption) hanya disimpan untuk slip
- * Property; COB lain tidak punya section.
+ * Copies selected clauses to slip_clauses with wording from slip override or master.
+ * Section 2 (Business Interruption) is stored only for Property slips.
  */
 async function insertSlipClauses(
   tx: Prisma.TransactionClient,
@@ -701,7 +699,7 @@ async function insertSlipClauses(
     "clauseIds" | "clauseOverrides" | "clauseIdsSection2" | "clauseOverridesSection2"
   >
 ) {
-  // Validasi: satu klausula tidak boleh ada di kedua section
+  // Ensure a clause does not appear in both Section 1 and Section 2
   const cob = normalizeCob(cobName)
   if (usesSectionSumInsured(cob)) {
     const issues = validateClauseUniquenessAcrossSections({
