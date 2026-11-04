@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-04
 - **Branch:** `feat/kop-surat-footer-setiap-halaman-a4`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #109
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
