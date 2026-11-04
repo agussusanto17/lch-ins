@@ -316,10 +316,10 @@ const SEED: PlacingSlip[] = [
     rateLines: [
       {
         id: "r1",
-        label: "Rate (‰)",
+        label: "Rate (%)",
         deductible:
           "IDR 25,000,000 each and every claim for Third Party Property Damage",
-        rate: 0.85,
+        rate: 0.085,
         premium: 8_500_000,
       },
     ],
@@ -369,10 +369,10 @@ const SEED: PlacingSlip[] = [
     rateLines: [
       {
         id: "r1",
-        label: "Rate (‰)",
+        label: "Rate (%)",
         deductible:
           "USD 500 each and every claim; USD 1,000 each and every claim for electronics",
-        rate: 1.35,
+        rate: 0.135,
         premium: 6_075,
       },
     ],
@@ -446,10 +446,10 @@ const SEED: PlacingSlip[] = [
     rateLines: [
       {
         id: "r1",
-        label: "Rate (‰)",
+        label: "Rate (%)",
         deductible:
           "IDR 500,000,000 each and every loss for testing & commissioning; IDR 250,000,000 each and every loss for other perils",
-        rate: 2.15,
+        rate: 0.215,
         premium: 999_750_000,
       },
     ],

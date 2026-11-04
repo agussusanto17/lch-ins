@@ -5,7 +5,7 @@ import { z } from "zod"
 
 import type { SlipStatus } from "@/lib/generated/prisma/client"
 import type { PlacingSlip } from "@/lib/data/types"
-import { brokerageLimitIssue } from "@/lib/calc"
+import { brokerageLimitIssue, rateUnitFor } from "@/lib/calc"
 import {
   createPlacingSlip,
   deletePlacingSlip,
@@ -242,8 +242,7 @@ export async function releasePlacingSlipAction(
         errorDetails.push(...validation.releaseIssues)
       }
       if (validation.missingExceptions.length > 0) {
-        // Motor Vehicle rates are percentage; Property and other COBs are permille.
-        const unit = target.cob === "Motor Vehicle" ? "%" : "‰"
+        const unit = rateUnitFor(target.cob)
         for (const { line, reason } of validation.missingExceptions) {
           const range =
             line.max == null

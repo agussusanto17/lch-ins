@@ -262,11 +262,16 @@ export function slipRateBasis(slip: PlacingSlip) {
   return totalSumInsured(slip)
 }
 
-/** Rate calculation basis: Property uses per mil (‰); Motor Vehicle uses percent (%). */
+/** Rate calculation basis: Property uses per mil (‰); every other COB uses percent (%). */
 export type RateMode = "permil" | "percent"
 
 export function rateModeFor(cob: string): RateMode {
-  return cob === "Motor Vehicle" ? "percent" : "permil"
+  return cob === "Property" ? "permil" : "percent"
+}
+
+/** Unit symbol printed beside a slip rate, matching rateModeFor. */
+export function rateUnitFor(cob: string) {
+  return rateModeFor(cob) === "permil" ? "‰" : "%"
 }
 
 export function premiumFromRate(

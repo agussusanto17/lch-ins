@@ -107,6 +107,7 @@ import {
   effectiveBrokeragePct,
   isParEqvetSlip,
   parEqvetPolicyCharge,
+  rateUnitFor,
   slipLossLimit,
   sumItems,
   sumPercent,
@@ -1432,7 +1433,7 @@ function SlipEditor({
                   <CoverRateTable
                     lines={lines}
                     currency={slip.currency}
-                    unit={isMotor ? "%" : "‰"}
+                    unit={rateUnitFor(slip.cob)}
                     exceptions={slip.rateExceptions}
                     readOnly={locked}
                     onRateChange={(id, rate) =>
@@ -1483,7 +1484,9 @@ function SlipEditor({
               {!isProperty && !isMotor ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="rate-std">Rate (‰)</FieldLabel>
+                    <FieldLabel htmlFor="rate-std">
+                      Rate ({rateUnitFor(slip.cob)})
+                    </FieldLabel>
                     <NumberInput
                       id="rate-std"
                       preset="rate"
