@@ -98,7 +98,7 @@ export function PlacingSlipDocument(props: DocProps) {
   if (!slip) return <Missing />
   return (
     <DocumentShell backHref={`/underwriting/edit/${slip.id}`}>
-      <Letterhead withAddress />
+      <Letterhead />
       <DocTitle
         title="PLACING SLIP"
         number={
@@ -126,6 +126,8 @@ export function PlacingSlipDocument(props: DocProps) {
       />
 
       <ClauseWordingAppendix slip={slip} />
+
+      <PrintedAt />
     </DocumentShell>
   )
 }
@@ -137,7 +139,7 @@ export function QuotationSlipDocument(props: DocProps) {
 
   return (
     <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
-      <Letterhead withAddress />
+      <Letterhead />
       <DocTitle
         title="QUOTATION SLIP"
         number={number ? `No. ${number}` : "DRAFT"}
@@ -179,7 +181,7 @@ export function CoverNoteDocument(props: DocProps) {
   const number = derivedDocNumber(slip.slipNo, "CN")
   return (
     <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
-      <Letterhead withAddress />
+      <Letterhead />
       <DocTitle
         title="COVER NOTE"
         number={
@@ -223,7 +225,7 @@ export function ClosingInstructionDocument(props: DocProps) {
 
   return (
     <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
-      <Letterhead withAddress />
+      <Letterhead />
       <DocTitle
         title="CLOSING INSTRUCTION"
         number={number ? `No. ${number}` : "DRAFT"}

@@ -1,5 +1,7 @@
+import Image from "next/image"
 import { Check } from "lucide-react"
 
+import regulatoryBadges from "@/public/images/regulatory-badges.png"
 import { DocumentShell } from "@/components/documents/document-shell"
 import {
   DocTitle,
@@ -275,10 +277,13 @@ function KycFooter() {
         <br />
         {LCH_ADDRESS.phone}
       </p>
-      <div className="shrink-0 text-right">
-        <p>Terdaftar &amp; diawasi oleh</p>
-        <p className="font-bold">Otoritas Jasa Keuangan</p>
-        <p className="mt-1">Anggota APPARINDO No. 237-2016</p>
+      <div className="shrink-0 flex items-center">
+        <Image
+          src={regulatoryBadges}
+          alt="Terdaftar & diawasi oleh OJK. Anggota APPARINDO"
+          className="h-10 w-auto object-contain"
+          unoptimized
+        />
       </div>
     </footer>
   )
