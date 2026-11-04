@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-04
 - **Branch:** `feat/deductible-klausula-per-section`
-- **PR:** TBA
+- **PR:** #104
 - **Dikerjakan oleh:** Claude Code
 
 ## Latar belakang
