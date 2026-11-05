@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `feat/periode-label-satu-tanggal` (di atas `feat/dua-cover-per-objek`)
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#145](https://github.com/agussusanto17/lch-ins/pull/145)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
