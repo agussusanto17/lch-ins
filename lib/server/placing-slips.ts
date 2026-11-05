@@ -30,6 +30,7 @@ import {
 } from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
 import { cleanDetailRows } from "@/lib/slip-details"
+import { cleanClauseGroups, groupedClauseOrder } from "@/lib/clause-groups"
 import { usesItemRates } from "@/lib/slip-items"
 import { slipRiskLocationText } from "@/lib/slip-locations"
 import { cobLookupKeys } from "@/lib/server/cob"
@@ -106,6 +107,7 @@ export interface PlacingSlipInput {
   sumInsuredSection2?: LineItem[]
   clauseIds?: string[]
   clauseOverrides?: Record<string, ClauseOverride>
+  clauseGroups?: Record<string, string>
   clauseIdsSection2?: string[]
   clauseOverridesSection2?: Record<string, ClauseOverride>
   clauseIdsGeneral?: string[]
@@ -469,10 +471,12 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     const ids: string[] = []
     const overrides: Record<string, ClauseOverride> = {}
     const copies: Record<string, ClauseOverride> = {}
+    const groups: Record<string, string> = {}
     for (const cl of raw.clauses) {
       if (cl.section !== section) continue
       ids.push(cl.clauseId)
       copies[cl.clauseId] = { title: cl.title, wording: cl.wordingHtml }
+      if (cl.groupTitle) groups[cl.clauseId] = cl.groupTitle
       if (cl.isEdited) {
         overrides[cl.clauseId] = {
           title: cl.title,
@@ -484,6 +488,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
       ids,
       overrides: Object.keys(overrides).length > 0 ? overrides : undefined,
       copies,
+      groups: Object.keys(groups).length > 0 ? groups : undefined,
     }
   }
   const clauses0 = clauseSet(0)
@@ -575,6 +580,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     clauseIds: clauses1.ids,
     clauseOverrides: clauses1.overrides,
     clauseCopies: clauses1.copies,
+    clauseGroups: clauses1.groups,
     clauseIdsSection2: clauses2.ids,
     clauseOverridesSection2: clauses2.overrides,
     clauseCopiesSection2: clauses2.copies,
@@ -895,6 +901,7 @@ async function insertSlipClauses(
     PlacingSlipInput,
     | "clauseIds"
     | "clauseOverrides"
+    | "clauseGroups"
     | "clauseIdsSection2"
     | "clauseOverridesSection2"
     | "clauseIdsGeneral"
@@ -917,19 +924,28 @@ async function insertSlipClauses(
     }
   }
 
+  // Slip tanpa section boleh mengelompokkan daftar utamanya dengan judul;
+  // klausul sekelompok disimpan berdampingan.
+  const groups = sectioned
+    ? undefined
+    : cleanClauseGroups([...new Set(input.clauseIds ?? [])], input.clauseGroups)
   const sections = [
-    { section: 1, ids: input.clauseIds, overrides: input.clauseOverrides },
+    {
+      section: 1,
+      ids: groupedClauseOrder([...new Set(input.clauseIds ?? [])], groups),
+      overrides: input.clauseOverrides,
+    },
   ]
   if (sectioned) {
     sections.push(
       {
         section: 0,
-        ids: input.clauseIdsGeneral,
+        ids: input.clauseIdsGeneral ?? [],
         overrides: input.clauseOverridesGeneral,
       },
       {
         section: 2,
-        ids: input.clauseIdsSection2,
+        ids: input.clauseIdsSection2 ?? [],
         overrides: input.clauseOverridesSection2,
       }
     )
@@ -952,6 +968,7 @@ async function insertSlipClauses(
             title: override?.title || clause.title,
             wordingHtml: override?.wording || clause.wordingHtml,
             isEdited: Boolean(override),
+            groupTitle: section === 1 ? (groups?.[clause.id] ?? null) : null,
             sortOrder: clIdx++,
           },
         })

@@ -181,6 +181,12 @@ const placingSlipSchema = z.object({
       })
     )
     .optional(),
+  clauseGroups: z
+    .record(
+      z.string(),
+      z.string().max(200, "Judul kelompok klausul maksimal 200 karakter")
+    )
+    .optional(),
   clauseIdsSection2: z.array(z.string()).optional(),
   clauseOverridesSection2: z
     .record(
@@ -473,6 +479,7 @@ export async function duplicatePlacingSlipAction(
       sumInsuredSection2: source.sumInsuredSection2,
       clauseIds: source.clauseIds,
       clauseOverrides: source.clauseOverrides,
+      clauseGroups: source.clauseGroups,
       clauseIdsSection2: source.clauseIdsSection2,
       clauseOverridesSection2: source.clauseOverridesSection2,
       clauseIdsGeneral: source.clauseIdsGeneral,

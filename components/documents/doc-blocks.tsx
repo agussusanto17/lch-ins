@@ -50,6 +50,7 @@ import {
   type LocationGroup,
 } from "@/lib/slip-locations"
 import { printedDetailRows } from "@/lib/slip-details"
+import { clauseGroupBlocks } from "@/lib/clause-groups"
 import {
   isFlatLine,
   isLimitOnlyItem,
@@ -542,8 +543,9 @@ interface ClauseGroup {
 /**
  * Slip Property mencetak klausula tanpa section dulu tanpa judul, lalu per
  * section dengan judul yang sama seperti INTEREST INSURED, sesuai CI LCH. COB
- * lain satu daftar tanpa judul. Kelompok kosong dilewati. Nomor klausula
- * mulai dari 1 lagi di tiap kelompok (Agus, 5 November 2026).
+ * lain satu daftar, atau beberapa kelompok berjudul seperti EXTENSIONS dan
+ * GENERAL CONDITIONS bila judulnya diisi. Kelompok kosong dilewati. Nomor
+ * klausula mulai dari 1 lagi di tiap kelompok (Agus, 5 November 2026).
  */
 function clauseGroups(slip: PlacingSlip): ClauseGroup[] {
   const section1 = resolveClauses(
@@ -572,7 +574,10 @@ function clauseGroups(slip: PlacingSlip): ClauseGroup[] {
           ),
         },
       ]
-    : [{ heading: null, clauses: section1 }]
+    : clauseGroupBlocks(slip.clauseIds, slip.clauseGroups).map((b) => ({
+        heading: b.title || null,
+        clauses: resolveClauses(b.ids, slip.clauseOverrides, slip.clauseCopies),
+      }))
 
   return groups.filter((g) => g.clauses.length > 0)
 }

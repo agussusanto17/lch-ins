@@ -1558,6 +1558,15 @@ function SlipEditor({
                   copies={slip.clauseCopies}
                   onChange={(ids) => set({ clauseIds: ids })}
                   onOverridesChange={(o) => set({ clauseOverrides: o })}
+                  // Slip tanpa section boleh mengelompokkan klausul dengan
+                  // judul, misalnya Extensions dan General Conditions.
+                  {...(sectionTitles
+                    ? {}
+                    : {
+                        groups: slip.clauseGroups,
+                        onGroupsChange: (g: Record<string, string>) =>
+                          set({ clauseGroups: g }),
+                      })}
                   masterClauses={masterClauses}
                 />
               </div>
