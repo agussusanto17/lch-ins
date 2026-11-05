@@ -340,6 +340,12 @@ export interface PlacingSlip {
    */
   clauseCopies?: Record<string, ClauseOverride>
   /**
+   * Judul kelompok per klausul di `clauseIds`, untuk slip tanpa section,
+   * misalnya "Extensions" dan "General Conditions". Klausul tanpa judul
+   * masuk kelompok tanpa judul.
+   */
+  clauseGroups?: Record<string, string>
+  /**
    * Klausula Section 2 (Business Interruption) slip Property. Field `clause*`
    * di atas menjadi Section 1. Satu klausula hanya dipilih di satu kelompok.
    */

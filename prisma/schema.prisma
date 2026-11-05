@@ -1328,6 +1328,9 @@ model SlipClause {
   /// Slip Property: 1 Material Damage, 2 Business Interruption. Klausula yang
   /// berlaku untuk keduanya punya satu baris per section. COB lain selalu 1.
   section     Int     @default(1) @db.SmallInt
+  /// Judul kelompok klausul di slip tanpa section, misalnya "Extensions" atau
+  /// "General Conditions". Kosong berarti kelompok tanpa judul.
+  groupTitle  String? @map("group_title")
   sortOrder   Int     @default(0) @map("sort_order")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

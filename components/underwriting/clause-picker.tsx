@@ -1,7 +1,16 @@
 "use client"
 
 import * as React from "react"
-import { BookOpenText, Check, Pencil, RotateCcw, Search, X } from "lucide-react"
+import {
+  ArrowDown,
+  ArrowUp,
+  BookOpenText,
+  Check,
+  Pencil,
+  RotateCcw,
+  Search,
+  X,
+} from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,6 +23,14 @@ import {
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   CLAUSES,
   resolveSlipClauses,
   wordingHtml,
@@ -23,12 +40,67 @@ import {
 } from "@/lib/data"
 import { useFormOptions } from "@/components/shared/form-options-provider"
 import { clauseFitsSlip } from "@/lib/clause-filter"
+import {
+  CLAUSE_GROUP_SUGGESTIONS,
+  CLAUSE_GROUP_TITLE_MAX,
+  clauseGroupBlocks,
+  clauseGroupOf,
+  groupedClauseOrder,
+  moveClause,
+  moveClauseGroup,
+  moveClauseToGroup,
+  renameClauseGroup,
+  type ClauseGroups,
+} from "@/lib/clause-groups"
 import { coversFor } from "@/lib/form-options"
 import { cn } from "@/lib/utils"
 import {
   getClausesForPickerAction,
   type ClausePickerItem,
 } from "@/app/(app)/underwriting/actions"
+
+/** Nilai pilihan kelompok: tanpa judul dan kelompok baru. */
+const NO_GROUP = "__tanpa_judul__"
+const NEW_GROUP = "__kelompok_baru__"
+
+/**
+ * Judul kelompok klausula. Disimpan saat keluar dari isian atau Enter, supaya
+ * kelompok tidak bergabung dengan kelompok lain di tengah mengetik.
+ */
+function GroupTitleInput({
+  title,
+  listId,
+  onCommit,
+}: {
+  title: string
+  listId: string
+  onCommit: (title: string) => void
+}) {
+  const [draft, setDraft] = React.useState(title)
+  const [prev, setPrev] = React.useState(title)
+  if (prev !== title) {
+    setPrev(title)
+    setDraft(title)
+  }
+  return (
+    <Input
+      className="h-8 flex-1 text-xs font-semibold"
+      aria-label="Judul kelompok klausula"
+      list={listId}
+      maxLength={CLAUSE_GROUP_TITLE_MAX}
+      placeholder="Tanpa judul. Ketik judul kelompok, misalnya Extensions"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => onCommit(draft)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault()
+          onCommit(draft)
+        }
+      }}
+    />
+  )
+}
 
 /**
  * Slip Property memasang dua picker (Section 1 dan 2) sekaligus. Keduanya
@@ -53,6 +125,8 @@ export function ClausePicker({
   copies,
   onChange,
   onOverridesChange,
+  groups,
+  onGroupsChange,
   masterClauses: propMasterClauses,
 }: {
   cob: ClassOfBusiness
@@ -69,6 +143,13 @@ export function ClausePicker({
   copies?: Record<string, ClauseOverride>
   onChange: (ids: string[]) => void
   onOverridesChange: (overrides: Record<string, ClauseOverride>) => void
+  /**
+   * Judul kelompok per klausul (slip tanpa section). Bila `onGroupsChange`
+   * diisi, daftar terpilih bisa dikelompokkan dengan judul seperti Extensions
+   * dan General Conditions.
+   */
+  groups?: ClauseGroups
+  onGroupsChange?: (groups: ClauseGroups) => void
   masterClauses?: ClausePickerItem[]
 }) {
   /** Dua picker bisa membuka klausula yang sama, jadi id input dibuat unik per picker. */
@@ -142,19 +223,66 @@ export function ClausePicker({
     ).map((c) => ({ ...c, inactive: inactive.some((i) => i.id === c.id) }))
   }, [selected, overrides, copies, pool])
 
+  const grouping = Boolean(onGroupsChange)
+
   function toggle(id: string) {
     if (selected.includes(id)) {
       onChange(selected.filter((s) => s !== id))
-      // Klausula yang dilepas tidak menyimpan override lagi.
+      // Klausula yang dilepas tidak menyimpan override dan kelompok lagi.
       if (overrides[id]) {
         const next = { ...overrides }
         delete next[id]
         onOverridesChange(next)
       }
+      if (groups?.[id] !== undefined && onGroupsChange) {
+        const next = { ...groups }
+        delete next[id]
+        onGroupsChange(next)
+      }
       if (editing === id) setEditing(null)
       return
     }
+    // Klausula baru masuk kelompok klausula terakhir, jadi daftar bisa diisi
+    // kelompok demi kelompok.
+    const last = selected[selected.length - 1]
+    const title = grouping && last ? clauseGroupOf(groups, last) : ""
+    if (title && onGroupsChange) {
+      onGroupsChange({ ...(groups ?? {}), [id]: title })
+      onChange(groupedClauseOrder([...selected, id], { ...(groups ?? {}), [id]: title }))
+      return
+    }
     onChange([...selected, id])
+  }
+
+  const blocks = grouping
+    ? clauseGroupBlocks(selected, groups)
+    : [{ title: "", ids: selected }]
+  const groupTitles = blocks.map((b) => b.title).filter(Boolean)
+  const groupItems = [
+    { label: "Tanpa judul", value: NO_GROUP },
+    ...groupTitles.map((t) => ({ label: t, value: t })),
+    { label: "Kelompok baru", value: NEW_GROUP },
+  ]
+  const suggestionsId = `${pickerId}-group-titles`
+
+  function setGroup(id: string, value: string) {
+    if (!onGroupsChange) return
+    let title = value === NO_GROUP ? "" : value
+    if (value === NEW_GROUP) {
+      title = "Kelompok baru"
+      for (let n = 2; groupTitles.includes(title); n++) title = `Kelompok baru ${n}`
+    }
+    const next = moveClauseToGroup(selected, groups, id, title)
+    onGroupsChange(next.groups)
+    onChange(next.ids)
+  }
+
+  function renameGroup(from: string, to: string) {
+    if (!onGroupsChange || from === to.trim()) return
+    const next = renameClauseGroup(selected, groups, from, to.trim())
+    onGroupsChange(next)
+    // Judul yang sama dengan kelompok lain menggabungkan keduanya.
+    onChange(groupedClauseOrder(selected, next))
   }
 
   function patchOverride(id: string, patch: Partial<ClauseOverride>) {
@@ -259,106 +387,207 @@ export function ClausePicker({
               berubah.
             </p>
           </div>
+          {grouping ? (
+            <p className="text-[11px] text-muted-foreground">
+              Beri judul kelompok, misalnya Extensions atau General Conditions,
+              lalu pindahkan klausula lewat pilihan kelompoknya. Nomor klausula
+              mulai dari 1 di tiap kelompok.
+            </p>
+          ) : null}
+          {grouping ? (
+            <datalist id={suggestionsId}>
+              {[...new Set([...CLAUSE_GROUP_SUGGESTIONS, ...groupTitles])].map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+          ) : null}
 
-          <div className="flex flex-col gap-1.5">
-            {selectedClauses.map((c) => {
-              const open = editing === c.id
-              return (
-                <div key={c.id} className="rounded-lg bg-muted/60">
-                  <div className="flex items-center gap-2 px-3 py-2 text-[13px]">
-                    <span className="min-w-0 flex-1 truncate">{c.title}</span>
-
-                    {c.inactive ? (
-                      <Badge variant="outline" className="shrink-0">
-                        Nonaktif di master
-                      </Badge>
-                    ) : null}
-                    {c.overridden ? (
-                      <Badge variant="outline" className="shrink-0">
-                        Diedit
-                      </Badge>
-                    ) : null}
-
+          <div className="flex flex-col gap-3">
+            {blocks.map((block, bi) => (
+              <div key={block.title || "tanpa-judul"} className="flex flex-col gap-1.5">
+                {grouping ? (
+                  <div className="flex items-center gap-1">
+                    <GroupTitleInput
+                      title={block.title}
+                      listId={suggestionsId}
+                      onCommit={(to) => renameGroup(block.title, to)}
+                    />
                     <Button
                       variant="ghost"
-                      size="sm"
-                      aria-expanded={open}
-                      className="text-muted-foreground"
-                      onClick={() => setEditing(open ? null : c.id)}
+                      size="icon-sm"
+                      aria-label={`Naikkan kelompok ${block.title || "tanpa judul"}`}
+                      disabled={bi === 0}
+                      onClick={() =>
+                        onChange(moveClauseGroup(selected, groups, block.title, -1))
+                      }
                     >
-                      {/* Hasil edit sudah masuk ke slip saat diketik; Save hanya menutup
-                          editor. Ke database tetap lewat Simpan Draft. */}
-                      {open ? (
-                        <>
-                          <Check data-icon="inline-start" />
-                          Save
-                        </>
-                      ) : (
-                        <>
-                          <Pencil data-icon="inline-start" />
-                          Edit wording
-                        </>
-                      )}
+                      <ArrowUp />
                     </Button>
-
                     <Button
                       variant="ghost"
-                      size="icon-xs"
-                      aria-label="Lepas klausula"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => toggle(c.id)}
+                      size="icon-sm"
+                      aria-label={`Turunkan kelompok ${block.title || "tanpa judul"}`}
+                      disabled={bi === blocks.length - 1}
+                      onClick={() =>
+                        onChange(moveClauseGroup(selected, groups, block.title, 1))
+                      }
                     >
-                      <X />
+                      <ArrowDown />
                     </Button>
                   </div>
+                ) : null}
 
-                  {open ? (
-                    <div className="flex flex-col gap-3 border-t px-3 py-3">
-                      <div className="flex flex-col gap-1.5">
-                        <label
-                          htmlFor={`${pickerId}-title-${c.id}`}
-                          className="text-xs text-muted-foreground"
+                {block.ids.map((id, i) => {
+                  const c = selectedClauses.find((x) => x.id === id)
+                  if (!c) return null
+                  const open = editing === c.id
+                  return (
+                    <div key={c.id} className="rounded-lg bg-muted/60">
+                      <div className="flex items-center gap-1.5 px-3 py-2 text-[13px]">
+                        <span className="w-6 shrink-0 text-muted-foreground tabular">
+                          {i + 1}.
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{c.title}</span>
+
+                        {c.inactive ? (
+                          <Badge variant="outline" className="shrink-0">
+                            Nonaktif di master
+                          </Badge>
+                        ) : null}
+                        {c.overridden ? (
+                          <Badge variant="outline" className="shrink-0">
+                            Diedit
+                          </Badge>
+                        ) : null}
+
+                        {grouping ? (
+                          <Select
+                            items={groupItems}
+                            value={block.title || NO_GROUP}
+                            onValueChange={(v) => setGroup(c.id, String(v))}
+                          >
+                            <SelectTrigger
+                              size="sm"
+                              className="h-8 w-48 shrink-0"
+                              aria-label={`Kelompok ${c.title}`}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {groupItems.map((g) => (
+                                  <SelectItem key={g.value} value={g.value}>
+                                    {g.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        ) : null}
+
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Naikkan ${c.title}`}
+                          disabled={i === 0}
+                          className="text-muted-foreground"
+                          onClick={() => onChange(moveClause(selected, groups, c.id, -1))}
                         >
-                          Judul klausula di slip ini
-                        </label>
-                        <Input
-                          id={`${pickerId}-title-${c.id}`}
-                          value={c.title}
-                          onChange={(e) =>
-                            patchOverride(c.id, { title: e.target.value })
-                          }
-                        />
+                          <ArrowUp />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Turunkan ${c.title}`}
+                          disabled={i === block.ids.length - 1}
+                          className="text-muted-foreground"
+                          onClick={() => onChange(moveClause(selected, groups, c.id, 1))}
+                        >
+                          <ArrowDown />
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-expanded={open}
+                          className="text-muted-foreground"
+                          onClick={() => setEditing(open ? null : c.id)}
+                        >
+                          {/* Hasil edit sudah masuk ke slip saat diketik; Save hanya menutup
+                              editor. Ke database tetap lewat Simpan Draft. */}
+                          {open ? (
+                            <>
+                              <Check data-icon="inline-start" />
+                              Save
+                            </>
+                          ) : (
+                            <>
+                              <Pencil data-icon="inline-start" />
+                              Edit wording
+                            </>
+                          )}
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label="Lepas klausula"
+                          className="text-muted-foreground hover:text-destructive"
+                          onClick={() => toggle(c.id)}
+                        >
+                          <X />
+                        </Button>
                       </div>
 
-                      <RichTextEditor
-                        key={`${c.id}-${resetTick}`}
-                        value={c.wording}
-                        minHeight="10rem"
-                        onChange={(html) =>
-                          patchOverride(c.id, { wording: html })
-                        }
-                      />
+                      {open ? (
+                        <div className="flex flex-col gap-3 border-t px-3 py-3">
+                          <div className="flex flex-col gap-1.5">
+                            <label
+                              htmlFor={`${pickerId}-title-${c.id}`}
+                              className="text-xs text-muted-foreground"
+                            >
+                              Judul klausula di slip ini
+                            </label>
+                            <Input
+                              id={`${pickerId}-title-${c.id}`}
+                              value={c.title}
+                              onChange={(e) =>
+                                patchOverride(c.id, { title: e.target.value })
+                              }
+                            />
+                          </div>
 
-                      {c.overridden ? (
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-[11px] text-muted-foreground">
-                            Versi slip ini berbeda dari master.
-                          </p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => resetOverride(c.id)}
-                          >
-                            <RotateCcw data-icon="inline-start" />
-                            Kembalikan ke master
-                          </Button>
-                        </div>
-                      ) : null}
+                          <RichTextEditor
+                            key={`${c.id}-${resetTick}`}
+                            value={c.wording}
+                            minHeight="10rem"
+                            onChange={(html) =>
+                              patchOverride(c.id, { wording: html })
+                            }
+                          />
+
+                          {c.overridden ? (
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[11px] text-muted-foreground">
+                                Versi slip ini berbeda dari master.
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => resetOverride(c.id)}
+                              >
+                                <RotateCcw data-icon="inline-start" />
+                                Kembalikan ke master
+                              </Button>
+                            </div>
+                          ) : null}
                     </div>
                   ) : null}
-                </div>
-              )
-            })}
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
