@@ -12,6 +12,7 @@ import {
   deductibleRows,
   emptySlip,
   locationRowsPatch,
+  rateLinesWithBounds,
   removeLocationPatch,
   switchCob,
   updateLocationPatch,
@@ -286,4 +287,14 @@ test("baris slip lama tanpa kendaraan ikut kendaraan pertama", () => {
   const slip = recalcSlip(legacy)
   assert.ok([...slip.rateLines, ...slip.tplLines, ...slip.paLines].every((l) => l.vehicleId === "lama"))
   assert.equal(slip.rateLines[0].premium, 4_000_000)
+})
+
+test("Loading Rate Comprehensive tidak memakai batas casco OJK", () => {
+  const slip = twoVehicleSlip()
+  const lines = rateLinesWithBounds(slip)
+  const casco = lines.find((l) => l.label === "Comprehensive Casco")
+  const loading = lines.find((l) => l.label === "Loading Rate Comprehensive")
+  assert.ok(casco?.min != null)
+  assert.equal(loading?.min ?? null, null)
+  assert.equal(loading?.max ?? null, null)
 })

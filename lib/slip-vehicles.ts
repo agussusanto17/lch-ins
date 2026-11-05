@@ -48,6 +48,22 @@ export function vehicleGroups(
   })
 }
 
+/**
+ * Baris rate yang memakai batas casco OJK. Loading Rate Comprehensive bukan
+ * rate casco: OJK mengatur loading sebagai tambahan dari rate dasar, jadi
+ * tidak dibandingkan dengan batas casco walaupun namanya memuat
+ * "Comprehensive".
+ */
+export function isCascoLine(label: string) {
+  const name = label.toLowerCase()
+  if (name.startsWith("loading")) return false
+  return (
+    label === "Total Loss Only" ||
+    name.includes("casco") ||
+    name.includes("comprehensive")
+  )
+}
+
 /** Slip Motor Vehicle dengan lebih dari satu kendaraan; dokumennya memakai jadwal per kendaraan. */
 export function isMultiVehicle(
   slip: Pick<PlacingSlip, "cob" | "interestItems">

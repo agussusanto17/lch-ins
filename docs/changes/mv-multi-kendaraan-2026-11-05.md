@@ -60,14 +60,25 @@ Tahap 1 (Property multi lokasi) sudah live lewat
     dengan subtotal per kendaraan dan Total Premium.
   - Discount, Admin Cost, Stamp Duty, dan Total Payable dicetak di bawahnya.
   - Slip satu kendaraan tidak berubah.
+  - Baris "Rate & Premium : As per schedule below" diberi jarak dari blok di
+    atasnya. Ini berlaku juga untuk slip Property multi lokasi, yang
+    sebelumnya baris itu menempel ke daftar deductible.
 - **Daftar slip:** slip multi kendaraan menulis jumlah kendaraannya.
 - **Penyimpanan:** kendaraan yang hanya berisi TSI tetap tersimpan, karena
   rate-nya menempel ke kendaraan itu. Kendaraan yang benar-benar kosong
   dibuang bersama barisnya.
+- **Perbaikan batas Loading Rate:** baris Loading Rate Comprehensive dulu ikut
+  mendapat batas casco OJK karena namanya memuat "Comprehensive", sehingga
+  loading 0,15% ditandai di bawah batas. Loading bukan rate casco (OJK
+  mengaturnya sebagai tambahan dari rate dasar), jadi sekarang tidak
+  dibandingkan dengan batas casco. Batas yang sempat tersimpan di baris loading
+  dihapus lewat migrasi `20261105235500_batas_loading_rate`.
 
 ## File utama
 
 - `prisma/schema.prisma` dan migrasi `20261105235000_rate_per_kendaraan`.
+- Migrasi `20261105235500_batas_loading_rate`: hapus batas casco yang sempat
+  tersimpan di baris Loading Rate Comprehensive.
 - `lib/slip-vehicles.ts`: pengelompokan baris per kendaraan, normalisasi,
   nama kendaraan, dan kategori/wilayah OJK per kendaraan.
 - `lib/calc.ts`: premi per kendaraan.
@@ -78,7 +89,8 @@ Tahap 1 (Property multi lokasi) sudah live lewat
   batas OJK, dan validasi di server.
 - `components/documents/doc-blocks.tsx` dan `slip-documents.tsx`: jadwal
   premi per kendaraan.
-- `tests/calc.test.ts`: empat tes baru untuk multi kendaraan.
+- `tests/calc.test.ts`: lima tes baru untuk multi kendaraan dan batas
+  Loading Rate.
 
 ## Dampak
 
@@ -115,7 +127,7 @@ Tahap 1 (Property multi lokasi) sudah live lewat
 - **Tes:** dengan angka contoh usulan, premi kendaraan 1 5.395.000, kendaraan
   2 15.290.000, dan total 20.685.000.
 - `npx tsc --noEmit`, `npx eslint` untuk file yang berubah,
-  `npx tsx --test tests/*.test.ts` (37 tes lulus), dan `npm run build`:
+  `npx tsx --test tests/*.test.ts` (38 tes lulus), dan `npm run build`:
   lolos.
 
 ## Catatan untuk yang melanjutkan

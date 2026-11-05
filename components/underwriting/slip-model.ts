@@ -35,6 +35,7 @@ import {
   slipLocations,
 } from "@/lib/slip-locations"
 import {
+  isCascoLine,
   isMultiVehicle,
   vehicleGroups,
   vehicleOwner,
@@ -527,12 +528,7 @@ export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
       if (l.min != null || l.max != null) return l
       const { coverType, region, casco: motorBounds } =
         tariffs.get(owner(l.vehicleId) ?? "") ?? fallback
-      if (
-        l.label === "Comprehensive Casco" ||
-        l.label === "Total Loss Only" ||
-        l.label.toLowerCase().includes("casco") ||
-        l.label.toLowerCase().includes("comprehensive")
-      ) {
+      if (isCascoLine(l.label)) {
         if (motorBounds) {
           return {
             ...l,

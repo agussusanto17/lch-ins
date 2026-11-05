@@ -7,7 +7,11 @@ import {
   vehicleIssues,
 } from "@/components/underwriting/slip-model"
 import { locationOwner, slipLocations } from "@/lib/slip-locations"
-import { vehicleOwner, vehicleTariff } from "@/lib/slip-vehicles"
+import {
+  isCascoLine,
+  vehicleOwner,
+  vehicleTariff,
+} from "@/lib/slip-vehicles"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
   brokerageLimitIssue,
@@ -172,12 +176,7 @@ export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
         region,
         casco: motorCascoBounds,
       } = tariffs.get(owner(l.vehicleId) ?? "") ?? fallback
-      if (
-        l.label === "Comprehensive Casco" ||
-        l.label === "Total Loss Only" ||
-        l.label.toLowerCase().includes("casco") ||
-        l.label.toLowerCase().includes("comprehensive")
-      ) {
+      if (isCascoLine(l.label)) {
         if (motorCascoBounds) {
           return {
             ...l,

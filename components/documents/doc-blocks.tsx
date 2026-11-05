@@ -964,7 +964,9 @@ export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
 
   return (
     <>
-      <InfoTable rows={[["Rate & Premium", "As per schedule below"]]} />
+      <div className="mt-6">
+        <InfoTable rows={[["Rate & Premium", "As per schedule below"]]} />
+      </div>
       <SectionHeading>PREMIUM CALCULATION</SectionHeading>
       <table className="w-full text-[12px]">
         <thead>
@@ -1073,7 +1075,9 @@ export function VehiclePremiumSchedule({ slip }: { slip: PlacingSlip }) {
 
   return (
     <>
-      <InfoTable rows={[["Rate & Premium", "As per schedule below"]]} />
+      <div className="mt-6">
+        <InfoTable rows={[["Rate & Premium", "As per schedule below"]]} />
+      </div>
       <SectionHeading>PREMIUM CALCULATION</SectionHeading>
       <table className="w-full text-[12px]">
         <thead>
