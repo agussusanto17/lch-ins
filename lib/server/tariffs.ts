@@ -4,8 +4,14 @@ import type { PlacingSlip, RateLine, SlipLocation } from "@/lib/data/types"
 import {
   locationIssues,
   usesSectionSumInsured,
+  vehicleIssues,
 } from "@/components/underwriting/slip-model"
 import { locationOwner, slipLocations } from "@/lib/slip-locations"
+import {
+  isCascoLine,
+  vehicleOwner,
+  vehicleTariff,
+} from "@/lib/slip-vehicles"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
   brokerageLimitIssue,
@@ -114,18 +120,14 @@ export function getPropertyRateBounds(
   return bounds
 }
 
+/** Batas casco OJK slip Motor Vehicle tanpa kendaraan, dari total TSI dan domisili. */
 export function getMotorRateBounds(slip: PlacingSlip): RateBounds | null {
   if (slip.cob !== "Motor Vehicle") return null
-  const tsi = totalSumInsured(slip)
-  const vehicleDesc = slip.interestItems.map((i) => i.description).join(" ")
-  const locationOrPlate = slip.riskLocation || vehicleDesc || ""
-  const coverType = slip.typeOfCover || slip.coverage || "Comprehensive"
-
   return findMotorTariffBounds({
-    vehicleDesc,
-    tsi,
-    locationOrPlate,
-    coverType,
+    vehicleDesc: "",
+    tsi: totalSumInsured(slip),
+    locationOrPlate: slip.riskLocation ?? "",
+    coverType: slip.typeOfCover || slip.coverage || "Comprehensive",
   })
 }
 
@@ -157,18 +159,24 @@ export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
   }
 
   if (slip.cob === "Motor Vehicle") {
-    const motorCascoBounds = getMotorRateBounds(slip)
-    const coverType = slip.typeOfCover || slip.coverage || "Comprehensive"
-    const vehicleDesc = slip.interestItems.map((i) => i.description).join(" ")
-    const region = matchMotorRegion(slip.riskLocation || vehicleDesc || "")
+    // Kategori dan wilayah OJK dihitung per kendaraan.
+    const owner = vehicleOwner(slip)
+    const tariffs = new Map(
+      slip.interestItems.map((v) => [v.id, vehicleTariff(slip, v)])
+    )
+    const fallback = {
+      coverType: slip.typeOfCover || slip.coverage || "Comprehensive",
+      region: matchMotorRegion(slip.riskLocation ?? ""),
+      casco: getMotorRateBounds(slip),
+    }
     return slip.rateLines.map((l) => {
       if (l.min != null || l.max != null) return l
-      if (
-        l.label === "Comprehensive Casco" ||
-        l.label === "Total Loss Only" ||
-        l.label.toLowerCase().includes("casco") ||
-        l.label.toLowerCase().includes("comprehensive")
-      ) {
+      const {
+        coverType,
+        region,
+        casco: motorCascoBounds,
+      } = tariffs.get(owner(l.vehicleId) ?? "") ?? fallback
+      if (isCascoLine(l.label)) {
         if (motorCascoBounds) {
           return {
             ...l,
@@ -244,7 +252,7 @@ export async function validatePlacingSlipForRelease(
       releaseIssues.push("Expiry date harus setelah inception date.")
     }
   }
-  releaseIssues.push(...locationIssues(slip))
+  releaseIssues.push(...locationIssues(slip), ...vehicleIssues(slip))
   if (usesSectionSumInsured(slip.cob)) {
     const clauseIssues = validateClauseUniquenessAcrossSections(slip)
     if (clauseIssues.length) releaseIssues.push(...clauseIssues)

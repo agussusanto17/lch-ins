@@ -23,6 +23,7 @@ import {
   SignatureGrid,
   isParEqvetSlip,
   premiumRows,
+  VehiclePremiumSchedule,
 } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
 import { PrintedAt } from "@/components/documents/printed-at"
@@ -32,6 +33,7 @@ import { rateUnitFor } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data"
 import { dateLong } from "@/lib/format"
 import { isMultiLocation } from "@/lib/slip-locations"
+import { isMultiVehicle } from "@/lib/slip-vehicles"
 import { useRecord } from "@/lib/store"
 
 /*
@@ -68,6 +70,15 @@ function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
   // Slip multi lokasi mencetak jadwal premi per lokasi saja (Opsi B); slip
   // satu lokasi tetap mencetak bagian RATE.
   if (isMultiLocation(slip)) return <LocationPremiumSchedule slip={slip} />
+  // Slip multi kendaraan: jadwal premi per kendaraan, lalu diskon dan biaya.
+  if (isMultiVehicle(slip)) {
+    return (
+      <>
+        <VehiclePremiumSchedule slip={slip} />
+        <PayableTable slip={slip} />
+      </>
+    )
+  }
   if (isParEqvetSlip(slip)) {
     return (
       <>

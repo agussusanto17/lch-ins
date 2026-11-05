@@ -414,6 +414,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
       lossLimitPct: rl.lossLimitPct != null ? Number(rl.lossLimitPct) : null,
       deductibles: rl.deductibles,
       locationId: rl.locationId,
+      vehicleId: rl.vehicleItemId,
     }
 
     if (kindCode === "tpl") {
@@ -822,6 +823,19 @@ async function insertSlipLocations(
   })
 }
 
+/**
+ * Kendaraan tersimpan untuk baris rate, TPL, atau PA slip Motor Vehicle.
+ * Baris tanpa kendaraan ikut kendaraan pertama. undefined berarti
+ * kendaraannya tidak tersimpan karena kosong, jadi barisnya ikut dibuang.
+ */
+function savedVehicleId(
+  vehicleIds: Map<string, string>,
+  vehicleId?: string | null
+): string | null | undefined {
+  if (!vehicleId) return vehicleIds.values().next().value ?? null
+  return vehicleIds.get(vehicleId)
+}
+
 /** Lokasi tersimpan untuk `locationId` dari form; yang tidak dikenal ikut lokasi pertama. */
 function savedLocationId(
   locations: SavedLocation[],
@@ -941,6 +955,7 @@ export async function createPlacingSlip(
   const expiryDate = input.expiryDate ? new Date(input.expiryDate) : null
   const resolvedSppaId = await resolveSppaId(input.sppaId)
   const locations = await resolveSlipLocations(input, resolvedCob.name)
+  const motorSlip = normalizeCob(resolvedCob.name as CobType) === "Motor Vehicle"
 
   const record = await prisma.$transaction(async (tx) => {
     const slip = await tx.placingSlip.create({
@@ -985,7 +1000,9 @@ export async function createPlacingSlip(
 
     // Insert items
     let sortIdx = 0
+    const vehicleIds = new Map<string, string>()
     const itemsToCreate: {
+      id?: string
       slipId: string
       kind: SlipItemKind
       description: string
@@ -999,19 +1016,25 @@ export async function createPlacingSlip(
     if (input.interestItems) {
       const motor = normalizeCob(resolvedCob.name as CobType) === "Motor Vehicle"
       for (const it of input.interestItems) {
+        // Kendaraan dengan TSI tetap disimpan walau datanya belum lengkap,
+        // karena rate-nya menempel ke kendaraan itu.
         const hasMotorData =
           motor &&
           Boolean(
             it.vehicleBrandId ||
             it.licensePlate ||
             it.chassisNumber ||
-            it.vehicleModel
+            it.vehicleModel ||
+            (it.amount || 0) > 0
           )
         if (it.description?.trim() || hasMotorData) {
           const finalDesc = motor
             ? buildVehicleDescription(it) || it.description?.trim() || "Kendaraan Bermotor"
             : it.description.trim()
+          const itemId = randomUUID()
+          vehicleIds.set(it.id, itemId)
           itemsToCreate.push({
+            id: itemId,
             slipId: slip.id,
             kind: "Interest",
             description: finalDesc,
@@ -1077,10 +1100,15 @@ export async function createPlacingSlip(
       outOfBoundsReason: string | null
       sortOrder: number
       locationId?: string | null
+      vehicleItemId?: string | null
     }[] = []
 
     if (input.rateLines) {
       for (const rl of input.rateLines) {
+        const vehicleItemId = motorSlip
+          ? savedVehicleId(vehicleIds, rl.vehicleId)
+          : null
+        if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
         const reason = exception ? `${exception.reason}: ${exception.note}` : null
         rateLinesToCreate.push({
@@ -1098,12 +1126,17 @@ export async function createPlacingSlip(
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
           locationId: savedLocationId(locations, rl.locationId),
+          vehicleItemId,
         })
       }
     }
 
     if (input.tplLines) {
       for (const rl of input.tplLines) {
+        const vehicleItemId = motorSlip
+          ? savedVehicleId(vehicleIds, rl.vehicleId)
+          : null
+        if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
         const reason = exception ? `${exception.reason}: ${exception.note}` : null
         rateLinesToCreate.push({
@@ -1119,12 +1152,17 @@ export async function createPlacingSlip(
           deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
+          vehicleItemId,
         })
       }
     }
 
     if (input.paLines) {
       for (const rl of input.paLines) {
+        const vehicleItemId = motorSlip
+          ? savedVehicleId(vehicleIds, rl.vehicleId)
+          : null
+        if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
         const reason = exception ? `${exception.reason}: ${exception.note}` : null
         rateLinesToCreate.push({
@@ -1140,6 +1178,7 @@ export async function createPlacingSlip(
           deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
+          vehicleItemId,
         })
       }
     }
@@ -1274,6 +1313,7 @@ export async function updatePlacingSlip(
   const resolvedSppaId =
     input.sppaId !== undefined ? await resolveSppaId(input.sppaId) : existing.sppaId
   const locations = await resolveSlipLocations(input, resolvedCob.name)
+  const motorSlip = normalizeCob(resolvedCob.name as CobType) === "Motor Vehicle"
 
   await prisma.$transaction(async (tx) => {
     await tx.placingSlip.update({
@@ -1321,7 +1361,9 @@ export async function updatePlacingSlip(
     // Refresh items
     await tx.slipItem.deleteMany({ where: { slipId: id } })
     let sortIdx = 0
+    const vehicleIds = new Map<string, string>()
     const itemsToCreate: {
+      id?: string
       slipId: string
       kind: SlipItemKind
       description: string
@@ -1335,19 +1377,25 @@ export async function updatePlacingSlip(
     if (input.interestItems) {
       const motor = normalizeCob(resolvedCob.name as CobType) === "Motor Vehicle"
       for (const it of input.interestItems) {
+        // Kendaraan dengan TSI tetap disimpan walau datanya belum lengkap,
+        // karena rate-nya menempel ke kendaraan itu.
         const hasMotorData =
           motor &&
           Boolean(
             it.vehicleBrandId ||
             it.licensePlate ||
             it.chassisNumber ||
-            it.vehicleModel
+            it.vehicleModel ||
+            (it.amount || 0) > 0
           )
         if (it.description?.trim() || hasMotorData) {
           const finalDesc = motor
             ? buildVehicleDescription(it) || it.description?.trim() || "Kendaraan Bermotor"
             : it.description.trim()
+          const itemId = randomUUID()
+          vehicleIds.set(it.id, itemId)
           itemsToCreate.push({
+            id: itemId,
             slipId: id,
             kind: "Interest",
             description: finalDesc,
@@ -1414,10 +1462,15 @@ export async function updatePlacingSlip(
       outOfBoundsReason: string | null
       sortOrder: number
       locationId?: string | null
+      vehicleItemId?: string | null
     }[] = []
 
     if (input.rateLines) {
       for (const rl of input.rateLines) {
+        const vehicleItemId = motorSlip
+          ? savedVehicleId(vehicleIds, rl.vehicleId)
+          : null
+        if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
         const reason = exception ? `${exception.reason}: ${exception.note}` : null
         rateLinesToCreate.push({
@@ -1435,12 +1488,17 @@ export async function updatePlacingSlip(
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
           locationId: savedLocationId(locations, rl.locationId),
+          vehicleItemId,
         })
       }
     }
 
     if (input.tplLines) {
       for (const rl of input.tplLines) {
+        const vehicleItemId = motorSlip
+          ? savedVehicleId(vehicleIds, rl.vehicleId)
+          : null
+        if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
         const reason = exception ? `${exception.reason}: ${exception.note}` : null
         rateLinesToCreate.push({
@@ -1456,12 +1514,17 @@ export async function updatePlacingSlip(
           deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
+          vehicleItemId,
         })
       }
     }
 
     if (input.paLines) {
       for (const rl of input.paLines) {
+        const vehicleItemId = motorSlip
+          ? savedVehicleId(vehicleIds, rl.vehicleId)
+          : null
+        if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
         const reason = exception ? `${exception.reason}: ${exception.note}` : null
         rateLinesToCreate.push({
@@ -1477,6 +1540,7 @@ export async function updatePlacingSlip(
           deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
+          vehicleItemId,
         })
       }
     }

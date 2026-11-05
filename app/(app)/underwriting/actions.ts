@@ -77,6 +77,7 @@ const rateLineSchema = z
     // without this it would be stripped and the deductible silently lost.
     deductible: z.string().max(500).optional(),
     locationId: z.string().nullish(),
+    vehicleId: z.string().nullish(),
   })
   .transform(({ deductible, ...line }) => ({
     ...line,
