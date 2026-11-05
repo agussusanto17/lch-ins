@@ -20,6 +20,7 @@ import type {
 } from "@/lib/generated/prisma/client"
 
 import { prisma } from "@/lib/prisma"
+import { cleanDetailLabels } from "@/lib/slip-details"
 import { recordAudit } from "@/server/services/audit"
 
 // Interfaces & types
@@ -50,6 +51,8 @@ export interface CoverTypeInput {
   name: string
   /** Token {COVER} di nomor slip, contoh PAR. Kosong berarti tanpa segmen cover. */
   abbreviation?: string | null
+  /** Label bawaan Detail tambahan slip. Tidak dikirim berarti tidak diubah. */
+  detailLabels?: string[]
   isActive?: boolean
 }
 
@@ -443,6 +446,7 @@ export async function createCoverType(
         code: input.code.trim(),
         name: input.name.trim(),
         abbreviation: input.abbreviation?.trim() || null,
+        detailLabels: cleanDetailLabels(input.detailLabels),
         isActive: input.isActive ?? true,
       },
     })
@@ -471,6 +475,9 @@ export async function updateCoverType(
         code: input.code.trim(),
         name: input.name.trim(),
         abbreviation: input.abbreviation?.trim() || null,
+        detailLabels: input.detailLabels
+          ? cleanDetailLabels(input.detailLabels)
+          : undefined,
         isActive: input.isActive ?? before.isActive,
       },
     })

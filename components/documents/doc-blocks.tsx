@@ -45,6 +45,7 @@ import {
   oneLineAddress,
   type LocationGroup,
 } from "@/lib/slip-locations"
+import { printedDetailRows } from "@/lib/slip-details"
 import { isMultiItem, itemGroups, type ItemGroup } from "@/lib/slip-items"
 import { isMultiVehicle, vehicleTitle } from "@/lib/slip-vehicles"
 import { cn } from "@/lib/utils"
@@ -136,6 +137,10 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
   }
   if (slip.cob === "Property" && slip.indemnityPeriod)
     rows.push(["Indemnity Period", slip.indemnityPeriod])
+  // Detail tambahan, misalnya Retroactive Date, Voyage, atau Vessels (analisa
+  // 26 contoh slip LCH, 6 November 2026). Baris tanpa isi tidak dicetak.
+  for (const r of printedDetailRows(slip.detailRows))
+    rows.push([r.label || "—", r.value])
 
   return <InfoTable rows={rows} />
 }

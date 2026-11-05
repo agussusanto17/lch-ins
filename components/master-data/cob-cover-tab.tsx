@@ -35,6 +35,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Table,
   TableBody,
@@ -69,6 +70,8 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
   const [coverCode, setCoverCode] = React.useState("")
   const [coverName, setCoverName] = React.useState("")
   const [coverAbbreviation, setCoverAbbreviation] = React.useState("")
+  // Satu label per baris; disimpan sebagai daftar label bawaan Detail tambahan.
+  const [coverDetailLabels, setCoverDetailLabels] = React.useState("")
   const [coverIsActive, setCoverIsActive] = React.useState(true)
 
   const [prevInitialCobs, setPrevInitialCobs] = React.useState(initialCobs)
@@ -109,6 +112,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverCode(cobCodeVal)
     setCoverName("")
     setCoverAbbreviation("")
+    setCoverDetailLabels("")
     setCoverIsActive(true)
     setCoverDialogOpen(true)
   }
@@ -119,6 +123,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverCode(cover.code)
     setCoverName(cover.name)
     setCoverAbbreviation(cover.abbreviation ?? "")
+    setCoverDetailLabels((cover.detailLabels ?? []).join("\n"))
     setCoverIsActive(cover.isActive)
     setCoverDialogOpen(true)
   }
@@ -129,6 +134,8 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
       return
     }
 
+    const detailLabels = coverDetailLabels.split("\n")
+
     startTransition(async () => {
       if (editingCover) {
         const res = await updateCoverTypeAction(editingCover.id, {
@@ -136,6 +143,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           code: coverCode,
           name: coverName,
           abbreviation: coverAbbreviation,
+          detailLabels,
           isActive: coverIsActive,
         })
         if (!res.ok) {
@@ -155,6 +163,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                           code: coverCode,
                           name: coverName,
                           abbreviation: res.data?.abbreviation ?? null,
+                          detailLabels: res.data?.detailLabels ?? [],
                           isActive: coverIsActive,
                         }
                       : ct
@@ -169,6 +178,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           code: coverCode,
           name: coverName,
           abbreviation: coverAbbreviation,
+          detailLabels,
           isActive: coverIsActive,
         })
         if (!res.ok || !res.data) {
@@ -524,6 +534,24 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
               <p className="text-[11px] text-muted-foreground">
                 Dipakai di nomor slip, misalnya 001/LCH-PLCMT/PS-PAR/X/2026.
                 Kosongkan bila nomor slip cukup PS tanpa singkatan.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cover-detail-labels">
+                Label Detail Tambahan
+              </Label>
+              <Textarea
+                id="cover-detail-labels"
+                rows={4}
+                placeholder={"Contoh:\nRetroactive Date\nTerritorial Limit\nJurisdiction"}
+                value={coverDetailLabels}
+                onChange={(e) => setCoverDetailLabels(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Satu label per baris. Label ini otomatis muncul di Detail
+                tambahan placing slip saat type of cover ini dipilih, lalu
+                dicetak di tabel detail dokumen bila isinya diisi.
               </p>
             </div>
 

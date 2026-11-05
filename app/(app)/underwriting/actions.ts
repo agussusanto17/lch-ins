@@ -128,6 +128,15 @@ const placingSlipSchema = z.object({
     .string()
     .max(500, "Keterangan periode maksimal 500 karakter")
     .nullish(),
+  detailRows: z
+    .array(
+      z.object({
+        label: z.string().max(100, "Label detail tambahan maksimal 100 karakter"),
+        value: z.string().max(2000, "Isi detail tambahan maksimal 2000 karakter"),
+      })
+    )
+    .max(40, "Detail tambahan maksimal 40 baris")
+    .nullish(),
   occupation: z.string().nullish(),
   occupationId: z.string().nullish(),
   occupationLabel: z.string().max(500, "Nama okupasi di slip maksimal 500 karakter").nullish(),
@@ -426,6 +435,7 @@ export async function duplicatePlacingSlipAction(
       inceptionDate: source.inceptionDate,
       expiryDate: source.expiryDate,
       periodNote: source.periodNote,
+      detailRows: source.detailRows,
       occupation: source.occupation,
       occupationLabel: source.occupationLabel,
       riskLocation: source.riskLocation,

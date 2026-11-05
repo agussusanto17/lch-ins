@@ -16,6 +16,7 @@ import {
   type RateExceptionReason,
   type RateLine,
   type SecurityPanelRow,
+  type SlipDetailRow,
   type SlipLocation,
 } from "@/lib/data/types"
 import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
@@ -27,6 +28,7 @@ import {
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
+import { cleanDetailRows } from "@/lib/slip-details"
 import { usesItemRates } from "@/lib/slip-items"
 import { slipRiskLocationText } from "@/lib/slip-locations"
 import { cobLookupKeys } from "@/lib/server/cob"
@@ -80,6 +82,7 @@ export interface PlacingSlipInput {
   inceptionDate?: string | null
   expiryDate?: string | null
   periodNote?: string | null
+  detailRows?: SlipDetailRow[] | null
   occupation?: string | null
   occupationId?: string | null
   riskLocation?: string | null
@@ -539,6 +542,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     inceptionDate,
     expiryDate,
     periodNote: raw.periodNote || undefined,
+    detailRows: cleanDetailRows(raw.detailRows),
     occupation: raw.occupation
       ? `${raw.occupation.code} - ${raw.occupation.name}`
       : undefined,
@@ -725,6 +729,15 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
 
   if (!record) return null
   return toPlacingSlipRecord(record)
+}
+
+/**
+ * Detail tambahan yang disimpan ke kolom JSON. Input tanpa field ini (bukan
+ * dari form slip) tidak mengubah isi yang sudah tersimpan.
+ */
+function detailRowsData(rows: SlipDetailRow[] | null | undefined) {
+  if (rows === undefined) return undefined
+  return cleanDetailRows(rows).map((r) => ({ label: r.label, value: r.value }))
 }
 
 /** Filled-in deductibles only, trimmed and capped at MAX_DEDUCTIBLES. */
@@ -986,6 +999,7 @@ export async function createPlacingSlip(
         inceptionDate,
         expiryDate,
         periodNote: input.periodNote?.trim() || null,
+        detailRows: detailRowsData(input.detailRows),
         occupationId,
         occupationLabel: input.occupationLabel?.trim() || null,
         riskLocation: input.riskLocation?.trim() || null,
@@ -1351,6 +1365,7 @@ export async function updatePlacingSlip(
         inceptionDate,
         expiryDate,
         periodNote: input.periodNote?.trim() || null,
+        detailRows: detailRowsData(input.detailRows),
         occupationId,
         occupationLabel: input.occupationLabel?.trim() || null,
         riskLocation: input.riskLocation?.trim() || null,

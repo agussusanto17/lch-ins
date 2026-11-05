@@ -218,6 +218,12 @@ export interface SecurityPanelRow {
   role: "As Leader" | "As Member"
 }
 
+/** Satu baris Detail tambahan slip, dicetak "label : value" di tabel detail. */
+export interface SlipDetailRow {
+  label: string
+  value: string
+}
+
 export interface PlacingSlip {
   id: string
   slipNo: string | null
@@ -251,6 +257,12 @@ export interface PlacingSlip {
   expiryDate: string | null
   /** Keterangan di bawah periode asuransi di dokumen, seperti CI LCH. */
   periodNote?: string
+  /**
+   * Detail tambahan yang dicetak di tabel detail dokumen setelah baris
+   * bawaan, misalnya Retroactive Date atau Voyage. Label bawaannya datang dari
+   * type of cover di Master Data.
+   */
+  detailRows?: SlipDetailRow[]
   occupation?: string
   /** Nama okupasi di dokumen slip ini, tanpa kode. Kosong berarti nama OJK. */
   occupationLabel?: string
