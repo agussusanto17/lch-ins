@@ -7,7 +7,9 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  ExternalLink,
   FileText,
+  FileUp,
   Loader2,
   MapPin,
   Pencil,
@@ -26,6 +28,7 @@ import {
   listClaimDocumentsAction,
   listClaimFollowupsAction,
   toggleClaimDocumentAction,
+  uploadClaimDocumentFileAction,
 } from "@/app/(app)/claims/actions"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import { usePermission } from "@/components/auth/permission-provider"
@@ -45,6 +48,7 @@ import { Textarea } from "@/components/ui/textarea"
 import type { Claim } from "@/lib/data"
 import { dateShort, money } from "@/lib/format"
 import type { ClaimDocumentRecord, ClaimFollowupRecord } from "@/lib/server/claims"
+import { UPLOAD_ACCEPT, UPLOAD_HINT, uploadProblem } from "@/lib/uploads"
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -80,6 +84,9 @@ export function ClaimDetailSheet({
   // Loading diturunkan dari id klaim yang datanya sudah dimuat, tanpa setState sinkron di effect.
   const [docsLoadedFor, setDocsLoadedFor] = React.useState<string | null>(null)
   const [togglingDocId, setTogglingDocId] = React.useState<string | null>(null)
+  const [uploadingDocId, setUploadingDocId] = React.useState<string | null>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const uploadTargetRef = React.useRef<ClaimDocumentRecord | null>(null)
 
   const [newDocName, setNewDocName] = React.useState("")
   const [newDocRequired, setNewDocRequired] = React.useState(false)
@@ -189,6 +196,35 @@ export function ClaimDetailSheet({
       setNewDocRequired(false)
       toast.success(`Dokumen "${res.data.documentTypeName}" berhasil ditambahkan`)
     }
+  }
+
+  function pickFile(doc: ClaimDocumentRecord) {
+    uploadTargetRef.current = doc
+    fileInputRef.current?.click()
+  }
+
+  async function handleUploadFile(file: File) {
+    const doc = uploadTargetRef.current
+    uploadTargetRef.current = null
+    if (!doc) return
+    const problem = uploadProblem(file)
+    if (problem) {
+      toast.error(problem, { description: file.name })
+      return
+    }
+
+    setUploadingDocId(doc.id)
+    const body = new FormData()
+    body.append("file", file)
+    const res = await uploadClaimDocumentFileAction(doc.id, body)
+    setUploadingDocId(null)
+
+    if (!res.ok || !res.data) {
+      toast.error(`Gagal mengunggah ${file.name}`, { description: res.error })
+      return
+    }
+    setDocuments((prev) => prev.map((d) => (d.id === doc.id ? res.data! : d)))
+    toast.success(`File "${doc.documentTypeName}" tersimpan`, { description: file.name })
   }
 
   async function handleDeleteDocument(doc: ClaimDocumentRecord) {
@@ -495,8 +531,39 @@ export function ClaimDetailSheet({
                                     <span className="truncate italic">{doc.notes}</span>
                                   </>
                                 ) : null}
+                                {doc.fileUrl ? (
+                                  <>
+                                    <span>·</span>
+                                    <a
+                                      href={doc.fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline"
+                                    >
+                                      <ExternalLink className="size-3" />
+                                      Lihat file
+                                    </a>
+                                  </>
+                                ) : null}
                               </div>
                             </div>
+                            {canManage && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={uploadingDocId === doc.id}
+                                onClick={() => pickFile(doc)}
+                                aria-label={`${doc.fileUrl ? "Ganti" : "Unggah"} file ${doc.documentTypeName}`}
+                                className="text-muted-foreground"
+                              >
+                                {uploadingDocId === doc.id ? (
+                                  <Loader2 data-icon="inline-start" className="animate-spin" />
+                                ) : (
+                                  <FileUp data-icon="inline-start" />
+                                )}
+                                {doc.fileUrl ? "Ganti" : "Unggah"}
+                              </Button>
+                            )}
                             {!doc.isRequired && canManage && (
                               <Button
                                 variant="ghost"
@@ -513,6 +580,23 @@ export function ClaimDetailSheet({
                       })}
                     </div>
                   )}
+
+                  {canManage && documents.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      File berkas: {UPLOAD_HINT}
+                    </p>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={UPLOAD_ACCEPT}
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      e.target.value = ""
+                      if (file) void handleUploadFile(file)
+                    }}
+                  />
 
                   {/* Add Document Form */}
                   {canManage && (
