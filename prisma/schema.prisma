@@ -1060,6 +1060,9 @@ model PlacingSlip {
 
   /// Salinan dari klien. Bisa diedit di slip tanpa mengubah data klien.
   insuredName             String  @map("insured_name")
+  /// Uraian tertanggung yang dicetak di bawah Insured Name dengan huruf asli,
+  /// misalnya daftar pihak a), b), c) atau "and/or subsidiary companies".
+  insuredDescription      String? @map("insured_description")
   /// Salinan alamat klien yang dipilih, juga bisa diedit.
   correspondenceAddress   String? @map("correspondence_address")
   /// Alamat klien asal salinan di atas, untuk jejak. Kosong bila diketik manual.

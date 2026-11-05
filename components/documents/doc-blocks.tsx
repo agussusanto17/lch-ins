@@ -126,14 +126,21 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
         : wordingForms[0],
     ])
   rows.push(
-    ["Insured Name", slip.insuredName.toUpperCase() || "—"],
+    [
+      "Insured Name",
+      // Uraian tertanggung dicetak di bawah nama dengan huruf apa adanya.
+      [slip.insuredName.toUpperCase() || "—", slip.insuredDescription?.trim()]
+        .filter(Boolean)
+        .join("\n"),
+    ],
     ["Correspondence Address", slip.correspondenceAddress || "—"],
     ["Period of Insurance", period]
   )
   if (isMultiLocation(slip)) {
     rows.push(...locationRows(slip))
   } else {
-    if (slip.occupation) rows.push(["Occupation", slipOccupationText(slip)])
+    const occupation = slipOccupationText(slip)
+    if (occupation) rows.push(["Occupation", occupation])
     if (slip.riskLocation) rows.push(["Risk Location", slip.riskLocation])
     if (slip.cob === "Property" && slip.constructionClass)
       rows.push([

@@ -18,6 +18,7 @@ import {
   switchCob,
   updateLocationPatch,
   itemRowsPatch,
+  slipOccupationText,
 } from "../components/underwriting/slip-model"
 import type { PlacingSlip, RateLine } from "../lib/data/types"
 import {
@@ -444,4 +445,13 @@ test("limit saja diabaikan di Motor Vehicle", () => {
     interestItems: [{ id: "truk", description: "Truk", amount: 350_000_000, limitOnly: true }],
   })
   assert.equal(totalSumInsured(slip), 350_000_000)
+})
+
+test("okupasi tanpa kode OJK dicetak apa adanya, dengan kode tetap berkode", () => {
+  assert.equal(slipOccupationText({ occupationLabel: " Office " }), "Office")
+  assert.equal(slipOccupationText({}), "")
+  assert.equal(
+    slipOccupationText({ occupation: "2975 - Apartments", occupationLabel: "Apartment" }),
+    "2975 - Apartment"
+  )
 })

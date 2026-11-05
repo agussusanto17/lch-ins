@@ -266,6 +266,11 @@ export interface PlacingSlip {
   periodTba: boolean
   inceptionDate: string | null
   expiryDate: string | null
+  /**
+   * Uraian tertanggung yang dicetak di bawah Insured Name dengan huruf asli,
+   * misalnya daftar pihak a), b), c) di CI CGL LCH.
+   */
+  insuredDescription?: string
   /** Keterangan di bawah periode asuransi di dokumen, seperti CI LCH. */
   periodNote?: string
   /**

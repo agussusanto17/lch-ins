@@ -82,6 +82,7 @@ export interface PlacingSlipInput {
   inceptionDate?: string | null
   expiryDate?: string | null
   periodNote?: string | null
+  insuredDescription?: string | null
   detailRows?: SlipDetailRow[] | null
   occupation?: string | null
   occupationId?: string | null
@@ -544,6 +545,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     inceptionDate,
     expiryDate,
     periodNote: raw.periodNote || undefined,
+    insuredDescription: raw.insuredDescription || undefined,
     detailRows: cleanDetailRows(raw.detailRows),
     occupation: raw.occupation
       ? `${raw.occupation.code} - ${raw.occupation.name}`
@@ -1001,6 +1003,7 @@ export async function createPlacingSlip(
         inceptionDate,
         expiryDate,
         periodNote: input.periodNote?.trim() || null,
+        insuredDescription: input.insuredDescription?.trim() || null,
         detailRows: detailRowsData(input.detailRows),
         occupationId,
         occupationLabel: input.occupationLabel?.trim() || null,
@@ -1371,6 +1374,7 @@ export async function updatePlacingSlip(
         inceptionDate,
         expiryDate,
         periodNote: input.periodNote?.trim() || null,
+        insuredDescription: input.insuredDescription?.trim() || null,
         detailRows: detailRowsData(input.detailRows),
         occupationId,
         occupationLabel: input.occupationLabel?.trim() || null,
