@@ -73,5 +73,8 @@ Uji manual di aplikasi:
 - Isi item daftar dan kutipan juga paragraf, jadi ikut bisa diratakan. Kalau
   nanti menambah tipe blok ke `types` TextAlign, tambahkan tag-nya juga ke
   `ALIGNABLE_TAGS` di sanitizer. Kalau tidak, perataan hilang saat disimpan.
-- Klausula yang sudah disalin ke slip menyimpan wording sendiri. Perataan yang
-  ditambahkan di Master Clauses setelahnya tidak ikut ke slip lama.
+- Klausula slip yang tidak diubah wording-nya ikut memakai wording master
+  terbaru (termasuk perataan) setelah slip disimpan ulang; sebelum disimpan
+  ulang, dokumen slip masih menampilkan salinan lama. Klausula yang wording-nya
+  diubah di slip menyimpan salinan sendiri dan tidak ikut berubah. (Diluruskan
+  di [status-tombol-toolbar-editor-2026-11-05.md](status-tombol-toolbar-editor-2026-11-05.md).)
