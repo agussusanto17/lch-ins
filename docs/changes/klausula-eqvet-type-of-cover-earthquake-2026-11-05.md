@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `fix/clause-eqvet-type-of-cover-earthquake`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #119
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
