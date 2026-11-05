@@ -29,6 +29,10 @@ kartu lokasi bisa dibuka dan ditutup (5 November 2026).
 - **Buka/tutup semua:** slip multi lokasi punya tombol "Buka semua lokasi" dan
   "Tutup semua lokasi".
 - **Lokasi dihapus:** kartu lain tetap pada keadaan buka/tutupnya.
+- **Kolom Premium tidak terpotong:** keterangan baris BI ("Otomatis setelah
+  sum insured Section 2 diisi: ...") sekarang boleh pindah baris. Sebelumnya
+  teks itu membuat kolom Cover di kartu lokasi melebar, sehingga kolom Premium
+  terpotong di kanan.
 
 ## File utama
 
