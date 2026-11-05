@@ -6,6 +6,7 @@ import {
   recalcSlip,
   totalPayable,
   totalPremium,
+  totalSumInsured,
 } from "../lib/calc"
 import {
   addLocationPatch,
@@ -416,4 +417,31 @@ test("premi flat diabaikan di Motor Vehicle, dan slip tanpa premi ditolak", () =
   assert.equal(missingRateIssue(flagged), "Isi minimal satu rate.")
   const empty = recalcSlip({ ...switchCob(emptySlip(), "Liability") })
   assert.equal(missingRateIssue(empty), "Isi minimal satu rate atau premi flat.")
+})
+
+test("objek limit saja tidak ikut TSI dan premi (CIT: carrying tahunan dan limit per carrying)", () => {
+  let slip = switchCob(emptySlip(), "Marine Cargo")
+  slip = recalcSlip({
+    ...slip,
+    interestItems: [
+      { id: "tahunan", description: "Estimated annual carrying", amount: 1_000_000_000 },
+      { id: "limit", description: "Limit any one carrying", amount: 250_000_000, limitOnly: true },
+    ],
+  })
+  slip = recalcSlip({ ...slip, rateLines: slip.rateLines.map((l) => ({ ...l, rate: 0.025 })) })
+  const [tahunan, limit] = itemGroups(slip)
+  assert.equal(totalSumInsured(slip), 1_000_000_000)
+  assert.equal(tahunan.rateLines[0].premium, 250_000)
+  assert.equal(limit.rateLines[0].premium, 0)
+  assert.equal(limit.rateLines[0].rate, null)
+  assert.equal(totalPremium(slip), 250_000)
+})
+
+test("limit saja diabaikan di Motor Vehicle", () => {
+  const motor = switchCob(emptySlip(), "Motor Vehicle")
+  const slip = recalcSlip({
+    ...motor,
+    interestItems: [{ id: "truk", description: "Truk", amount: 350_000_000, limitOnly: true }],
+  })
+  assert.equal(totalSumInsured(slip), 350_000_000)
 })

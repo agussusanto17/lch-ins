@@ -374,6 +374,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
         id: it.id,
         description: it.description,
         amount: it.amount ? Number(it.amount) : 0,
+        limitOnly: it.isLimitOnly || undefined,
         vehicleBrandId: it.vehicleBrandId,
         vehicleTypeId: it.vehicleTypeId,
         vehicleBrandName: it.vehicleBrand?.name ?? null,
@@ -1035,6 +1036,7 @@ export async function createPlacingSlip(
       kind: SlipItemKind
       description: string
       amount: Prisma.Decimal | null
+      isLimitOnly?: boolean
       sortOrder: number
       vehicleBrandId?: string | null
       vehicleTypeId?: string | null
@@ -1067,6 +1069,7 @@ export async function createPlacingSlip(
             kind: "Interest",
             description: finalDesc,
             amount: new Prisma.Decimal(it.amount || 0),
+            isLimitOnly: it.limitOnly === true,
             sortOrder: sortIdx++,
             ...(motor ? await checkVehiclePair(tx, it.vehicleBrandId, it.vehicleTypeId) : {}),
           })
@@ -1405,6 +1408,7 @@ export async function updatePlacingSlip(
       kind: SlipItemKind
       description: string
       amount: Prisma.Decimal | null
+      isLimitOnly?: boolean
       sortOrder: number
       vehicleBrandId?: string | null
       vehicleTypeId?: string | null
@@ -1437,6 +1441,7 @@ export async function updatePlacingSlip(
             kind: "Interest",
             description: finalDesc,
             amount: new Prisma.Decimal(it.amount || 0),
+            isLimitOnly: it.limitOnly === true,
             sortOrder: sortIdx++,
             ...(motor ? await checkVehiclePair(tx, it.vehicleBrandId, it.vehicleTypeId) : {}),
           })
@@ -1929,6 +1934,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
           kind: SlipItemKind
           description: string
           amount: Prisma.Decimal | null
+          isLimitOnly?: boolean
           sortOrder: number
         }[] = []
 
@@ -1938,6 +1944,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             kind: "Interest",
             description: it.description,
             amount: new Prisma.Decimal(it.amount || 0),
+            isLimitOnly: it.limitOnly === true,
             sortOrder: itIdx++,
           })
         }

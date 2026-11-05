@@ -49,6 +49,7 @@ import {
 import { printedDetailRows } from "@/lib/slip-details"
 import {
   isFlatLine,
+  isLimitOnlyItem,
   isMultiItem,
   itemGroups,
   type ItemGroup,
@@ -378,6 +379,8 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
                   {i.description}
                 </span>
                 <span className="tabular whitespace-nowrap">
+                  {/* Nilai "limit saja" tidak ikut Total Sum Insured di bawah. */}
+                  {isLimitOnlyItem(slip.cob, i) ? "Limit " : ""}
                   {money(i.amount, slip.currency)}
                 </span>
               </li>
@@ -387,7 +390,10 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
       )}
 
       <p className="mt-3 flex justify-between rounded bg-primary/8 px-3 py-2 text-[13px] font-semibold text-primary">
-        <span>Total Sum Insured</span>
+        {/* Nilai objek Liability adalah limit, seperti contoh slip LCH. */}
+        <span>
+          {slip.cob === "Liability" ? "Total Limit of Liability" : "Total Sum Insured"}
+        </span>
         <span className="tabular">
           {money(totalSumInsured(slip), slip.currency)}
         </span>
@@ -1307,14 +1313,16 @@ export function ObjectPremiumSchedule({ slip }: { slip: PlacingSlip }) {
                   {i === 0 ? amount(g.item.amount || 0) : ""}
                 </td>
                 <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
-                  {l && isFlatLine(slip.cob, l)
-                    ? "Flat"
-                    : l?.rate != null
-                      ? `${rateText(l.rate)}%`
-                      : "—"}
+                  {isLimitOnlyItem(slip.cob, g.item)
+                    ? "Limit"
+                    : l && isFlatLine(slip.cob, l)
+                      ? "Flat"
+                      : l?.rate != null
+                        ? `${rateText(l.rate)}%`
+                        : "—"}
                 </td>
                 <td className="tabular py-1.5 text-right align-top whitespace-nowrap">
-                  {amount(l?.premium ?? 0)}
+                  {isLimitOnlyItem(slip.cob, g.item) ? "—" : amount(l?.premium ?? 0)}
                 </td>
               </tr>
             ))

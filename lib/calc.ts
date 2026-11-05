@@ -6,7 +6,12 @@ import { BI_SCALE_OJK } from "./data/ojk-tariff"
 import type { PlacingSlip, RateLine, SlipPart } from "./data/types"
 import { num } from "./format"
 import { locationGroups, locationOwner, withLocations } from "./slip-locations"
-import { isFlatLine, itemOwner, withItemRates } from "./slip-items"
+import {
+  isFlatLine,
+  isLimitOnlyItem,
+  itemOwner,
+  withItemRates,
+} from "./slip-items"
 
 /** Demo exchange rates for report aggregation. */
 export const FX: Record<string, number> = {
@@ -60,7 +65,8 @@ export function totalSumInsured(slip: PlacingSlip) {
   if (slip.cob === "Property") {
     return sumItems(slip.sumInsuredSection1) + sumItems(slip.sumInsuredSection2)
   }
-  return sumItems(slip.interestItems)
+  // Objek "limit saja" (misalnya limit any one carrying) tidak ikut TSI.
+  return sumItems(slip.interestItems.filter((i) => !isLimitOnlyItem(slip.cob, i)))
 }
 
 /** Total gross premium before discounts and statutory charges. */
@@ -382,9 +388,16 @@ export function recalcSlip(input: PlacingSlip): PlacingSlip {
   const owner = locationOwner(slip)
   const itemOf = itemOwner(slip)
   const itemValue = new Map(slip.interestItems.map((v) => [v.id, v.amount || 0]))
+  const limitItems = new Set(
+    slip.interestItems.filter((v) => isLimitOnlyItem(slip.cob, v)).map((v) => v.id)
+  )
 
   const rateLines = (property ? withBiRates(slip) : slip.rateLines).map((l) => {
     if (!property) {
+      // Objek "limit saja" tidak dikenai premi.
+      if (limitItems.has(itemOf(l.vehicleId) ?? "")) {
+        return { ...l, rate: null, flatPremium: undefined, premium: 0 }
+      }
       // Premi flat diisi langsung; rate-nya dikosongkan supaya tidak tercetak.
       if (isFlatLine(slip.cob, l)) {
         return { ...l, rate: null, premium: roundCents(Math.max(0, l.premium || 0)) }
