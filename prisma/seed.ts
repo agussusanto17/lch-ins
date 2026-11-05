@@ -462,29 +462,54 @@ const COB_FORM: Record<string, { rateMode: string; formVariant: string }> = {
 }
 
 /**
- * Singkatan type of cover untuk token {COVER}, diambil dari kode di
- * TYPE_OF_COVER (lib/data/reference.ts). Yang belum ada menunggu daftar LCH.
+ * Singkatan type of cover untuk token {COVER}, dari kolom SINGKATAN TOC di
+ * file LCH "LIST COB DAN TOC" (diperbarui LCH 21 Oktober 2026). Pengecualian:
+ * PSAGBI (0105) EQ supaya slip PAR + EQ bernomor PAREQ seperti CI LCH; Directors
+ * and Officer Liability (0913) DNO karena singkatan hanya boleh huruf dan angka
+ * (file LCH menulis D&O); 0312 kosong di file LCH dan tetap MC. Yang kosong di
+ * file LCH dibiarkan tanpa singkatan.
  */
 const COVER_ABBREVIATIONS: Record<string, string> = {
   "0103": "BI",
-  // PSAGBI dipakai sebagai type of cover Earthquake; EQ supaya slip PAR + EQ
-  // bernomor PS-PAREQ seperti CI LCH (Agus, 5 November 2026).
   "0105": "EQ",
   "0109": "PAR",
   "0110": "IAR",
-  "0311": "MC",
+  "0116": "TS",
+  "0201": "MV",
+  "0203": "HE",
+  "0205": "MV",
+  "0308": "CIT",
+  "0311": "MOP",
   "0312": "MC",
   "0323": "MC",
-  "0401": "MH",
+  "0401": "HMH",
+  "0402": "HBR",
+  "0403": "HMHSV",
+  "0405": "SRLL",
+  "0406": "MII",
+  "0407": "MAPP",
   "0801": "CAR",
   "0802": "EAR",
   "0803": "MB",
   "0804": "EEI",
+  "0805": "CPM",
+  "0808": "CECR",
   "0901": "PL",
-  "0905": "PRL",
+  "0902": "EL",
+  "0903": "WCI",
+  "0905": "PLI",
   "0906": "PI",
+  "0908": "CGL",
+  "0911": "AL",
+  "0912": "EOI",
   "0913": "DNO",
+  "0914": "TOL",
   "1004": "PA",
+  "1202": "FG",
+  "1203": "CIS",
+  "1208": "TRAVEL",
+  "1209": "HIO",
+  "1213": "MAR",
 }
 
 async function seedCobAndCoverTypes() {
