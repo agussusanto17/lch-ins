@@ -30,6 +30,18 @@ export function allowsFlatPremium(cob: ClassOfBusiness) {
   return usesItemRates(cob) && cob !== "Motor Vehicle"
 }
 
+/**
+ * Objek yang nilainya hanya batas (limit): tidak ikut total sum insured dan
+ * premi, misalnya limit any one carrying CIT di samping estimasi carrying
+ * tahunan. COB-nya sama dengan premi flat.
+ */
+export function isLimitOnlyItem(
+  cob: ClassOfBusiness,
+  item: Pick<LineItem, "limitOnly">
+) {
+  return item.limitOnly === true && allowsFlatPremium(cob)
+}
+
 /** Baris rate yang dihitung sebagai premi flat. */
 export function isFlatLine(cob: ClassOfBusiness, line: Pick<RateLine, "flatPremium">) {
   return line.flatPremium === true && allowsFlatPremium(cob)

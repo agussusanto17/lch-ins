@@ -1188,6 +1188,10 @@ model SlipItem {
   description String
   /// Kosong untuk baris deductible.
   amount      Decimal?     @db.Decimal(18, 2)
+  /// Nilai yang hanya batas (limit): tidak ikut total sum insured dan premi,
+  /// misalnya limit any one carrying CIT. Hanya baris Interest COB selain
+  /// Property dan Motor Vehicle.
+  isLimitOnly Boolean      @default(false) @map("is_limit_only")
   sortOrder   Int          @default(0) @map("sort_order")
   /// Hanya baris Interest slip Motor Vehicle.
   vehicleBrandId String? @map("vehicle_brand_id") @db.Uuid

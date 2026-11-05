@@ -137,6 +137,12 @@ export interface LineItem {
   id: string
   description: string
   amount: number
+  /**
+   * Nilai yang hanya batas (limit), misalnya limit any one carrying CIT atau
+   * limit TPL: tidak ikut total sum insured dan premi. Hanya COB selain
+   * Property dan Motor Vehicle.
+   */
+  limitOnly?: boolean
   /** Baris Interest slip Motor Vehicle: merek dan tipe dari master data. */
   vehicleBrandId?: string | null
   vehicleTypeId?: string | null

@@ -104,7 +104,6 @@ import {
   effectiveBrokeragePct,
   isParEqvetSlip,
   parEqvetPolicyCharge,
-  sumItems,
   sumPercent,
   totalPayable,
   totalPremium,
@@ -129,7 +128,7 @@ import {
 import { money, num, percent } from "@/lib/format"
 import { cleanDetailLabels, withDetailLabels } from "@/lib/slip-details"
 import { locationGroups, locationOwner } from "@/lib/slip-locations"
-import { itemOwner } from "@/lib/slip-items"
+import { isLimitOnlyItem, itemOwner } from "@/lib/slip-items"
 import type { InsuredOption } from "@/lib/server/clients"
 import { newId, store, useRecord } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -1272,7 +1271,7 @@ function SlipEditor({
             summary={
               usesSectionSumInsured(slip.cob)
                 ? undefined
-                : money(sumItems(slip.interestItems), slip.currency)
+                : money(totalSumInsured(slip), slip.currency)
             }
           >
             {usesSectionSumInsured(slip.cob) ? (
@@ -1315,9 +1314,14 @@ function SlipEditor({
                   addLabel={isMotor ? "Tambah kendaraan" : "Tambah interest"}
                   vehicleOptions={isMotor ? vehicleOptions : undefined}
                 />
+                {/* Objek "limit saja" (diatur di Rate & Premium) tidak ikut total. */}
                 <TotalBar
-                  label="Total Interest Insured"
-                  value={money(sumItems(slip.interestItems), slip.currency)}
+                  label={
+                    slip.interestItems.some((i) => isLimitOnlyItem(slip.cob, i))
+                      ? "Total Interest Insured (tanpa limit)"
+                      : "Total Interest Insured"
+                  }
+                  value={money(totalSumInsured(slip), slip.currency)}
                 />
               </div>
             )}

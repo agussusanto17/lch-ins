@@ -41,6 +41,7 @@ const lineItemSchema = z.object({
   id: z.string(),
   description: z.string(),
   amount: z.coerce.number().optional(),
+  limitOnly: z.boolean().optional(),
   vehicleBrandId: z.string().nullish(),
   vehicleTypeId: z.string().nullish(),
   vehicleBrandName: z.string().nullish(),
