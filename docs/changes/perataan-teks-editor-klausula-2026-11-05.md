@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `feat/perataan-teks-editor-klausula`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#133](https://github.com/agussusanto17/lch-ins/pull/133)
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
