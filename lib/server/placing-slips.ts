@@ -100,6 +100,7 @@ export interface PlacingSlipInput {
   interestSection1?: string | null
   interestSection2?: string | null
   specialConditions?: string | null
+  exclusions?: string | null
   interestItems?: LineItem[]
   sumInsuredSection1?: LineItem[]
   sumInsuredSection2?: LineItem[]
@@ -567,6 +568,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     interestSection1: raw.interestSection1 || undefined,
     interestSection2: raw.interestSection2 || undefined,
     specialConditions: raw.specialConditions || undefined,
+    exclusions: raw.exclusions || undefined,
     interestItems,
     sumInsuredSection1,
     sumInsuredSection2,
@@ -1030,6 +1032,7 @@ export async function createPlacingSlip(
         interestSection1: input.interestSection1?.trim() || null,
         interestSection2: input.interestSection2?.trim() || null,
         specialConditions: input.specialConditions?.trim() || null,
+        exclusions: input.exclusions?.trim() || null,
         discountPct: new Prisma.Decimal(input.discountPct ?? 0),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
@@ -1406,6 +1409,7 @@ export async function updatePlacingSlip(
         interestSection1: input.interestSection1?.trim() || null,
         interestSection2: input.interestSection2?.trim() || null,
         specialConditions: input.specialConditions?.trim() || null,
+        exclusions: input.exclusions?.trim() || null,
         discountPct: new Prisma.Decimal(input.discountPct ?? 0),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),

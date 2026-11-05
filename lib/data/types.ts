@@ -322,6 +322,11 @@ export interface PlacingSlip {
   sumInsuredSection1: LineItem[]
   sumInsuredSection2: LineItem[]
   specialConditions?: string
+  /**
+   * Exclusion slip, satu per baris dengan nomor a) atau 1) yang diketik
+   * sendiri. Dicetak sebagai blok EXCLUSIONS setelah CLAUSES.
+   */
+  exclusions?: string
   clauseIds: string[]
   /**
    * Judul dan wording klausula yang diedit khusus slip ini, dikunci per id
