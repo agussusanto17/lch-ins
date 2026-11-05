@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `feat/blok-exclusions` (di atas `feat/periode-label-satu-tanggal`)
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#146](https://github.com/agussusanto17/lch-ins/pull/146)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
