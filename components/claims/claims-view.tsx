@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { CircleCheck, Clock, Eye, Pencil, Plus, Receipt, Trash2 } from "lucide-react"
+import Link from "next/link"
+import { CircleCheck, Clock, Eye, Pencil, Plus, Printer, Receipt, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { deleteClaimAction } from "@/app/(app)/claims/actions"
@@ -36,6 +37,12 @@ import {
 } from "@/components/ui/table"
 import { useCobFilterItems } from "@/components/shared/form-options-provider"
 import { toIdr } from "@/lib/calc"
+import {
+  claimFilterQuery,
+  claimPrintHref,
+  filterClaims,
+  type ClaimFilterParams,
+} from "@/lib/claim-filter"
 import {
   CLAIM_STAGES,
   CLAIM_STATUSES,
@@ -78,8 +85,8 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
   const permission = usePermission()
   const canManage = permission.canManage("/claims")
   const [search, setSearch] = React.useState("")
-  const [status, setStatus] = React.useState<string>("all")
-  const [stage, setStage] = React.useState<string>("all")
+  const [status, setStatus] = React.useState<ClaimFilterParams["status"]>("all")
+  const [stage, setStage] = React.useState<ClaimFilterParams["stage"]>("all")
   const [cob, setCob] = React.useState<string>("all")
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [form, setForm] = React.useState<{
@@ -104,21 +111,11 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
     0
   )
 
-  const filtered = items.filter((c) => {
-    if (status !== "all" && c.status !== status) return false
-    if (stage !== "all" && c.stage !== stage) return false
-    if (cob !== "all" && c.cob !== cob) return false
-    if (!search.trim()) return true
-    const q = search.toLowerCase()
-    return (
-      c.claimNo.toLowerCase().includes(q) ||
-      c.insuredName.toLowerCase().includes(q) ||
-      (c.policyNo || "").toLowerCase().includes(q) ||
-      c.cob.toLowerCase().includes(q) ||
-      (c.location || "").toLowerCase().includes(q) ||
-      (c.lossDescription || "").toLowerCase().includes(q)
-    )
-  })
+  const activeFilters = { status, stage, cob, search }
+  const filtered = React.useMemo(
+    () => filterClaims(items, activeFilters),
+    [items, status, stage, cob, search]
+  )
 
   const { page, pageSize, totalItems, paginatedItems, setPage, setPageSize } =
     usePagination(filtered, 10)
@@ -249,7 +246,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
           <Select
             items={STATUS_ITEMS}
             value={status}
-            onValueChange={(v) => setStatus(v as string)}
+            onValueChange={(v) => setStatus(v as ClaimFilterParams["status"])}
           >
             <SelectTrigger size="sm" className="w-42.5">
               <SelectValue />
@@ -267,7 +264,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
           <Select
             items={STAGE_ITEMS}
             value={stage}
-            onValueChange={(v) => setStage(v as string)}
+            onValueChange={(v) => setStage(v as ClaimFilterParams["stage"])}
           >
             <SelectTrigger size="sm" className="w-49">
               <SelectValue />
@@ -282,7 +279,11 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
               </SelectGroup>
             </SelectContent>
           </Select>
-          <ExportButtons className="ml-auto" spec={exportSpec} />
+          <ExportButtons
+            className="ml-auto"
+            spec={exportSpec}
+            printHref={claimPrintHref(activeFilters)}
+          />
         </div>
 
         <Card className="gap-0 overflow-hidden py-0">
@@ -325,6 +326,19 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
                             label: "Detail",
                             icon: Eye,
                             onSelect: () => setSelectedId(c.id),
+                          },
+                          {
+                            label: "Cetak detail",
+                            icon: Printer,
+                            render: (
+                              <Link
+                                href={`/claims/print/${c.id}${
+                                  claimFilterQuery(activeFilters)
+                                    ? `?${claimFilterQuery(activeFilters)}`
+                                    : ""
+                                }`}
+                              />
+                            ),
                           },
                           ...(canManage
                             ? [
