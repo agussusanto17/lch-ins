@@ -28,6 +28,7 @@ import {
 } from "@/lib/data/ojk-motor"
 import { todayIso } from "@/lib/date"
 import { normalizeCob } from "@/lib/format"
+import { withDetailLabels } from "@/lib/slip-details"
 import {
   isMultiLocation,
   locationGroups,
@@ -256,6 +257,7 @@ export function emptySlip(): PlacingSlip {
     inceptionDate: null,
     expiryDate: null,
     periodNote: DEFAULT_PERIOD_NOTE,
+    detailRows: [],
     occupation: "",
     riskLocation: "",
     wordingForms: [""],
@@ -300,6 +302,8 @@ export function switchCob(
     typeOfCover2: "",
     typeOfCoverLabel: undefined,
     typeOfCover2Label: undefined,
+    // Label bawaan type of cover lama dibuang; baris yang sudah diisi tetap.
+    detailRows: withDetailLabels(slip.detailRows, []),
     coverCode: null,
     // Slip Property mulai lagi dengan satu lokasi dari isian slip.
     locations: undefined,
@@ -737,7 +741,8 @@ export function slipForClient(client: Client): PlacingSlip {
 export function slipFromSppa(
   sppa: Sppa,
   client: Client | null,
-  covers?: Pick<CoverOption, "name" | "abbreviation">[]
+  covers?: (Pick<CoverOption, "name" | "abbreviation"> &
+    Partial<Pick<CoverOption, "detailLabels">>)[]
 ): PlacingSlip {
   const cob = normalizeCob(sppa.cob)
   const base = switchCob(emptySlip(), cob)
@@ -789,6 +794,10 @@ export function slipFromSppa(
       ? (correspondenceAddress(client)?.value ?? "")
       : "",
     typeOfCover: sppa.typeOfCover,
+    detailRows: withDetailLabels(
+      base.detailRows,
+      covers?.find((c) => c.name === sppa.typeOfCover)?.detailLabels ?? []
+    ),
     coverCode: coverCodeFor(cob, sppa.typeOfCover, covers),
     currency: sppa.currency,
     inceptionDate: sppa.periodStart,

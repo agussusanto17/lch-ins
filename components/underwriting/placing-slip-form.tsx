@@ -42,6 +42,7 @@ import { InsuredPicker } from "@/components/underwriting/insured-picker"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
 import { SlipLocations } from "@/components/underwriting/slip-locations"
 import { SlipItemRates } from "@/components/underwriting/slip-item-rates"
+import { SlipDetailRows } from "@/components/underwriting/slip-detail-rows"
 import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
 import { type RateBounds } from "@/components/underwriting/ojk-reference"
 import {
@@ -126,6 +127,7 @@ import {
   withCurrent,
 } from "@/lib/form-options"
 import { money, num, percent } from "@/lib/format"
+import { cleanDetailLabels, withDetailLabels } from "@/lib/slip-details"
 import { locationGroups, locationOwner } from "@/lib/slip-locations"
 import { itemOwner } from "@/lib/slip-items"
 import type { InsuredOption } from "@/lib/server/clients"
@@ -134,6 +136,7 @@ import { cn } from "@/lib/utils"
 
 const SECTION_KEYS = [
   "basic",
+  "details",
   "wording",
   "coverage",
   "interest",
@@ -456,6 +459,18 @@ function SlipEditor({
       covers.find((c) => c.name === typeOfCover2)?.abbreviation
     )
   }
+  /** Label bawaan Detail tambahan untuk type of cover pertama dan kedua. */
+  function detailLabelsFor(typeOfCover?: string, typeOfCover2?: string) {
+    return cleanDetailLabels(
+      [typeOfCover, typeOfCover2].flatMap(
+        (name) => covers.find((c) => c.name === name)?.detailLabels ?? []
+      )
+    )
+  }
+  const detailSuggestions = cleanDetailLabels(
+    options.cobs.flatMap((c) => c.covers.flatMap((v) => v.detailLabels))
+  )
+  const filledDetails = (slip.detailRows ?? []).filter((r) => r.value.trim()).length
   const wordingNames = options.wordingForms.map((w) => w.name)
   const insurerItems = options.insurers.map((ins) => ins.name)
 
@@ -884,6 +899,10 @@ function SlipEditor({
                         (v as string) ?? "",
                         slip.typeOfCover2
                       ),
+                      detailRows: withDetailLabels(
+                        slip.detailRows,
+                        detailLabelsFor((v as string) ?? "", slip.typeOfCover2)
+                      ),
                     })
                   }
                 >
@@ -942,6 +961,10 @@ function SlipEditor({
                         coverCode: slipCoverCode(
                           slip.typeOfCover,
                           (v as string) ?? ""
+                        ),
+                        detailRows: withDetailLabels(
+                          slip.detailRows,
+                          detailLabelsFor(slip.typeOfCover, (v as string) ?? "")
                         ),
                       })
                     }
@@ -1135,6 +1158,20 @@ function SlipEditor({
                 </Field>
               )}
             </div>
+          </SectionCard>
+
+          <SectionCard
+            title="Detail Tambahan"
+            {...sectionProps("details")}
+            summary={filledDetails ? `${filledDetails} baris terisi` : undefined}
+          >
+            <SlipDetailRows
+              rows={slip.detailRows ?? []}
+              defaults={detailLabelsFor(slip.typeOfCover, slip.typeOfCover2)}
+              suggestions={detailSuggestions}
+              locked={locked}
+              onChange={(detailRows) => set({ detailRows })}
+            />
           </SectionCard>
 
           {usesPropertyBlocks(slip.cob) ? (

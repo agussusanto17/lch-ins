@@ -35,6 +35,11 @@ const FIELD_LABELS: Record<string, string> = {
   name: "Nama",
   code: "Kode",
   abbreviation: "Singkatan",
+  detailLabels: "Label detail tambahan",
+  detailRows: "Detail tambahan",
+  periodNote: "Keterangan periode",
+  typeOfCoverLabel: "Type of cover di dokumen",
+  typeOfCover2Label: "Type of cover Earthquake di dokumen",
   email: "Email",
   jobTitle: "Jabatan",
   roles: "Peran",
@@ -161,7 +166,7 @@ const MONEY_FIELDS = new Set([
 ])
 
 /** Daftar teks yang isinya sendiri memuat koma, jadi ditampilkan per baris. */
-const LINE_LIST_FIELDS = new Set(["addresses", "documents"])
+const LINE_LIST_FIELDS = new Set(["addresses", "documents", "detailLabels"])
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -229,6 +234,14 @@ export function formatAuditValue(
     if (value.length === 0) return "—"
     if (key === "roles") {
       return value.map((r) => ROLE_LABELS[r as RoleCode] ?? String(r)).join(", ")
+    }
+    if (key === "detailRows") {
+      return value
+        .map((r) => {
+          const row = (r ?? {}) as { label?: unknown; value?: unknown }
+          return `${String(row.label ?? "")}: ${String(row.value ?? "") || "—"}`
+        })
+        .join("\n")
     }
     if (value.every((v) => typeof v !== "object" || v === null)) {
       return value

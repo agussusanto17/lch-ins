@@ -82,6 +82,10 @@ const coverTypeSchema = z.object({
     .regex(/^[A-Za-z0-9]*$/, "Singkatan hanya huruf dan angka, tanpa spasi")
     .transform((v) => (v ? v.toUpperCase() : null))
     .nullish(),
+  detailLabels: z
+    .array(z.string().trim().max(100, "Label detail tambahan maksimal 100 karakter"))
+    .max(30, "Label detail tambahan maksimal 30")
+    .optional(),
   isActive: z.boolean().optional(),
 })
 

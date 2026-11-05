@@ -14,6 +14,8 @@ export interface CoverOption {
   name: string
   /** Token {COVER} di nomor slip, contoh PAR. Kosong berarti tanpa segmen cover. */
   abbreviation: string | null
+  /** Label bawaan Detail tambahan slip, misalnya Retroactive Date. */
+  detailLabels: string[]
 }
 
 /** Pilihan deductible dari Master Data > Deductible. */

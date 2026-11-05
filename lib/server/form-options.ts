@@ -30,7 +30,13 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
           coverTypes: {
             where: { isActive: true },
             orderBy: { code: "asc" },
-            select: { id: true, code: true, name: true, abbreviation: true },
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              abbreviation: true,
+              detailLabels: true,
+            },
           },
           deductibleOptions: {
             where: { isActive: true },
