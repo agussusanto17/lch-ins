@@ -20,16 +20,19 @@ export function InsuredPicker({
   clients,
   clientId,
   insuredName,
+  insuredDescription,
   correspondenceAddress,
   onChange,
 }: {
   clients: InsuredOption[]
   clientId: string | null
   insuredName: string
+  insuredDescription?: string
   correspondenceAddress: string
   onChange: (patch: {
     clientId?: string | null
     insuredName?: string
+    insuredDescription?: string
     correspondenceAddress?: string
   }) => void
 }) {
@@ -108,6 +111,28 @@ export function InsuredPicker({
             Diedit khusus slip ini, data klien tidak berubah.
           </FieldDescription>
         ) : null}
+      </Field>
+
+      {/*
+       * CI LCH sering menulis tertanggung lebih dari satu baris, misalnya
+       * daftar pihak a), b), c) di CGL Orela. Nama tetap dicetak kapital;
+       * uraian ini dicetak di bawahnya dengan huruf apa adanya.
+       */}
+      <Field className="md:col-span-2">
+        <FieldLabel htmlFor="insured-desc">Uraian tertanggung di dokumen</FieldLabel>
+        <Textarea
+          id="insured-desc"
+          rows={2}
+          value={insuredDescription ?? ""}
+          placeholder="Misalnya and/or subsidiary and/or affiliated companies for their respective rights and interests."
+          onChange={(e) =>
+            onChange({ insuredDescription: e.target.value || undefined })
+          }
+        />
+        <FieldDescription>
+          Dicetak di bawah Insured Name dengan huruf apa adanya. Kosongkan bila
+          tidak perlu.
+        </FieldDescription>
       </Field>
 
       <Field className="md:col-span-2">

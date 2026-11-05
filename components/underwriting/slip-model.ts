@@ -90,8 +90,10 @@ export function occupationParts(occupation: string | undefined) {
 export function slipOccupationText(
   slip: Pick<PlacingSlip, "occupation" | "occupationLabel">
 ) {
-  if (!slip.occupation) return ""
   const label = slip.occupationLabel?.trim()
+  // COB selain Property boleh mengetik okupasi tanpa kode OJK, misalnya
+  // "Office" (contoh slip LCH); teksnya dicetak apa adanya.
+  if (!slip.occupation) return label ?? ""
   return label ? `${occupationParts(slip.occupation).code} - ${label}` : slip.occupation
 }
 

@@ -1013,6 +1013,7 @@ function SlipEditor({
                 clients={clients}
                 clientId={slip.clientId}
                 insuredName={slip.insuredName}
+                insuredDescription={slip.insuredDescription}
                 correspondenceAddress={slip.correspondenceAddress}
                 onChange={set}
               />
@@ -1108,16 +1109,15 @@ function SlipEditor({
                           slip.occupationLabel ??
                           occupationParts(slip.occupation).name
                         }
-                        disabled={!slip.occupation}
                         placeholder={
                           occupationParts(slip.occupation).name ||
-                          "Pilih okupasi OJK dulu"
+                          "Ketik okupasi, misalnya Office"
                         }
                         onChange={(e) =>
                           set({ occupationLabel: e.target.value })
                         }
                       />
-                      {slip.occupationLabel !== undefined ? (
+                      {slip.occupation && slip.occupationLabel !== undefined ? (
                         <Button
                           type="button"
                           variant="outline"
@@ -1130,7 +1130,7 @@ function SlipEditor({
                     <FieldDescription>
                       {slip.occupation
                         ? `Hanya mengubah teks di dokumen slip ini. Kode ${occupationParts(slip.occupation).code} tetap tercetak, dan master okupasi tetap sesuai OJK.`
-                        : "Bisa diringkas setelah okupasi OJK dipilih."}
+                        : "Boleh diketik tanpa kode OJK, misalnya Office atau Insurance Broker. Dicetak apa adanya; kode OJK hanya dipakai tarif Property."}
                     </FieldDescription>
                   </Field>
                   <Field className="md:col-span-2">
