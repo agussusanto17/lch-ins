@@ -82,6 +82,8 @@ export interface PlacingSlipInput {
   clauseOverrides?: Record<string, ClauseOverride>
   clauseIdsSection2?: string[]
   clauseOverridesSection2?: Record<string, ClauseOverride>
+  clauseIdsGeneral?: string[]
+  clauseOverridesGeneral?: Record<string, ClauseOverride>
   wordingForms?: string[]
   rateLines?: RateLine[]
   tplLines?: RateLine[]
@@ -427,7 +429,8 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     role: sp.position.name === "As Leader" ? "As Leader" : "As Member",
   }))
 
-  // Clauses & Overrides, per section. Section 2 hanya dipakai slip Property.
+  // Clauses & Overrides, per section. Section 0 (tanpa section) dan 2 hanya
+  // dipakai slip Property.
   const clauseSet = (section: number) => {
     const ids: string[] = []
     const overrides: Record<string, ClauseOverride> = {}
@@ -449,6 +452,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
       copies,
     }
   }
+  const clauses0 = clauseSet(0)
   const clauses1 = clauseSet(1)
   const clauses2 = clauseSet(2)
 
@@ -516,6 +520,9 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     clauseIdsSection2: clauses2.ids,
     clauseOverridesSection2: clauses2.overrides,
     clauseCopiesSection2: clauses2.copies,
+    clauseIdsGeneral: clauses0.ids,
+    clauseOverridesGeneral: clauses0.overrides,
+    clauseCopiesGeneral: clauses0.copies,
     wordingForms,
     rateLines,
     tplLines,
@@ -703,15 +710,21 @@ async function insertSlipClauses(
   cobName: string,
   input: Pick<
     PlacingSlipInput,
-    "clauseIds" | "clauseOverrides" | "clauseIdsSection2" | "clauseOverridesSection2"
+    | "clauseIds"
+    | "clauseOverrides"
+    | "clauseIdsSection2"
+    | "clauseOverridesSection2"
+    | "clauseIdsGeneral"
+    | "clauseOverridesGeneral"
   >
 ) {
-  // Ensure a clause does not appear in both Section 1 and Section 2
+  // Satu klausula hanya di satu kelompok: tanpa section, Section 1, atau Section 2.
   const cob = normalizeCob(cobName)
   if (usesSectionSumInsured(cob)) {
     const issues = validateClauseUniquenessAcrossSections({
       clauseIds: input.clauseIds ?? [],
       clauseIdsSection2: input.clauseIdsSection2 ?? [],
+      clauseIdsGeneral: input.clauseIdsGeneral ?? [],
     })
     if (issues.length > 0) {
       throw new Error(issues[0])
@@ -722,11 +735,18 @@ async function insertSlipClauses(
     { section: 1, ids: input.clauseIds, overrides: input.clauseOverrides },
   ]
   if (usesSectionSumInsured(normalizeCob(cobName))) {
-    sections.push({
-      section: 2,
-      ids: input.clauseIdsSection2,
-      overrides: input.clauseOverridesSection2,
-    })
+    sections.push(
+      {
+        section: 0,
+        ids: input.clauseIdsGeneral,
+        overrides: input.clauseOverridesGeneral,
+      },
+      {
+        section: 2,
+        ids: input.clauseIdsSection2,
+        overrides: input.clauseOverridesSection2,
+      }
+    )
   }
   for (const { section, ids, overrides } of sections) {
     let clIdx = 0

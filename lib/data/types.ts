@@ -244,12 +244,19 @@ export interface PlacingSlip {
   clauseCopies?: Record<string, ClauseOverride>
   /**
    * Klausula Section 2 (Business Interruption) slip Property. Field `clause*`
-   * di atas menjadi Section 1. Klausula yang berlaku untuk kedua section
-   * dipilih di keduanya, dengan wording masing-masing.
+   * di atas menjadi Section 1. Satu klausula hanya dipilih di satu kelompok.
    */
   clauseIdsSection2?: string[]
   clauseOverridesSection2?: Record<string, ClauseOverride>
   clauseCopiesSection2?: Record<string, ClauseOverride>
+  /**
+   * Klausula slip Property tanpa section, berlaku untuk seluruh polis. Dicetak
+   * paling atas tanpa judul, sebelum Section 1, seperti CI LCH. Disimpan di
+   * slip_clauses sebagai section 0.
+   */
+  clauseIdsGeneral?: string[]
+  clauseOverridesGeneral?: Record<string, ClauseOverride>
+  clauseCopiesGeneral?: Record<string, ClauseOverride>
   rateLines: RateLine[]
   tplLines: RateLine[]
   paLines: RateLine[]
