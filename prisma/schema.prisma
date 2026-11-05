@@ -1187,6 +1187,8 @@ model SlipItem {
   location     SlipLocation? @relation(fields: [locationId], references: [id], onDelete: Cascade)
   vehicleBrand VehicleBrand? @relation(fields: [vehicleBrandId], references: [id], onDelete: Restrict)
   vehicleType  VehicleType?  @relation(fields: [vehicleTypeId], references: [id], onDelete: Restrict)
+  /// Baris rate, TPL, dan PA kendaraan ini (slip Motor Vehicle).
+  vehicleRateLines SlipRateLine[] @relation("rate_line_vehicle")
 
   @@index([slipId, kind, sortOrder])
   @@map("slip_items")
@@ -1216,6 +1218,9 @@ model SlipRateLine {
   lossLimitPct      Decimal? @map("loss_limit_pct") @db.Decimal(7, 4)
   /// Lokasi slip Property untuk baris rate. TPL, PA, dan COB lain kosong.
   locationId        String?  @map("location_id") @db.Uuid
+  /// Kendaraan slip Motor Vehicle (baris Interest) untuk baris rate, TPL,
+  /// dan PA. COB lain kosong.
+  vehicleItemId     String?  @map("vehicle_item_id") @db.Uuid
   /// Alasan bila rate keluar dari batas OJK.
   outOfBoundsReason String?  @map("out_of_bounds_reason")
   /// Tidak dipakai lagi sejak satu cover bisa punya beberapa deductible
@@ -1230,9 +1235,10 @@ model SlipRateLine {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  slip     PlacingSlip   @relation(fields: [slipId], references: [id], onDelete: Cascade)
-  location SlipLocation? @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  kind     LookupValue   @relation("rate_line_kind_slip", fields: [kindId], references: [id])
+  slip        PlacingSlip   @relation(fields: [slipId], references: [id], onDelete: Cascade)
+  location    SlipLocation? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  vehicleItem SlipItem?     @relation("rate_line_vehicle", fields: [vehicleItemId], references: [id], onDelete: Cascade)
+  kind        LookupValue   @relation("rate_line_kind_slip", fields: [kindId], references: [id])
 
   @@index([slipId, sortOrder])
   @@map("slip_rate_lines")

@@ -172,6 +172,11 @@ export interface RateLine {
   deductibles?: string[]
   /** Lokasi slip Property untuk baris rate. TPL, PA, dan COB lain kosong. */
   locationId?: string | null
+  /**
+   * Kendaraan slip Motor Vehicle (id baris Interest) untuk baris rate, TPL,
+   * dan PA. COB lain kosong.
+   */
+  vehicleId?: string | null
 }
 
 /**

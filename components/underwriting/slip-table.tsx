@@ -39,6 +39,7 @@ import { useCobFilterItems } from "@/components/shared/form-options-provider"
 import { SLIP_STATUSES, type PlacingSlip } from "@/lib/data"
 import type { ExportSpec } from "@/lib/export"
 import { dateShort, money } from "@/lib/format"
+import { isMultiVehicle } from "@/lib/slip-vehicles"
 import { newId, store, useCollection } from "@/lib/store"
 import type { PlacingSlipRecord } from "@/lib/server/placing-slips"
 import {
@@ -346,6 +347,11 @@ export function SlipTable({
                         {(s.locations?.length ?? 0) > 1
                           ? ` · ${s.locations?.length} lokasi`
                           : ""}
+                      </p>
+                    ) : null}
+                    {isMultiVehicle(s) ? (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {s.interestItems.length} kendaraan
                       </p>
                     ) : null}
                   </TableCell>
