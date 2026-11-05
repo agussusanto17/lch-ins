@@ -271,7 +271,7 @@ export function ClauseForm({
 
         <SectionCard
           title="Isi Wording Clause"
-          description="Format ikut terbawa ke placing slip dan dokumen turunannya."
+          description="Format ikut terbawa ke placing slip dan dokumen turunannya. Boleh dikosongkan bila klausul cukup dicetak judulnya."
         >
           <RichTextEditor
             value={wording}

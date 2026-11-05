@@ -36,6 +36,7 @@ import {
   type RateLine,
   type ResolvedClause,
   type SecurityPanelRow,
+  wordingText,
 } from "@/lib/data"
 import { CURRENCY_SYMBOL, dateEn, money, moneyCents, num } from "@/lib/format"
 import {
@@ -572,7 +573,7 @@ export function ClausesBlock({
               <p className={inline ? "font-semibold" : undefined}>
                 {i + 1}. {inline ? c.title : clauseTitleCase(c.title)}
               </p>
-              {inline ? (
+              {inline && wordingText(c.wording) ? (
                 <div
                   className="rte-prose mt-0.5 ml-4 text-[12px] text-muted-foreground"
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
@@ -606,10 +607,12 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
               <p className="font-semibold">
                 {i + 1}. {c.title}
               </p>
-              <div
-                className="rte-prose mt-0.5 text-[12px] text-muted-foreground"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
-              />
+              {wordingText(c.wording) ? (
+                <div
+                  className="rte-prose mt-0.5 text-[12px] text-muted-foreground"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
+                />
+              ) : null}
             </div>
           ))
         )}

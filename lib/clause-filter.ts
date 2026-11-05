@@ -20,11 +20,17 @@ function isCashInTransit(name: string) {
 /**
  * Whether a clause belongs in the picker of a slip with these COB and types
  * of cover. A clause without a COB or cover type applies to every one.
+ *
+ * Cover-specific clauses need the exact type of cover name, so "Marine Hull"
+ * clauses stay out of "Marine Hull Single Voyage" slips. `knownCovers` lists
+ * the COB's master names; a slip cover outside it (an older free-text name such
+ * as "Marine Cargo — Institute Cargo Clauses (A)") still matches by fragment.
  */
 export function clauseFitsSlip(
   clause: ClauseScope,
   cob: string,
-  slipCovers: string[]
+  slipCovers: string[],
+  knownCovers: string[] = []
 ): boolean {
   const clauseCob = clause.cobName?.toLowerCase()
   if (clauseCob && clauseCob !== "all" && clauseCob !== cob.toLowerCase()) {
@@ -36,8 +42,11 @@ export function clauseFitsSlip(
   if (clause.sourceGroup === "Cargo" && covers.every(isCashInTransit)) return false
   if (!clause.coverTypeName) return true
 
-  const clauseCover = clause.coverTypeName.toLowerCase()
-  if (covers.some((c) => c.includes(clauseCover) || clauseCover.includes(c))) {
+  const clauseCover = clause.coverTypeName.toLowerCase().trim()
+  const known = new Set(knownCovers.map((c) => c.toLowerCase().trim()))
+  if (covers.some((c) => c.trim() === clauseCover)) return true
+  const legacy = covers.filter((c) => !known.has(c.trim()))
+  if (legacy.some((c) => c.includes(clauseCover) || clauseCover.includes(c))) {
     return true
   }
   // Slips with PAR + EQ under one combined cover name still need EQVET clauses.
