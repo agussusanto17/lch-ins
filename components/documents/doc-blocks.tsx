@@ -10,7 +10,7 @@ import {
   brokerageAmount,
   calculateParEqvet,
   discountAmount,
-  ratePercentText,
+  ratePermilText,
   sumItems,
   totalPayable,
   totalPremium,
@@ -621,8 +621,8 @@ export function PayableTable({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Rate dengan pengali dicetak seperti CI LCH: "0,0450000% × 85% = 0,0382500%"
- * untuk loss limit, dan dasar BI × skala indemnity period selain 12 bulan.
+ * Rate with a multiplier prints like the LCH CI: "0,450000‰ × 85% = 0,382500‰"
+ * for loss limit, and BI basis × indemnity period scale other than 12 months.
  */
 function rateFormula(
   line: ParEqvetLine,
@@ -635,16 +635,16 @@ function rateFormula(
         ? bi.eqvet
         : null
   if (biBase != null && bi.scalePct !== 100) {
-    return `${ratePercentText(biBase / 10)} × ${num(bi.scalePct, 0, 1)}% = ${line.rateText}`
+    return `${ratePermilText(biBase)} × ${num(bi.scalePct, 0, 1)}% = ${line.rateText}`
   }
-  if (line.ratePercent != null && line.lossLimitPct != null) {
-    const effective = (line.ratePercent * line.lossLimitPct) / 100
-    return `${line.rateText} × ${num(line.lossLimitPct, 0, 4)}% = ${ratePercentText(effective)}`
+  if (line.ratePermil != null && line.lossLimitPct != null) {
+    const effective = (line.ratePermil * line.lossLimitPct) / 100
+    return `${line.rateText} × ${num(line.lossLimitPct, 0, 4)}% = ${ratePermilText(effective)}`
   }
   return line.rateText
 }
 
-/** Formats Property rate list with full peril titles and 7-decimal percentages. */
+/** Formats Property rate list with full peril titles and per mil rates. */
 export function ParEqvetRateBlock({ slip }: { slip: PlacingSlip }) {
   const calc = calculateParEqvet(slip)
   const bi = biRateBasis(slip)
