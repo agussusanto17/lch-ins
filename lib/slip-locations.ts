@@ -71,6 +71,22 @@ export function locationGroups(
   }))
 }
 
+/**
+ * Semua lokasi memakai rate dan loss limit yang sama untuk setiap cover,
+ * misalnya lima unit apartemen di CI SISKA RAHARJA. Dokumennya tetap mencetak
+ * bagian RATE sekali, sebelum jadwal premi per lokasi.
+ */
+export function locationsShareRates(
+  slip: Parameters<typeof locationGroups>[0]
+) {
+  const groups = locationGroups(slip)
+  const key = (g: LocationGroup) =>
+    JSON.stringify(
+      g.rateLines.map((l) => [l.label, l.rate ?? null, l.lossLimitPct ?? null])
+    )
+  return groups.every((g) => key(g) === key(groups[0]))
+}
+
 /** Slip Property dengan lebih dari satu lokasi; dokumennya memakai jadwal per lokasi. */
 export function isMultiLocation(slip: Pick<PlacingSlip, "cob" | "locations">) {
   return slip.cob === "Property" && (slip.locations?.length ?? 0) > 1

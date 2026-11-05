@@ -1048,6 +1048,11 @@ model PlacingSlip {
   /// pertama dan dipakai polis EQVET (Harry, 5 Nov 2026).
   coverType2Id String? @map("cover_type_2_id") @db.Uuid
   typeOfCover2 String? @map("type_of_cover_2")
+  /// Nama type of cover yang dicetak di dokumen bila berbeda dari master,
+  /// misalnya "PROPERTY ALL RISKS + RIOTS, STRIKES, ... INSURANCE." seperti CI
+  /// LCH. Kosong berarti nama master.
+  typeOfCoverLabel  String? @map("type_of_cover_label")
+  typeOfCover2Label String? @map("type_of_cover_2_label")
 
   /// Salinan dari klien. Bisa diedit di slip tanpa mengubah data klien.
   insuredName             String  @map("insured_name")
@@ -1062,6 +1067,9 @@ model PlacingSlip {
   periodTba     Boolean   @default(false) @map("period_tba")
   inceptionDate DateTime? @map("inception_date") @db.Date
   expiryDate    DateTime? @map("expiry_date") @db.Date
+  /// Keterangan di bawah periode asuransi, misalnya "Both days at 12 o'clock
+  /// noon local time at the location of the insured object." seperti CI LCH.
+  periodNote    String?   @map("period_note")
 
   occupationId        String? @map("occupation_id") @db.Uuid
   /// Nama okupasi yang dicetak di dokumen slip, tanpa kode. Kosong berarti

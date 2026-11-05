@@ -108,6 +108,14 @@ const placingSlipSchema = z.object({
   cob: z.string().trim().min(1, "Class of Business wajib dipilih."),
   typeOfCover: z.string().nullish(),
   typeOfCover2: z.string().nullish(),
+  typeOfCoverLabel: z
+    .string()
+    .max(1000, "Nama type of cover di dokumen maksimal 1000 karakter")
+    .nullish(),
+  typeOfCover2Label: z
+    .string()
+    .max(1000, "Nama type of cover di dokumen maksimal 1000 karakter")
+    .nullish(),
   coverCode: z.string().nullish(),
   insuredName: z.string().trim().min(1, "Nama tertanggung wajib diisi."),
   correspondenceAddress: z.string().nullish(),
@@ -116,6 +124,10 @@ const placingSlipSchema = z.object({
   periodTba: z.boolean().optional(),
   inceptionDate: z.string().nullish(),
   expiryDate: z.string().nullish(),
+  periodNote: z
+    .string()
+    .max(500, "Keterangan periode maksimal 500 karakter")
+    .nullish(),
   occupation: z.string().nullish(),
   occupationId: z.string().nullish(),
   occupationLabel: z.string().max(500, "Nama okupasi di slip maksimal 500 karakter").nullish(),
@@ -403,6 +415,8 @@ export async function duplicatePlacingSlipAction(
       cob: source.cob,
       typeOfCover: source.typeOfCover,
       typeOfCover2: source.typeOfCover2,
+      typeOfCoverLabel: source.typeOfCoverLabel,
+      typeOfCover2Label: source.typeOfCover2Label,
       coverCode: source.coverCode,
       insuredName: source.insuredName,
       correspondenceAddress: source.correspondenceAddress,
@@ -411,6 +425,7 @@ export async function duplicatePlacingSlipAction(
       periodTba: source.periodTba,
       inceptionDate: source.inceptionDate,
       expiryDate: source.expiryDate,
+      periodNote: source.periodNote,
       occupation: source.occupation,
       occupationLabel: source.occupationLabel,
       riskLocation: source.riskLocation,

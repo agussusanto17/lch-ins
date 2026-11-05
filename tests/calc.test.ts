@@ -19,7 +19,11 @@ import {
   itemRowsPatch,
 } from "../components/underwriting/slip-model"
 import type { PlacingSlip, RateLine } from "../lib/data/types"
-import { locationGroups, slipRiskLocationText } from "../lib/slip-locations"
+import {
+  locationGroups,
+  locationsShareRates,
+  slipRiskLocationText,
+} from "../lib/slip-locations"
 import { itemGroups } from "../lib/slip-items"
 
 /** Slip Property dengan rate FLEXAS 0,5‰ dan Section 1 IDR 1 miliar. */
@@ -358,4 +362,21 @@ test("rate COB lain dari slip lama ikut objek pertama", () => {
   assert.equal(slip.rateLines.length, 1)
   assert.equal(slip.rateLines[0].vehicleId, "mesin")
   assert.equal(slip.rateLines[0].premium, 2_000_000)
+})
+
+test("rate semua lokasi sama terdeteksi, beda satu rate tidak", () => {
+  const slip = twoLocationSlip()
+  // Contoh usulan: FLEXAS lokasi 1 0,368 dan lokasi 2 1,127.
+  assert.equal(locationsShareRates(slip), false)
+  const second = locationGroups(slip)[1]
+  const same = recalcSlip({
+    ...slip,
+    ...locationRowsPatch(
+      slip,
+      "rateLines",
+      second.location.id,
+      second.rateLines.map((l) => ({ ...l, rate: l.label === "FLEXAS" ? 0.368 : l.rate }))
+    ),
+  })
+  assert.equal(locationsShareRates(same), true)
 })

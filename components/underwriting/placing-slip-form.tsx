@@ -46,6 +46,7 @@ import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
 import { type RateBounds } from "@/components/underwriting/ojk-reference"
 import {
   coverCodeFor,
+  DEFAULT_PERIOD_NOTE,
   joinCoverCodes,
   occupationParts,
   isOutOfBounds,
@@ -878,6 +879,7 @@ function SlipEditor({
                   onValueChange={(v) =>
                     set({
                       typeOfCover: (v as string) ?? "",
+                      typeOfCoverLabel: undefined,
                       coverCode: slipCoverCode(
                         (v as string) ?? "",
                         slip.typeOfCover2
@@ -900,6 +902,30 @@ function SlipEditor({
                 </Select>
               </Field>
 
+              {/*
+               * CI LCH sering mencetak type of cover dengan nama panjang,
+               * misalnya "PROPERTY ALL RISKS + RIOTS, STRIKES, ... INSURANCE."
+               * (contoh SISKA RAHARJA, 5 November 2026). Master tidak berubah.
+               */}
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor="toc-label">
+                  Type of Cover di dokumen
+                </FieldLabel>
+                <Textarea
+                  id="toc-label"
+                  rows={2}
+                  value={slip.typeOfCoverLabel ?? ""}
+                  disabled={!slip.typeOfCover}
+                  placeholder={slip.typeOfCover || "Pilih type of cover dulu"}
+                  onChange={(e) =>
+                    set({ typeOfCoverLabel: e.target.value || undefined })
+                  }
+                />
+                <FieldDescription>
+                  Kosongkan untuk mencetak nama type of cover dari master.
+                </FieldDescription>
+              </Field>
+
               {isProperty ? (
                 <Field className="md:col-span-2">
                   <FieldLabel>Type of Cover Earthquake</FieldLabel>
@@ -912,6 +938,7 @@ function SlipEditor({
                     onValueChange={(v) =>
                       set({
                         typeOfCover2: (v as string) ?? "",
+                        typeOfCover2Label: undefined,
                         coverCode: slipCoverCode(
                           slip.typeOfCover,
                           (v as string) ?? ""
@@ -936,6 +963,26 @@ function SlipEditor({
                   <FieldDescription>
                     Untuk slip PAR + EQVET. Dicetak di bawah type of cover di
                     atas dan dipakai polis EQVET.
+                  </FieldDescription>
+                </Field>
+              ) : null}
+
+              {isProperty && slip.typeOfCover2 ? (
+                <Field className="md:col-span-2">
+                  <FieldLabel htmlFor="toc2-label">
+                    Type of Cover Earthquake di dokumen
+                  </FieldLabel>
+                  <Textarea
+                    id="toc2-label"
+                    rows={2}
+                    value={slip.typeOfCover2Label ?? ""}
+                    placeholder={slip.typeOfCover2}
+                    onChange={(e) =>
+                      set({ typeOfCover2Label: e.target.value || undefined })
+                    }
+                  />
+                  <FieldDescription>
+                    Kosongkan untuk mencetak nama type of cover dari master.
                   </FieldDescription>
                 </Field>
               ) : null}
@@ -992,6 +1039,21 @@ function SlipEditor({
                       }
                     />
                   </Field>
+                  <Field className="md:col-span-2">
+                    <FieldLabel htmlFor="period-note">
+                      Keterangan periode
+                    </FieldLabel>
+                    <Input
+                      id="period-note"
+                      value={slip.periodNote ?? ""}
+                      placeholder={DEFAULT_PERIOD_NOTE}
+                      onChange={(e) => set({ periodNote: e.target.value })}
+                    />
+                    <FieldDescription>
+                      Dicetak di bawah periode asuransi, seperti CI LCH.
+                      Kosongkan bila tidak perlu.
+                    </FieldDescription>
+                  </Field>
                 </>
               ) : null}
 
@@ -1016,9 +1078,10 @@ function SlipEditor({
                     <FieldLabel htmlFor="occupation-label">
                       Nama okupasi di slip
                     </FieldLabel>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <Input
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                      <Textarea
                         id="occupation-label"
+                        rows={2}
                         value={
                           slip.occupationLabel ??
                           occupationParts(slip.occupation).name
