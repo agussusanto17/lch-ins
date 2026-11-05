@@ -106,11 +106,12 @@ const schema = z
     additionalFee: z.number().optional(),
   })
   .superRefine((d, ctx) => {
-    if (d.expiryDate && d.inceptionDate && d.expiryDate <= d.inceptionDate) {
+    // Tanggal sama boleh: polis acara satu hari, misalnya Hole in One.
+    if (d.expiryDate && d.inceptionDate && d.expiryDate < d.inceptionDate) {
       ctx.addIssue({
         code: "custom",
         path: ["expiryDate"],
-        message: "Tanggal berakhir harus setelah tanggal mulai",
+        message: "Tanggal berakhir tidak boleh sebelum tanggal mulai",
       })
     }
     if (POLICY_TYPES_WITH_PARENT.includes(d.type) && !d.parentPolicyId) {

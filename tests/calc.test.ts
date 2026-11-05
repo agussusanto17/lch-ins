@@ -21,6 +21,9 @@ import {
   sectionItemsPatch,
   slipOccupationText,
   slipSectionTitles,
+  slipPeriodRow,
+  nextPeriodLabel,
+  releaseIssues,
 } from "../components/underwriting/slip-model"
 import type { PlacingSlip, RateLine } from "../lib/data/types"
 import {
@@ -587,4 +590,55 @@ test("objek baru ikut cover objek pertama, objek limit saja cukup satu baris", (
   assert.deepEqual(kedua.rateLines.map((l) => l.label), ['ICC "A"', "War Risks"])
   assert.deepEqual(batas.rateLines.map((l) => l.label), ["Rate (%)"])
   assert.equal(new Set(next.rateLines.map((l) => l.id)).size, next.rateLines.length)
+})
+
+test("baris periode: label, satu tanggal, TBA, dan teks pengganti tanggal", () => {
+  const base = {
+    periodTba: false,
+    inceptionDate: "2026-07-29",
+    expiryDate: "2027-07-29",
+    periodNote: "Both days at 12 o'clock noon local time.",
+  }
+  assert.deepEqual(slipPeriodRow(base), [
+    "Period of Insurance",
+    "29 July 2026 to 29 July 2027\nBoth days at 12 o'clock noon local time.",
+  ])
+  // Hole in One: satu hari turnamen, label dari type of cover.
+  assert.deepEqual(
+    slipPeriodRow({ ...base, expiryDate: "2026-07-29", periodNote: "", periodLabel: "Date of Tournament" }),
+    ["Date of Tournament", "29 July 2026"]
+  )
+  assert.deepEqual(slipPeriodRow({ ...base, periodTba: true }), ["Period of Insurance", "To Be Advised"])
+  // Single shipment: teks ETD menggantikan tanggal dan keterangannya.
+  assert.deepEqual(
+    slipPeriodRow({
+      ...base,
+      periodLabel: " Estimated Time of Departure (ETD) ",
+      periodText: "23rd / 24th / 25th October 2026 until final destination.",
+    }),
+    ["Estimated Time of Departure (ETD)", "23rd / 24th / 25th October 2026 until final destination."]
+  )
+  // Proyek T.B.A: teks dipakai juga saat Period TBA.
+  assert.deepEqual(
+    slipPeriodRow({ ...base, periodTba: true, periodText: "The whole period from T.B.A." }),
+    ["Period of Insurance", "The whole period from T.B.A."]
+  )
+})
+
+test("label periode ikut type of cover baru, kecuali yang diketik sendiri", () => {
+  assert.equal(nextPeriodLabel(undefined, null, "Date of Tournament"), "Date of Tournament")
+  assert.equal(nextPeriodLabel("Date of Tournament", "Date of Tournament", null), undefined)
+  assert.equal(
+    nextPeriodLabel("Date of Tournament", "Date of Tournament", "Estimated Time of Departure (ETD)"),
+    "Estimated Time of Departure (ETD)"
+  )
+  assert.equal(nextPeriodLabel("Date of Event", "Date of Tournament", null), "Date of Event")
+})
+
+test("release menerima periode satu hari, menolak expiry sebelum inception", () => {
+  const slip = { ...switchCob(emptySlip(), "Miscellaneous"), inceptionDate: "2026-07-29" }
+  const sameDay = releaseIssues({ ...slip, expiryDate: "2026-07-29" })
+  assert.ok(!sameDay.some((i) => i.startsWith("Expiry date")))
+  const before = releaseIssues({ ...slip, expiryDate: "2026-07-28" })
+  assert.ok(before.includes("Expiry date tidak boleh sebelum inception date."))
 })

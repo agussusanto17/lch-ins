@@ -55,6 +55,11 @@ export interface CoverTypeInput {
   detailLabels?: string[]
   /** Slip type of cover ini dibagi Section 1 dan 2 (CAR, EAR). */
   usesSections?: boolean
+  /**
+   * Label periode bawaan di dokumen slip, misalnya Date of Tournament. Kosong
+   * berarti Period of Insurance; tidak dikirim berarti tidak diubah.
+   */
+  periodLabel?: string | null
   isActive?: boolean
 }
 
@@ -450,6 +455,7 @@ export async function createCoverType(
         abbreviation: input.abbreviation?.trim() || null,
         detailLabels: cleanDetailLabels(input.detailLabels),
         usesSections: input.usesSections ?? false,
+        periodLabel: input.periodLabel?.trim() || null,
         isActive: input.isActive ?? true,
       },
     })
@@ -482,6 +488,10 @@ export async function updateCoverType(
           ? cleanDetailLabels(input.detailLabels)
           : undefined,
         usesSections: input.usesSections ?? before.usesSections,
+        periodLabel:
+          input.periodLabel === undefined
+            ? undefined
+            : input.periodLabel?.trim() || null,
         isActive: input.isActive ?? before.isActive,
       },
     })

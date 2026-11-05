@@ -37,6 +37,7 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
               abbreviation: true,
               detailLabels: true,
               usesSections: true,
+              periodLabel: true,
             },
           },
           deductibleOptions: {

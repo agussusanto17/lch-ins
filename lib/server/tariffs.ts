@@ -245,8 +245,9 @@ export async function validatePlacingSlipForRelease(
   if (!slip.periodTba) {
     if (!slip.inceptionDate || !slip.expiryDate) {
       releaseIssues.push("Isi periode asuransi atau aktifkan Period TBA.")
-    } else if (slip.expiryDate <= slip.inceptionDate) {
-      releaseIssues.push("Expiry date harus setelah inception date.")
+    } else if (slip.expiryDate < slip.inceptionDate) {
+      // Tanggal sama boleh: acara satu hari, misalnya turnamen Hole in One.
+      releaseIssues.push("Expiry date tidak boleh sebelum inception date.")
     }
   }
   releaseIssues.push(...locationIssues(slip), ...vehicleIssues(slip))

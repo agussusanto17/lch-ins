@@ -47,8 +47,10 @@ import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
 import { type RateBounds } from "@/components/underwriting/ojk-reference"
 import {
   coverCodeFor,
+  DEFAULT_PERIOD_LABEL,
   DEFAULT_PERIOD_NOTE,
   joinCoverCodes,
+  nextPeriodLabel,
   occupationParts,
   isOutOfBounds,
   rateLinesWithBounds,
@@ -476,6 +478,15 @@ function SlipEditor({
   const detailSuggestions = cleanDetailLabels(
     options.cobs.flatMap((c) => c.covers.flatMap((v) => v.detailLabels))
   )
+  // Saran label periode: bawaan dokumen dan label periode semua type of cover.
+  const periodLabelSuggestions = [
+    ...new Set([
+      DEFAULT_PERIOD_LABEL,
+      ...options.cobs.flatMap((c) =>
+        c.covers.flatMap((v) => (v.periodLabel?.trim() ? [v.periodLabel.trim()] : []))
+      ),
+    ]),
+  ]
   const filledDetails = (slip.detailRows ?? []).filter((r) => r.value.trim()).length
   const wordingNames = options.wordingForms.map((w) => w.name)
   const insurerItems = options.insurers.map((ins) => ins.name)
@@ -908,6 +919,11 @@ function SlipEditor({
                       ),
                       usesSections:
                         covers.find((c) => c.name === v)?.usesSections ?? false,
+                      periodLabel: nextPeriodLabel(
+                        slip.periodLabel,
+                        covers.find((c) => c.name === slip.typeOfCover)?.periodLabel,
+                        covers.find((c) => c.name === v)?.periodLabel
+                      ),
                     })
                   }
                 >
@@ -1052,7 +1068,7 @@ function SlipEditor({
                     data-invalid={
                       slip.inceptionDate &&
                       slip.expiryDate &&
-                      slip.expiryDate <= slip.inceptionDate
+                      slip.expiryDate < slip.inceptionDate
                         ? true
                         : undefined
                     }
@@ -1085,6 +1101,53 @@ function SlipEditor({
                   </Field>
                 </>
               ) : null}
+
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor="period-label">
+                  Label periode di dokumen
+                </FieldLabel>
+                <Input
+                  id="period-label"
+                  list="period-label-options"
+                  maxLength={200}
+                  value={slip.periodLabel ?? ""}
+                  placeholder={DEFAULT_PERIOD_LABEL}
+                  onChange={(e) => set({ periodLabel: e.target.value })}
+                />
+                <datalist id="period-label-options">
+                  {periodLabelSuggestions.map((label) => (
+                    <option key={label} value={label} />
+                  ))}
+                </datalist>
+                <FieldDescription>
+                  Misalnya Estimated Time of Departure (ETD) untuk single
+                  shipment atau Date of Tournament untuk Hole in One. Tanggal
+                  mulai dan akhir yang sama dicetak satu tanggal.
+                </FieldDescription>
+              </Field>
+
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor="period-text">
+                  Teks periode di dokumen
+                </FieldLabel>
+                <Textarea
+                  id="period-text"
+                  rows={2}
+                  maxLength={1000}
+                  value={slip.periodText ?? ""}
+                  placeholder={
+                    slip.periodTba
+                      ? "Kosongkan untuk mencetak To Be Advised"
+                      : "Kosongkan untuk mencetak tanggal dan keterangan periode"
+                  }
+                  onChange={(e) => set({ periodText: e.target.value })}
+                />
+                <FieldDescription>
+                  Dicetak sebagai pengganti tanggal, misalnya &ldquo;23rd /
+                  24th / 25th October 2026 until final destination&rdquo;.
+                  Tanggal tetap disimpan untuk polis.
+                </FieldDescription>
+              </Field>
 
               {/* Okupasi, risk location, dan kelas slip Property diisi per lokasi. */}
               {isProperty ? null : usesPropertyBlocks(slip.cob) ? (

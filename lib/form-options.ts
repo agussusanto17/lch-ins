@@ -18,6 +18,8 @@ export interface CoverOption {
   detailLabels: string[]
   /** Slip type of cover ini dibagi Section 1 dan 2, misalnya CAR dan EAR. */
   usesSections: boolean
+  /** Label periode bawaan di dokumen, misalnya Date of Tournament. */
+  periodLabel: string | null
 }
 
 /** Pilihan deductible dari Master Data > Deductible. */

@@ -56,11 +56,12 @@ const schema = z
     vehicleTypeId: z.string().nullable().optional(),
   })
   .superRefine((d, ctx) => {
-    if (d.periodStart && d.periodEnd && d.periodEnd <= d.periodStart) {
+    // Sama dengan server: tanggal sama boleh untuk acara satu hari.
+    if (d.periodStart && d.periodEnd && d.periodEnd < d.periodStart) {
       ctx.addIssue({
         code: "custom",
         path: ["periodEnd"],
-        message: "Akhir periode harus setelah awal periode",
+        message: "Akhir periode tidak boleh sebelum awal periode",
       })
     }
     if (d.cob === "Motor Vehicle") {
