@@ -469,8 +469,10 @@ export function TariffOjkTab({
           <p className="text-sm text-muted-foreground">
             Skala premi polis yang tidak dipertanggungkan secara nilai penuh,
             dari SE OJK 6/SEOJK.05/2017 Lampiran I Tabel I.B (sama dengan Tabel
-            II.C dan III.B). Persentase loss limit terhadap nilai penuh yang
-            jatuh di antara baris memakai baris berikutnya ke atas.
+            II.C dan III.B). Persen premi di sini menjadi acuan isian Loss
+            Limit (%) di tabel rate placing slip. Persentase loss limit
+            terhadap nilai penuh yang jatuh di antara baris memakai baris
+            berikutnya ke atas.
           </p>
           {lossLimitScales.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">

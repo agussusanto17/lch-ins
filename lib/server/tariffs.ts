@@ -204,36 +204,11 @@ export function getMissingExceptions(
     }))
 }
 
-export function validateBiRateScaling(
-  slip: PlacingSlip
-): Array<{ line: RateLine; message: string }> {
-  const issues: Array<{ line: RateLine; message: string }> = []
-  const flexasLine = slip.rateLines.find((l) => l.label === "FLEXAS")
-  const flexasRate = flexasLine?.rate
-
-  const BI_RATE_LABELS = ["BI PAR (FLEXAS + FWTWD + RSMDCC + Others)", "BI EQVET"]
-
-  for (const label of BI_RATE_LABELS) {
-    const biLine = slip.rateLines.find((l) => l.label === label)
-    if (biLine && biLine.rate != null && flexasRate != null) {
-      if (biLine.rate < flexasRate) {
-        issues.push({
-          line: biLine,
-          message: `Rate ${label} (${biLine.rate}) di bawah FLEXAS (${flexasRate})`,
-        })
-      }
-    }
-  }
-
-  return issues
-}
-
 export interface PreReleaseValidation {
   canRelease: boolean
   releaseIssues: string[]
   missingExceptions: Array<{ line: RateLine; reason: "below" | "above" }>
   brokerageIssue?: { max: number; current: number; message: string }
-  biIssues: Array<{ line: RateLine; message: string }>
 }
 
 export async function validatePlacingSlipForRelease(
@@ -293,23 +268,15 @@ export async function validatePlacingSlipForRelease(
     releaseIssues.push(brokerageMessage)
   }
 
-  const biIssues = slip.cob === "Property" ? validateBiRateScaling(slip) : []
-
-  for (const issue of biIssues) {
-    releaseIssues.push(issue.message)
-  }
-
   const canRelease =
     releaseIssues.length === 0 &&
     missingExceptions.length === 0 &&
-    !brokerageIssue &&
-    biIssues.length === 0
+    !brokerageIssue
 
   return {
     canRelease,
     releaseIssues,
     missingExceptions,
     brokerageIssue,
-    biIssues,
   }
 }

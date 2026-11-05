@@ -19,10 +19,10 @@ import { Button } from "@/components/ui/button"
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
 import {
   brokerageCapFor,
-  insuredAmount,
   slipPolicyParts,
   slipPolicyPremium,
   sumPercent,
+  totalSumInsured,
 } from "@/lib/calc"
 import {
   POLICY_TYPES,
@@ -264,8 +264,7 @@ export function PolicyForm({
       currency: slip.currency,
       inceptionDate: slip.inceptionDate ?? "",
       expiryDate: slip.expiryDate ?? "",
-      // Slip loss limit: harga pertanggungan memakai nilai loss limit.
-      sumInsured: insuredAmount(slip),
+      sumInsured: totalSumInsured(slip),
       // Slip PAR + EQVET: premi per bagian, additional fee ikut polis PAR.
       premium: slipPolicyPremium(slip, part),
       brokeragePct: slip.brokeragePct,

@@ -2,7 +2,7 @@ import {
   PAR_EQVET_FORMULA_NAMES,
   PAR_EQVET_FULL_NAMES,
 } from "./data/reference"
-import { lossLimitPremiumPct } from "./data/loss-limit"
+import { BI_SCALE_OJK } from "./data/ojk-tariff"
 import type { PlacingSlip, RateLine, SlipPart } from "./data/types"
 import { num } from "./format"
 
@@ -151,6 +151,14 @@ export interface ParEqvetCalculation {
 }
 
 /**
+ * Rate persen di dokumen selalu tujuh desimal (permintaan 5 November 2026),
+ * cukup untuk rate per mil enam desimal: 0,000009‰ = 0,0000009%.
+ */
+export function ratePercentText(ratePercent: number) {
+  return `${num(ratePercent, 7)}%`
+}
+
+/**
  * Policy cost plus stamp duty for one PAR or EQVET policy, taken from the
  * slip's Admin Cost and Stamp Duty fields. An empty field counts as zero.
  */
@@ -168,7 +176,7 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
     const isBi = BI_RATE_LABELS.includes(l.label)
     const basis = isBi ? biBasis : mdBasis
     const ratePercent = l.rate != null ? l.rate / 10 : null
-    const lossLimitPct = isBi ? null : (slip.lossLimitPremiumPct ?? null)
+    const lossLimitPct = isBi ? null : (l.lossLimitPct ?? null)
     const premium =
       l.premium ||
       (ratePercent != null
@@ -182,7 +190,7 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
       fullName: PAR_EQVET_FULL_NAMES[l.label] ?? l.label,
       basis,
       ratePercent,
-      rateText: ratePercent != null ? `${num(ratePercent, 5)}%` : "—",
+      rateText: ratePercent != null ? ratePercentText(ratePercent) : "—",
       lossLimitPct,
       premium,
     }
@@ -278,7 +286,7 @@ export function premiumFromRate(
   basis: number,
   rate: number | null,
   mode: RateMode,
-  /** Persen premi loss limit OJK; 100 berarti full value. */
+  /** Persentase loss limit baris rate; 100 berarti full value. */
   lossLimitPct = 100
 ) {
   if (!rate) return 0
@@ -337,26 +345,30 @@ export function brokerageLimitIssue(slip: PlacingSlip) {
 }
 
 /**
- * Recalculate all premiums from rate and sum insured. Property BI lines use
- * Section 2 sum insured; TPL and PA lines use their respective liability limits.
+ * Recalculate all premiums from rate and sum insured. Property lines use
+ * Section 1 sum insured × rate × loss limit percentage, BI lines Section 2;
+ * TPL and PA lines use their respective liability limits.
  */
 export function recalcSlip(slip: PlacingSlip): PlacingSlip {
   const mode = rateModeFor(slip.cob)
-  const mdBasis =
-    slip.cob === "Property"
-      ? sumItems(slip.sumInsuredSection1)
-      : sumItems(slip.interestItems)
+  const property = slip.cob === "Property"
+  const mdBasis = property
+    ? sumItems(slip.sumInsuredSection1)
+    : sumItems(slip.interestItems)
   const biBasis = sumItems(slip.sumInsuredSection2)
-  // Loss limit hanya mengurangi premi Material Damage; BI tetap penuh.
-  const lossLimitPct = slipLossLimit(slip)?.premiumPct ?? null
 
-  const rateLines = slip.rateLines.map((l) => {
-    const isBi = slip.cob === "Property" && BI_RATE_LABELS.includes(l.label)
+  const rateLines = (property ? withBiRates(slip) : slip.rateLines).map((l) => {
+    const isBi = property && BI_RATE_LABELS.includes(l.label)
     return {
       ...l,
       premium: isBi
         ? premiumFromRate(biBasis, l.rate, mode)
-        : premiumFromRate(mdBasis, l.rate, mode, lossLimitPct ?? 100),
+        : premiumFromRate(
+            mdBasis,
+            l.rate,
+            mode,
+            property ? (l.lossLimitPct ?? 100) : 100
+          ),
     }
   })
 
@@ -368,7 +380,6 @@ export function recalcSlip(slip: PlacingSlip): PlacingSlip {
 
   return {
     ...slip,
-    lossLimitPremiumPct: lossLimitPct,
     rateLines,
     tplLines: withBasis(slip.tplLines),
     paLines: withBasis(slip.paLines),
@@ -376,26 +387,73 @@ export function recalcSlip(slip: PlacingSlip): PlacingSlip {
 }
 
 /**
- * Loss limit slip Property terhadap nilai penuh Section 1, dengan persen premi
- * dari skala OJK (Tabel I.B). Null untuk full value: tanpa loss limit, bukan
- * Property, atau loss limit tidak di bawah nilai penuh.
+ * Rate dibulatkan ke enam desimal seperti kolom numeric(12,6), setengah ke
+ * atas. toPrecision membuang galat floating point dulu: 1,0963305 tersimpan
+ * sebagai 1,09633049…, yang tanpa itu dibulatkan ke bawah.
  */
-export function slipLossLimit(slip: PlacingSlip) {
-  if (slip.cob !== "Property" || !slip.lossLimit || slip.lossLimit <= 0) {
-    return null
-  }
-  const values = sumItems(slip.sumInsuredSection1)
-  if (values <= 0 || slip.lossLimit >= values) return null
-  const valuesPct = (slip.lossLimit / values) * 100
-  return { valuesPct, premiumPct: lossLimitPremiumPct(valuesPct) }
+function roundRate(value: number) {
+  return Math.round(Number((value * 1e6).toPrecision(12))) / 1e6
+}
+
+/** Rate setelah persentase loss limit; kosong berarti full value. */
+export function effectiveRate(line: Pick<RateLine, "rate" | "lossLimitPct">) {
+  return ((line.rate ?? 0) * (line.lossLimitPct ?? 100)) / 100
 }
 
 /**
- * Harga pertanggungan untuk polis: dengan loss limit, Section 1 diganti nilai
- * loss limit (SE OJK: loss limit adalah harga pertanggungan); Section 2 tetap.
+ * Skala BI OJK untuk indemnity period slip. Periode di antara dua baris skala
+ * memakai baris berikutnya; periode kosong dihitung 100% seperti 12 bulan.
  */
-export function insuredAmount(slip: PlacingSlip) {
-  return slipLossLimit(slip)
-    ? (slip.lossLimit ?? 0) + sumItems(slip.sumInsuredSection2)
-    : totalSumInsured(slip)
+export function biScalePct(indemnityPeriod?: string) {
+  const months = Number(indemnityPeriod?.match(/\d+/)?.[0])
+  if (!months) return 100
+  const row =
+    BI_SCALE_OJK.find((s) => s.months >= months) ??
+    BI_SCALE_OJK[BI_SCALE_OJK.length - 1]
+  return row.pct
+}
+
+/**
+ * Dasar rate BI slip Property sebelum dikali skala indemnity period: jumlah
+ * rate FLEXAS, FWTWD, RSMDCC, dan Other Losses untuk BI PAR, dan rate EQVET
+ * untuk BI EQVET, masing-masing setelah persentase loss limit.
+ */
+export function biRateBasis(
+  slip: Pick<PlacingSlip, "rateLines" | "indemnityPeriod">
+) {
+  const sum = (labels: string[]) =>
+    slip.rateLines
+      .filter((l) => labels.includes(l.label))
+      .reduce((a, l) => a + effectiveRate(l), 0)
+  return {
+    par: sum(BI_BASE_LABELS),
+    eqvet: sum(["EQVET"]),
+    scalePct: biScalePct(slip.indemnityPeriod),
+  }
+}
+
+/**
+ * Rate BI slip Property selalu dihitung dari baris lain (Harry, 5 November
+ * 2026), jadi tidak bisa basi saat rate FLEXAS dan kawan-kawan diubah. Contoh
+ * LCH: (0,048300% + 0,045000% × 85% + 0,000001% + 0,000001%) × 90% untuk
+ * indemnity period 24 bulan.
+ */
+function withBiRates(slip: PlacingSlip): RateLine[] {
+  const basis = biRateBasis(slip)
+  const bases = new Map([
+    [BI_RATE_LABELS[0], basis.par],
+    [BI_RATE_LABELS[1], basis.eqvet],
+  ])
+  return slip.rateLines.map((l) => {
+    const base = bases.get(l.label)
+    if (base === undefined) return l
+    return {
+      ...l,
+      rate: base > 0 ? roundRate((base * basis.scalePct) / 100) : null,
+      lossLimitPct: null,
+      min: null,
+      max: null,
+      boundSource: undefined,
+    }
+  })
 }

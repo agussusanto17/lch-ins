@@ -61,6 +61,12 @@ const rateLineSchema = z
     basis: z.string().optional(),
     min: z.coerce.number().nullable().optional(),
     max: z.coerce.number().nullable().optional(),
+    lossLimitPct: z.coerce
+      .number()
+      .gt(0, "Persentase loss limit harus lebih dari 0%.")
+      .max(100, "Persentase loss limit maksimal 100%.")
+      .nullable()
+      .optional(),
     deductibles: z
       .array(z.string().max(500, "Teks deductible maksimal 500 karakter."))
       .max(MAX_DEDUCTIBLES, `Deductible per cover maksimal ${MAX_DEDUCTIBLES}.`)
@@ -150,8 +156,6 @@ const placingSlipSchema = z.object({
     .number()
     .min(0, "Additional fee tidak boleh negatif")
     .nullish(),
-  lossLimit: z.coerce.number().min(0, "Loss limit tidak boleh negatif").nullish(),
-  lossLimitPremiumPct: z.coerce.number().min(0).max(100).nullish(),
   subjectivity: z.string().nullish(),
   closingInstruction: z.string().nullish(),
   coverNoteRemarks: z.string().nullish(),
@@ -270,11 +274,6 @@ export async function releasePlacingSlipAction(
       }
       if (validation.brokerageIssue) {
         errorDetails.push(validation.brokerageIssue.message)
-      }
-      if (validation.biIssues.length > 0) {
-        for (const bi of validation.biIssues) {
-          errorDetails.push(bi.message)
-        }
       }
       return { ok: false, error: errorDetails.join(" ") }
     }
@@ -409,8 +408,6 @@ export async function duplicatePlacingSlipAction(
       brokeragePct: source.brokeragePct,
       includeVat: source.includeVat,
       additionalFee: source.additionalFee,
-      lossLimit: source.lossLimit,
-      lossLimitPremiumPct: source.lossLimitPremiumPct,
     }
 
     const created = await createPlacingSlip(duplicateInput, user.id)

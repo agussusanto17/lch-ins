@@ -422,8 +422,8 @@ export function PropertyPanel({
         title="Skala BI (Business Interruption)"
         note={
           baseRate > 0
-            ? `Tarif dasar ${num(baseRate, 3)}‰ diambil dari jumlah FLEXAS, FWTWD, RSMDCC, dan Other Losses.${eqRate ? ` BI EQVET dihitung dari rate EQVET ${num(eqRate, 3)}‰.` : ""}`
-            : "Isi rate FLEXAS dan kawan-kawan dulu. Rate BI dihitung dari jumlah rate tersebut dikali persentase periode."
+            ? `Pilih indemnity period. Rate BI PAR dihitung otomatis dari jumlah FLEXAS, FWTWD, RSMDCC, dan Other Losses (${num(baseRate, 0, 6)}‰)${eqRate ? `, BI EQVET dari rate EQVET (${num(eqRate, 0, 6)}‰)` : ""}, dikali persentase periode.`
+            : "Pilih indemnity period. Rate BI dihitung otomatis dari jumlah rate FLEXAS, FWTWD, RSMDCC, dan Other Losses dikali persentase periode."
         }
       >
         <div className="flex flex-wrap gap-1.5">
@@ -432,31 +432,8 @@ export function PropertyPanel({
               key={s.months}
               variant="outline"
               size="sm"
-              disabled={baseRate <= 0}
               title={`Indemnity period ${s.months} bulan, rate BI ${s.pct}% dari tarif dasar`}
-              onClick={() => {
-                onPickIndemnity?.(s.months)
-                onPickRate?.(
-                  "BI PAR",
-                  Number(((baseRate * s.pct) / 100).toFixed(6)),
-                  {
-                    min: null,
-                    max: null,
-                    source: `BI ${s.months} bulan, ${s.pct}% dari tarif dasar`,
-                  }
-                )
-                if (eqRate) {
-                  onPickRate?.(
-                    "BI EQVET",
-                    Number(((eqRate * s.pct) / 100).toFixed(6)),
-                    {
-                      min: null,
-                      max: null,
-                      source: `BI EQVET ${s.months} bulan, ${s.pct}% dari rate EQVET`,
-                    }
-                  )
-                }
-              }}
+              onClick={() => onPickIndemnity?.(s.months)}
             >
               {s.months} bln
               <span className="text-muted-foreground">{s.pct}%</span>

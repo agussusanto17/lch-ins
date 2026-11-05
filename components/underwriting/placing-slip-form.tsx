@@ -98,6 +98,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Toggle } from "@/components/ui/toggle"
 import {
   BI_BASE_LABELS,
+  BI_RATE_LABELS,
+  biRateBasis,
   brokerageAmount,
   brokerageLimitIssue,
   brokerageLimitText,
@@ -108,7 +110,6 @@ import {
   isParEqvetSlip,
   parEqvetPolicyCharge,
   rateUnitFor,
-  slipLossLimit,
   sumItems,
   sumPercent,
   totalPayable,
@@ -121,6 +122,7 @@ import {
   type ClassOfBusiness,
   type PlacingSlip,
   type RateException,
+  type RateLine,
   type SecurityPanelRow,
   type VehicleBrandOption,
 } from "@/lib/data"
@@ -460,7 +462,6 @@ function SlipEditor({
   const md = sumItems(slip.sumInsuredSection1)
   const bi = sumItems(slip.sumInsuredSection2)
   const tsi = totalSumInsured(slip)
-  const lossLimit = slipLossLimit(slip)
   const premium = totalPremium(slip)
   const discount = discountAmount(slip)
   const payable = totalPayable(slip)
@@ -475,11 +476,8 @@ function SlipEditor({
     (l) => isOutOfBounds(l) && !slip.rateExceptions?.[l.id]
   ).length
 
-  /** Tarif dasar BI: jumlah FLEXAS, FWTWD, RSMDCC, dan Other Losses. */
-  const biBaseRate = slip.rateLines
-    .filter((l) => BI_BASE_LABELS.includes(l.label))
-    .reduce((a, l) => a + (l.rate ?? 0), 0)
-  const eqRate = slip.rateLines.find((l) => l.label === "EQVET")?.rate ?? null
+  /** Dasar rate BI setelah loss limit, dan skala indemnity period-nya. */
+  const biBasis = biRateBasis(slip)
   const brokerageLimit = brokerageLimitText(slip)
   const brokerageIssue = brokerageLimitIssue(slip)
   // Klausula Section 2 (Business Interruption) hanya berlaku untuk Property.
@@ -497,8 +495,6 @@ function SlipEditor({
   /** Isi satu baris rate dari panel referensi OJK, sekaligus catat batasnya. */
   function applyOjkRate(label: string, value: number, bounds?: RateBounds) {
     if (!slip.rateLines.some((l) => l.label.startsWith(label))) return
-    // Satu klik BI mengisi dua baris sekaligus, jadi wajib pakai updater agar
-    // panggilan kedua tidak menimpa hasil panggilan pertama.
     setSlip((s) =>
       recalc({
         ...s,
@@ -522,6 +518,28 @@ function SlipEditor({
     toast.success(`Rate ${label} diisi ${value.toLocaleString("id-ID")}`, {
       description: bounds?.source,
     })
+  }
+
+  /** Keterangan baris BI, yang rate-nya dihitung dari baris lain. */
+  function biRateNote(line: RateLine) {
+    const source =
+      line.label === BI_RATE_LABELS[0]
+        ? {
+            text: "jumlah rate FLEXAS, FWTWD, RSMDCC, dan Other Losses",
+            labels: BI_BASE_LABELS,
+          }
+        : line.label === BI_RATE_LABELS[1]
+          ? { text: "rate EQVET", labels: ["EQVET"] }
+          : null
+    if (!source) return null
+    const afterLossLimit = slip.rateLines.some(
+      (l) => source.labels.includes(l.label) && l.lossLimitPct != null
+    )
+    const scale =
+      biBasis.scalePct !== 100
+        ? ` × ${num(biBasis.scalePct, 0, 1)}% (Indemnity Period ${slip.indemnityPeriod})`
+        : ""
+    return `Otomatis: ${source.text}${afterLossLimit ? " setelah loss limit" : ""}${scale}`
   }
 
   function setException(lineId: string, exception: RateException | null) {
@@ -1204,25 +1222,6 @@ function SlipEditor({
                     value={money(md, slip.currency)}
                     tone="muted"
                   />
-                  <Field className="mt-2 md:max-w-sm">
-                    <FieldLabel htmlFor="loss-limit">
-                      Loss Limit ({slip.currency})
-                    </FieldLabel>
-                    <NumberInput
-                      id="loss-limit"
-                      preset="money"
-                      min={0}
-                      value={slip.lossLimit || null}
-                      onValueChange={(v) => set({ lossLimit: v || null })}
-                    />
-                    <FieldDescription>
-                      {!slip.lossLimit
-                        ? "Kosongkan untuk full value."
-                        : lossLimit
-                          ? `${percent(lossLimit.valuesPct, 2)} dari nilai Section 1. Premi Material Damage ${percent(lossLimit.premiumPct, 2)} dari premi full value (skala OJK Tabel I.B).`
-                          : "Loss limit tidak di bawah nilai Section 1, jadi dihitung full value."}
-                    </FieldDescription>
-                  </Field>
                 </div>
                 <div className="flex flex-col gap-2">
                   <p className="text-sm font-medium">
@@ -1372,15 +1371,6 @@ function SlipEditor({
             }
           >
             <div className="flex flex-col gap-4">
-              {lossLimit ? (
-                <p className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-                  <Info className="mt-0.5 size-3.5 shrink-0" />
-                  Premi Material Damage dihitung{" "}
-                  {percent(lossLimit.premiumPct, 2)} dari premi full value,
-                  karena loss limit {percent(lossLimit.valuesPct, 2)} dari
-                  nilai Section 1. Premi BI tetap penuh.
-                </p>
-              ) : null}
               {(isProperty || isMotor) && !locked ? (
                 <OjkReference
                   mode={isMotor ? "motor" : "property"}
@@ -1391,8 +1381,8 @@ function SlipEditor({
                     set({ constructionClass: code })
                   }
                   sumInsured={tsi}
-                  baseRate={biBaseRate}
-                  eqRate={eqRate}
+                  baseRate={biBasis.par}
+                  eqRate={biBasis.eqvet || null}
                   onPickRate={applyOjkRate}
                   onPickIndemnity={(months) =>
                     set({ indemnityPeriod: `${months} months` })
@@ -1416,12 +1406,25 @@ function SlipEditor({
                       })
                     }
                     onExceptionChange={setException}
+                    onLossLimitChange={
+                      isProperty
+                        ? (id, lossLimitPct) =>
+                            set({
+                              rateLines: slip.rateLines.map((l) =>
+                                l.id === id ? { ...l, lossLimitPct } : l
+                              ),
+                            })
+                        : undefined
+                    }
+                    autoRateNote={isProperty ? biRateNote : undefined}
                   />
                   {isProperty ? (
                     <p className="text-xs text-muted-foreground">
-                      Rate dalam per mil (‰). Baris BI dihitung dari sum insured
-                      Section 2, sisanya dari Section 1. Batas FLEXAS terisi
-                      otomatis dari okupasi dan kelas konstruksi.
+                      Rate dalam per mil (‰). Premi = sum insured × rate ×
+                      persentase loss limit; kosongkan loss limit untuk full
+                      value. Baris BI memakai sum insured Section 2, sisanya
+                      Section 1. Batas FLEXAS terisi otomatis dari okupasi dan
+                      kelas konstruksi.
                     </p>
                   ) : null}
                 </>
