@@ -41,6 +41,7 @@ import {
 import { InsuredPicker } from "@/components/underwriting/insured-picker"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
 import { SlipLocations } from "@/components/underwriting/slip-locations"
+import { SlipItemRates } from "@/components/underwriting/slip-item-rates"
 import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
 import { type RateBounds } from "@/components/underwriting/ojk-reference"
 import {
@@ -101,7 +102,6 @@ import {
   effectiveBrokeragePct,
   isParEqvetSlip,
   parEqvetPolicyCharge,
-  rateUnitFor,
   sumItems,
   sumPercent,
   totalPayable,
@@ -126,7 +126,7 @@ import {
 } from "@/lib/form-options"
 import { money, num, percent } from "@/lib/format"
 import { locationGroups, locationOwner } from "@/lib/slip-locations"
-import { vehicleOwner } from "@/lib/slip-vehicles"
+import { itemOwner } from "@/lib/slip-items"
 import type { InsuredOption } from "@/lib/server/clients"
 import { newId, store, useRecord } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -507,7 +507,7 @@ function SlipEditor({
     scope: { locationId?: string; vehicleId?: string } = {}
   ) {
     const location = locationOwner(slip)
-    const vehicle = vehicleOwner(slip)
+    const vehicle = itemOwner(slip)
     const target = (l: RateLine) =>
       l.label.startsWith(label) &&
       (!scope.locationId || location(l.locationId) === scope.locationId) &&
@@ -1434,35 +1434,7 @@ function SlipEditor({
               ) : null}
 
               {!isProperty && !isMotor ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="rate-std">
-                      Rate ({rateUnitFor(slip.cob)})
-                    </FieldLabel>
-                    <NumberInput
-                      id="rate-std"
-                      preset="rate"
-                      placeholder="0,000"
-                      value={slip.rateLines[0]?.rate ?? null}
-                      onValueChange={(v) =>
-                        set({
-                          rateLines: slip.rateLines.map((l, i) =>
-                            i === 0 ? { ...l, rate: v } : l
-                          ),
-                        })
-                      }
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="basis">Basis perhitungan</FieldLabel>
-                    <Input
-                      id="basis"
-                      readOnly
-                      className="tabular bg-muted/60"
-                      value={money(tsi, slip.currency)}
-                    />
-                  </Field>
-                </div>
+                <SlipItemRates slip={slip} locked={locked} onChange={set} />
               ) : null}
 
               <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">

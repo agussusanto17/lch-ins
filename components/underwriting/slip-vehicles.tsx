@@ -14,18 +14,15 @@ import {
 import {
   isOutOfBounds,
   keepGroupDeductibles,
-  vehicleRowsPatch,
+  itemRowsPatch,
 } from "@/components/underwriting/slip-model"
 import { UnitCard } from "@/components/underwriting/unit-card"
 import { Button } from "@/components/ui/button"
 import { rateUnitFor, sumPremium } from "@/lib/calc"
 import type { PlacingSlip, RateException, RateLine } from "@/lib/data"
 import { money } from "@/lib/format"
-import {
-  vehicleGroups,
-  vehicleTariff,
-  vehicleTitle,
-} from "@/lib/slip-vehicles"
+import { itemGroups } from "@/lib/slip-items"
+import { vehicleTariff, vehicleTitle } from "@/lib/slip-vehicles"
 
 /**
  * Rate slip Motor Vehicle per kendaraan (Harry, 5 November 2026). Tiap kartu
@@ -54,7 +51,7 @@ export function SlipVehicles({
   ) => void
   onExceptionChange: (id: string, exception: RateException | null) => void
 }) {
-  const groups = vehicleGroups(slip)
+  const groups = itemGroups(slip)
   const multi = groups.length > 1
 
   // Seperti kartu lokasi: dicatat per urutan, slip multi kendaraan mulai
@@ -96,7 +93,7 @@ export function SlipVehicles({
       ) : null}
 
       {groups.map((g, index) => {
-        const { vehicle } = g
+        const { item: vehicle } = g
         const tariff = vehicleTariff(slip, vehicle)
         const ids = new Set(g.rateLines.map((l) => l.id))
         const vehicleLines = lines.filter((l) => ids.has(l.id))
@@ -176,7 +173,7 @@ export function SlipVehicles({
               readOnly={locked}
               onChange={(l) =>
                 onChange(
-                  vehicleRowsPatch(
+                  itemRowsPatch(
                     slip,
                     "tplLines",
                     vehicle.id,
@@ -194,7 +191,7 @@ export function SlipVehicles({
               readOnly={locked}
               onChange={(l) =>
                 onChange(
-                  vehicleRowsPatch(
+                  itemRowsPatch(
                     slip,
                     "paLines",
                     vehicle.id,

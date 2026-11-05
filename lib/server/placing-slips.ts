@@ -27,6 +27,7 @@ import {
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
+import { usesItemRates } from "@/lib/slip-items"
 import { slipRiskLocationText } from "@/lib/slip-locations"
 import { cobLookupKeys } from "@/lib/server/cob"
 import { prisma } from "@/lib/prisma"
@@ -824,16 +825,16 @@ async function insertSlipLocations(
 }
 
 /**
- * Kendaraan tersimpan untuk baris rate, TPL, atau PA slip Motor Vehicle.
- * Baris tanpa kendaraan ikut kendaraan pertama. undefined berarti
- * kendaraannya tidak tersimpan karena kosong, jadi barisnya ikut dibuang.
+ * Baris Interest tersimpan (kendaraan atau objek) untuk baris rate, TPL, atau
+ * PA. Baris tanpa objek ikut objek pertama. undefined berarti objeknya tidak
+ * tersimpan karena kosong, jadi barisnya ikut dibuang.
  */
-function savedVehicleId(
-  vehicleIds: Map<string, string>,
-  vehicleId?: string | null
+function savedItemId(
+  itemIds: Map<string, string>,
+  itemId?: string | null
 ): string | null | undefined {
-  if (!vehicleId) return vehicleIds.values().next().value ?? null
-  return vehicleIds.get(vehicleId)
+  if (!itemId) return itemIds.values().next().value ?? null
+  return itemIds.get(itemId)
 }
 
 /** Lokasi tersimpan untuk `locationId` dari form; yang tidak dikenal ikut lokasi pertama. */
@@ -955,7 +956,8 @@ export async function createPlacingSlip(
   const expiryDate = input.expiryDate ? new Date(input.expiryDate) : null
   const resolvedSppaId = await resolveSppaId(input.sppaId)
   const locations = await resolveSlipLocations(input, resolvedCob.name)
-  const motorSlip = normalizeCob(resolvedCob.name as CobType) === "Motor Vehicle"
+  // Baris rate Motor Vehicle dan COB lain selain Property menunjuk objeknya.
+  const itemRates = usesItemRates(normalizeCob(resolvedCob.name as CobType))
 
   const record = await prisma.$transaction(async (tx) => {
     const slip = await tx.placingSlip.create({
@@ -1000,7 +1002,7 @@ export async function createPlacingSlip(
 
     // Insert items
     let sortIdx = 0
-    const vehicleIds = new Map<string, string>()
+    const itemIds = new Map<string, string>()
     const itemsToCreate: {
       id?: string
       slipId: string
@@ -1032,7 +1034,7 @@ export async function createPlacingSlip(
             ? buildVehicleDescription(it) || it.description?.trim() || "Kendaraan Bermotor"
             : it.description.trim()
           const itemId = randomUUID()
-          vehicleIds.set(it.id, itemId)
+          itemIds.set(it.id, itemId)
           itemsToCreate.push({
             id: itemId,
             slipId: slip.id,
@@ -1105,8 +1107,8 @@ export async function createPlacingSlip(
 
     if (input.rateLines) {
       for (const rl of input.rateLines) {
-        const vehicleItemId = motorSlip
-          ? savedVehicleId(vehicleIds, rl.vehicleId)
+        const vehicleItemId = itemRates
+          ? savedItemId(itemIds, rl.vehicleId)
           : null
         if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
@@ -1133,8 +1135,8 @@ export async function createPlacingSlip(
 
     if (input.tplLines) {
       for (const rl of input.tplLines) {
-        const vehicleItemId = motorSlip
-          ? savedVehicleId(vehicleIds, rl.vehicleId)
+        const vehicleItemId = itemRates
+          ? savedItemId(itemIds, rl.vehicleId)
           : null
         if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
@@ -1159,8 +1161,8 @@ export async function createPlacingSlip(
 
     if (input.paLines) {
       for (const rl of input.paLines) {
-        const vehicleItemId = motorSlip
-          ? savedVehicleId(vehicleIds, rl.vehicleId)
+        const vehicleItemId = itemRates
+          ? savedItemId(itemIds, rl.vehicleId)
           : null
         if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
@@ -1313,7 +1315,8 @@ export async function updatePlacingSlip(
   const resolvedSppaId =
     input.sppaId !== undefined ? await resolveSppaId(input.sppaId) : existing.sppaId
   const locations = await resolveSlipLocations(input, resolvedCob.name)
-  const motorSlip = normalizeCob(resolvedCob.name as CobType) === "Motor Vehicle"
+  // Baris rate Motor Vehicle dan COB lain selain Property menunjuk objeknya.
+  const itemRates = usesItemRates(normalizeCob(resolvedCob.name as CobType))
 
   await prisma.$transaction(async (tx) => {
     await tx.placingSlip.update({
@@ -1361,7 +1364,7 @@ export async function updatePlacingSlip(
     // Refresh items
     await tx.slipItem.deleteMany({ where: { slipId: id } })
     let sortIdx = 0
-    const vehicleIds = new Map<string, string>()
+    const itemIds = new Map<string, string>()
     const itemsToCreate: {
       id?: string
       slipId: string
@@ -1393,7 +1396,7 @@ export async function updatePlacingSlip(
             ? buildVehicleDescription(it) || it.description?.trim() || "Kendaraan Bermotor"
             : it.description.trim()
           const itemId = randomUUID()
-          vehicleIds.set(it.id, itemId)
+          itemIds.set(it.id, itemId)
           itemsToCreate.push({
             id: itemId,
             slipId: id,
@@ -1467,8 +1470,8 @@ export async function updatePlacingSlip(
 
     if (input.rateLines) {
       for (const rl of input.rateLines) {
-        const vehicleItemId = motorSlip
-          ? savedVehicleId(vehicleIds, rl.vehicleId)
+        const vehicleItemId = itemRates
+          ? savedItemId(itemIds, rl.vehicleId)
           : null
         if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
@@ -1495,8 +1498,8 @@ export async function updatePlacingSlip(
 
     if (input.tplLines) {
       for (const rl of input.tplLines) {
-        const vehicleItemId = motorSlip
-          ? savedVehicleId(vehicleIds, rl.vehicleId)
+        const vehicleItemId = itemRates
+          ? savedItemId(itemIds, rl.vehicleId)
           : null
         if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]
@@ -1521,8 +1524,8 @@ export async function updatePlacingSlip(
 
     if (input.paLines) {
       for (const rl of input.paLines) {
-        const vehicleItemId = motorSlip
-          ? savedVehicleId(vehicleIds, rl.vehicleId)
+        const vehicleItemId = itemRates
+          ? savedItemId(itemIds, rl.vehicleId)
           : null
         if (vehicleItemId === undefined) continue
         const exception = input.rateExceptions?.[rl.id]

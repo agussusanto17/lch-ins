@@ -7,11 +7,8 @@ import {
   vehicleIssues,
 } from "@/components/underwriting/slip-model"
 import { locationOwner, slipLocations } from "@/lib/slip-locations"
-import {
-  isCascoLine,
-  vehicleOwner,
-  vehicleTariff,
-} from "@/lib/slip-vehicles"
+import { itemOwner } from "@/lib/slip-items"
+import { isCascoLine, vehicleTariff } from "@/lib/slip-vehicles"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
   brokerageLimitIssue,
@@ -160,7 +157,7 @@ export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
 
   if (slip.cob === "Motor Vehicle") {
     // Kategori dan wilayah OJK dihitung per kendaraan.
-    const owner = vehicleOwner(slip)
+    const owner = itemOwner(slip)
     const tariffs = new Map(
       slip.interestItems.map((v) => [v.id, vehicleTariff(slip, v)])
     )

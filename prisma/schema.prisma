@@ -1187,7 +1187,7 @@ model SlipItem {
   location     SlipLocation? @relation(fields: [locationId], references: [id], onDelete: Cascade)
   vehicleBrand VehicleBrand? @relation(fields: [vehicleBrandId], references: [id], onDelete: Restrict)
   vehicleType  VehicleType?  @relation(fields: [vehicleTypeId], references: [id], onDelete: Restrict)
-  /// Baris rate, TPL, dan PA kendaraan ini (slip Motor Vehicle).
+  /// Baris rate, TPL, dan PA milik kendaraan atau objek ini.
   vehicleRateLines SlipRateLine[] @relation("rate_line_vehicle")
 
   @@index([slipId, kind, sortOrder])
@@ -1218,8 +1218,9 @@ model SlipRateLine {
   lossLimitPct      Decimal? @map("loss_limit_pct") @db.Decimal(7, 4)
   /// Lokasi slip Property untuk baris rate. TPL, PA, dan COB lain kosong.
   locationId        String?  @map("location_id") @db.Uuid
-  /// Kendaraan slip Motor Vehicle (baris Interest) untuk baris rate, TPL,
-  /// dan PA. COB lain kosong.
+  /// Baris Interest pemilik baris rate, TPL, atau PA: kendaraan di Motor
+  /// Vehicle, objek di COB lain selain Property (5 November 2026). Namanya
+  /// tetap "vehicle" karena mula-mula dipakai untuk kendaraan.
   vehicleItemId     String?  @map("vehicle_item_id") @db.Uuid
   /// Alasan bila rate keluar dari batas OJK.
   outOfBoundsReason String?  @map("out_of_bounds_reason")
