@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `feat/paket-klausul` (di atas `feat/kelompok-klausul`)
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#148](https://github.com/agussusanto17/lch-ins/pull/148)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
