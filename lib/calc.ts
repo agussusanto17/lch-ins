@@ -124,6 +124,8 @@ export interface ParEqvetLine {
   fullName: string
   basis: number
   ratePercent: number | null
+  /** Rate as entered on the slip, per mil (‰). */
+  ratePermil: number | null
   rateText: string
   /** Persen premi loss limit OJK, kosong untuk full value dan baris BI. */
   lossLimitPct: number | null
@@ -149,11 +151,11 @@ export interface ParEqvetCalculation {
 }
 
 /**
- * Rate persen di dokumen selalu tujuh desimal (permintaan 5 November 2026),
- * cukup untuk rate per mil enam desimal: 0,000009‰ = 0,0000009%.
+ * Property rates print per mil like the slip input, six decimals so the
+ * smallest entered rate (0,000009‰) still shows.
  */
-export function ratePercentText(ratePercent: number) {
-  return `${num(ratePercent, 7)}%`
+export function ratePermilText(ratePermil: number) {
+  return `${num(ratePermil, 6)}‰`
 }
 
 /**
@@ -188,7 +190,8 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
       fullName: PAR_EQVET_FULL_NAMES[l.label] ?? l.label,
       basis,
       ratePercent,
-      rateText: ratePercent != null ? ratePercentText(ratePercent) : "—",
+      ratePermil: l.rate,
+      rateText: l.rate != null ? ratePermilText(l.rate) : "—",
       lossLimitPct,
       premium,
     }
