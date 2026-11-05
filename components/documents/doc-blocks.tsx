@@ -46,7 +46,12 @@ import {
   type LocationGroup,
 } from "@/lib/slip-locations"
 import { printedDetailRows } from "@/lib/slip-details"
-import { isMultiItem, itemGroups, type ItemGroup } from "@/lib/slip-items"
+import {
+  isFlatLine,
+  isMultiItem,
+  itemGroups,
+  type ItemGroup,
+} from "@/lib/slip-items"
 import { isMultiVehicle, vehicleTitle } from "@/lib/slip-vehicles"
 import { cn } from "@/lib/utils"
 
@@ -642,7 +647,12 @@ export function premiumRows(slip: PlacingSlip): PremiumRow[] {
         l.lossLimitPct != null && !BI_RATE_LABELS.includes(l.label)
           ? `${l.label} (Loss Limit ${num(l.lossLimitPct, 0, 4)}%)`
           : coverLabel(slip, l),
-      rate: l.rate !== null ? rateText(l.rate) : "—",
+      // Premi flat dicetak "Flat" di kolom rate, seperti contoh slip LCH.
+      rate: isFlatLine(slip.cob, l)
+        ? "Flat"
+        : l.rate !== null
+          ? rateText(l.rate)
+          : "—",
       premium: l.premium,
     }))
 
@@ -1294,7 +1304,11 @@ export function ObjectPremiumSchedule({ slip }: { slip: PlacingSlip }) {
                   {i === 0 ? amount(g.item.amount || 0) : ""}
                 </td>
                 <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
-                  {l?.rate != null ? `${rateText(l.rate)}%` : "—"}
+                  {l && isFlatLine(slip.cob, l)
+                    ? "Flat"
+                    : l?.rate != null
+                      ? `${rateText(l.rate)}%`
+                      : "—"}
                 </td>
                 <td className="tabular py-1.5 text-right align-top whitespace-nowrap">
                   {amount(l?.premium ?? 0)}

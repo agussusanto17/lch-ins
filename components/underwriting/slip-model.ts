@@ -39,6 +39,7 @@ import {
   GENERIC_RATE_LABEL,
   itemGroups,
   itemOwner,
+  missingRateIssue,
   usesItemRates,
 } from "@/lib/slip-items"
 import {
@@ -613,9 +614,8 @@ export function releaseIssues(slip: PlacingSlip) {
     if (clauseIssues.length) issues.push(...clauseIssues)
   }
   if (totalSumInsured(slip) <= 0) issues.push("Isi sum insured.")
-  if (!slip.rateLines.some((l) => (l.rate ?? 0) > 0)) {
-    issues.push("Isi minimal satu rate.")
-  }
+  const rateIssue = missingRateIssue(slip)
+  if (rateIssue) issues.push(rateIssue)
 
   // Primary rate lines receive bounds based on COB. TPL and PA apply only to
   // Motor Vehicle, where bounds are resolved per section rather than raw labels alone.

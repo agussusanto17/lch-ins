@@ -415,6 +415,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
       label: rl.label,
       rate: rl.rate != null ? Number(rl.rate) : null,
       premium: Number(rl.premium),
+      flatPremium: rl.isFlatPremium || undefined,
       basis: rl.limitAmount != null ? String(Number(rl.limitAmount)) : undefined,
       min: rl.rateMin != null ? Number(rl.rateMin) : null,
       max: rl.rateMax != null ? Number(rl.rateMax) : null,
@@ -1120,6 +1121,7 @@ export async function createPlacingSlip(
       limitAmount: Prisma.Decimal | null
       rate: Prisma.Decimal | null
       premium: Prisma.Decimal
+      isFlatPremium?: boolean
       rateMin: Prisma.Decimal | null
       rateMax: Prisma.Decimal | null
       lossLimitPct: Prisma.Decimal | null
@@ -1145,6 +1147,7 @@ export async function createPlacingSlip(
           limitAmount: null,
           rate: rl.rate != null ? new Prisma.Decimal(rl.rate) : null,
           premium: new Prisma.Decimal(rl.premium || 0),
+          isFlatPremium: rl.flatPremium === true,
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
           lossLimitPct:
@@ -1489,6 +1492,7 @@ export async function updatePlacingSlip(
       limitAmount: Prisma.Decimal | null
       rate: Prisma.Decimal | null
       premium: Prisma.Decimal
+      isFlatPremium?: boolean
       rateMin: Prisma.Decimal | null
       rateMax: Prisma.Decimal | null
       lossLimitPct: Prisma.Decimal | null
@@ -1514,6 +1518,7 @@ export async function updatePlacingSlip(
           limitAmount: null,
           rate: rl.rate != null ? new Prisma.Decimal(rl.rate) : null,
           premium: new Prisma.Decimal(rl.premium || 0),
+          isFlatPremium: rl.flatPremium === true,
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
           lossLimitPct:
@@ -1971,6 +1976,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
           limitAmount: Prisma.Decimal | null
           rate: Prisma.Decimal | null
           premium: Prisma.Decimal
+          isFlatPremium?: boolean
           rateMin: Prisma.Decimal | null
           rateMax: Prisma.Decimal | null
           deductibles: string[]
@@ -1986,6 +1992,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             limitAmount: null,
             rate: rl.rate != null ? new Prisma.Decimal(rl.rate) : null,
             premium: new Prisma.Decimal(rl.premium || 0),
+            isFlatPremium: rl.flatPremium === true,
             rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
             rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
             deductibles: cleanDeductibles(rl.deductibles),

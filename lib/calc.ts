@@ -6,7 +6,7 @@ import { BI_SCALE_OJK } from "./data/ojk-tariff"
 import type { PlacingSlip, RateLine, SlipPart } from "./data/types"
 import { num } from "./format"
 import { locationGroups, locationOwner, withLocations } from "./slip-locations"
-import { itemOwner, withItemRates } from "./slip-items"
+import { isFlatLine, itemOwner, withItemRates } from "./slip-items"
 
 /** Demo exchange rates for report aggregation. */
 export const FX: Record<string, number> = {
@@ -385,8 +385,12 @@ export function recalcSlip(input: PlacingSlip): PlacingSlip {
 
   const rateLines = (property ? withBiRates(slip) : slip.rateLines).map((l) => {
     if (!property) {
+      // Premi flat diisi langsung; rate-nya dikosongkan supaya tidak tercetak.
+      if (isFlatLine(slip.cob, l)) {
+        return { ...l, rate: null, premium: roundCents(Math.max(0, l.premium || 0)) }
+      }
       const value = itemValue.get(itemOf(l.vehicleId) ?? "") ?? 0
-      return { ...l, premium: premiumFromRate(value, l.rate, mode) }
+      return { ...l, flatPremium: undefined, premium: premiumFromRate(value, l.rate, mode) }
     }
     const location = bases.get(owner(l.locationId))!
     return {

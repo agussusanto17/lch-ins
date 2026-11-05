@@ -22,6 +22,34 @@ export function usesItemRates(cob: ClassOfBusiness) {
 }
 
 /**
+ * COB yang objeknya boleh memakai premi flat (premi diisi langsung, tanpa
+ * rate), seperti Liability dan Machinery Breakdown di contoh slip LCH. Motor
+ * Vehicle tetap per rate karena dicek terhadap tarif OJK.
+ */
+export function allowsFlatPremium(cob: ClassOfBusiness) {
+  return usesItemRates(cob) && cob !== "Motor Vehicle"
+}
+
+/** Baris rate yang dihitung sebagai premi flat. */
+export function isFlatLine(cob: ClassOfBusiness, line: Pick<RateLine, "flatPremium">) {
+  return line.flatPremium === true && allowsFlatPremium(cob)
+}
+
+/**
+ * Pesan release bila slip belum punya rate atau premi flat sama sekali; null
+ * bila sudah ada. Dipakai form dan pengecekan ulang di server.
+ */
+export function missingRateIssue(slip: Pick<PlacingSlip, "cob" | "rateLines">) {
+  const priced = slip.rateLines.some(
+    (l) => (l.rate ?? 0) > 0 || (isFlatLine(slip.cob, l) && l.premium > 0)
+  )
+  if (priced) return null
+  return allowsFlatPremium(slip.cob)
+    ? "Isi minimal satu rate atau premi flat."
+    : "Isi minimal satu rate."
+}
+
+/**
  * Baris Interest pemilik sebuah baris rate, TPL, atau PA. Field-nya bernama
  * `vehicleId` karena mula-mula dipakai untuk kendaraan; di COB lain isinya
  * objek. Baris tanpa pemilik (slip lama) ikut baris Interest pertama; baris
