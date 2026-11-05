@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `fix/rate-dokumen-per-mil`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #126
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
