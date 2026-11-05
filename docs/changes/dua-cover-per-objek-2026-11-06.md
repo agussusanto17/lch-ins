@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `feat/dua-cover-per-objek` (di atas `feat/slip-section-engineering`)
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#144](https://github.com/agussusanto17/lch-ins/pull/144)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
