@@ -105,20 +105,23 @@ export function coverAbbreviation(
 }
 
 /**
- * Pilihan deductible untuk type of cover slip: yang khusus type of cover itu
- * lebih dulu, lalu yang berlaku untuk semua type of cover di COB-nya.
+ * Pilihan deductible untuk type of cover slip (slip Property bisa punya dua):
+ * yang khusus type of cover itu lebih dulu, lalu yang berlaku untuk semua type
+ * of cover di COB-nya.
  */
 export function deductibleChoicesFor(
   options: FormOptions,
   cob: string,
-  typeOfCover: string
+  typesOfCover: string[]
 ): string[] {
   const cobOption = options.cobs.find((c) => c.label === cob)
   if (!cobOption) return []
-  const cover = cobOption.covers.find((c) => c.name === typeOfCover)
-  const specific = cover
-    ? cobOption.deductibles.filter((d) => d.coverTypeId === cover.id)
-    : []
+  const coverIds = cobOption.covers
+    .filter((c) => typesOfCover.includes(c.name))
+    .map((c) => c.id)
+  const specific = cobOption.deductibles.filter(
+    (d) => d.coverTypeId !== null && coverIds.includes(d.coverTypeId)
+  )
   const general = cobOption.deductibles.filter((d) => d.coverTypeId === null)
   return Array.from(new Set([...specific, ...general].map((d) => d.text)))
 }

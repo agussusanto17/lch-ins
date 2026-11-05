@@ -397,7 +397,8 @@ model CoverType {
 
   clauses           Clause[]
   sppa              Sppa[]
-  placingSlips      PlacingSlip[]
+  placingSlips      PlacingSlip[] @relation("SlipCoverType")
+  placingSlips2     PlacingSlip[] @relation("SlipCoverType2")
   policies          Policy[]
   deductibleOptions DeductibleOption[]
 
@@ -1041,6 +1042,10 @@ model PlacingSlip {
   sourceId    String? @map("source_id") @db.Uuid
   /// Label pilihan form, misal "PAR + EQVET". Tidak semua label punya padanan di cover_types.
   typeOfCover String? @map("type_of_cover")
+  /// Type of cover kedua slip Property (Earthquake), dicetak di bawah yang
+  /// pertama dan dipakai polis EQVET (Harry, 5 Nov 2026).
+  coverType2Id String? @map("cover_type_2_id") @db.Uuid
+  typeOfCover2 String? @map("type_of_cover_2")
 
   /// Salinan dari klien. Bisa diedit di slip tanpa mengubah data klien.
   insuredName             String  @map("insured_name")
@@ -1106,7 +1111,8 @@ model PlacingSlip {
   client                      Client          @relation(fields: [clientId], references: [id])
   sppa                        Sppa?           @relation(fields: [sppaId], references: [id])
   cob                         ClassOfBusiness @relation(fields: [cobId], references: [id])
-  coverType                   CoverType?      @relation(fields: [coverTypeId], references: [id])
+  coverType                   CoverType?      @relation("SlipCoverType", fields: [coverTypeId], references: [id])
+  coverType2                  CoverType?      @relation("SlipCoverType2", fields: [coverType2Id], references: [id])
   source                      Source?         @relation(fields: [sourceId], references: [id])
   correspondenceAddressSource ClientAddress?  @relation(fields: [correspondenceAddressId], references: [id])
   currency                    Currency        @relation(fields: [currencyCode], references: [code])

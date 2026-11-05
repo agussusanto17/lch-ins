@@ -193,6 +193,11 @@ export interface PlacingSlip {
   seq: number
   cob: ClassOfBusiness
   typeOfCover: string
+  /**
+   * Type of cover kedua slip Property (Earthquake), di bawah yang pertama.
+   * Dicetak sebagai baris kedua Type of Cover dan dipakai polis EQVET.
+   */
+  typeOfCover2?: string
   coverCode: string | null
   /** Klien asal tertanggung. Null bila nama diketik manual (data lama). */
   clientId: string | null

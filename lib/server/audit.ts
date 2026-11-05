@@ -91,6 +91,7 @@ const FIELD_MODEL: Record<string, RefModel> = {
   claimId: "claim",
   cobId: "classOfBusiness",
   coverTypeId: "coverType",
+  coverType2Id: "coverType",
   occupationId: "occupation",
   insurerId: "insurer",
   adjusterId: "adjuster",

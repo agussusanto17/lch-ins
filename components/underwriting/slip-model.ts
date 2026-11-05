@@ -251,6 +251,7 @@ export function switchCob(
     ...slip,
     cob: normCob,
     typeOfCover: "",
+    typeOfCover2: "",
     coverCode: null,
     rateLines: makeRateLines(normCob),
     ...sub,
@@ -270,6 +271,15 @@ export function coverCodeFor(
   const fromMaster = covers?.find((c) => c.name === typeOfCover)?.abbreviation
   if (fromMaster) return fromMaster
   return TYPE_OF_COVER[cob]?.find((t) => t.label === typeOfCover)?.code ?? null
+}
+
+/**
+ * Token {COVER} slip dengan dua type of cover: singkatan keduanya digabung
+ * sesuai urutan isian, misalnya PAR + EQ menjadi PAREQ seperti CI LCH
+ * 011/LCH-PLCMT/CI-PAREQ/VIII/2026.
+ */
+export function joinCoverCodes(...codes: (string | null | undefined)[]) {
+  return codes.filter(Boolean).join("") || null
 }
 
 /** Property punya blok Okupasi, Risk Location, Wording Form, dan Detail Coverage. */
