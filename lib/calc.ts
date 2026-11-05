@@ -167,15 +167,20 @@ export function parEqvetPolicyCharge(slip: PlacingSlip) {
 }
 
 export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
-  const mdBasis =
-    sumItems(slip.sumInsuredSection1) || totalSumInsured(slip)
-  const biBasis = sumItems(slip.sumInsuredSection2) || mdBasis
+  // Tiap section hanya memakai sum insured-nya sendiri, sama seperti
+  // recalcSlip. Dulu section kosong memakai nilai section lain, sehingga rate
+  // BI otomatis mendapat premi dari Section 1 walaupun Section 2 kosong.
+  const mdBasis = sumItems(slip.sumInsuredSection1)
+  const biBasis = sumItems(slip.sumInsuredSection2)
 
   // Property rates in rateLines are per mil (‰); divided by 10 to represent percent (%).
   function mapLine(l: RateLine): ParEqvetLine {
     const isBi = BI_RATE_LABELS.includes(l.label)
     const basis = isBi ? biBasis : mdBasis
-    const ratePercent = l.rate != null ? l.rate / 10 : null
+    // Slip yang tersimpan sebelum perbaikan ini masih membawa rate BI otomatis
+    // walaupun Section 2 kosong; rate itu tidak dicetak.
+    const rate = isBi && biBasis <= 0 ? null : l.rate
+    const ratePercent = rate != null ? rate / 10 : null
     const lossLimitPct = isBi ? null : (l.lossLimitPct ?? null)
     const premium =
       l.premium ||
@@ -190,8 +195,8 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
       fullName: PAR_EQVET_FULL_NAMES[l.label] ?? l.label,
       basis,
       ratePercent,
-      ratePermil: l.rate,
-      rateText: l.rate != null ? ratePermilText(l.rate) : "—",
+      ratePermil: rate,
+      rateText: rate != null ? ratePermilText(rate) : "—",
       lossLimitPct,
       premium,
     }
@@ -443,12 +448,16 @@ function withBiRates(slip: PlacingSlip): RateLine[] {
     [BI_RATE_LABELS[0], basis.par],
     [BI_RATE_LABELS[1], basis.eqvet],
   ])
+  // Tanpa sum insured Section 2 tidak ada jaminan BI, jadi rate BI kosong dan
+  // tidak tercetak di dokumen.
+  const covered = sumItems(slip.sumInsuredSection2) > 0
   return slip.rateLines.map((l) => {
     const base = bases.get(l.label)
     if (base === undefined) return l
     return {
       ...l,
-      rate: base > 0 ? roundRate((base * basis.scalePct) / 100) : null,
+      rate:
+        covered && base > 0 ? roundRate((base * basis.scalePct) / 100) : null,
       lossLimitPct: null,
       min: null,
       max: null,
