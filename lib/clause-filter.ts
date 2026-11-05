@@ -2,6 +2,7 @@
 export type ClauseScope = {
   cobName: string | null
   coverTypeName: string | null
+  sourceGroup?: string
 }
 
 /**
@@ -10,6 +11,10 @@ export type ClauseScope = {
  */
 export function isEarthquakeCover(name: string): boolean {
   return /\b(psagbi|earthquake|eqvet|gempa)\b/i.test(name)
+}
+
+function isCashInTransit(name: string) {
+  return /cash in transit/i.test(name)
 }
 
 /**
@@ -26,7 +31,10 @@ export function clauseFitsSlip(
     return false
   }
   const covers = slipCovers.filter(Boolean).map((c) => c.toLowerCase())
-  if (!clause.coverTypeName || covers.length === 0) return true
+  if (covers.length === 0) return true
+  // Cash In Transit has its own clause group, so general Cargo ones stay out (SIT-035).
+  if (clause.sourceGroup === "Cargo" && covers.every(isCashInTransit)) return false
+  if (!clause.coverTypeName) return true
 
   const clauseCover = clause.coverTypeName.toLowerCase()
   if (covers.some((c) => c.includes(clauseCover) || clauseCover.includes(c))) {
