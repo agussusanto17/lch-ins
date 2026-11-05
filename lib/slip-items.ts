@@ -1,9 +1,10 @@
 import { MOTOR_RATE_LINES } from "./data/reference"
-import type {
-  ClassOfBusiness,
-  LineItem,
-  PlacingSlip,
-  RateLine,
+import {
+  MAX_DEDUCTIBLES,
+  type ClassOfBusiness,
+  type LineItem,
+  type PlacingSlip,
+  type RateLine,
 } from "./data/types"
 
 type LineGroup = "rateLines" | "tplLines" | "paLines"
@@ -105,6 +106,68 @@ export function itemGroups(
   })
 }
 
+/**
+ * Tambah satu cover (baris rate) ke sebuah objek, misalnya War di samping
+ * ICC "A" pada CI single shipment LCH (contoh 02). Nama cover diisi setelah
+ * baris ditambahkan. Baris baru menyusul baris objek itu, jadi urutannya per
+ * objek tetap.
+ */
+export function addItemCover(
+  slip: Pick<PlacingSlip, "interestItems" | "rateLines">,
+  itemId: string
+): RateLine[] {
+  const owner = itemOwner(slip)
+  const ids = new Set(slip.rateLines.map((l) => l.id))
+  let n = slip.rateLines.filter((l) => owner(l.vehicleId) === itemId).length + 1
+  while (ids.has(`${itemId}-r${n}`)) n++
+  return [
+    ...slip.rateLines,
+    { id: `${itemId}-r${n}`, label: "", rate: null, premium: 0, vehicleId: itemId },
+  ]
+}
+
+/**
+ * Hapus satu cover objek. Objek tetap punya minimal satu cover. Deductible
+ * cover yang dihapus pindah ke cover pertama yang tersisa di objek itu,
+ * karena deductible per cover dan per section disimpan di baris objek
+ * pertama.
+ */
+export function removeItemCover(
+  slip: Pick<PlacingSlip, "interestItems" | "rateLines">,
+  lineId: string
+): RateLine[] {
+  const owner = itemOwner(slip)
+  const line = slip.rateLines.find((l) => l.id === lineId)
+  if (!line) return slip.rateLines
+  const itemId = owner(line.vehicleId)
+  const rest = slip.rateLines.filter((l) => l.id !== lineId)
+  const heir = rest.find((l) => owner(l.vehicleId) === itemId)
+  if (!heir) return slip.rateLines
+  if (!line.deductibles?.length) return rest
+  const deductibles = [
+    ...new Set([...(heir.deductibles ?? []), ...line.deductibles]),
+  ].slice(0, MAX_DEDUCTIBLES)
+  return rest.map((l) => (l.id === heir.id ? { ...l, deductibles } : l))
+}
+
+/**
+ * Objek yang punya lebih dari satu cover wajib memberi nama setiap cover
+ * tambahannya sebelum release, karena nama itu yang tercetak di dokumen.
+ * Cover pertama boleh tanpa nama; dokumen mencetak type of cover slip.
+ */
+export function coverNameIssues(
+  slip: Pick<PlacingSlip, "cob" | "interestItems" | "rateLines" | "tplLines" | "paLines">
+): string[] {
+  if (!allowsFlatPremium(slip.cob)) return []
+  return itemGroups(slip).flatMap(({ item, no, rateLines }) =>
+    rateLines.length > 1 &&
+    !isLimitOnlyItem(slip.cob, item) &&
+    rateLines.some((l) => !l.label.trim())
+      ? [`Isi nama cover tambahan objek ${no}.`]
+      : []
+  )
+}
+
 /** Slip dengan lebih dari satu objek atau kendaraan; dokumennya memakai jadwal premi per objek. */
 export function isMultiItem(slip: Pick<PlacingSlip, "cob" | "interestItems">) {
   return usesItemRates(slip.cob) && slip.interestItems.length > 1
@@ -193,10 +256,16 @@ export function withItemRates(slip: PlacingSlip): PlacingSlip {
     slip.cob === "Motor Vehicle" ? MOTOR_RATE_LINES : [GENERIC_RATE_LABEL]
   for (const item of slip.interestItems) {
     if (next.rateLines.some((l) => l.vehicleId === item.id)) continue
+    // Objek baru memakai cover objek pertama, kecuali objek limit saja
+    // (misalnya limit TPL Section 2) yang tidak berpremi: cukup satu baris.
     const lines = standardLines(
       slip.cob,
       item.id,
-      firstLabels.length ? firstLabels : defaultLabels
+      isLimitOnlyItem(slip.cob, item)
+        ? [GENERIC_RATE_LABEL]
+        : firstLabels.length
+          ? firstLabels
+          : defaultLabels
     )
     for (const key of LINE_GROUPS) next[key] = [...next[key], ...lines[key]]
   }

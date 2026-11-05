@@ -1304,7 +1304,8 @@ function objectName(group: ItemGroup) {
 /**
  * Rate & premium slip multi objek COB selain Property dan Motor Vehicle
  * (Agus, 5 November 2026), misalnya peserta PA atau unit MB dan CPM: satu
- * baris per objek dengan nilai, rate, dan preminya, lalu Total Premium.
+ * baris per objek dengan nilai, rate, dan preminya, lalu Total Premium. Objek
+ * dengan beberapa cover mendapat satu baris per cover dengan nama covernya.
  * Diskon, admin cost, stamp duty, dan Total Payable dicetak di bawahnya oleh
  * PayableTable.
  */
@@ -1336,14 +1337,26 @@ export function ObjectPremiumSchedule({ slip }: { slip: PlacingSlip }) {
         </thead>
         <tbody>
           {groups.map((g) => {
-            // Satu baris rate per objek; slip lama bisa punya lebih.
-            const lines = g.rateLines.length ? g.rateLines : [null]
+            // Satu baris per cover objek, misalnya ICC "A" dan War; objek
+            // limit saja tidak berpremi, jadi cukup satu baris.
+            const limit = isLimitOnlyItem(slip.cob, g.item)
+            const lines: (RateLine | null)[] = g.rateLines.length
+              ? limit
+                ? g.rateLines.slice(0, 1)
+                : g.rateLines
+              : [null]
+            const multi = lines.length > 1
             return lines.map((l, i) => (
               <tr key={l?.id ?? g.item.id} className="avoid-break border-b border-dashed">
                 <td className={cell}>{i === 0 ? g.no : ""}</td>
                 <td className={cell}>
                   {i === 0 ? (
                     <span className="line-clamp-2">{objectName(g)}</span>
+                  ) : null}
+                  {multi && l ? (
+                    <span className="block text-muted-foreground">
+                      {coverLabel(slip, l)}
+                    </span>
                   ) : null}
                 </td>
                 <td className={cn(cell, "tabular text-right whitespace-nowrap")}>

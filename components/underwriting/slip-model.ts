@@ -41,6 +41,7 @@ import {
   itemGroups,
   itemOwner,
   itemSection,
+  coverNameIssues,
   missingRateIssue,
   usesItemRates,
 } from "@/lib/slip-items"
@@ -102,13 +103,14 @@ export function slipOccupationText(
 /**
  * Nama cover sebuah baris rate, untuk deductible per cover. Baris tunggal
  * "Rate (%)" bukan nama cover, jadi diganti type of cover slipnya; tanpa itu
- * dokumen mencetak "Rate (%)" di kolom cover.
+ * dokumen mencetak "Rate (%)" di kolom cover. Cover tambahan yang belum diberi
+ * nama juga memakai type of cover (release memintanya diisi).
  */
 export function coverLabel(
   slip: Pick<PlacingSlip, "typeOfCover" | "cob">,
   line: Pick<RateLine, "label">
 ) {
-  return line.label === GENERIC_RATE_LABEL
+  return line.label === GENERIC_RATE_LABEL || !line.label.trim()
     ? slip.typeOfCover || slip.cob
     : line.label
 }
@@ -680,6 +682,7 @@ export function releaseIssues(slip: PlacingSlip) {
   if (totalSumInsured(slip) <= 0) issues.push("Isi sum insured.")
   const rateIssue = missingRateIssue(slip)
   if (rateIssue) issues.push(rateIssue)
+  issues.push(...coverNameIssues(slip))
 
   // Primary rate lines receive bounds based on COB. TPL and PA apply only to
   // Motor Vehicle, where bounds are resolved per section rather than raw labels alone.
