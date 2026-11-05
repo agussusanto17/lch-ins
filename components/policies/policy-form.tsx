@@ -260,7 +260,11 @@ export function PolicyForm({
       clientId: client?.id ?? slip.clientId,
       insuredName: client?.name ?? slip.insuredName,
       cob: slip.cob,
-      typeOfCover: slip.typeOfCover,
+      // Polis EQVET dari slip PAR + EQVET memakai type of cover kedua.
+      typeOfCover:
+        part === "EQVET" && slip.typeOfCover2
+          ? slip.typeOfCover2
+          : slip.typeOfCover,
       currency: slip.currency,
       inceptionDate: slip.inceptionDate ?? "",
       expiryDate: slip.expiryDate ?? "",

@@ -71,8 +71,16 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
     ? "To Be Advised"
     : `${dateEn(slip.inceptionDate)} to ${dateEn(slip.expiryDate)}`
 
+  // Slip PAR + EQVET dengan dua type of cover dicetak seperti CI LCH: satu
+  // baris per type of cover, masing-masing diawali tanda hubung.
+  const covers = [slip.typeOfCover, slip.typeOfCover2].filter(Boolean)
   const rows: [string, string][] = [
-    ["Type of Cover", slip.typeOfCover || "—"],
+    [
+      "Type of Cover",
+      covers.length > 1
+        ? covers.map((c) => `- ${c}`).join("\n")
+        : slip.typeOfCover || "—",
+    ],
   ]
   if (slip.wordingForms.filter(Boolean).length)
     rows.push(["Wording Form", slip.wordingForms.filter(Boolean).join("; ")])

@@ -76,6 +76,8 @@ const FIELD_LABELS: Record<string, string> = {
   cobId: "Class of Business",
   coverType: "Type of Cover",
   coverTypeId: "Type of Cover",
+  coverType2Id: "Type of Cover Earthquake",
+  typeOfCover2: "Type of Cover Earthquake",
   occupation: "Okupasi",
   occupationId: "Okupasi",
   constructionClassId: "Kelas konstruksi",

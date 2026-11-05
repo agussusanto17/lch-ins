@@ -20,6 +20,7 @@ import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
 import { CLIENTS } from "@/lib/data/clients"
 import {
   coverCodeFor,
+  joinCoverCodes,
   usesAdditionalFee,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
@@ -55,6 +56,7 @@ export interface PlacingSlipInput {
   sppaId?: string | null
   cob: CobType | string
   typeOfCover?: string | null
+  typeOfCover2?: string | null
   coverCode?: string | null
   insuredName: string
   correspondenceAddress?: string | null
@@ -247,6 +249,20 @@ async function resolveCob(cobNameOrCode: string) {
 }
 
 /**
+ * Type of cover kedua hanya untuk slip Property; COB lain dan isian kosong
+ * disimpan null.
+ */
+async function slipCoverType2(
+  cob: { id: string; name: string },
+  typeOfCover2?: string | null
+) {
+  const label = usesSectionSumInsured(normalizeCob(cob.name)) ? typeOfCover2?.trim() : ""
+  if (!label) return { coverType2Id: null, typeOfCover2: null }
+  const coverType = await resolveCoverType(cob.id, label)
+  return { coverType2Id: coverType?.id ?? null, typeOfCover2: label }
+}
+
+/**
  * Cover type master untuk type of cover slip, hanya di dalam COB yang sama.
  * Label lama yang tidak ada di master (misalnya "PAR + EQVET") tidak punya
  * padanan dan tetap disimpan sebagai teks saja.
@@ -288,6 +304,7 @@ type PrismaPlacingSlipWithRelations = Prisma.PlacingSlipGetPayload<{
     client: { select: { id: true; name: true } }
     cob: { select: { id: true; code: true; name: true } }
     coverType: { select: { id: true; code: true; name: true; abbreviation: true } }
+    coverType2: { select: { id: true; code: true; name: true; abbreviation: true } }
     occupation: { select: { id: true; code: true; name: true } }
     constructionClass: { select: { id: true; code: true; name: true } }
     currency: { select: { code: true } }
@@ -462,11 +479,14 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     seq,
     cob: normCob,
     typeOfCover: raw.typeOfCover || raw.coverType?.name || "",
+    typeOfCover2: raw.typeOfCover2 || raw.coverType2?.name || undefined,
     // Singkatan cover dari master didahulukan; slip lama tanpa cover type
     // memakai kode bawaan dari label type of cover.
-    coverCode:
+    coverCode: joinCoverCodes(
       raw.coverType?.abbreviation ||
-      coverCodeFor(normCob, raw.typeOfCover || raw.coverType?.name || ""),
+        coverCodeFor(normCob, raw.typeOfCover || raw.coverType?.name || ""),
+      raw.coverType2?.abbreviation
+    ),
     clientId: raw.clientId,
     sppaId: raw.sppaId,
     insuredName: raw.insuredName,
@@ -572,6 +592,7 @@ export async function listPlacingSlips(
       client: { select: { id: true, name: true } },
       cob: { select: { id: true, code: true, name: true } },
       coverType: { select: { id: true, code: true, name: true, abbreviation: true } },
+      coverType2: { select: { id: true, code: true, name: true, abbreviation: true } },
       occupation: { select: { id: true, code: true, name: true } },
       constructionClass: { select: { id: true, code: true, name: true } },
       currency: { select: { code: true } },
@@ -624,6 +645,7 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
       client: { select: { id: true, name: true } },
       cob: { select: { id: true, code: true, name: true } },
       coverType: { select: { id: true, code: true, name: true, abbreviation: true } },
+      coverType2: { select: { id: true, code: true, name: true, abbreviation: true } },
       occupation: { select: { id: true, code: true, name: true } },
       constructionClass: { select: { id: true, code: true, name: true } },
       currency: { select: { code: true } },
@@ -740,6 +762,7 @@ export async function createPlacingSlip(
   const resolvedClientId = await resolveClientId(input.clientId, input.insuredName)
   const resolvedCob = await resolveCob(input.cob)
   const resolvedCoverType = await resolveCoverType(resolvedCob.id, input.typeOfCover)
+  const coverType2 = await slipCoverType2(resolvedCob, input.typeOfCover2)
 
   let occupationId: string | null = input.occupationId || null
   if (!occupationId && input.occupation) {
@@ -772,6 +795,7 @@ export async function createPlacingSlip(
         cobId: resolvedCob.id,
         coverTypeId: resolvedCoverType?.id || null,
         typeOfCover: input.typeOfCover?.trim() || null,
+        ...coverType2,
         insuredName: input.insuredName.trim(),
         correspondenceAddress: input.correspondenceAddress?.trim() || null,
         currencyCode,
@@ -1062,6 +1086,7 @@ export async function updatePlacingSlip(
   const resolvedClientId = await resolveClientId(input.clientId, input.insuredName)
   const resolvedCob = await resolveCob(input.cob)
   const resolvedCoverType = await resolveCoverType(resolvedCob.id, input.typeOfCover)
+  const coverType2 = await slipCoverType2(resolvedCob, input.typeOfCover2)
 
   let occupationId: string | null = input.occupationId || null
   if (!occupationId && input.occupation) {
@@ -1095,6 +1120,7 @@ export async function updatePlacingSlip(
         cobId: resolvedCob.id,
         coverTypeId: resolvedCoverType?.id || null,
         typeOfCover: input.typeOfCover?.trim() || null,
+        ...coverType2,
         insuredName: input.insuredName.trim(),
         correspondenceAddress: input.correspondenceAddress?.trim() || null,
         currencyCode,
@@ -1379,6 +1405,7 @@ export async function releasePlacingSlip(
     include: {
       cob: true,
       coverType: true,
+      coverType2: true,
       items: true,
       rateLines: true,
       client: true,
@@ -1402,12 +1429,14 @@ export async function releasePlacingSlip(
     // Generate nomor slip dokumen jika belum ada
     let slipNo = existing.slipNo
     if (!slipNo) {
-      const coverCode =
+      const coverCode = joinCoverCodes(
         existing.coverType?.abbreviation ||
-        coverCodeFor(
-          normalizeCob(existing.cob.name as CobType),
-          existing.typeOfCover || existing.coverType?.name || ""
-        )
+          coverCodeFor(
+            normalizeCob(existing.cob.name as CobType),
+            existing.typeOfCover || existing.coverType?.name || ""
+          ),
+        existing.coverType2?.abbreviation
+      )
       slipNo = await nextDocumentNumber(tx, { code: "PS", coverCode })
     }
 

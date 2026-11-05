@@ -44,6 +44,7 @@ function loadPickerClauses() {
 export function ClausePicker({
   cob,
   typeOfCover,
+  typeOfCover2,
   selected,
   overrides,
   onChange,
@@ -52,6 +53,8 @@ export function ClausePicker({
 }: {
   cob: ClassOfBusiness
   typeOfCover: string
+  /** Type of cover kedua slip Property (Earthquake). */
+  typeOfCover2?: string
   selected: string[]
   overrides: Record<string, ClauseOverride>
   onChange: (ids: string[]) => void
@@ -99,14 +102,22 @@ export function ClausePicker({
 
   const available = React.useMemo(() => {
     const q = query.trim().toLowerCase()
+    // Klausula khusus type of cover tampil bila cocok dengan salah satu type of cover slip.
+    const slipCovers = [typeOfCover, typeOfCover2]
+      .filter((t): t is string => Boolean(t))
+      .map((t) => t.toLowerCase())
     return pool.filter((c) => {
       if (c.cobName && c.cobName.toLowerCase() !== "all" && c.cobName.toLowerCase() !== cob.toLowerCase()) {
         return false
       }
-      if (c.coverTypeName && typeOfCover) {
-        const coverNorm = typeOfCover.toLowerCase()
+      if (c.coverTypeName && slipCovers.length) {
         const cCoverNorm = c.coverTypeName.toLowerCase()
-        if (!coverNorm.includes(cCoverNorm) && !cCoverNorm.includes(coverNorm)) {
+        if (
+          !slipCovers.some(
+            (coverNorm) =>
+              coverNorm.includes(cCoverNorm) || cCoverNorm.includes(coverNorm)
+          )
+        ) {
           return false
         }
       }
@@ -116,7 +127,7 @@ export function ClausePicker({
         (plainWording.get(c.id) ?? "").toLowerCase().includes(q)
       )
     })
-  }, [pool, plainWording, cob, typeOfCover, query])
+  }, [pool, plainWording, cob, typeOfCover, typeOfCover2, query])
 
   const selectedClauses = React.useMemo(() => {
     return resolveSlipClauses(

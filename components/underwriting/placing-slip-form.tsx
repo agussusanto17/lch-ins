@@ -50,6 +50,7 @@ import {
 } from "@/components/underwriting/rate-tables"
 import {
   coverCodeFor,
+  joinCoverCodes,
   occupationParts,
   isOutOfBounds,
   keepGroupDeductibles,
@@ -446,15 +447,26 @@ function SlipEditor({
     slip.currency
   ).map(toItem)
   const covers = coversFor(options, slip.cob)
-  const deductibleChoices = deductibleChoicesFor(
-    options,
-    slip.cob,
-    slip.typeOfCover
-  )
+  const deductibleChoices = deductibleChoicesFor(options, slip.cob, [
+    slip.typeOfCover,
+    slip.typeOfCover2 ?? "",
+  ])
   const coverItems = withCurrent(
     covers.map((c) => c.name),
     slip.typeOfCover
   ).map(toItem)
+  const coverItems2 = withCurrent(
+    covers.map((c) => c.name),
+    slip.typeOfCover2
+  ).map(toItem)
+
+  /** Token {COVER} nomor slip: singkatan type of cover pertama lalu kedua. */
+  function slipCoverCode(typeOfCover: string, typeOfCover2?: string) {
+    return joinCoverCodes(
+      coverCodeFor(slip.cob, typeOfCover, covers),
+      covers.find((c) => c.name === typeOfCover2)?.abbreviation
+    )
+  }
   const wordingNames = options.wordingForms.map((w) => w.name)
   const insurerItems = options.insurers.map((ins) => ins.name)
 
@@ -882,10 +894,9 @@ function SlipEditor({
                   onValueChange={(v) =>
                     set({
                       typeOfCover: (v as string) ?? "",
-                      coverCode: coverCodeFor(
-                        slip.cob,
+                      coverCode: slipCoverCode(
                         (v as string) ?? "",
-                        covers
+                        slip.typeOfCover2
                       ),
                     })
                   }
@@ -904,6 +915,46 @@ function SlipEditor({
                   </SelectContent>
                 </Select>
               </Field>
+
+              {isProperty ? (
+                <Field className="md:col-span-2">
+                  <FieldLabel>Type of Cover Earthquake</FieldLabel>
+                  <Select
+                    items={[
+                      { label: "Tanpa Earthquake", value: null },
+                      ...coverItems2,
+                    ]}
+                    value={slip.typeOfCover2 || null}
+                    onValueChange={(v) =>
+                      set({
+                        typeOfCover2: (v as string) ?? "",
+                        coverCode: slipCoverCode(
+                          slip.typeOfCover,
+                          (v as string) ?? ""
+                        ),
+                      })
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value={null}>Tanpa Earthquake</SelectItem>
+                        {coverItems2.map((i) => (
+                          <SelectItem key={i.value} value={i.value}>
+                            {i.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FieldDescription>
+                    Untuk slip PAR + EQVET. Dicetak di bawah type of cover di
+                    atas dan dipakai polis EQVET.
+                  </FieldDescription>
+                </Field>
+              ) : null}
 
               <InsuredPicker
                 clients={clients}
@@ -1298,6 +1349,7 @@ function SlipEditor({
                 <ClausePicker
                   cob={slip.cob}
                   typeOfCover={slip.typeOfCover}
+                  typeOfCover2={slip.typeOfCover2}
                   selected={slip.clauseIds}
                   overrides={slip.clauseOverrides ?? {}}
                   onChange={(ids) => set({ clauseIds: ids })}
@@ -1319,6 +1371,7 @@ function SlipEditor({
                   <ClausePicker
                     cob={slip.cob}
                     typeOfCover={slip.typeOfCover}
+                    typeOfCover2={slip.typeOfCover2}
                     selected={clauseIds2}
                     overrides={slip.clauseOverridesSection2 ?? {}}
                     onChange={(ids) => set({ clauseIdsSection2: ids })}
