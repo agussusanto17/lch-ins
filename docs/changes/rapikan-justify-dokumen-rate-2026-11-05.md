@@ -9,7 +9,8 @@
 
 Lanjutan [rate-dokumen-per-mil-2026-11-05.md](rate-dokumen-per-mil-2026-11-05.md)
 (PR #126). User minta bagian justify di dokumen itu diperbaiki dan tampilan
-print out dirapikan (5 November 2026).
+print out dirapikan (5 November 2026). Contoh yang diminta: titik dua, `=`,
+`IDR`, dan nilai premi lurus satu garis di setiap baris.
 
 Masalahnya ada di perataan:
 
@@ -27,11 +28,15 @@ Masalahnya ada di perataan:
 - **RATE** menjadi tabel tiga kolom: nama peril, titik dua, rate. Semua titik
   dua dan rate sejajar, rate rata kiri. Nama peril yang panjang turun baris di
   kolomnya sendiri.
-- **PREMIUM CALCULATION** menjadi tabel enam kolom: label, titik dua, nilai
-  pertanggungan (rata kanan), rate dan loss limit, `=`, dan premi (rata
-  kanan). PAR dan EQVET sekarang satu tabel, jadi kolomnya sejajar dari atas
-  sampai bawah. Baris Premium, Discount, Policy Cost + Stamp Duty, dan Total
-  tetap memakai kolom premi yang sama.
+- **PREMIUM CALCULATION** menjadi tabel sembilan kolom: label, titik dua,
+  `IDR`, nilai pertanggungan (rata kanan), rate dan loss limit, `=`, `IDR`,
+  premi (rata kanan), dan tanda `+`/`-`. Kode mata uang dipisah dari angka
+  supaya `IDR` lurus dan angkanya rata kanan. Tanda `+`/`-` punya kolom
+  sendiri sehingga tidak menggeser angka, dan kurung tutup Discount
+  menggantung di luar kolom angka.
+- PAR, EQVET, dan GRAND TOTAL sekarang satu tabel, jadi kolomnya sejajar dari
+  atas sampai bawah, termasuk baris Premium, Discount, Premium after discount,
+  Policy Cost + Stamp Duty, dan Total.
 - Nilai, rumus, dan teks tidak berubah. Hanya perataan.
 
 Berlaku di semua dokumen Property yang memakai blok rate PAR/EQVET: Placing
@@ -40,7 +45,8 @@ Slip, Quotation Slip, Cover Note, dan Closing Instruction.
 ## File utama
 
 - `components/documents/doc-blocks.tsx`: `ParEqvetRateBlock`,
-  `ParEqvetGroupSection` (sekarang `<tbody>`), dan `ParEqvetCalculationBlock`.
+  `ParEqvetGroupSection` (sekarang `<tbody>`), `ParEqvetCalculationBlock`, serta
+  komponen baru `AmountCells` dan `SummaryRow`.
 
 ## Dampak
 
@@ -53,14 +59,16 @@ Slip, Quotation Slip, Cover Note, dan Closing Instruction.
    slip dengan loss limit pada FLEXAS.
 2. Bagian RATE: semua titik dua berada di satu garis vertikal, termasuk baris
    loss limit.
-3. Bagian PREMIUM CALCULATION: titik dua, nilai pertanggungan, rate, `=`, dan
-   premi sejajar di semua baris PAR dan EQVET.
+3. Bagian PREMIUM CALCULATION: titik dua, `IDR`, ujung kanan nilai
+   pertanggungan, `=`, `IDR` premi, ujung kanan premi, dan tanda `+`/`-`
+   sejajar di semua baris PAR, EQVET, dan GRAND TOTAL.
 4. Ulangi di Quotation Slip, Cover Note, dan Closing Instruction, lalu
    Print / Save PDF. Pada lebar konten A4 (174 mm) tidak ada kolom yang
    terpotong dan setiap baris rumus tetap satu baris.
 
-Hasil pengukuran DOM pada lebar konten A4, slip PAR + EQVET: posisi kolom
-sama di keempat dokumen, nol sel overflow.
+Hasil pengukuran DOM di lebar layar dan lebar konten A4, pada slip Property
+dengan loss limit dan slip PAR + EQVET dengan discount: posisi `=`, `IDR`, dan
+ujung kanan angka sama di setiap baris, dan tabel tidak melebihi lebar konten.
 
 ## Catatan untuk yang melanjutkan
 
