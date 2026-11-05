@@ -41,20 +41,13 @@ import {
 import { InsuredPicker } from "@/components/underwriting/insured-picker"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
 import { SlipLocations } from "@/components/underwriting/slip-locations"
-import {
-  OjkReference,
-  type RateBounds,
-} from "@/components/underwriting/ojk-reference"
-import {
-  CoverRateTable,
-  LimitRateTable,
-} from "@/components/underwriting/rate-tables"
+import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
+import { type RateBounds } from "@/components/underwriting/ojk-reference"
 import {
   coverCodeFor,
   joinCoverCodes,
   occupationParts,
   isOutOfBounds,
-  keepGroupDeductibles,
   rateLinesWithBounds,
   recalc,
   releaseIssues,
@@ -133,6 +126,7 @@ import {
 } from "@/lib/form-options"
 import { money, num, percent } from "@/lib/format"
 import { locationGroups, locationOwner } from "@/lib/slip-locations"
+import { vehicleOwner } from "@/lib/slip-vehicles"
 import type { InsuredOption } from "@/lib/server/clients"
 import { newId, store, useRecord } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -503,18 +497,21 @@ function SlipEditor({
 
   /**
    * Isi satu baris rate dari panel referensi OJK, sekaligus catat batasnya.
-   * Slip Property mengisi baris lokasi yang panelnya dipakai.
+   * Slip Property dan Motor Vehicle mengisi baris lokasi atau kendaraan yang
+   * panelnya dipakai.
    */
   function applyOjkRate(
     label: string,
     value: number,
     bounds?: RateBounds,
-    locationId?: string
+    scope: { locationId?: string; vehicleId?: string } = {}
   ) {
-    const owner = locationOwner(slip)
+    const location = locationOwner(slip)
+    const vehicle = vehicleOwner(slip)
     const target = (l: RateLine) =>
       l.label.startsWith(label) &&
-      (!locationId || owner(l.locationId) === locationId)
+      (!scope.locationId || location(l.locationId) === scope.locationId) &&
+      (!scope.vehicleId || vehicle(l.vehicleId) === scope.vehicleId)
     if (!slip.rateLines.some(target)) return
     setSlip((s) =>
       recalc({
@@ -1245,7 +1242,7 @@ function SlipEditor({
                 locked={locked}
                 onChange={set}
                 onPickRate={(locationId, label, value, bounds) =>
-                  applyOjkRate(label, value, bounds, locationId)
+                  applyOjkRate(label, value, bounds, { locationId })
                 }
                 onPickIndemnity={(months) =>
                   set({ indemnityPeriod: `${months} months` })
@@ -1423,61 +1420,17 @@ function SlipEditor({
                 </p>
               ) : null}
 
-              {isMotor && !locked ? (
-                <OjkReference
-                  mode="motor"
-                  riskLocation={slip.riskLocation ?? ""}
-                  sumInsured={tsi}
-                  onPickRate={applyOjkRate}
-                />
-              ) : null}
-
               {isMotor ? (
-                <CoverRateTable
+                <SlipVehicles
+                  slip={slip}
                   lines={lines}
-                  currency={slip.currency}
-                  unit={rateUnitFor(slip.cob)}
-                  exceptions={slip.rateExceptions}
-                  readOnly={locked}
-                  onRateChange={(id, rate) =>
-                    set({
-                      rateLines: slip.rateLines.map((l) =>
-                        l.id === id ? { ...l, rate } : l
-                      ),
-                    })
+                  locked={locked}
+                  onChange={set}
+                  onPickRate={(vehicleId, label, value, bounds) =>
+                    applyOjkRate(label, value, bounds, { vehicleId })
                   }
                   onExceptionChange={setException}
                 />
-              ) : null}
-
-              {isMotor ? (
-                <>
-                  <LimitRateTable
-                    title="Third Party Liability"
-                    lines={slip.tplLines}
-                    currency={slip.currency}
-                    totalLabel="Total TPL"
-                    readOnly={locked}
-                    onChange={(l) =>
-                      set({ tplLines: keepGroupDeductibles(slip.tplLines, l) })
-                    }
-                  />
-                  <LimitRateTable
-                    title="Personal Accident"
-                    lines={slip.paLines}
-                    currency={slip.currency}
-                    totalLabel="Total PA"
-                    showCoverColumn
-                    readOnly={locked}
-                    onChange={(l) =>
-                      set({ paLines: keepGroupDeductibles(slip.paLines, l) })
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Limit PA: IDR 5.000.000/orang, maks. 4 orang (selain truck
-                    &amp; motorcycle) · maks. 2 orang (truck).
-                  </p>
-                </>
               ) : null}
 
               {!isProperty && !isMotor ? (

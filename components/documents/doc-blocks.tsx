@@ -15,6 +15,7 @@ import {
   ratePermilText,
   roundCents,
   sumItems,
+  sumPremium,
   totalPayable,
   totalPremium,
   totalSumInsured,
@@ -31,6 +32,7 @@ import {
   resolveSlipClauses,
   type ClauseOverride,
   type PlacingSlip,
+  type RateLine,
   type ResolvedClause,
   type SecurityPanelRow,
 } from "@/lib/data"
@@ -41,6 +43,11 @@ import {
   oneLineAddress,
   type LocationGroup,
 } from "@/lib/slip-locations"
+import {
+  isMultiVehicle,
+  vehicleGroups,
+  vehicleTitle,
+} from "@/lib/slip-vehicles"
 import { cn } from "@/lib/utils"
 
 export function DocTitle({
@@ -269,7 +276,7 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
         </div>
       ) : (
         <ul className="flex flex-col gap-2 text-[13px]">
-          {slip.interestItems.map((i) => {
+          {slip.interestItems.map((i, index) => {
             const isVehicle = slip.cob === "Motor Vehicle" || Boolean(i.vehicleBrandId || i.vehicleBrandName)
             if (isVehicle) {
               const parsed = !i.licensePlate && !i.chassisNumber && i.description
@@ -294,6 +301,8 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
                 >
                   <div className="flex flex-col gap-0.5">
                     <div className="font-semibold text-foreground">
+                      {/* Nomor kendaraan dirujuk jadwal premi slip multi kendaraan. */}
+                      {isMultiVehicle(slip) ? `${index + 1}. ` : ""}
                       {fullTitle}
                       {year ? ` (${year})` : ""}
                     </div>
@@ -972,6 +981,108 @@ export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
             </td>
             <td className="tabular px-2 py-2 text-right whitespace-nowrap">
               {amount(calc.grandTotal)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </>
+  )
+}
+
+/**
+ * Rate & premium slip Motor Vehicle multi kendaraan, seperti jadwal premi per
+ * lokasi slip Property: per kendaraan casco dan perluasan dari TSI-nya, lalu
+ * TPL dan PA dari limitnya, dengan subtotal per kendaraan. Diskon, admin
+ * cost, stamp duty, dan Total Payable dicetak di bawahnya oleh PayableTable.
+ */
+export function VehiclePremiumSchedule({ slip }: { slip: PlacingSlip }) {
+  const groups = vehicleGroups(slip)
+  const currency = slip.currency || "IDR"
+  const amount = (value: number) => num(value, 2)
+  const shown = (l: RateLine) => l.rate !== null || l.premium > 0
+  const cell = "py-1.5 pr-2 align-top"
+
+  return (
+    <>
+      <InfoTable rows={[["Rate & Premium", "As per schedule below"]]} />
+      <SectionHeading>PREMIUM CALCULATION</SectionHeading>
+      <table className="w-full text-[12px]">
+        <thead>
+          <tr className="border-b text-left text-muted-foreground">
+            <th className="w-20 py-2 pr-2 font-semibold">Kendaraan</th>
+            <th className="py-2 pr-2 font-semibold">Objek</th>
+            <th className="py-2 pr-2 text-right font-semibold">
+              TSI / Limit ({currency})
+            </th>
+            <th className="py-2 pr-2 font-semibold">Cover</th>
+            <th className="py-2 pr-2 text-right font-semibold">Rate</th>
+            <th className="py-2 text-right font-semibold">
+              Premium ({currency})
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((g) => {
+            const casco = g.rateLines.filter(shown)
+            const limits = [
+              ...g.tplLines.filter(shown).map((l) => ({ line: l, cover: "Third Party Liability" })),
+              ...g.paLines.filter(shown).map((l) => ({ line: l, cover: `Personal Accident — ${l.label}` })),
+            ]
+            const subtotal =
+              sumPremium(g.rateLines) + sumPremium(g.tplLines) + sumPremium(g.paLines)
+            return (
+              <Fragment key={g.vehicle.id}>
+                {casco.map((l, i) => (
+                  <tr key={l.id} className="avoid-break border-b border-dashed">
+                    <td className={cell}>{i === 0 ? g.no : ""}</td>
+                    <td className={cell}>{i === 0 ? vehicleTitle(g.vehicle) : ""}</td>
+                    <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
+                      {i === 0 ? amount(g.vehicle.amount || 0) : ""}
+                    </td>
+                    <td className={cell}>{l.label}</td>
+                    <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
+                      {l.rate !== null ? `${rateText(l.rate)}%` : "—"}
+                    </td>
+                    <td className="tabular py-1.5 text-right align-top whitespace-nowrap">
+                      {amount(l.premium)}
+                    </td>
+                  </tr>
+                ))}
+                {limits.map(({ line, cover }, i) => (
+                  <tr key={line.id} className="avoid-break border-b border-dashed">
+                    <td className={cell}>{!casco.length && i === 0 ? g.no : ""}</td>
+                    <td className={cell}>
+                      {!casco.length && i === 0 ? vehicleTitle(g.vehicle) : ""}
+                    </td>
+                    <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
+                      {amount(Number(line.basis ?? 0))}
+                    </td>
+                    <td className={cell}>{cover}</td>
+                    <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
+                      {line.rate !== null ? `${rateText(line.rate)}%` : "—"}
+                    </td>
+                    <td className="tabular py-1.5 text-right align-top whitespace-nowrap">
+                      {amount(line.premium)}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="avoid-break border-b font-semibold">
+                  <td colSpan={5} className="py-1.5 pr-2">
+                    Premium kendaraan {g.no}
+                  </td>
+                  <td className="tabular py-1.5 text-right whitespace-nowrap">
+                    {amount(subtotal)}
+                  </td>
+                </tr>
+              </Fragment>
+            )
+          })}
+          <tr className="avoid-break bg-muted/60 font-bold">
+            <td colSpan={5} className="px-2 py-2">
+              Total Premium
+            </td>
+            <td className="tabular px-2 py-2 text-right whitespace-nowrap">
+              {amount(totalPremium(slip))}
             </td>
           </tr>
         </tbody>

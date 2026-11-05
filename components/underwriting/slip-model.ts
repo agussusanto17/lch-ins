@@ -34,6 +34,12 @@ import {
   locationOwner,
   slipLocations,
 } from "@/lib/slip-locations"
+import {
+  isMultiVehicle,
+  vehicleGroups,
+  vehicleOwner,
+  vehicleTariff,
+} from "@/lib/slip-vehicles"
 
 let seq = 0
 export const uid = (prefix: string) =>
@@ -125,11 +131,10 @@ const MOTOR_EXTRA_COVERS: {
 const MOTOR_EXTRA_AFTER = "Terrorism & Sabotage"
 
 /** Motor PA and TPL covers this slip has, i.e. whose table has a line. */
-export function extraDeductibleCovers(
-  slip: Pick<PlacingSlip, "cob" | "tplLines" | "paLines">
-) {
+export function extraDeductibleCovers(slip: PlacingSlip) {
   if (slip.cob !== "Motor Vehicle") return []
-  return MOTOR_EXTRA_COVERS.filter((c) => slip[c.group].length > 0)
+  const source = deductibleSource(slip)
+  return MOTOR_EXTRA_COVERS.filter((c) => source[c.group].length > 0)
 }
 
 /**
@@ -141,7 +146,8 @@ export function deductibleRows(
   slip: PlacingSlip,
   added: DeductibleGroup[] = []
 ): DeductibleRow[] {
-  const lines = deductibleLines(slip)
+  const source = deductibleSource(slip)
+  const lines = source.rateLines
   const rows: DeductibleRow[] = lines.map((l) => ({
     group: "rateLines",
     lineId: l.id,
@@ -150,7 +156,7 @@ export function deductibleRows(
     extra: false,
   }))
   const extras = extraDeductibleCovers(slip).flatMap((c): DeductibleRow[] => {
-    const line = slip[c.group][0]
+    const line = source[c.group][0]
     const deductibles = line.deductibles ?? []
     return deductibles.length || added.includes(c.group)
       ? [
@@ -170,15 +176,21 @@ export function deductibleRows(
 }
 
 /**
- * Baris rate yang menyimpan deductible per cover. Slip Property punya satu
- * daftar deductible per cover untuk semua lokasi (Harry, 5 November 2026),
- * disimpan di baris lokasi pertama; deductible yang beda per lokasi ditulis di
- * teksnya.
+ * Baris yang menyimpan deductible per cover. Slip Property dan Motor Vehicle
+ * punya satu daftar deductible per cover untuk semua lokasi atau kendaraan
+ * (Harry, 5 November 2026), disimpan di baris lokasi atau kendaraan pertama;
+ * yang beda per lokasi atau kendaraan ditulis di teksnya.
  */
-function deductibleLines(slip: PlacingSlip) {
-  return slip.cob === "Property"
-    ? locationGroups(slip)[0].rateLines
-    : slip.rateLines
+function deductibleSource(
+  slip: PlacingSlip
+): Pick<PlacingSlip, "rateLines" | "tplLines" | "paLines"> {
+  if (slip.cob === "Property") {
+    return { rateLines: locationGroups(slip)[0].rateLines, tplLines: [], paLines: [] }
+  }
+  if (slip.cob === "Motor Vehicle" && slip.interestItems.length) {
+    return vehicleGroups(slip)[0]
+  }
+  return slip
 }
 
 /**
@@ -390,6 +402,22 @@ export function locationRowsPatch<
   return { [key]: next } as Partial<PlacingSlip>
 }
 
+/** Ganti baris rate, TPL, atau PA satu kendaraan; baris tetap berurutan per kendaraan. */
+export function vehicleRowsPatch(
+  slip: PlacingSlip,
+  key: "rateLines" | "tplLines" | "paLines",
+  vehicleId: string,
+  rows: RateLine[]
+): Partial<PlacingSlip> {
+  const owner = vehicleOwner(slip)
+  const next = slip.interestItems.flatMap((vehicle) =>
+    vehicle.id === vehicleId
+      ? rows.map((r) => ({ ...r, vehicleId }))
+      : slip[key].filter((r) => owner(r.vehicleId) === vehicle.id)
+  )
+  return { [key]: next }
+}
+
 /**
  * Token {COVER} di nomor slip. Singkatan dari master data didahulukan; label
  * lama yang belum ada di master (misalnya "PAR + EQVET") memakai kode bawaan
@@ -479,20 +507,26 @@ export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
   }
 
   if (slip.cob === "Motor Vehicle") {
-    const tsi = totalSumInsured(slip)
-    const vehicleDesc = slip.interestItems.map((i) => i.description).join(" ")
-    const locationOrPlate = slip.riskLocation || vehicleDesc || ""
-    const coverType = slip.typeOfCover || slip.coverage || "Comprehensive"
-    const motorBounds = findMotorTariffBounds({
-      vehicleDesc,
-      tsi,
-      locationOrPlate,
-      coverType,
-    })
-    const region = matchMotorRegion(locationOrPlate)
+    // Kategori dan wilayah OJK dihitung per kendaraan.
+    const owner = vehicleOwner(slip)
+    const tariffs = new Map(
+      slip.interestItems.map((v) => [v.id, vehicleTariff(slip, v)])
+    )
+    const fallback = {
+      coverType: slip.typeOfCover || slip.coverage || "Comprehensive",
+      region: matchMotorRegion(slip.riskLocation ?? ""),
+      casco: findMotorTariffBounds({
+        vehicleDesc: "",
+        tsi: totalSumInsured(slip),
+        locationOrPlate: slip.riskLocation ?? "",
+        coverType: slip.typeOfCover || slip.coverage || "Comprehensive",
+      }),
+    }
 
     return slip.rateLines.map((l) => {
       if (l.min != null || l.max != null) return l
+      const { coverType, region, casco: motorBounds } =
+        tariffs.get(owner(l.vehicleId) ?? "") ?? fallback
       if (
         l.label === "Comprehensive Casco" ||
         l.label === "Total Loss Only" ||
@@ -560,7 +594,7 @@ export function releaseIssues(slip: PlacingSlip) {
       issues.push("Expiry date harus setelah inception date.")
     }
   }
-  issues.push(...locationIssues(slip))
+  issues.push(...locationIssues(slip), ...vehicleIssues(slip))
   if (usesSectionSumInsured(slip.cob)) {
     const clauseIssues = validateClauseUniquenessAcrossSections(slip)
     if (clauseIssues.length) issues.push(...clauseIssues)
@@ -625,8 +659,32 @@ export function locationIssues(slip: PlacingSlip): string[] {
   })
 }
 
-/** Nama baris rate di pesan validasi; slip multi lokasi menyebut lokasinya. */
+/**
+ * Isian kendaraan slip Motor Vehicle multi kendaraan yang wajib sebelum
+ * release: TSI dan minimal satu rate per kendaraan. Slip satu kendaraan cukup
+ * dicek oleh pemeriksaan sum insured dan rate slip.
+ */
+export function vehicleIssues(slip: PlacingSlip): string[] {
+  if (!isMultiVehicle(slip)) return []
+  return vehicleGroups(slip).flatMap(({ vehicle, no, rateLines }) => {
+    const issues: string[] = []
+    if ((vehicle.amount || 0) <= 0) issues.push(`Isi TSI kendaraan ${no}.`)
+    if (!rateLines.some((l) => (l.rate ?? 0) > 0))
+      issues.push(`Isi minimal satu rate untuk kendaraan ${no}.`)
+    return issues
+  })
+}
+
+/**
+ * Nama baris rate di pesan validasi; slip multi lokasi atau multi kendaraan
+ * menyebut lokasi atau kendaraannya.
+ */
 export function rateLineName(slip: PlacingSlip, line: RateLine) {
+  if (isMultiVehicle(slip)) {
+    const owner = vehicleOwner(slip)(line.vehicleId)
+    const no = slip.interestItems.findIndex((v) => v.id === owner) + 1
+    return no ? `${line.label} kendaraan ${no}` : line.label
+  }
   if (!isMultiLocation(slip) || !slip.rateLines.some((l) => l.id === line.id)) {
     return line.label
   }
