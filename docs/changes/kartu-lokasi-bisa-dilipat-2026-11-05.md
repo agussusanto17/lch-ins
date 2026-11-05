@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `feat/lokasi-bisa-dilipat`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#131](https://github.com/agussusanto17/lch-ins/pull/131)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
