@@ -61,9 +61,9 @@ export function OjkReference({
   onConstructionClassChange?: (code: string) => void
   /** Total sum insured, dipakai memilih kategori tarif kendaraan bermotor. */
   sumInsured?: number
-  /** Jumlah rate FLEXAS, FWTWD, RSMDCC, dan Other Losses. Dasar perhitungan BI PAR. */
+  /** Jumlah rate FLEXAS, FWTWD, RSMDCC, dan Other Losses setelah loss limit. Dasar rate BI PAR. */
   baseRate?: number
-  /** Rate EQVET berjalan. Dasar perhitungan BI EQVET. */
+  /** Rate EQVET setelah loss limit. Dasar rate BI EQVET. */
   eqRate?: number | null
   onPickRate?: PickRate
   onPickIndemnity?: (months: number) => void

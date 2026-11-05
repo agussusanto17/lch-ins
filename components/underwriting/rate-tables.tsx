@@ -139,6 +139,8 @@ export function CoverRateTable({
   exceptions,
   onRateChange,
   onExceptionChange,
+  onLossLimitChange,
+  autoRateNote,
   readOnly,
 }: {
   /** Rate line items augmented with OJK statutory boundaries (see rateLinesWithBounds). */
@@ -148,6 +150,10 @@ export function CoverRateTable({
   exceptions?: Record<string, RateException>
   onRateChange: (id: string, rate: number | null) => void
   onExceptionChange: (id: string, exception: RateException | null) => void
+  /** Adds the Loss Limit (%) column: premium = sum insured × rate × percentage. */
+  onLossLimitChange?: (id: string, pct: number | null) => void
+  /** Note for lines whose rate is calculated from other lines; their rate stays read-only. */
+  autoRateNote?: (line: RateLine) => string | null
   readOnly?: boolean
 }) {
   const [editing, setEditing] = React.useState<string | null>(null)
@@ -155,12 +161,15 @@ export function CoverRateTable({
 
   return (
     <>
-      <Table className="min-w-155">
+      <Table className={onLossLimitChange ? "min-w-180" : "min-w-155"}>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead>Cover</TableHead>
             <TableHead className="w-40 text-right">Batas OJK</TableHead>
             <TableHead className="w-32 text-right">Rate ({unit})</TableHead>
+            {onLossLimitChange ? (
+              <TableHead className="w-32 text-right">Loss Limit (%)</TableHead>
+            ) : null}
             <TableHead className="w-44 text-right">Premium</TableHead>
           </TableRow>
         </TableHeader>
@@ -168,10 +177,19 @@ export function CoverRateTable({
           {lines.map((l) => {
             const out = isOutOfBounds(l)
             const exception = exceptions?.[l.id]
+            const autoNote = autoRateNote?.(l) ?? null
+            const lossLimitInvalid =
+              l.lossLimitPct != null &&
+              (l.lossLimitPct <= 0 || l.lossLimitPct > 100)
             return (
               <TableRow key={l.id}>
                 <TableCell className="text-sm">
                   {l.label}
+                  {autoNote ? (
+                    <span className="mt-1 block text-[11px] text-muted-foreground">
+                      {autoNote}
+                    </span>
+                  ) : null}
                   {out ? (
                     <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
                       <span
@@ -214,10 +232,28 @@ export function CoverRateTable({
                     aria-label={`Rate ${l.label}`}
                     value={l.rate}
                     invalid={out && !exception}
-                    readOnly={readOnly}
+                    readOnly={readOnly || Boolean(autoNote)}
                     onValueChange={(v) => onRateChange(l.id, v)}
                   />
                 </TableCell>
+                {onLossLimitChange ? (
+                  <TableCell className="text-right">
+                    {autoNote ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : (
+                      <NumberInput
+                        preset="percent"
+                        className="ml-auto h-8 w-24"
+                        aria-label={`Loss limit ${l.label} (%)`}
+                        placeholder="100"
+                        value={l.lossLimitPct ?? null}
+                        invalid={lossLimitInvalid}
+                        readOnly={readOnly}
+                        onValueChange={(v) => onLossLimitChange(l.id, v || null)}
+                      />
+                    )}
+                  </TableCell>
+                ) : null}
                 <TableCell className="tabular text-right">
                   {money(l.premium, currency)}
                 </TableCell>

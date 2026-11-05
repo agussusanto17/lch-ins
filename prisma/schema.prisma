@@ -1083,9 +1083,9 @@ model PlacingSlip {
   /// Vehicle. Tidak dicetak di dokumen slip; ikut ke polis yang dibuat dari slip.
   additionalFee Decimal @default(0) @map("additional_fee") @db.Decimal(18, 2)
 
-  /// Loss limit slip Property: batas ganti rugi di bawah nilai penuh Section 1.
-  /// Kosong berarti full value. Persen premi dari skala OJK disimpan saat
-  /// premi dihitung, supaya dokumen lama tetap sama dengan preminya.
+  /// Tidak dipakai lagi sejak 5 Nov 2026: loss limit menjadi persentase per
+  /// baris rate (`slip_rate_lines.loss_limit_pct`). Kolom dibiarkan supaya
+  /// kode versi sebelumnya tetap jalan selama deploy.
   lossLimit           Decimal? @map("loss_limit") @db.Decimal(18, 2)
   lossLimitPremiumPct Decimal? @map("loss_limit_premium_pct") @db.Decimal(5, 2)
 
@@ -1171,6 +1171,9 @@ model SlipRateLine {
   /// Batas bawah dan atas OJK saat rate diisi.
   rateMin           Decimal? @map("rate_min") @db.Decimal(12, 6)
   rateMax           Decimal? @map("rate_max") @db.Decimal(12, 6)
+  /// Persentase loss limit baris Property: premi = sum insured × rate ×
+  /// persentase. Kosong berarti full value.
+  lossLimitPct      Decimal? @map("loss_limit_pct") @db.Decimal(7, 4)
   /// Alasan bila rate keluar dari batas OJK.
   outOfBoundsReason String?  @map("out_of_bounds_reason")
   /// Tidak dipakai lagi sejak satu cover bisa punya beberapa deductible

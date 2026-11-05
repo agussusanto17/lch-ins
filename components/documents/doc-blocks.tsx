@@ -6,15 +6,17 @@ import {
 } from "@/components/underwriting/slip-model"
 import {
   BI_RATE_LABELS,
+  biRateBasis,
   brokerageAmount,
   calculateParEqvet,
   discountAmount,
-  slipLossLimit,
+  ratePercentText,
   sumItems,
   totalPayable,
   totalPremium,
   totalSumInsured,
   type ParEqvetGroup,
+  type ParEqvetLine,
 } from "@/lib/calc"
 
 export { isParEqvetSlip } from "@/lib/calc"
@@ -118,7 +120,6 @@ export function InfoTable({
 
 export function InterestBlock({ slip }: { slip: PlacingSlip }) {
   const isProperty = slip.cob === "Property"
-  const lossLimit = slipLossLimit(slip)
 
   return (
     <>
@@ -273,16 +274,6 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
           {money(totalSumInsured(slip), slip.currency)}
         </span>
       </p>
-      {lossLimit ? (
-        <p className="mt-1.5 flex justify-between gap-6 px-3 text-[13px] font-semibold">
-          <span>
-            Loss Limit ({num(lossLimit.valuesPct, 2)}% of Section 1 values)
-          </span>
-          <span className="tabular">
-            {money(slip.lossLimit ?? 0, slip.currency)}
-          </span>
-        </p>
-      ) : null}
     </>
   )
 }
@@ -496,14 +487,13 @@ export interface PremiumRow {
 const rateText = (rate: number) => num(rate, 2, 6)
 
 export function premiumRows(slip: PlacingSlip): PremiumRow[] {
-  // Premi baris non-BI slip loss limit sudah dikali persen skala OJK.
-  const lossLimitPct = slip.lossLimitPremiumPct
+  // Premi baris dengan loss limit sudah dikali persentasenya.
   const rows: PremiumRow[] = slip.rateLines
     .filter((l) => l.rate !== null || l.premium > 0)
     .map((l) => ({
       label:
-        lossLimitPct != null && !BI_RATE_LABELS.includes(l.label)
-          ? `${l.label} (Loss Limit ${num(lossLimitPct, 2)}%)`
+        l.lossLimitPct != null && !BI_RATE_LABELS.includes(l.label)
+          ? `${l.label} (Loss Limit ${num(l.lossLimitPct, 0, 4)}%)`
           : coverLabel(slip, l),
       rate: l.rate !== null ? rateText(l.rate) : "—",
       premium: l.premium,
@@ -614,9 +604,34 @@ export function PayableTable({ slip }: { slip: PlacingSlip }) {
   )
 }
 
+/**
+ * Rate dengan pengali dicetak seperti CI LCH: "0,04500% × 85% = 0,03825%"
+ * untuk loss limit, dan dasar BI × skala indemnity period selain 12 bulan.
+ */
+function rateFormula(
+  line: ParEqvetLine,
+  bi: ReturnType<typeof biRateBasis>
+) {
+  const biBase =
+    line.label === BI_RATE_LABELS[0]
+      ? bi.par
+      : line.label === BI_RATE_LABELS[1]
+        ? bi.eqvet
+        : null
+  if (biBase != null && bi.scalePct !== 100) {
+    return `${ratePercentText(biBase / 10)} × ${num(bi.scalePct, 0, 1)}% = ${line.rateText}`
+  }
+  if (line.ratePercent != null && line.lossLimitPct != null) {
+    const effective = (line.ratePercent * line.lossLimitPct) / 100
+    return `${line.rateText} × ${num(line.lossLimitPct, 0, 4)}% = ${ratePercentText(effective)}`
+  }
+  return line.rateText
+}
+
 /** Formats Property rate list with full peril titles and 5-decimal percentages per Image 5. */
 export function ParEqvetRateBlock({ slip }: { slip: PlacingSlip }) {
   const calc = calculateParEqvet(slip)
+  const bi = biRateBasis(slip)
   const allLines = [...calc.par.lines, ...calc.eqvet.lines].filter(
     (l) => l.ratePercent != null
   )
@@ -630,7 +645,7 @@ export function ParEqvetRateBlock({ slip }: { slip: PlacingSlip }) {
         >
           <span>- {line.fullName}</span>
           <span className="tabular font-medium whitespace-nowrap text-right">
-            : {line.rateText}
+            : {rateFormula(line, bi)}
           </span>
         </li>
       ))}
@@ -656,7 +671,7 @@ function ParEqvetGroupSection({
             <tr key={l.id} className="border-b/40 border-b">
               <td className="py-1 pr-2">
                 {l.formulaLabel} : {moneyCents(l.basis, currency)} x {l.rateText}
-                {l.lossLimitPct != null ? ` x ${num(l.lossLimitPct, 2)}%` : ""} =
+                {l.lossLimitPct != null ? ` x ${num(l.lossLimitPct, 0, 4)}%` : ""} =
               </td>
               <td className="tabular py-1 text-right whitespace-nowrap">
                 {moneyCents(l.premium, currency)}

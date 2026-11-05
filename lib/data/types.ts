@@ -161,6 +161,11 @@ export interface RateLine {
   min?: number | null
   max?: number | null
   boundSource?: string
+  /**
+   * Persentase loss limit baris rate Property: premi = sum insured × rate ×
+   * persentase. Kosong berarti full value (100%).
+   */
+  lossLimitPct?: number | null
   /** Deductible untuk cover ini, teks bebas, paling banyak MAX_DEDUCTIBLES. */
   deductibles?: string[]
 }
@@ -255,16 +260,6 @@ export interface PlacingSlip {
    * Tidak dicetak di slip; disalin ke polis yang dibuat dari slip.
    */
   additionalFee?: number
-  /**
-   * Loss limit slip Property: batas ganti rugi di bawah nilai penuh Section 1.
-   * Kosong berarti full value.
-   */
-  lossLimit?: number | null
-  /**
-   * Persen premi full value dari skala OJK untuk loss limit di atas, diisi saat
-   * premi dihitung. Kosong berarti full value (100%).
-   */
-  lossLimitPremiumPct?: number | null
   createdAt: string
   updatedAt: string
   /* pasca-release */
