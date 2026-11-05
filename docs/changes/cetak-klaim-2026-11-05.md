@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `feat/cetak-klaim`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #125
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
