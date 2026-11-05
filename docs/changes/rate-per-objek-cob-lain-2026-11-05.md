@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `feat/rate-per-objek-cob-lain`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#136](https://github.com/agussusanto17/lch-ins/pull/136)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
