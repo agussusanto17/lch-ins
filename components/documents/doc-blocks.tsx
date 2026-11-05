@@ -41,6 +41,7 @@ import { CURRENCY_SYMBOL, dateEn, money, moneyCents, num } from "@/lib/format"
 import {
   isMultiLocation,
   locationGroups,
+  locationsShareRates,
   oneLineAddress,
   type LocationGroup,
 } from "@/lib/slip-locations"
@@ -81,19 +82,30 @@ export function SectionHeading({ children }: { children: React.ReactNode }) {
 }
 
 export function DetailTable({ slip }: { slip: PlacingSlip }) {
+  // Keterangan periode dicetak di baris berikutnya, seperti CI LCH: "Both
+  // days at 12 o'clock noon local time at the location of the insured object."
   const period = slip.periodTba
     ? "To Be Advised"
-    : `${dateEn(slip.inceptionDate)} to ${dateEn(slip.expiryDate)}`
+    : [
+        `${dateEn(slip.inceptionDate)} to ${dateEn(slip.expiryDate)}`,
+        slip.periodNote?.trim(),
+      ]
+        .filter(Boolean)
+        .join("\n")
 
   // Slip PAR + EQVET dengan dua type of cover dicetak seperti CI LCH: satu
-  // baris per type of cover, masing-masing diawali tanda hubung.
-  const covers = [slip.typeOfCover, slip.typeOfCover2].filter(Boolean)
+  // baris per type of cover, masing-masing diawali tanda hubung. Nama di
+  // dokumen yang diisi di slip menggantikan nama master.
+  const covers = [
+    slip.typeOfCover && (slip.typeOfCoverLabel?.trim() || slip.typeOfCover),
+    slip.typeOfCover2 && (slip.typeOfCover2Label?.trim() || slip.typeOfCover2),
+  ].filter(Boolean)
   const rows: [string, string | string[]][] = [
     [
       "Type of Cover",
       covers.length > 1
         ? covers.map((c) => `- ${c}`).join("\n")
-        : slip.typeOfCover || "—",
+        : covers[0] || "—",
     ],
   ]
   // Wording form hanya dicetak di sini, tidak di CLAUSES (Harry, 5 November
@@ -130,15 +142,16 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
 
 /**
  * Okupasi, lokasi, dan kelas slip Property multi lokasi, bernomor seperti CI
- * LCH Ruko & Gudang. Tiap lokasi mencetak sum insured-nya; kelas konstruksi
- * cukup sekali bila semua lokasi sama.
+ * LCH Ruko & Gudang. Tiap lokasi mencetak sum insured-nya. Okupasi dan kelas
+ * konstruksi cukup sekali bila semua lokasi sama, seperti CI SISKA RAHARJA.
  */
 function locationRows(slip: PlacingSlip): [string, string[]][] {
   const groups = locationGroups(slip)
+  const occupations = groups.map((g) => slipOccupationText(g.location) || "—")
   const rows: [string, string[]][] = [
     [
       "Occupation",
-      groups.map((g) => slipOccupationText(g.location) || "—"),
+      new Set(occupations).size === 1 ? [occupations[0]] : occupations,
     ],
     [
       "Risk(s) Location",
@@ -392,30 +405,57 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
   // Deductible texts already name their peril, so the cover column is not
   // printed. Covers sharing the same text print it once, each as a "-" bullet
   // like the rate list, with wrapped lines aligned to the text.
-  const deductibles = [
+  const rows = deductibleRows(slip)
+  const texts = (pick: (row: (typeof rows)[number]) => boolean) => [
     ...new Set(
-      deductibleRows(slip)
+      rows
+        .filter(pick)
         .flatMap((r) => r.deductibles)
         .map((text) => text.trim())
         .filter(Boolean)
     ),
   ]
-  if (!deductibles.length && !slip.specialConditions) return null
+  // Slip Property mengikuti CI LCH (contoh SISKA RAHARJA): kalimat pengantar,
+  // lalu deductible per section; cover BI masuk Section 2.
+  const property = slip.cob === "Property"
+  const groups = (
+    property
+      ? [
+          {
+            heading: "Section 1 — Material Damage",
+            texts: texts((r) => !BI_RATE_LABELS.includes(r.cover)),
+          },
+          {
+            heading: "Section 2 — Business Interruption",
+            texts: texts((r) => BI_RATE_LABELS.includes(r.cover)),
+          },
+        ]
+      : [{ heading: null, texts: texts(() => true) }]
+  ).filter((g) => g.texts.length > 0)
+  if (!groups.length && !slip.specialConditions) return null
 
   return (
     <>
       <SectionHeading>DEDUCTIBLE &amp; CONDITIONS</SectionHeading>
       <div className="flex flex-col gap-3 text-[13px]">
-        {deductibles.length ? (
-          <ul className="flex flex-col gap-1.5 text-[12.5px]">
-            {deductibles.map((text) => (
-              <li key={text} className="flex gap-2">
-                <span aria-hidden>-</span>
-                <span className="whitespace-pre-line">{text}</span>
-              </li>
-            ))}
-          </ul>
+        {groups.length && property ? (
+          <p>Any one loss or series of losses arising out of any one event:</p>
         ) : null}
+        {groups.map((g) => (
+          <div key={g.heading ?? "deductible"}>
+            {g.heading ? (
+              <p className="mb-1.5 font-semibold">{g.heading}</p>
+            ) : null}
+            <ul className="flex flex-col gap-1.5 text-[12.5px]">
+              {g.texts.map((text) => (
+                <li key={text} className="flex gap-2">
+                  <span aria-hidden>-</span>
+                  <span className="whitespace-pre-line">{text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
         {slip.specialConditions ? (
           <div>
             <p className="font-semibold">Special Conditions</p>
@@ -956,11 +996,16 @@ function scheduleRows(lines: ParEqvetLine[], groups: LocationGroup[]) {
  * Rate & premium slip Property multi lokasi (Opsi B, disetujui Harry 5
  * November 2026): satu baris per lokasi dan cover, PAR dan EQVET terpisah,
  * lalu Discount, Policy Cost, dan Stamp Duty sebelum Grand Total. Bagian RATE
- * tidak dicetak karena rate sudah ada di tabel.
+ * hanya dicetak bila semua lokasi memakai rate yang sama; selain itu rate
+ * cukup dibaca di tabel.
  */
 export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
   const calc = calculateParEqvet(slip)
   const groups = locationGroups(slip)
+  // Rate yang sama di semua lokasi dicetak sekali di bagian RATE, seperti CI
+  // SISKA RAHARJA; tabel di bawahnya tetap per lokasi.
+  const sharedRates = locationsShareRates(slip)
+  const first = groups[0]
   const currency = calc.currency
   const amount = (value: number) => num(value, 2)
   const policies = [calc.par, calc.eqvet].filter((g) => g.subtotal > 0).length
@@ -972,8 +1017,26 @@ export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
 
   return (
     <>
+      {sharedRates ? (
+        <>
+          <SectionHeading>RATE</SectionHeading>
+          <ParEqvetRateBlock
+            slip={{
+              ...slip,
+              locations: [first.location],
+              sumInsuredSection1: first.section1,
+              sumInsuredSection2: first.section2,
+              rateLines: first.rateLines,
+            }}
+          />
+        </>
+      ) : null}
       <div className="mt-6">
-        <InfoTable rows={[["Rate & Premium", "As per schedule below"]]} />
+        <InfoTable
+          rows={[
+            [sharedRates ? "Premium" : "Rate & Premium", "As per schedule below"],
+          ]}
+        />
       </div>
       <SectionHeading>PREMIUM CALCULATION</SectionHeading>
       <table className="w-full text-[12px]">

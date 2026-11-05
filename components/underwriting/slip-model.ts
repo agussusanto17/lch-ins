@@ -235,6 +235,10 @@ export function makeMotorSubLines(): {
   }
 }
 
+/** Keterangan periode di semua CI LCH, isi awal slip baru. */
+export const DEFAULT_PERIOD_NOTE =
+  "Both days at 12 o'clock noon local time at the location of the insured object."
+
 export function emptySlip(): PlacingSlip {
   return {
     id: "new",
@@ -251,6 +255,7 @@ export function emptySlip(): PlacingSlip {
     periodTba: false,
     inceptionDate: null,
     expiryDate: null,
+    periodNote: DEFAULT_PERIOD_NOTE,
     occupation: "",
     riskLocation: "",
     wordingForms: [""],
@@ -293,6 +298,8 @@ export function switchCob(
     cob: normCob,
     typeOfCover: "",
     typeOfCover2: "",
+    typeOfCoverLabel: undefined,
+    typeOfCover2Label: undefined,
     coverCode: null,
     // Slip Property mulai lagi dengan satu lokasi dari isian slip.
     locations: undefined,

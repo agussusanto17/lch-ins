@@ -22,7 +22,6 @@ import {
 import { UnitCard } from "@/components/underwriting/unit-card"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
   BI_BASE_LABELS,
@@ -119,6 +118,7 @@ export function SlipLocations({
 }) {
   const groups = locationGroups(slip)
   const multi = groups.length > 1
+  const first = groups[0].location
   const setLine = (id: string, patch: Partial<RateLine>) =>
     onChange({
       rateLines: slip.rateLines.map((l) =>
@@ -153,7 +153,36 @@ export function SlipLocations({
   return (
     <div className="flex flex-col gap-4">
       {multi ? (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/*
+           * Lokasi satu slip sering berokupasi sama, misalnya lima unit
+           * apartemen (CI SISKA RAHARJA): cukup isi lokasi 1 lalu samakan.
+           */}
+          {!locked && first.occupation ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                onChange({
+                  locations: groups.map((g) =>
+                    g.no === 1
+                      ? g.location
+                      : {
+                          ...g.location,
+                          occupation: first.occupation,
+                          occupationLabel: first.occupationLabel,
+                          constructionClass: first.constructionClass,
+                        }
+                  ),
+                })
+              }
+            >
+              Samakan okupasi & kelas dengan Lokasi 1
+            </Button>
+          ) : (
+            <span />
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -269,9 +298,10 @@ export function SlipLocations({
                 <FieldLabel htmlFor={`${key}-occupation-label`}>
                   Nama okupasi di slip
                 </FieldLabel>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                  <Textarea
                     id={`${key}-occupation-label`}
+                    rows={2}
                     value={location.occupationLabel ?? ojkName}
                     disabled={!location.occupation}
                     placeholder={ojkName || "Pilih okupasi OJK dulu"}

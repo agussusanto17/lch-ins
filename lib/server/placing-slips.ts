@@ -69,6 +69,8 @@ export interface PlacingSlipInput {
   cob: CobType | string
   typeOfCover?: string | null
   typeOfCover2?: string | null
+  typeOfCoverLabel?: string | null
+  typeOfCover2Label?: string | null
   coverCode?: string | null
   insuredName: string
   correspondenceAddress?: string | null
@@ -77,6 +79,7 @@ export interface PlacingSlipInput {
   periodTba?: boolean
   inceptionDate?: string | null
   expiryDate?: string | null
+  periodNote?: string | null
   occupation?: string | null
   occupationId?: string | null
   riskLocation?: string | null
@@ -517,6 +520,8 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     cob: normCob,
     typeOfCover: raw.typeOfCover || raw.coverType?.name || "",
     typeOfCover2: raw.typeOfCover2 || raw.coverType2?.name || undefined,
+    typeOfCoverLabel: raw.typeOfCoverLabel || undefined,
+    typeOfCover2Label: raw.typeOfCover2Label || undefined,
     // Singkatan cover dari master didahulukan; slip lama tanpa cover type
     // memakai kode bawaan dari label type of cover.
     coverCode: joinCoverCodes(
@@ -533,6 +538,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     periodTba: raw.periodTba,
     inceptionDate,
     expiryDate,
+    periodNote: raw.periodNote || undefined,
     occupation: raw.occupation
       ? `${raw.occupation.code} - ${raw.occupation.name}`
       : undefined,
@@ -968,6 +974,10 @@ export async function createPlacingSlip(
         coverTypeId: resolvedCoverType?.id || null,
         typeOfCover: input.typeOfCover?.trim() || null,
         ...coverType2,
+        typeOfCoverLabel: input.typeOfCoverLabel?.trim() || null,
+        typeOfCover2Label: coverType2.typeOfCover2
+          ? input.typeOfCover2Label?.trim() || null
+          : null,
         insuredName: input.insuredName.trim(),
         correspondenceAddress: input.correspondenceAddress?.trim() || null,
         currencyCode,
@@ -975,6 +985,7 @@ export async function createPlacingSlip(
         periodTba: input.periodTba ?? false,
         inceptionDate,
         expiryDate,
+        periodNote: input.periodNote?.trim() || null,
         occupationId,
         occupationLabel: input.occupationLabel?.trim() || null,
         riskLocation: input.riskLocation?.trim() || null,
@@ -1328,6 +1339,10 @@ export async function updatePlacingSlip(
         coverTypeId: resolvedCoverType?.id || null,
         typeOfCover: input.typeOfCover?.trim() || null,
         ...coverType2,
+        typeOfCoverLabel: input.typeOfCoverLabel?.trim() || null,
+        typeOfCover2Label: coverType2.typeOfCover2
+          ? input.typeOfCover2Label?.trim() || null
+          : null,
         insuredName: input.insuredName.trim(),
         correspondenceAddress: input.correspondenceAddress?.trim() || null,
         currencyCode,
@@ -1335,6 +1350,7 @@ export async function updatePlacingSlip(
         periodTba: input.periodTba ?? existing.periodTba,
         inceptionDate,
         expiryDate,
+        periodNote: input.periodNote?.trim() || null,
         occupationId,
         occupationLabel: input.occupationLabel?.trim() || null,
         riskLocation: input.riskLocation?.trim() || null,

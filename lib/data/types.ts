@@ -229,6 +229,13 @@ export interface PlacingSlip {
    * Dicetak sebagai baris kedua Type of Cover dan dipakai polis EQVET.
    */
   typeOfCover2?: string
+  /**
+   * Nama type of cover yang dicetak di dokumen bila berbeda dari master,
+   * misalnya "PROPERTY ALL RISKS + RIOTS, STRIKES, ... INSURANCE." seperti CI
+   * LCH. Kosong berarti nama master.
+   */
+  typeOfCoverLabel?: string
+  typeOfCover2Label?: string
   coverCode: string | null
   /** Klien asal tertanggung. Null bila nama diketik manual (data lama). */
   clientId: string | null
@@ -242,6 +249,8 @@ export interface PlacingSlip {
   periodTba: boolean
   inceptionDate: string | null
   expiryDate: string | null
+  /** Keterangan di bawah periode asuransi di dokumen, seperti CI LCH. */
+  periodNote?: string
   occupation?: string
   /** Nama okupasi di dokumen slip ini, tanpa kode. Kosong berarti nama OJK. */
   occupationLabel?: string
