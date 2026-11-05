@@ -34,7 +34,7 @@ import {
   type ResolvedClause,
   type SecurityPanelRow,
 } from "@/lib/data"
-import { dateEn, money, moneyCents, num } from "@/lib/format"
+import { CURRENCY_SYMBOL, dateEn, money, moneyCents, num } from "@/lib/format"
 import {
   isMultiLocation,
   locationGroups,
@@ -722,19 +722,73 @@ export function ParEqvetRateBlock({ slip }: { slip: PlacingSlip }) {
   )
 
   return (
-    <ul className="space-y-1.5 text-[12.5px]">
-      {allLines.map((line) => (
-        <li
-          key={line.id}
-          className="flex items-baseline justify-between gap-4"
-        >
-          <span>- {line.fullName}</span>
-          <span className="tabular font-medium whitespace-nowrap text-right">
-            : {rateFormula(line, bi)}
-          </span>
-        </li>
-      ))}
-    </ul>
+    // Columns keep every colon and rate aligned, as on the LCH CI.
+    <table className="w-full text-[12.5px]">
+      <tbody>
+        {allLines.map((line) => (
+          <tr key={line.id} className="align-top">
+            <td className="py-0.5 pr-2">- {line.fullName}</td>
+            <td className="w-3 py-0.5">:</td>
+            <td className="tabular py-0.5 font-medium whitespace-nowrap">
+              {rateFormula(line, bi)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+const CELL = "tabular py-1 whitespace-nowrap"
+
+/**
+ * Currency, amount, and +/- marker in separate cells so every IDR, digit, and
+ * marker lines up down the column.
+ */
+function AmountCells({
+  value,
+  currency,
+  sign,
+  negative,
+  className = "",
+}: {
+  value: number
+  currency: string
+  sign?: "+" | "-"
+  negative?: boolean
+  className?: string
+}) {
+  return (
+    <>
+      <td className={`${CELL} pr-1.5 ${className}`}>
+        {CURRENCY_SYMBOL[currency] ?? currency}
+      </td>
+      <td className={`${CELL} text-right ${className}`}>
+        {negative ? "(" : ""}
+        {num(value, 2)}
+        {/* Hanging parenthesis keeps the digits aligned with other rows. */}
+        {negative ? <span className="absolute">)</span> : null}
+      </td>
+      <td className={`${CELL} w-5 pl-2.5 ${className}`}>{sign ?? ""}</td>
+    </>
+  )
+}
+
+function SummaryRow({
+  label,
+  className = "",
+  ...amount
+}: {
+  label: string
+  className?: string
+} & Parameters<typeof AmountCells>[0]) {
+  return (
+    <tr className={className}>
+      <td colSpan={6} className="py-1">
+        {label}
+      </td>
+      <AmountCells {...amount} />
+    </tr>
   )
 }
 
@@ -749,62 +803,67 @@ function ParEqvetGroupSection({
   const lastIndex = group.lines.length - 1
 
   return (
-    <div className="space-y-1">
-      <table className="w-full text-[12.5px]">
-        <tbody>
-          {group.lines.map((l, i) => (
-            <tr key={l.id} className="border-b/40 border-b">
-              <td className="py-1 pr-2">
-                {l.formulaLabel} : {moneyCents(l.basis, currency)} x {l.rateText}
-                {l.lossLimitPct != null ? ` x ${num(l.lossLimitPct, 0, 4)}%` : ""} =
-              </td>
-              <td className="tabular py-1 text-right whitespace-nowrap">
-                {moneyCents(l.premium, currency)}
-                {i === lastIndex && group.lines.length > 1 ? " +" : ""}
-              </td>
-            </tr>
-          ))}
+    <tbody>
+      {group.lines.map((l, i) => (
+        <tr key={l.id} className="border-b border-border/40 align-top">
+          <td className="py-1 pr-2">{l.formulaLabel}</td>
+          <td className="w-3 py-1">:</td>
+          <td className={`${CELL} pr-1.5`}>
+            {CURRENCY_SYMBOL[currency] ?? currency}
+          </td>
+          <td className={`${CELL} pr-2 text-right`}>{num(l.basis, 2)}</td>
+          <td className={`${CELL} pr-2`}>
+            x {l.rateText}
+            {l.lossLimitPct != null ? ` x ${num(l.lossLimitPct, 0, 4)}%` : ""}
+          </td>
+          <td className="w-4 py-1">=</td>
+          <AmountCells
+            value={l.premium}
+            currency={currency}
+            sign={i === lastIndex && group.lines.length > 1 ? "+" : undefined}
+          />
+        </tr>
+      ))}
 
-          <tr className="border-t font-semibold">
-            <td className="py-1">Premium {group.name}</td>
-            <td className="tabular py-1 text-right whitespace-nowrap">
-              {moneyCents(group.subtotal, currency)}
-            </td>
-          </tr>
+      <SummaryRow
+        label={`Premium ${group.name}`}
+        className="border-t font-semibold"
+        value={group.subtotal}
+        currency={currency}
+      />
 
-          {group.discountPct > 0 ? (
-            <>
-              <tr className="text-muted-foreground">
-                <td className="py-1">Discount ({num(group.discountPct, 2)}%)</td>
-                <td className="tabular py-1 text-right whitespace-nowrap">
-                  ({moneyCents(group.discountAmount, currency)}) -
-                </td>
-              </tr>
-              <tr>
-                <td className="py-1">Premium after discount</td>
-                <td className="tabular py-1 text-right whitespace-nowrap">
-                  {moneyCents(group.afterDiscount, currency)}
-                </td>
-              </tr>
-            </>
-          ) : null}
+      {group.discountPct > 0 ? (
+        <>
+          <SummaryRow
+            label={`Discount (${num(group.discountPct, 2)}%)`}
+            className="text-muted-foreground"
+            value={group.discountAmount}
+            currency={currency}
+            negative
+            sign="-"
+          />
+          <SummaryRow
+            label="Premium after discount"
+            value={group.afterDiscount}
+            currency={currency}
+          />
+        </>
+      ) : null}
 
-          <tr>
-            <td className="py-1">Policy Cost + Stamp Duty</td>
-            <td className="tabular py-1 text-right whitespace-nowrap">
-              {moneyCents(group.policyCost, currency)} +
-            </td>
-          </tr>
+      <SummaryRow
+        label="Policy Cost + Stamp Duty"
+        value={group.policyCost}
+        currency={currency}
+        sign="+"
+      />
 
-          <tr className="border-t border-b font-bold">
-            <td className="py-1.5">Total Premium {group.name}</td>
-            <td className="tabular py-1.5 text-right whitespace-nowrap">
-              {moneyCents(group.total, currency)}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <SummaryRow
+        label={`Total Premium ${group.name}`}
+        className="border-t border-b font-bold"
+        value={group.total}
+        currency={currency}
+      />
+    </tbody>
   )
 }
 
@@ -813,19 +872,29 @@ export function ParEqvetCalculationBlock({ slip }: { slip: PlacingSlip }) {
   const calc = calculateParEqvet(slip)
 
   return (
-    <div className="space-y-4 text-[12.5px]">
+    // One table so PAR, EQVET, and the grand total share column widths.
+    <table className="w-full text-[12.5px]">
       <ParEqvetGroupSection group={calc.par} currency={calc.currency} />
+      {calc.par.lines.length > 0 && calc.eqvet.lines.length > 0 ? (
+        <tbody aria-hidden>
+          <tr>
+            <td colSpan={9} className="h-4" />
+          </tr>
+        </tbody>
+      ) : null}
       <ParEqvetGroupSection group={calc.eqvet} currency={calc.currency} />
-
-      <div className="border-t-2 border-primary/40 pt-2">
-        <div className="flex items-center justify-between text-[13px] font-bold">
-          <span>GRAND TOTAL PREMIUM (PAR+EQVET)</span>
-          <span className="tabular whitespace-nowrap">
-            {moneyCents(calc.grandTotal, calc.currency)}
-          </span>
-        </div>
-      </div>
-    </div>
+      <tbody>
+        <tr aria-hidden>
+          <td colSpan={9} className="h-4" />
+        </tr>
+        <SummaryRow
+          label="GRAND TOTAL PREMIUM (PAR+EQVET)"
+          className="border-t-2 border-primary/40 text-[13px] font-bold"
+          value={calc.grandTotal}
+          currency={calc.currency}
+        />
+      </tbody>
+    </table>
   )
 }
 
