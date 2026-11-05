@@ -24,6 +24,7 @@ import { CLIENTS } from "@/lib/data/clients"
 import {
   coverCodeFor,
   joinCoverCodes,
+  slipSectionTitles,
   usesAdditionalFee,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
@@ -881,7 +882,8 @@ function savedLocationId(
 
 /**
  * Copies selected clauses to slip_clauses with wording from slip override or master.
- * Section 2 (Business Interruption) is stored only for Property slips.
+ * The general group (section 0) and Section 2 are stored only for slips with
+ * sections: Property, and CAR/EAR-style slips with sections switched on.
  */
 async function insertSlipClauses(
   tx: Prisma.TransactionClient,
@@ -895,11 +897,14 @@ async function insertSlipClauses(
     | "clauseOverridesSection2"
     | "clauseIdsGeneral"
     | "clauseOverridesGeneral"
+    | "usesSections"
   >
 ) {
   // Satu klausula hanya di satu kelompok: tanpa section, Section 1, atau Section 2.
   const cob = normalizeCob(cobName)
-  if (usesSectionSumInsured(cob)) {
+  const sectioned =
+    slipSectionTitles({ cob, usesSections: input.usesSections === true }) !== null
+  if (sectioned) {
     const issues = validateClauseUniquenessAcrossSections({
       clauseIds: input.clauseIds ?? [],
       clauseIdsSection2: input.clauseIdsSection2 ?? [],
@@ -913,7 +918,7 @@ async function insertSlipClauses(
   const sections = [
     { section: 1, ids: input.clauseIds, overrides: input.clauseOverrides },
   ]
-  if (usesSectionSumInsured(normalizeCob(cobName))) {
+  if (sectioned) {
     sections.push(
       {
         section: 0,
