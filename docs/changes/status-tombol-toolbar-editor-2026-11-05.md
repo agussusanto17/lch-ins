@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `fix/status-tombol-toolbar-editor`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#135](https://github.com/agussusanto17/lch-ins/pull/135)
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
