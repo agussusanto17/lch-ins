@@ -1225,6 +1225,9 @@ model SlipRateLine {
   limitAmount       Decimal? @map("limit_amount") @db.Decimal(18, 2)
   rate              Decimal? @db.Decimal(12, 6)
   premium           Decimal  @default(0) @db.Decimal(18, 2)
+  /// Premi flat: premi diisi langsung tanpa rate, misalnya Liability dan MB
+  /// (contoh slip LCH). Hanya COB selain Property dan Motor Vehicle.
+  isFlatPremium     Boolean  @default(false) @map("is_flat_premium")
   /// Batas bawah dan atas OJK saat rate diisi.
   rateMin           Decimal? @map("rate_min") @db.Decimal(12, 6)
   rateMax           Decimal? @map("rate_max") @db.Decimal(12, 6)

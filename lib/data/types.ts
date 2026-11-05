@@ -158,6 +158,11 @@ export interface RateLine {
   label: string
   rate: number | null
   premium: number
+  /**
+   * Premi flat: premi diisi langsung dan rate kosong, misalnya Liability atau
+   * MB (contoh slip LCH). Hanya COB selain Property dan Motor Vehicle.
+   */
+  flatPremium?: boolean
   basis?: string
   /** Batas bawah dan atas tarif OJK yang berlaku saat rate diisi. */
   min?: number | null

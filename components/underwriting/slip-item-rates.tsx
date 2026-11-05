@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { NumberInput } from "@/components/ui/number-input"
 import {
@@ -16,12 +17,15 @@ import {
 import { rateUnitFor } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data"
 import { money } from "@/lib/format"
-import { itemGroups } from "@/lib/slip-items"
+import type { RateLine } from "@/lib/data/types"
+import { allowsFlatPremium, itemGroups } from "@/lib/slip-items"
 
 /**
  * Rate slip COB selain Property dan Motor Vehicle per objek (Agus, 5 November
  * 2026), misalnya peserta PA, unit MB, alat CPM, atau CIT dan CIS. Objek dan
- * nilainya diisi di Interest Insured; premi = nilai objek × rate.
+ * nilainya diisi di Interest Insured; premi = nilai objek × rate. Objek bisa
+ * memakai premi flat yang diisi langsung, seperti Liability dan MB di contoh
+ * slip LCH (6 November 2026).
  */
 export function SlipItemRates({
   slip,
@@ -35,10 +39,19 @@ export function SlipItemRates({
   const groups = itemGroups(slip)
   const unit = rateUnitFor(slip.cob)
   const [rateForAll, setRateForAll] = React.useState<number | null>(null)
-  const setRate = (id: string, rate: number | null) =>
+  const flatAllowed = allowsFlatPremium(slip.cob)
+  const isFlat = (l: RateLine) => flatAllowed && l.flatPremium === true
+  const anyFlat = slip.rateLines.some(isFlat)
+  const setLine = (id: string, patch: Partial<RateLine>) =>
     onChange({
-      rateLines: slip.rateLines.map((l) => (l.id === id ? { ...l, rate } : l)),
+      rateLines: slip.rateLines.map((l) => (l.id === id ? { ...l, ...patch } : l)),
     })
+  // Pindah ke premi flat: premi hasil rate menjadi isian awal.
+  const setFlat = (l: RateLine, flat: boolean) =>
+    setLine(
+      l.id,
+      flat ? { flatPremium: true, rate: null } : { flatPremium: false, premium: 0 }
+    )
 
   if (!groups.length) {
     return (
@@ -71,15 +84,19 @@ export function SlipItemRates({
             disabled={rateForAll == null}
             onClick={() =>
               onChange({
-                rateLines: slip.rateLines.map((l) => ({
-                  ...l,
-                  rate: rateForAll,
-                })),
+                rateLines: slip.rateLines.map((l) =>
+                  isFlat(l) ? l : { ...l, rate: rateForAll }
+                ),
               })
             }
           >
             Terapkan ke semua objek
           </Button>
+          {anyFlat ? (
+            <p className="pb-2 text-xs text-muted-foreground">
+              Objek dengan premi flat tidak ikut.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -90,6 +107,9 @@ export function SlipItemRates({
             <TableHead>Objek</TableHead>
             <TableHead className="w-44 text-right">Nilai</TableHead>
             <TableHead className="w-32 text-right">Rate ({unit})</TableHead>
+            {flatAllowed ? (
+              <TableHead className="w-16 text-center">Flat</TableHead>
+            ) : null}
             <TableHead className="w-44 text-right">Premium</TableHead>
           </TableRow>
         </TableHeader>
@@ -121,17 +141,44 @@ export function SlipItemRates({
                   {i === 0 ? money(g.item.amount || 0, slip.currency) : ""}
                 </TableCell>
                 <TableCell className="align-top">
-                  <NumberInput
-                    preset="rate"
-                    className="ml-auto h-8 w-24"
-                    aria-label={`Rate objek ${g.no}`}
-                    value={l.rate}
-                    readOnly={locked}
-                    onValueChange={(v) => setRate(l.id, v)}
-                  />
+                  {isFlat(l) ? (
+                    <span className="block pt-1.5 text-right text-sm text-muted-foreground">
+                      Flat
+                    </span>
+                  ) : (
+                    <NumberInput
+                      preset="rate"
+                      className="ml-auto h-8 w-24"
+                      aria-label={`Rate objek ${g.no}`}
+                      value={l.rate}
+                      readOnly={locked}
+                      onValueChange={(v) => setLine(l.id, { rate: v })}
+                    />
+                  )}
                 </TableCell>
+                {flatAllowed ? (
+                  <TableCell className="text-center align-top">
+                    <Checkbox
+                      className="mt-2"
+                      aria-label={`Premi flat objek ${g.no}`}
+                      checked={isFlat(l)}
+                      disabled={locked}
+                      onCheckedChange={(v) => setFlat(l, v === true)}
+                    />
+                  </TableCell>
+                ) : null}
                 <TableCell className="tabular text-right align-top text-sm">
-                  {money(l.premium, slip.currency)}
+                  {isFlat(l) ? (
+                    <NumberInput
+                      className="ml-auto h-8 w-36"
+                      aria-label={`Nilai premi flat objek ${g.no}`}
+                      value={l.premium || null}
+                      readOnly={locked}
+                      onValueChange={(v) => setLine(l.id, { premium: v ?? 0 })}
+                    />
+                  ) : (
+                    money(l.premium, slip.currency)
+                  )}
                 </TableCell>
               </TableRow>
             ))
@@ -141,8 +188,9 @@ export function SlipItemRates({
 
       <p className="text-xs text-muted-foreground">
         Objek dan nilainya diisi di bagian Interest Insured. Premi = nilai objek
-        × rate. Kosongkan rate untuk baris yang hanya keterangan, misalnya
-        limit yang tidak dikenai premi.
+        × rate, atau centang Flat untuk mengisi premi langsung, misalnya premi
+        flat Liability. Kosongkan rate untuk baris yang hanya keterangan,
+        misalnya limit yang tidak dikenai premi.
       </p>
     </div>
   )

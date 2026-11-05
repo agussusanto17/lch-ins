@@ -60,6 +60,7 @@ const rateLineSchema = z
     label: z.string(),
     rate: z.coerce.number().nullable().optional(),
     premium: z.coerce.number(),
+    flatPremium: z.boolean().optional(),
     basis: z.string().optional(),
     min: z.coerce.number().nullable().optional(),
     max: z.coerce.number().nullable().optional(),

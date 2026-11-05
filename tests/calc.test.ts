@@ -24,7 +24,7 @@ import {
   locationsShareRates,
   slipRiskLocationText,
 } from "../lib/slip-locations"
-import { itemGroups } from "../lib/slip-items"
+import { itemGroups, missingRateIssue } from "../lib/slip-items"
 
 /** Slip Property dengan rate FLEXAS 0,5‰ dan Section 1 IDR 1 miliar. */
 function propertySlip(section2: number): PlacingSlip {
@@ -379,4 +379,41 @@ test("rate semua lokasi sama terdeteksi, beda satu rate tidak", () => {
     ),
   })
   assert.equal(locationsShareRates(same), true)
+})
+
+/** Slip PL Habco: limit IDR 10 M dengan premi flat IDR 10 jt (contoh CI LCH). */
+function flatLiabilitySlip(): PlacingSlip {
+  let slip = switchCob(emptySlip(), "Liability")
+  slip = recalcSlip({
+    ...slip,
+    interestItems: [{ id: "lol", description: "Limit of Liability", amount: 10_000_000_000 }],
+  })
+  const g = itemGroups(slip)[0]
+  return recalcSlip({
+    ...slip,
+    ...itemRowsPatch(slip, "rateLines", "lol", g.rateLines.map((l) => ({ ...l, flatPremium: true, rate: 0.5, premium: 10_000_000 }))),
+  })
+}
+
+test("premi flat dipakai apa adanya, rate dikosongkan", () => {
+  const slip = flatLiabilitySlip()
+  const line = itemGroups(slip)[0].rateLines[0]
+  assert.equal(line.flatPremium, true)
+  assert.equal(line.rate, null)
+  assert.equal(line.premium, 10_000_000)
+  assert.equal(totalPremium(slip), 10_000_000)
+  assert.equal(missingRateIssue(slip), null)
+  assert.equal(JSON.stringify(recalcSlip(slip)), JSON.stringify(slip))
+})
+
+test("premi flat diabaikan di Motor Vehicle, dan slip tanpa premi ditolak", () => {
+  const motor = switchCob(emptySlip(), "Motor Vehicle")
+  const flagged = recalcSlip({
+    ...motor,
+    rateLines: motor.rateLines.map((l) => ({ ...l, flatPremium: true, premium: 5_000_000 })),
+  })
+  assert.equal(totalPremium(flagged), 0)
+  assert.equal(missingRateIssue(flagged), "Isi minimal satu rate.")
+  const empty = recalcSlip({ ...switchCob(emptySlip(), "Liability") })
+  assert.equal(missingRateIssue(empty), "Isi minimal satu rate atau premi flat.")
 })
