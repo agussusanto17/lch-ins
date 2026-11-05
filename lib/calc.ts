@@ -195,8 +195,8 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
       fullName: PAR_EQVET_FULL_NAMES[l.label] ?? l.label,
       basis,
       ratePercent,
-      ratePermil: l.rate,
-      rateText: l.rate != null ? ratePermilText(l.rate) : "—",
+      ratePermil: rate,
+      rateText: rate != null ? ratePermilText(rate) : "—",
       lossLimitPct,
       premium,
     }

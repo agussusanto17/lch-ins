@@ -64,6 +64,8 @@ test("rate BI lama tanpa Section 2 tidak dicetak", () => {
     l.label.startsWith("BI PAR")
   )
   assert.equal(line?.ratePercent, null)
+  assert.equal(line?.ratePermil, null)
+  assert.equal(line?.rateText, "—")
   assert.equal(line?.premium, 0)
   assert.equal(totalPayable(stale), 500_000)
 })

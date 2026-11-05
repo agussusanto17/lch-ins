@@ -28,7 +28,9 @@ Total Payable menulis 1.000.000.
   kalau sum insured Section 2 lebih dari 0. Tanpa Section 2 tidak ada jaminan
   BI, jadi rate BI tidak tercetak di bagian RATE.
 - **Slip yang sudah tersimpan:** rate BI otomatis yang tersimpan di slip tanpa
-  Section 2 tidak dicetak, tanpa perlu migrasi data.
+  Section 2 tidak dicetak, baik di RATE maupun di PREMIUM CALCULATION (teks
+  rate per mil dari [#126](https://github.com/agussusanto17/lch-ins/pull/126)),
+  tanpa perlu migrasi data.
 - **Form:** keterangan baris BI berbunyi "Otomatis setelah sum insured Section
   2 diisi" selama Section 2 masih kosong.
 
@@ -53,7 +55,8 @@ Total Payable menulis 1.000.000.
 - `npx tsx --test tests/calc.test.ts`: tiga tes lulus. Tes pertama gagal di
   `main`, dengan premi PAR 1.000.000 dan seharusnya 500.000.
 - `npx tsc --noEmit`, `npx eslint` untuk file yang berubah,
-  `npx tsx --test tests/*.test.ts` (24 tes lulus), dan `npm run build`: lolos.
+  `npx tsx --test tests/*.test.ts` (28 tes lulus setelah digabung dengan
+  `main` yang sudah berisi #126 dan #128), dan `npm run build`: lolos.
 - Database lokal tidak punya slip yang terdampak. Demo mungkin punya, karena
   slip Property tanpa Section 2 yang disimpan sejak #115 membawa rate BI.
 
