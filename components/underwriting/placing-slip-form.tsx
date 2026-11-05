@@ -557,7 +557,8 @@ function SlipEditor({
       biBasis.scalePct !== 100
         ? ` × ${num(biBasis.scalePct, 0, 1)}% (Indemnity Period ${slip.indemnityPeriod})`
         : ""
-    return `Otomatis: ${source.text}${afterLossLimit ? " setelah loss limit" : ""}${scale}`
+    const when = bi > 0 ? "Otomatis" : "Otomatis setelah sum insured Section 2 diisi"
+    return `${when}: ${source.text}${afterLossLimit ? " setelah loss limit" : ""}${scale}`
   }
 
   function setException(lineId: string, exception: RateException | null) {
