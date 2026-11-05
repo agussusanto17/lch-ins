@@ -927,6 +927,7 @@ async function seedClauses() {
     wordingHtml: string
     cobId: string | null
     coverTypeId: string | null
+    isActive: boolean
   }[] = []
 
   for (const r of rows) {
@@ -945,6 +946,8 @@ async function seedClauses() {
       wordingHtml: toHtml(r.wording.trim()),
       cobId: map ? (cobId.get(map.cob) ?? null) : null,
       coverTypeId: map?.cover ? (coverTypeId.get(map.cover) ?? null) : null,
+      // Klausula EQVET kembar dengan PAR, jadi tidak aktif (Harry, 5 Nov 2026).
+      isActive: sourceGroup !== "EQVET",
     })
   }
 

@@ -1361,6 +1361,7 @@ function SlipEditor({
                     typeOfCover2={slip.typeOfCover2}
                     selected={clauseIds0}
                     overrides={slip.clauseOverridesGeneral ?? {}}
+                    copies={slip.clauseCopiesGeneral}
                     onChange={(ids) => set({ clauseIdsGeneral: ids })}
                     onOverridesChange={(o) =>
                       set({ clauseOverridesGeneral: o })
@@ -1382,6 +1383,7 @@ function SlipEditor({
                   typeOfCover2={slip.typeOfCover2}
                   selected={slip.clauseIds}
                   overrides={slip.clauseOverrides ?? {}}
+                  copies={slip.clauseCopies}
                   onChange={(ids) => set({ clauseIds: ids })}
                   onOverridesChange={(o) => set({ clauseOverrides: o })}
                   masterClauses={masterClauses}
@@ -1404,6 +1406,7 @@ function SlipEditor({
                     typeOfCover2={slip.typeOfCover2}
                     selected={clauseIds2}
                     overrides={slip.clauseOverridesSection2 ?? {}}
+                    copies={slip.clauseCopiesSection2}
                     onChange={(ids) => set({ clauseIdsSection2: ids })}
                     onOverridesChange={(o) =>
                       set({ clauseOverridesSection2: o })

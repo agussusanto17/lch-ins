@@ -47,6 +47,7 @@ export function ClausePicker({
   typeOfCover2,
   selected,
   overrides,
+  copies,
   onChange,
   onOverridesChange,
   masterClauses: propMasterClauses,
@@ -57,6 +58,12 @@ export function ClausePicker({
   typeOfCover2?: string
   selected: string[]
   overrides: Record<string, ClauseOverride>
+  /**
+   * Salinan klausula di slip. Klausula terpilih yang sudah nonaktif di master
+   * (misalnya EQVET) tidak ada di daftar master, jadi tampil dari salinan ini
+   * supaya tetap terlihat dan bisa dilepas.
+   */
+  copies?: Record<string, ClauseOverride>
   onChange: (ids: string[]) => void
   onOverridesChange: (overrides: Record<string, ClauseOverride>) => void
   masterClauses?: ClausePickerItem[]
@@ -130,14 +137,17 @@ export function ClausePicker({
   }, [pool, plainWording, cob, typeOfCover, typeOfCover2, query])
 
   const selectedClauses = React.useMemo(() => {
+    const inactive = Object.entries(copies ?? {})
+      .filter(([id]) => !pool.some((c) => c.id === id))
+      .map(([id, c]) => ({ id, title: c.title, wording: c.wording }))
     return resolveSlipClauses(
       {
         clauseIds: selected,
         clauseOverrides: overrides,
       },
-      pool
-    )
-  }, [selected, overrides, pool])
+      [...pool, ...inactive]
+    ).map((c) => ({ ...c, inactive: inactive.some((i) => i.id === c.id) }))
+  }, [selected, overrides, copies, pool])
 
   function toggle(id: string) {
     if (selected.includes(id)) {
@@ -265,6 +275,11 @@ export function ClausePicker({
                   <div className="flex items-center gap-2 px-3 py-2 text-[13px]">
                     <span className="min-w-0 flex-1 truncate">{c.title}</span>
 
+                    {c.inactive ? (
+                      <Badge variant="outline" className="shrink-0">
+                        Nonaktif di master
+                      </Badge>
+                    ) : null}
                     {c.overridden ? (
                       <Badge variant="outline" className="shrink-0">
                         Diedit
