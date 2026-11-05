@@ -82,6 +82,7 @@ export interface PlacingSlipInput {
   inceptionDate?: string | null
   expiryDate?: string | null
   periodNote?: string | null
+  usesSections?: boolean
   insuredDescription?: string | null
   detailRows?: SlipDetailRow[] | null
   occupation?: string | null
@@ -376,6 +377,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
         description: it.description,
         amount: it.amount ? Number(it.amount) : 0,
         limitOnly: it.isLimitOnly || undefined,
+        section: it.sectionNo === 2 ? 2 : undefined,
         vehicleBrandId: it.vehicleBrandId,
         vehicleTypeId: it.vehicleTypeId,
         vehicleBrandName: it.vehicleBrand?.name ?? null,
@@ -545,6 +547,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     inceptionDate,
     expiryDate,
     periodNote: raw.periodNote || undefined,
+    usesSections: raw.usesSections || undefined,
     insuredDescription: raw.insuredDescription || undefined,
     detailRows: cleanDetailRows(raw.detailRows),
     occupation: raw.occupation
@@ -1003,6 +1006,7 @@ export async function createPlacingSlip(
         inceptionDate,
         expiryDate,
         periodNote: input.periodNote?.trim() || null,
+        usesSections: input.usesSections === true,
         insuredDescription: input.insuredDescription?.trim() || null,
         detailRows: detailRowsData(input.detailRows),
         occupationId,
@@ -1040,6 +1044,7 @@ export async function createPlacingSlip(
       description: string
       amount: Prisma.Decimal | null
       isLimitOnly?: boolean
+      sectionNo?: number | null
       sortOrder: number
       vehicleBrandId?: string | null
       vehicleTypeId?: string | null
@@ -1073,6 +1078,7 @@ export async function createPlacingSlip(
             description: finalDesc,
             amount: new Prisma.Decimal(it.amount || 0),
             isLimitOnly: it.limitOnly === true,
+            sectionNo: it.section === 2 ? 2 : null,
             sortOrder: sortIdx++,
             ...(motor ? await checkVehiclePair(tx, it.vehicleBrandId, it.vehicleTypeId) : {}),
           })
@@ -1374,6 +1380,7 @@ export async function updatePlacingSlip(
         inceptionDate,
         expiryDate,
         periodNote: input.periodNote?.trim() || null,
+        usesSections: input.usesSections === true,
         insuredDescription: input.insuredDescription?.trim() || null,
         detailRows: detailRowsData(input.detailRows),
         occupationId,
@@ -1413,6 +1420,7 @@ export async function updatePlacingSlip(
       description: string
       amount: Prisma.Decimal | null
       isLimitOnly?: boolean
+      sectionNo?: number | null
       sortOrder: number
       vehicleBrandId?: string | null
       vehicleTypeId?: string | null
@@ -1446,6 +1454,7 @@ export async function updatePlacingSlip(
             description: finalDesc,
             amount: new Prisma.Decimal(it.amount || 0),
             isLimitOnly: it.limitOnly === true,
+            sectionNo: it.section === 2 ? 2 : null,
             sortOrder: sortIdx++,
             ...(motor ? await checkVehiclePair(tx, it.vehicleBrandId, it.vehicleTypeId) : {}),
           })
@@ -1939,6 +1948,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
           description: string
           amount: Prisma.Decimal | null
           isLimitOnly?: boolean
+          sectionNo?: number | null
           sortOrder: number
         }[] = []
 
@@ -1949,6 +1959,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             description: it.description,
             amount: new Prisma.Decimal(it.amount || 0),
             isLimitOnly: it.limitOnly === true,
+            sectionNo: it.section === 2 ? 2 : null,
             sortOrder: itIdx++,
           })
         }

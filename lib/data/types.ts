@@ -143,6 +143,11 @@ export interface LineItem {
    * Property dan Motor Vehicle.
    */
   limitOnly?: boolean
+  /**
+   * Section objek Interest di slip ber-section (CAR, EAR): 2 = Third Party
+   * Liability. Kosong berarti Section 1 Material Damage.
+   */
+  section?: 1 | 2
   /** Baris Interest slip Motor Vehicle: merek dan tipe dari master data. */
   vehicleBrandId?: string | null
   vehicleTypeId?: string | null
@@ -279,6 +284,12 @@ export interface PlacingSlip {
    * type of cover di Master Data.
    */
   detailRows?: SlipDetailRow[]
+  /**
+   * Slip COB selain Property dan Motor Vehicle yang dibagi Section 1 (Material
+   * Damage) dan Section 2 (Third Party Liability), seperti CAR dan EAR. Nilai
+   * awalnya dari type of cover di Master Data.
+   */
+  usesSections?: boolean
   occupation?: string
   /** Nama okupasi di dokumen slip ini, tanpa kode. Kosong berarti nama OJK. */
   occupationLabel?: string

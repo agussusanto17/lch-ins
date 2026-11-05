@@ -37,8 +37,10 @@ import {
 } from "@/lib/slip-locations"
 import {
   GENERIC_RATE_LABEL,
+  allowsFlatPremium,
   itemGroups,
   itemOwner,
+  itemSection,
   missingRateIssue,
   usesItemRates,
 } from "@/lib/slip-items"
@@ -154,6 +156,26 @@ export function deductibleRows(
   slip: PlacingSlip,
   added: DeductibleGroup[] = []
 ): DeductibleRow[] {
+  // Slip ber-section (CAR, EAR): satu daftar per section, disimpan di baris
+  // rate objek pertama section itu.
+  const titles = slipSectionTitles(slip)
+  if (titles && slip.cob !== "Property") {
+    const groups = itemGroups(slip)
+    return ([1, 2] as const).flatMap((section): DeductibleRow[] => {
+      const line = groups.find((g) => itemSection(g.item) === section)?.rateLines[0]
+      return line
+        ? [
+            {
+              group: "rateLines",
+              lineId: line.id,
+              cover: titles[section - 1],
+              deductibles: line.deductibles ?? [],
+              extra: false,
+            },
+          ]
+        : []
+    })
+  }
   const source = deductibleSource(slip)
   const lines = source.rateLines
   const rows: DeductibleRow[] = lines.map((l) => ({
@@ -305,6 +327,7 @@ export function switchCob(
     typeOfCover2: "",
     typeOfCoverLabel: undefined,
     typeOfCover2Label: undefined,
+    usesSections: false,
     // Label bawaan type of cover lama dibuang; baris yang sudah diisi tetap.
     detailRows: withDetailLabels(slip.detailRows, []),
     coverCode: null,
@@ -472,6 +495,45 @@ export function usesSectionSumInsured(cob: ClassOfBusiness) {
   return cob === "Property"
 }
 
+/**
+ * Ganti objek Interest satu section slip ber-section. Objek Section 2 yang baru
+ * ditambah langsung "limit saja", karena Section 2 CAR/EAR biasanya limit TPL
+ * tanpa premi tersendiri (contoh slip LCH). Urutannya Section 1 lalu 2.
+ */
+export function sectionItemsPatch(
+  slip: Pick<PlacingSlip, "interestItems">,
+  section: 1 | 2,
+  items: LineItem[]
+): Pick<PlacingSlip, "interestItems"> {
+  const known = new Set(slip.interestItems.map((i) => i.id))
+  const tagged = items.map((i) =>
+    section === 2
+      ? { ...i, section: 2 as const, limitOnly: known.has(i.id) ? i.limitOnly : true }
+      : { ...i, section: undefined }
+  )
+  const keep = (s: 1 | 2) =>
+    s === section ? tagged : slip.interestItems.filter((i) => itemSection(i) === s)
+  return { interestItems: [...keep(1), ...keep(2)] }
+}
+
+/**
+ * Judul section slip untuk klausul, deductible, dan Interest: Property
+ * (Material Damage dan Business Interruption), atau slip ber-section seperti
+ * CAR dan EAR (Material Damage dan Third Party Liability, contoh slip LCH 6
+ * November 2026). Null berarti slip tanpa section.
+ */
+export function slipSectionTitles(
+  slip: Pick<PlacingSlip, "cob" | "usesSections">
+): readonly [string, string] | null {
+  if (usesSectionSumInsured(slip.cob)) {
+    return ["Section 1 — Material Damage", "Section 2 — Business Interruption"]
+  }
+  if (slip.usesSections && allowsFlatPremium(slip.cob)) {
+    return ["Section 1 — Material Damage", "Section 2 — Third Party Liability"]
+  }
+  return null
+}
+
 /** COB yang punya isian Additional Fee untuk produksi (4 November 2026). */
 export function usesAdditionalFee(cob: ClassOfBusiness) {
   return cob === "Property" || cob === "Motor Vehicle"
@@ -611,7 +673,7 @@ export function releaseIssues(slip: PlacingSlip) {
     }
   }
   issues.push(...locationIssues(slip), ...vehicleIssues(slip))
-  if (usesSectionSumInsured(slip.cob)) {
+  if (slipSectionTitles(slip)) {
     const clauseIssues = validateClauseUniquenessAcrossSections(slip)
     if (clauseIssues.length) issues.push(...clauseIssues)
   }
@@ -744,7 +806,7 @@ export function slipFromSppa(
   sppa: Sppa,
   client: Client | null,
   covers?: (Pick<CoverOption, "name" | "abbreviation"> &
-    Partial<Pick<CoverOption, "detailLabels">>)[]
+    Partial<Pick<CoverOption, "detailLabels" | "usesSections">>)[]
 ): PlacingSlip {
   const cob = normalizeCob(sppa.cob)
   const base = switchCob(emptySlip(), cob)
@@ -800,6 +862,8 @@ export function slipFromSppa(
       base.detailRows,
       covers?.find((c) => c.name === sppa.typeOfCover)?.detailLabels ?? []
     ),
+    usesSections:
+      covers?.find((c) => c.name === sppa.typeOfCover)?.usesSections ?? false,
     coverCode: coverCodeFor(cob, sppa.typeOfCover, covers),
     currency: sppa.currency,
     inceptionDate: sppa.periodStart,

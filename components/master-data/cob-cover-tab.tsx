@@ -72,6 +72,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
   const [coverAbbreviation, setCoverAbbreviation] = React.useState("")
   // Satu label per baris; disimpan sebagai daftar label bawaan Detail tambahan.
   const [coverDetailLabels, setCoverDetailLabels] = React.useState("")
+  const [coverUsesSections, setCoverUsesSections] = React.useState(false)
   const [coverIsActive, setCoverIsActive] = React.useState(true)
 
   const [prevInitialCobs, setPrevInitialCobs] = React.useState(initialCobs)
@@ -113,6 +114,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverName("")
     setCoverAbbreviation("")
     setCoverDetailLabels("")
+    setCoverUsesSections(false)
     setCoverIsActive(true)
     setCoverDialogOpen(true)
   }
@@ -124,6 +126,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverName(cover.name)
     setCoverAbbreviation(cover.abbreviation ?? "")
     setCoverDetailLabels((cover.detailLabels ?? []).join("\n"))
+    setCoverUsesSections(cover.usesSections ?? false)
     setCoverIsActive(cover.isActive)
     setCoverDialogOpen(true)
   }
@@ -144,6 +147,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           name: coverName,
           abbreviation: coverAbbreviation,
           detailLabels,
+          usesSections: coverUsesSections,
           isActive: coverIsActive,
         })
         if (!res.ok) {
@@ -164,6 +168,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                           name: coverName,
                           abbreviation: res.data?.abbreviation ?? null,
                           detailLabels: res.data?.detailLabels ?? [],
+                          usesSections: res.data?.usesSections ?? false,
                           isActive: coverIsActive,
                         }
                       : ct
@@ -179,6 +184,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           name: coverName,
           abbreviation: coverAbbreviation,
           detailLabels,
+          usesSections: coverUsesSections,
           isActive: coverIsActive,
         })
         if (!res.ok || !res.data) {
@@ -553,6 +559,20 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                 tambahan placing slip saat type of cover ini dipilih, lalu
                 dicetak di tabel detail dokumen bila isinya diisi.
               </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">Pakai Section 1 &amp; 2</span>
+                <span className="text-[11px] text-muted-foreground">
+                  Slip dibagi Section 1 Material Damage dan Section 2 Third
+                  Party Liability, misalnya CAR dan EAR.
+                </span>
+              </div>
+              <Switch
+                checked={coverUsesSections}
+                onCheckedChange={setCoverUsesSections}
+              />
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">

@@ -86,6 +86,7 @@ const coverTypeSchema = z.object({
     .array(z.string().trim().max(100, "Label detail tambahan maksimal 100 karakter"))
     .max(30, "Label detail tambahan maksimal 30")
     .optional(),
+  usesSections: z.boolean().optional(),
   isActive: z.boolean().optional(),
 })
 

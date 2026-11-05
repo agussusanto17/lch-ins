@@ -57,6 +57,8 @@ import {
   switchCob,
   usesAdditionalFee,
   usesPropertyBlocks,
+  sectionItemsPatch,
+  slipSectionTitles,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
@@ -128,7 +130,12 @@ import {
 import { money, num, percent } from "@/lib/format"
 import { cleanDetailLabels, withDetailLabels } from "@/lib/slip-details"
 import { locationGroups, locationOwner } from "@/lib/slip-locations"
-import { isLimitOnlyItem, itemOwner } from "@/lib/slip-items"
+import {
+  allowsFlatPremium,
+  isLimitOnlyItem,
+  itemOwner,
+  itemSection,
+} from "@/lib/slip-items"
 import type { InsuredOption } from "@/lib/server/clients"
 import { newId, store, useRecord } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -492,14 +499,11 @@ function SlipEditor({
 
   const brokerageLimit = brokerageLimitText(slip)
   const brokerageIssue = brokerageLimitIssue(slip)
-  // Klausula tanpa section dan Section 2 (Business Interruption) hanya berlaku
-  // untuk Property.
-  const clauseIds0 = usesSectionSumInsured(slip.cob)
-    ? (slip.clauseIdsGeneral ?? [])
-    : []
-  const clauseIds2 = usesSectionSumInsured(slip.cob)
-    ? (slip.clauseIdsSection2 ?? [])
-    : []
+  // Klausula tanpa section dan Section 2 hanya untuk slip ber-section:
+  // Property (Business Interruption) dan CAR/EAR (Third Party Liability).
+  const sectionTitles = slipSectionTitles(slip)
+  const clauseIds0 = sectionTitles ? (slip.clauseIdsGeneral ?? []) : []
+  const clauseIds2 = sectionTitles ? (slip.clauseIdsSection2 ?? []) : []
   const clauseCount =
     clauseIds0.length + slip.clauseIds.length + clauseIds2.length
   const editedClauseCount =
@@ -561,7 +565,7 @@ function SlipEditor({
   }
 
   function handleSave() {
-    if (usesSectionSumInsured(slip.cob)) {
+    if (sectionTitles) {
       const clauseIssues = validateClauseUniquenessAcrossSections(
         slip,
         clauseTitleLookup
@@ -716,7 +720,7 @@ function SlipEditor({
   /** Buka dokumen atau quotation; perubahan disimpan dulu supaya dokumen sama dengan form. */
   function goTo(path: (id: string) => string) {
     if (dirty || mode === "new") {
-      if (usesSectionSumInsured(slip.cob)) {
+      if (sectionTitles) {
         const clauseIssues = validateClauseUniquenessAcrossSections(
           slip,
           clauseTitleLookup
@@ -902,6 +906,8 @@ function SlipEditor({
                         slip.detailRows,
                         detailLabelsFor((v as string) ?? "", slip.typeOfCover2)
                       ),
+                      usesSections:
+                        covers.find((c) => c.name === v)?.usesSections ?? false,
                     })
                   }
                 >
@@ -1301,19 +1307,65 @@ function SlipEditor({
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                <LineItemList
-                  items={slip.interestItems}
-                  onChange={(items) => set({ interestItems: items })}
-                  descPlaceholder={
-                    isMotor
-                      ? "Tahun, No. Polisi, No. Rangka / Mesin, Penggunaan"
-                      : "Deskripsi objek pertanggungan"
-                  }
-                  amountPlaceholder="Nilai"
-                  multiline
-                  addLabel={isMotor ? "Tambah kendaraan" : "Tambah interest"}
-                  vehicleOptions={isMotor ? vehicleOptions : undefined}
-                />
+                {/*
+                 * CAR dan EAR LCH dibagi Section 1 Material Damage dan Section 2
+                 * Third Party Liability. Nilai awalnya dari type of cover.
+                 */}
+                {allowsFlatPremium(slip.cob) ? (
+                  <Field orientation="horizontal">
+                    <Switch
+                      id="uses-sections"
+                      checked={slip.usesSections ?? false}
+                      disabled={locked}
+                      onCheckedChange={(v) => set({ usesSections: v })}
+                    />
+                    <FieldLabel htmlFor="uses-sections">
+                      Pakai Section 1 &amp; 2 (Material Damage dan Third Party
+                      Liability)
+                    </FieldLabel>
+                  </Field>
+                ) : null}
+                {sectionTitles && !isProperty ? (
+                  ([1, 2] as const).map((section) => (
+                    <div key={section} className="flex flex-col gap-2">
+                      <p className="text-sm font-medium">
+                        {sectionTitles[section - 1]}
+                      </p>
+                      <LineItemList
+                        items={slip.interestItems.filter(
+                          (i) => itemSection(i) === section
+                        )}
+                        onChange={(items) =>
+                          set(sectionItemsPatch(slip, section, items))
+                        }
+                        descPlaceholder={
+                          section === 1
+                            ? "Misalnya Contract Works atau Existing Structures"
+                            : "Misalnya Third Party Liability any one occurrence and in the aggregate"
+                        }
+                        amountPlaceholder={section === 1 ? "Nilai" : "Limit"}
+                        multiline
+                        addLabel={
+                          section === 1 ? "Tambah objek Section 1" : "Tambah limit Section 2"
+                        }
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <LineItemList
+                    items={slip.interestItems}
+                    onChange={(items) => set({ interestItems: items })}
+                    descPlaceholder={
+                      isMotor
+                        ? "Tahun, No. Polisi, No. Rangka / Mesin, Penggunaan"
+                        : "Deskripsi objek pertanggungan"
+                    }
+                    amountPlaceholder="Nilai"
+                    multiline
+                    addLabel={isMotor ? "Tambah kendaraan" : "Tambah interest"}
+                    vehicleOptions={isMotor ? vehicleOptions : undefined}
+                  />
+                )}
                 {/* Objek "limit saja" (diatur di Rate & Premium) tidak ikut total. */}
                 <TotalBar
                   label={
@@ -1405,7 +1457,7 @@ function SlipEditor({
                 />
               </Field>
 
-              {usesSectionSumInsured(slip.cob) ? (
+              {sectionTitles ? (
                 <div className="flex flex-col gap-2">
                   <div>
                     <p className="text-sm font-medium">Clauses</p>
@@ -1432,9 +1484,7 @@ function SlipEditor({
 
               <div className="flex flex-col gap-2">
                 <p className="text-sm font-medium">
-                  {usesSectionSumInsured(slip.cob)
-                    ? "Clauses Section 1 — Material Damage"
-                    : "Clauses"}
+                  {sectionTitles ? `Clauses ${sectionTitles[0]}` : "Clauses"}
                 </p>
                 <ClausePicker
                   cob={slip.cob}
@@ -1449,11 +1499,11 @@ function SlipEditor({
                 />
               </div>
 
-              {usesSectionSumInsured(slip.cob) ? (
+              {sectionTitles ? (
                 <div className="flex flex-col gap-2">
                   <div>
                     <p className="text-sm font-medium">
-                      Clauses Section 2 — Business Interruption
+                      Clauses {sectionTitles[1]}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Pilih klausula khusus Section 2. Setiap klausula hanya boleh dipilih di satu kelompok.
@@ -1476,7 +1526,7 @@ function SlipEditor({
               ) : null}
 
               {/* Validation warning for duplicate clauses */}
-              {usesSectionSumInsured(slip.cob) && (
+              {sectionTitles && (
                 <div className="flex flex-col gap-2">
                   {(() => {
                     const issues = validateClauseUniquenessAcrossSections(

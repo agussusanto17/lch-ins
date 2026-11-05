@@ -4,8 +4,8 @@ import {
   coverLabel,
   deductibleRows,
   slipOccupationText,
+  slipSectionTitles,
   usesPropertyBlocks,
-  usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
 import {
   BI_RATE_LABELS,
@@ -32,6 +32,7 @@ import {
   parseVehicleDescription,
   resolveSlipClauses,
   type ClauseOverride,
+  type LineItem,
   type PlacingSlip,
   type RateLine,
   type ResolvedClause,
@@ -51,6 +52,7 @@ import {
   isFlatLine,
   isLimitOnlyItem,
   isMultiItem,
+  itemSection,
   itemGroups,
   type ItemGroup,
 } from "@/lib/slip-items"
@@ -236,11 +238,58 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
     locationGroups(slip).flatMap((g) =>
       g[section].map((item) => ({ item, no: g.no }))
     )
+  // Slip ber-section (CAR, EAR) mengelompokkan objek per section.
+  const objectSections = isProperty ? null : slipSectionTitles(slip)
+
+  /** Satu objek Interest COB selain Property dan kendaraan. */
+  const objectRow = (i: LineItem, index: number) => {
+    const vehicleLabel = [i.vehicleBrandName, i.vehicleTypeName]
+      .filter(Boolean)
+      .join(" ")
+    return (
+      <li
+        key={i.id}
+        className="flex justify-between gap-6 border-b border-dashed py-1"
+      >
+        <span className="leading-relaxed whitespace-pre-line">
+          {/* Nomor objek dirujuk jadwal premi slip multi objek. */}
+          {isMultiItem(slip) ? `${index + 1}. ` : ""}
+          {vehicleLabel ? (
+            <span className="mr-1.5 font-semibold text-foreground">
+              {vehicleLabel}
+              {i.description ? " —" : ""}
+            </span>
+          ) : null}
+          {i.description}
+        </span>
+        <span className="tabular whitespace-nowrap">
+          {/* Nilai "limit saja" tidak ikut Total Sum Insured di bawah. */}
+          {isLimitOnlyItem(slip.cob, i) ? "Limit " : ""}
+          {money(i.amount, slip.currency)}
+        </span>
+      </li>
+    )
+  }
 
   return (
     <>
       <SectionHeading>INTEREST INSURED</SectionHeading>
-      {isProperty ? (
+      {objectSections ? (
+        <div className="flex flex-col gap-4 text-[13px]">
+          {([1, 2] as const).map((section) => {
+            const items = slip.interestItems.filter((i) => itemSection(i) === section)
+            if (!items.length) return null
+            return (
+              <div key={section}>
+                <p className="font-semibold">{objectSections[section - 1]}</p>
+                <ul className="mt-1 flex flex-col gap-1">
+                  {items.map((i) => objectRow(i, slip.interestItems.indexOf(i)))}
+                </ul>
+              </div>
+            )
+          })}
+        </div>
+      ) : isProperty ? (
         <div className="flex flex-col gap-4 text-[13px]">
           {slip.interestSection1 ? (
             <div>
@@ -366,32 +415,7 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
               )
             }
 
-            const vehicleLabel = [i.vehicleBrandName, i.vehicleTypeName]
-              .filter(Boolean)
-              .join(" ")
-            return (
-              <li
-                key={i.id}
-                className="flex justify-between gap-6 border-b border-dashed py-1"
-              >
-                <span className="leading-relaxed whitespace-pre-line">
-                  {/* Nomor objek dirujuk jadwal premi slip multi objek. */}
-                  {isMultiItem(slip) ? `${index + 1}. ` : ""}
-                  {vehicleLabel ? (
-                    <span className="mr-1.5 font-semibold text-foreground">
-                      {vehicleLabel}
-                      {i.description ? " —" : ""}
-                    </span>
-                  ) : null}
-                  {i.description}
-                </span>
-                <span className="tabular whitespace-nowrap">
-                  {/* Nilai "limit saja" tidak ikut Total Sum Insured di bawah. */}
-                  {isLimitOnlyItem(slip.cob, i) ? "Limit " : ""}
-                  {money(i.amount, slip.currency)}
-                </span>
-              </li>
-            )
+            return objectRow(i, index)
           })}
         </ul>
       )}
@@ -442,8 +466,13 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
   // Slip Property mengikuti CI LCH (contoh SISKA RAHARJA): kalimat pengantar,
   // lalu deductible per section; cover BI masuk Section 2.
   const property = slip.cob === "Property"
+  // Slip ber-section (CAR, EAR): satu baris deductible per section, judulnya
+  // judul section.
+  const sectioned = !property && slipSectionTitles(slip) !== null
   const groups = (
-    property
+    sectioned
+      ? rows.map((r) => ({ heading: r.cover, texts: texts((x) => x === r) }))
+      : property
       ? [
           {
             heading: "Section 1 — Material Damage",
@@ -527,7 +556,8 @@ function clauseGroups(slip: PlacingSlip): ClauseGroup[] {
     slip.clauseOverrides,
     slip.clauseCopies
   )
-  const groups = usesSectionSumInsured(slip.cob)
+  const titles = slipSectionTitles(slip)
+  const groups = titles
     ? [
         {
           heading: null,
@@ -537,9 +567,9 @@ function clauseGroups(slip: PlacingSlip): ClauseGroup[] {
             slip.clauseCopiesGeneral
           ),
         },
-        { heading: "Section 1 — Material Damage", clauses: section1 },
+        { heading: titles[0], clauses: section1 },
         {
-          heading: "Section 2 — Business Interruption",
+          heading: titles[1],
           clauses: resolveClauses(
             slip.clauseIdsSection2 ?? [],
             slip.clauseOverridesSection2,

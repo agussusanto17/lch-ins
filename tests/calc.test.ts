@@ -18,7 +18,9 @@ import {
   switchCob,
   updateLocationPatch,
   itemRowsPatch,
+  sectionItemsPatch,
   slipOccupationText,
+  slipSectionTitles,
 } from "../components/underwriting/slip-model"
 import type { PlacingSlip, RateLine } from "../lib/data/types"
 import {
@@ -454,4 +456,47 @@ test("okupasi tanpa kode OJK dicetak apa adanya, dengan kode tetap berkode", () 
     slipOccupationText({ occupation: "2975 - Apartments", occupationLabel: "Apartment" }),
     "2975 - Apartment"
   )
+})
+
+/** Slip CAR SPIL: contract works 2,5 M di Section 1, limit TPL 250 jt di Section 2. */
+function carSlip(): PlacingSlip {
+  let slip = recalcSlip({ ...switchCob(emptySlip(), "Engineering"), usesSections: true })
+  slip = recalcSlip({
+    ...slip,
+    ...sectionItemsPatch(slip, 1, [{ id: "cw", description: "Contract works", amount: 2_500_000_000 }]),
+  })
+  slip = recalcSlip({
+    ...slip,
+    ...sectionItemsPatch(slip, 2, [{ id: "tpl", description: "Third Party Liability", amount: 250_000_000 }]),
+  })
+  return recalcSlip({ ...slip, rateLines: slip.rateLines.map((l) => ({ ...l, rate: 0.15 })) })
+}
+
+test("slip CAR ber-section: TPL Section 2 jadi limit, premi dari Section 1 saja", () => {
+  const slip = carSlip()
+  assert.deepEqual(slip.interestItems.map((i) => [i.id, i.section ?? 1, i.limitOnly === true]), [
+    ["cw", 1, false],
+    ["tpl", 2, true],
+  ])
+  assert.equal(totalSumInsured(slip), 2_500_000_000)
+  assert.equal(totalPremium(slip), 3_750_000)
+})
+
+test("deductible slip ber-section satu daftar per section", () => {
+  const slip = carSlip()
+  const rows = deductibleRows(slip)
+  assert.deepEqual(rows.map((r) => r.cover), [
+    "Section 1 — Material Damage",
+    "Section 2 — Third Party Liability",
+  ])
+  const [cw, tpl] = itemGroups(slip)
+  assert.equal(rows[0].lineId, cw.rateLines[0].id)
+  assert.equal(rows[1].lineId, tpl.rateLines[0].id)
+})
+
+test("judul section hanya untuk Property dan slip ber-section COB objek", () => {
+  assert.equal(slipSectionTitles({ cob: "Property" })?.[1], "Section 2 — Business Interruption")
+  assert.equal(slipSectionTitles({ cob: "Engineering" }), null)
+  assert.equal(slipSectionTitles({ cob: "Engineering", usesSections: true })?.[1], "Section 2 — Third Party Liability")
+  assert.equal(slipSectionTitles({ cob: "Motor Vehicle", usesSections: true }), null)
 })
