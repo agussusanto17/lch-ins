@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { EditorContent, useEditor, type Editor } from "@tiptap/react"
+import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import TextAlign from "@tiptap/extension-text-align"
 import {
@@ -117,8 +117,17 @@ const ALIGNS: ToolItem[] = [
   },
 ]
 
-function ToolButton({ item, editor }: { item: ToolItem; editor: Editor }) {
-  const active = item.active?.(editor) ?? false
+const TOOL_GROUPS = [MARKS, BLOCKS, ALIGNS]
+
+function ToolButton({
+  item,
+  editor,
+  active,
+}: {
+  item: ToolItem
+  editor: Editor
+  active: boolean
+}) {
   return (
     <Button
       type="button"
@@ -183,7 +192,36 @@ export function RichTextEditor({
     )
   }
 
-  const empty = editor.isEmpty
+  return (
+    <EditorFrame editor={editor} editable={editable} placeholder={placeholder} className={className} />
+  )
+}
+
+// Split out so useEditorState starts with a ready editor; created with null, it
+// stays null until the first transaction.
+function EditorFrame({
+  editor,
+  editable,
+  placeholder,
+  className,
+}: {
+  editor: Editor
+  editable: boolean
+  placeholder: string
+  className?: string
+}) {
+  // TipTap 3 does not re-render on selection changes, so subscribe to the
+  // toolbar state explicitly; otherwise active buttons ignore the cursor.
+  const toolbar = useEditorState({
+    editor,
+    selector: ({ editor }) => ({
+      active: TOOL_GROUPS.map((group) => group.map((item) => item.active?.(editor) ?? false)),
+      canUndo: editor.can().undo(),
+      canRedo: editor.can().redo(),
+      empty: editor.isEmpty,
+    }),
+  })
+  const empty = toolbar.empty
 
   return (
     <div
@@ -197,18 +235,19 @@ export function RichTextEditor({
     >
       {editable ? (
         <div className="bg-muted/40 flex flex-wrap items-center gap-0.5 border-b px-1.5 py-1">
-          {MARKS.map((item) => (
-            <ToolButton key={item.label} item={item} editor={editor} />
+          {TOOL_GROUPS.map((group, g) => (
+            <React.Fragment key={g}>
+              {group.map((item, i) => (
+                <ToolButton
+                  key={item.label}
+                  item={item}
+                  editor={editor}
+                  active={toolbar.active[g][i]}
+                />
+              ))}
+              <Separator orientation="vertical" className="mx-1 h-5" />
+            </React.Fragment>
           ))}
-          <Separator orientation="vertical" className="mx-1 h-5" />
-          {BLOCKS.map((item) => (
-            <ToolButton key={item.label} item={item} editor={editor} />
-          ))}
-          <Separator orientation="vertical" className="mx-1 h-5" />
-          {ALIGNS.map((item) => (
-            <ToolButton key={item.label} item={item} editor={editor} />
-          ))}
-          <Separator orientation="vertical" className="mx-1 h-5" />
           <Button
             type="button"
             variant="ghost"
@@ -229,7 +268,7 @@ export function RichTextEditor({
               aria-label="Undo"
               title="Undo"
               className="rounded-md"
-              disabled={!editor.can().undo()}
+              disabled={!toolbar.canUndo}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().undo().run()}
             >
@@ -242,7 +281,7 @@ export function RichTextEditor({
               aria-label="Redo"
               title="Redo"
               className="rounded-md"
-              disabled={!editor.can().redo()}
+              disabled={!toolbar.canRedo}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().redo().run()}
             >
