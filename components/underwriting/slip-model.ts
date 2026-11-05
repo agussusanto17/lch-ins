@@ -267,6 +267,23 @@ export function makeMotorSubLines(): {
 export const DEFAULT_PERIOD_NOTE =
   "Both days at 12 o'clock noon local time at the location of the insured object."
 
+/**
+ * Baris Exclusions untuk dokumen. Nomor yang diketik sendiri, misalnya "a)",
+ * "1)", "1." atau "-", dipisah dari teksnya supaya baris yang terlipat rata
+ * dengan teks. Baris tanpa nomor, seperti "And other exclusion as may be
+ * agreed by the company", dicetak apa adanya. Baris kosong dilewati.
+ */
+export function exclusionItems(text: string | undefined) {
+  return (text ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const m = /^(\(?(?:[a-z]|[ivx]{1,4}|\d{1,3})[).]|[-•])\s+(.+)$/i.exec(line)
+      return m ? { marker: m[1], text: m[2] } : { marker: null, text: line }
+    })
+}
+
 /** Label periode di dokumen bila slip dan type of cover-nya tidak mengaturnya. */
 export const DEFAULT_PERIOD_LABEL = "Period of Insurance"
 

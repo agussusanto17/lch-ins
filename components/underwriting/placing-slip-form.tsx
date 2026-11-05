@@ -1614,6 +1614,25 @@ function SlipEditor({
                   })()}
                 </div>
               )}
+
+              <Field>
+                <FieldLabel htmlFor="exclusions">Exclusions</FieldLabel>
+                <Textarea
+                  id="exclusions"
+                  rows={4}
+                  maxLength={4000}
+                  placeholder={
+                    "Satu exclusion per baris, misalnya\na) Workers Compensation Risks\nb) Professional liability"
+                  }
+                  value={slip.exclusions ?? ""}
+                  onChange={(e) => set({ exclusions: e.target.value })}
+                />
+                <FieldDescription>
+                  Dicetak sebagai blok EXCLUSIONS setelah CLAUSES. Ketik
+                  nomornya sendiri, misalnya a) atau 1); baris tanpa nomor
+                  dicetak apa adanya.
+                </FieldDescription>
+              </Field>
             </div>
           </SectionCard>
 

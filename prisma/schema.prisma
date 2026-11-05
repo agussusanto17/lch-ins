@@ -1111,6 +1111,9 @@ model PlacingSlip {
   interestSection1  String? @map("interest_section1")
   interestSection2  String? @map("interest_section2")
   specialConditions String? @map("special_conditions")
+  /// Exclusion slip, satu per baris dengan nomor yang diketik sendiri, dicetak
+  /// sebagai blok EXCLUSIONS setelah CLAUSES (CI CGL Orela, PL Infiniti).
+  exclusions        String?
 
   discountPct  Decimal @default(0) @map("discount_pct") @db.Decimal(12, 6)
   adminCost    Decimal @default(0) @map("admin_cost") @db.Decimal(18, 2)

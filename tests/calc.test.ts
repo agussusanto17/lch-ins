@@ -24,6 +24,7 @@ import {
   slipPeriodRow,
   nextPeriodLabel,
   releaseIssues,
+  exclusionItems,
 } from "../components/underwriting/slip-model"
 import type { PlacingSlip, RateLine } from "../lib/data/types"
 import {
@@ -641,4 +642,20 @@ test("release menerima periode satu hari, menolak expiry sebelum inception", () 
   assert.ok(!sameDay.some((i) => i.startsWith("Expiry date")))
   const before = releaseIssues({ ...slip, expiryDate: "2026-07-28" })
   assert.ok(before.includes("Expiry date tidak boleh sebelum inception date."))
+})
+
+test("exclusions: nomor diketik sendiri dipisah dari teks, kalimat penutup apa adanya", () => {
+  const items = exclusionItems(
+    "a) Workers Compensation Risks\n\n  b)   Professional liability \n1. Exclude Bailee Liability.\n(iv) Nuclear radiation\n- Exclude Product Liability.\nAnd other exclusion as may be agreed by the company"
+  )
+  assert.deepEqual(items, [
+    { marker: "a)", text: "Workers Compensation Risks" },
+    { marker: "b)", text: "Professional liability" },
+    { marker: "1.", text: "Exclude Bailee Liability." },
+    { marker: "(iv)", text: "Nuclear radiation" },
+    { marker: "-", text: "Exclude Product Liability." },
+    { marker: null, text: "And other exclusion as may be agreed by the company" },
+  ])
+  assert.deepEqual(exclusionItems(undefined), [])
+  assert.deepEqual(exclusionItems("No. 5 of the policy"), [{ marker: null, text: "No. 5 of the policy" }])
 })

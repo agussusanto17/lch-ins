@@ -12,6 +12,7 @@ import {
   DeductibleBlock,
   DetailTable,
   DocTitle,
+  ExclusionsBlock,
   InsurerSignatureGrid,
   InterestBlock,
   LocationPremiumSchedule,
@@ -133,6 +134,7 @@ export function PlacingSlipDocument(props: DocProps) {
       <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
       <ClausesBlock slip={slip} />
+      <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
 
@@ -179,6 +181,7 @@ export function QuotationSlipDocument(props: DocProps) {
       ) : null}
 
       <ClausesBlock slip={slip} inline />
+      <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
 
@@ -216,6 +219,7 @@ export function CoverNoteDocument(props: DocProps) {
       <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
       <ClausesBlock slip={slip} inline />
+      <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
 
@@ -267,6 +271,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       ) : null}
 
       <ClausesBlock slip={slip} inline />
+      <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
 

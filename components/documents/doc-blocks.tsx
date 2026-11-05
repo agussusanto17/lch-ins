@@ -3,6 +3,7 @@ import { Fragment } from "react"
 import {
   coverLabel,
   deductibleRows,
+  exclusionItems,
   slipOccupationText,
   slipPeriodRow,
   slipSectionTitles,
@@ -591,6 +592,30 @@ function ClauseGroupHeading({
     <p className={cn("mb-1.5 text-[13px] font-semibold", !first && "mt-2")}>
       {children}
     </p>
+  )
+}
+
+/**
+ * Exclusion slip setelah CLAUSES, seperti CI CGL Orela (a sampai m) dan PL
+ * Infiniti (1 sampai 7). Nomor dicetak seperti yang diketik.
+ */
+export function ExclusionsBlock({ slip }: { slip: PlacingSlip }) {
+  const items = exclusionItems(slip.exclusions)
+  if (!items.length) return null
+  return (
+    <>
+      <SectionHeading>EXCLUSIONS</SectionHeading>
+      <ul className="flex flex-col gap-1 text-[12.5px] leading-relaxed">
+        {items.map((item, i) => (
+          <li key={i} className="flex gap-2">
+            {item.marker ? (
+              <span className="w-6 shrink-0">{item.marker}</span>
+            ) : null}
+            <span>{item.text}</span>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
 
