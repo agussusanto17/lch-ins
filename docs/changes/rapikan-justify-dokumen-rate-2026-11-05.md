@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `fix/rapikan-justify-dokumen-rate`
-- **PR:** belum dibuat
+- **PR:** [#130](https://github.com/agussusanto17/lch-ins/pull/130)
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
