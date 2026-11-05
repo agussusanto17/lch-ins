@@ -151,11 +151,11 @@ export interface ParEqvetCalculation {
 }
 
 /**
- * Rate persen di dokumen: lima desimal seperti contoh LCH, sampai tujuh supaya
- * rate per mil enam desimal (0,000009‰ = 0,0000009%) tidak tercetak nol.
+ * Rate persen di dokumen selalu tujuh desimal (permintaan 5 November 2026),
+ * cukup untuk rate per mil enam desimal: 0,000009‰ = 0,0000009%.
  */
 export function ratePercentText(ratePercent: number) {
-  return `${num(ratePercent, 5, 7)}%`
+  return `${num(ratePercent, 7)}%`
 }
 
 /**

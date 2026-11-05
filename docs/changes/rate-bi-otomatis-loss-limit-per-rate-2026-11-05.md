@@ -18,7 +18,8 @@ REQ-030):
 - **Isian Loss Limit (IDR) di bawah Section 1 tidak dipakai.** Gantinya kolom
   persentase di samping rate: sum insured × rate × persentase = premi.
 - **Print memakai persen, input per mil.** Print hanya 5 desimal, jadi RSMDCC
-  0,000009‰ tercetak 0,00000% dan FWTWD 0,034425% tercetak 0,03443%.
+  0,000009‰ tercetak 0,00000% dan FWTWD 0,034425% tercetak 0,03443%. Diminta
+  rate di print selalu 7 angka di belakang koma.
 
 Acuan rumusnya CI Grand Mercure Batam 2026 di folder CONTOH SLIP LCH:
 - FWTWD 0,045000% × 85% = 0,038250%.
@@ -49,11 +50,12 @@ Acuan rumusnya CI Grand Mercure Batam 2026 di folder CONTOH SLIP LCH:
   - Polis yang dibuat dari slip memakai total sum insured. Sebelumnya Section 1
     diganti nilai loss limit.
 - **Dokumen:**
-  - Bagian RATE mencetak pengali seperti CI LCH: "0,04500% × 85% = 0,03825%"
-    untuk baris ber-loss limit, dan "dasar × 90% = rate" untuk BI dengan
-    indemnity period selain 12 bulan.
+  - Bagian RATE mencetak pengali seperti CI LCH: "0,0450000% × 85% =
+    0,0382500%" untuk baris ber-loss limit, dan "dasar × 90% = rate" untuk BI
+    dengan indemnity period selain 12 bulan.
   - PREMIUM CALCULATION mencetak "x 85%", sebelumnya "x 85,00%".
-  - Rate persen dicetak 5 sampai 7 desimal, jadi 0,000009‰ tercetak 0,0000009%.
+  - Rate persen di RATE dan PREMIUM CALCULATION selalu 7 desimal, sebelumnya 5:
+    FLEXAS 0,0803700%, dan 0,000009‰ tercetak 0,0000009%.
 - **Satuan tidak berubah:** input Property tetap per mil (REQ-025), dokumen
   tetap persen.
 - **Release:** cek "rate BI di bawah FLEXAS" dihapus. Rate BI sekarang dihitung
@@ -109,9 +111,9 @@ Acuan rumusnya CI Grand Mercure Batam 2026 di folder CONTOH SLIP LCH:
   - Premium PAR 231.959.360, diskon 11,5% 26.675.326,40, ditambah policy cost
     dan stamp duty 50.000, total 205.334.033,60. Semua sama dengan CI.
 - **Dokumen:**
-  - RATE mencetak "0,04500% × 85% = 0,03825%", "0,086552% × 90% =
-    0,0778968%", dan RSMDCC 0,000001%.
-  - PREMIUM CALCULATION mencetak FWTWD "x 85%".
+  - RATE mencetak "0,0450000% × 85% = 0,0382500%", "0,0865520% × 90% =
+    0,0778968%", dan RSMDCC 0,0000010%.
+  - PREMIUM CALCULATION mencetak FWTWD "x 0,0450000% x 85%".
 - **Kasus lain:**
   - EQVET 0,76 × 85%: premi 600.780, BI EQVET 0,646.
   - Skala BI: kosong 100%, 12 bulan 100%, 24 bulan 90%, 5 bulan 60% (baris 6

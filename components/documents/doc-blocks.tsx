@@ -605,7 +605,7 @@ export function PayableTable({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Rate dengan pengali dicetak seperti CI LCH: "0,04500% × 85% = 0,03825%"
+ * Rate dengan pengali dicetak seperti CI LCH: "0,0450000% × 85% = 0,0382500%"
  * untuk loss limit, dan dasar BI × skala indemnity period selain 12 bulan.
  */
 function rateFormula(
@@ -628,7 +628,7 @@ function rateFormula(
   return line.rateText
 }
 
-/** Formats Property rate list with full peril titles and 5-decimal percentages per Image 5. */
+/** Formats Property rate list with full peril titles and 7-decimal percentages. */
 export function ParEqvetRateBlock({ slip }: { slip: PlacingSlip }) {
   const calc = calculateParEqvet(slip)
   const bi = biRateBasis(slip)
