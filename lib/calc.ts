@@ -5,6 +5,7 @@ import {
 import { BI_SCALE_OJK } from "./data/ojk-tariff"
 import type { PlacingSlip, RateLine, SlipPart } from "./data/types"
 import { num } from "./format"
+import { locationGroups, locationOwner, withLocations } from "./slip-locations"
 
 /** Demo exchange rates for report aggregation. */
 export const FX: Record<string, number> = {
@@ -119,6 +120,8 @@ export function isParEqvetSlip(slip: PlacingSlip): boolean {
 
 export interface ParEqvetLine {
   id: string
+  /** Nomor lokasi slip, mulai 1. Slip satu lokasi selalu 1. */
+  locationNo: number
   label: string
   formulaLabel: string
   fullName: string
@@ -166,20 +169,35 @@ export function parEqvetPolicyCharge(slip: PlacingSlip) {
   return roundCents((slip.adminCost || 0) + (slip.stampDuty || 0))
 }
 
+/**
+ * Sum insured Section 1 dan 2 tiap lokasi slip Property, beserta nomor
+ * lokasinya. Slip tanpa daftar lokasi menjadi satu lokasi.
+ */
+function locationBases(slip: PlacingSlip) {
+  return new Map(
+    locationGroups(slip).map((g) => [
+      g.location.id,
+      { no: g.no, md: sumItems(g.section1), bi: sumItems(g.section2) },
+    ])
+  )
+}
+
 export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
-  // Tiap section hanya memakai sum insured-nya sendiri, sama seperti
-  // recalcSlip. Dulu section kosong memakai nilai section lain, sehingga rate
-  // BI otomatis mendapat premi dari Section 1 walaupun Section 2 kosong.
-  const mdBasis = sumItems(slip.sumInsuredSection1)
-  const biBasis = sumItems(slip.sumInsuredSection2)
+  // Tiap baris memakai sum insured lokasinya, dan tiap section hanya memakai
+  // sum insured-nya sendiri, sama seperti recalcSlip. Dulu section kosong
+  // memakai nilai section lain, sehingga rate BI otomatis mendapat premi dari
+  // Section 1 walaupun Section 2 kosong.
+  const bases = locationBases(slip)
+  const owner = locationOwner(slip)
 
   // Property rates in rateLines are per mil (‰); divided by 10 to represent percent (%).
   function mapLine(l: RateLine): ParEqvetLine {
     const isBi = BI_RATE_LABELS.includes(l.label)
-    const basis = isBi ? biBasis : mdBasis
+    const location = bases.get(owner(l.locationId))!
+    const basis = isBi ? location.bi : location.md
     // Slip yang tersimpan sebelum perbaikan ini masih membawa rate BI otomatis
     // walaupun Section 2 kosong; rate itu tidak dicetak.
-    const rate = isBi && biBasis <= 0 ? null : l.rate
+    const rate = isBi && location.bi <= 0 ? null : l.rate
     const ratePercent = rate != null ? rate / 10 : null
     const lossLimitPct = isBi ? null : (l.lossLimitPct ?? null)
     const premium =
@@ -190,6 +208,7 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
 
     return {
       id: l.id,
+      locationNo: location.no,
       label: l.label,
       formulaLabel: PAR_EQVET_FORMULA_NAMES[l.label] ?? l.label,
       fullName: PAR_EQVET_FULL_NAMES[l.label] ?? l.label,
@@ -349,30 +368,28 @@ export function brokerageLimitIssue(slip: PlacingSlip) {
 }
 
 /**
- * Recalculate all premiums from rate and sum insured. Property lines use
- * Section 1 sum insured × rate × loss limit percentage, BI lines Section 2;
- * TPL and PA lines use their respective liability limits.
+ * Recalculate all premiums from rate and sum insured. Property lines use the
+ * Section 1 sum insured of their location × rate × loss limit percentage, BI
+ * lines the location's Section 2; TPL and PA lines use their liability limits.
  */
-export function recalcSlip(slip: PlacingSlip): PlacingSlip {
+export function recalcSlip(input: PlacingSlip): PlacingSlip {
+  const slip = withLocations(input)
   const mode = rateModeFor(slip.cob)
   const property = slip.cob === "Property"
-  const mdBasis = property
-    ? sumItems(slip.sumInsuredSection1)
-    : sumItems(slip.interestItems)
-  const biBasis = sumItems(slip.sumInsuredSection2)
+  const interestBasis = sumItems(slip.interestItems)
+  const bases = locationBases(slip)
+  const owner = locationOwner(slip)
 
   const rateLines = (property ? withBiRates(slip) : slip.rateLines).map((l) => {
-    const isBi = property && BI_RATE_LABELS.includes(l.label)
+    if (!property) {
+      return { ...l, premium: premiumFromRate(interestBasis, l.rate, mode) }
+    }
+    const location = bases.get(owner(l.locationId))!
     return {
       ...l,
-      premium: isBi
-        ? premiumFromRate(biBasis, l.rate, mode)
-        : premiumFromRate(
-            mdBasis,
-            l.rate,
-            mode,
-            property ? (l.lossLimitPct ?? 100) : 100
-          ),
+      premium: BI_RATE_LABELS.includes(l.label)
+        ? premiumFromRate(location.bi, l.rate, mode)
+        : premiumFromRate(location.md, l.rate, mode, l.lossLimitPct ?? 100),
     }
   })
 
@@ -437,27 +454,41 @@ export function biRateBasis(
 }
 
 /**
- * Rate BI slip Property selalu dihitung dari baris lain (Harry, 5 November
- * 2026), jadi tidak bisa basi saat rate FLEXAS dan kawan-kawan diubah. Contoh
- * LCH: (0,048300% + 0,045000% × 85% + 0,000001% + 0,000001%) × 90% untuk
- * indemnity period 24 bulan.
+ * Rate BI slip Property selalu dihitung dari baris lain di lokasi yang sama
+ * (Harry, 5 November 2026), jadi tidak bisa basi saat rate FLEXAS dan
+ * kawan-kawan diubah. Contoh LCH: (0,048300% + 0,045000% × 85% + 0,000001% +
+ * 0,000001%) × 90% untuk indemnity period 24 bulan.
  */
 function withBiRates(slip: PlacingSlip): RateLine[] {
-  const basis = biRateBasis(slip)
-  const bases = new Map([
-    [BI_RATE_LABELS[0], basis.par],
-    [BI_RATE_LABELS[1], basis.eqvet],
-  ])
-  // Tanpa sum insured Section 2 tidak ada jaminan BI, jadi rate BI kosong dan
-  // tidak tercetak di dokumen.
-  const covered = sumItems(slip.sumInsuredSection2) > 0
+  const owner = locationOwner(slip)
+  const bases = new Map(
+    locationGroups(slip).map((g) => {
+      const basis = biRateBasis({
+        rateLines: g.rateLines,
+        indemnityPeriod: slip.indemnityPeriod,
+      })
+      // Tanpa sum insured Section 2 tidak ada jaminan BI, jadi rate BI lokasi
+      // itu kosong dan tidak tercetak di dokumen.
+      const covered = sumItems(g.section2) > 0
+      return [
+        g.location.id,
+        {
+          scalePct: basis.scalePct,
+          rates: new Map([
+            [BI_RATE_LABELS[0], covered ? basis.par : 0],
+            [BI_RATE_LABELS[1], covered ? basis.eqvet : 0],
+          ]),
+        },
+      ]
+    })
+  )
   return slip.rateLines.map((l) => {
-    const base = bases.get(l.label)
+    const basis = bases.get(owner(l.locationId))!
+    const base = basis.rates.get(l.label)
     if (base === undefined) return l
     return {
       ...l,
-      rate:
-        covered && base > 0 ? roundRate((base * basis.scalePct) / 100) : null,
+      rate: base > 0 ? roundRate((base * basis.scalePct) / 100) : null,
       lossLimitPct: null,
       min: null,
       max: null,

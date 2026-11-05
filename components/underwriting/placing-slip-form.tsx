@@ -40,6 +40,7 @@ import {
 } from "@/components/underwriting/line-items"
 import { InsuredPicker } from "@/components/underwriting/insured-picker"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
+import { SlipLocations } from "@/components/underwriting/slip-locations"
 import {
   OjkReference,
   type RateBounds,
@@ -98,9 +99,6 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Toggle } from "@/components/ui/toggle"
 import {
-  BI_BASE_LABELS,
-  BI_RATE_LABELS,
-  biRateBasis,
   brokerageAmount,
   brokerageLimitIssue,
   brokerageLimitText,
@@ -119,7 +117,6 @@ import {
 } from "@/lib/calc"
 import {
   CLAUSES,
-  CONSTRUCTION_CLASSES,
   type ClassOfBusiness,
   type PlacingSlip,
   type RateException,
@@ -135,6 +132,7 @@ import {
   withCurrent,
 } from "@/lib/form-options"
 import { money, num, percent } from "@/lib/format"
+import { locationGroups, locationOwner } from "@/lib/slip-locations"
 import type { InsuredOption } from "@/lib/server/clients"
 import { newId, store, useRecord } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -156,10 +154,6 @@ const SECTION_KEYS = [
 type SectionKey = (typeof SECTION_KEYS)[number]
 
 const toItem = (v: string) => ({ label: v, value: v })
-const CONSTRUCTION_ITEMS = CONSTRUCTION_CLASSES.map((c) => ({
-  label: `${c.label} — ${c.description}`,
-  value: c.code,
-}))
 const INDEMNITY_ITEMS = BI_SCALE_OJK.map((s) => ({
   label: `${s.months} bulan · ${s.pct}% tarif dasar`,
   value: `${s.months} months`,
@@ -471,8 +465,7 @@ function SlipEditor({
   const insurerItems = options.insurers.map((ins) => ins.name)
 
   const lines = rateLinesWithBounds(slip)
-  const md = sumItems(slip.sumInsuredSection1)
-  const bi = sumItems(slip.sumInsuredSection2)
+  const locationCount = isProperty ? locationGroups(slip).length : 0
   const tsi = totalSumInsured(slip)
   const premium = totalPremium(slip)
   const discount = discountAmount(slip)
@@ -488,8 +481,6 @@ function SlipEditor({
     (l) => isOutOfBounds(l) && !slip.rateExceptions?.[l.id]
   ).length
 
-  /** Dasar rate BI setelah loss limit, dan skala indemnity period-nya. */
-  const biBasis = biRateBasis(slip)
   const brokerageLimit = brokerageLimitText(slip)
   const brokerageIssue = brokerageLimitIssue(slip)
   // Klausula tanpa section dan Section 2 (Business Interruption) hanya berlaku
@@ -510,14 +501,26 @@ function SlipEditor({
     (w) => w && !wordingNames.includes(w)
   )
 
-  /** Isi satu baris rate dari panel referensi OJK, sekaligus catat batasnya. */
-  function applyOjkRate(label: string, value: number, bounds?: RateBounds) {
-    if (!slip.rateLines.some((l) => l.label.startsWith(label))) return
+  /**
+   * Isi satu baris rate dari panel referensi OJK, sekaligus catat batasnya.
+   * Slip Property mengisi baris lokasi yang panelnya dipakai.
+   */
+  function applyOjkRate(
+    label: string,
+    value: number,
+    bounds?: RateBounds,
+    locationId?: string
+  ) {
+    const owner = locationOwner(slip)
+    const target = (l: RateLine) =>
+      l.label.startsWith(label) &&
+      (!locationId || owner(l.locationId) === locationId)
+    if (!slip.rateLines.some(target)) return
     setSlip((s) =>
       recalc({
         ...s,
         rateLines: s.rateLines.map((l) =>
-          l.label.startsWith(label)
+          target(l)
             ? {
                 ...l,
                 rate: value,
@@ -536,29 +539,6 @@ function SlipEditor({
     toast.success(`Rate ${label} diisi ${value.toLocaleString("id-ID")}`, {
       description: bounds?.source,
     })
-  }
-
-  /** Keterangan baris BI, yang rate-nya dihitung dari baris lain. */
-  function biRateNote(line: RateLine) {
-    const source =
-      line.label === BI_RATE_LABELS[0]
-        ? {
-            text: "jumlah rate FLEXAS, FWTWD, RSMDCC, dan Other Losses",
-            labels: BI_BASE_LABELS,
-          }
-        : line.label === BI_RATE_LABELS[1]
-          ? { text: "rate EQVET", labels: ["EQVET"] }
-          : null
-    if (!source) return null
-    const afterLossLimit = slip.rateLines.some(
-      (l) => source.labels.includes(l.label) && l.lossLimitPct != null
-    )
-    const scale =
-      biBasis.scalePct !== 100
-        ? ` × ${num(biBasis.scalePct, 0, 1)}% (Indemnity Period ${slip.indemnityPeriod})`
-        : ""
-    const when = bi > 0 ? "Otomatis" : "Otomatis setelah sum insured Section 2 diisi"
-    return `${when}: ${source.text}${afterLossLimit ? " setelah loss limit" : ""}${scale}`
   }
 
   function setException(lineId: string, exception: RateException | null) {
@@ -1018,12 +998,11 @@ function SlipEditor({
                 </>
               ) : null}
 
-              {usesPropertyBlocks(slip.cob) ? (
+              {/* Okupasi, risk location, dan kelas slip Property diisi per lokasi. */}
+              {isProperty ? null : usesPropertyBlocks(slip.cob) ? (
                 <>
                   <Field className="md:col-span-2">
-                    <FieldLabel>
-                      Okupasi (OJK){isProperty ? " *" : ""}
-                    </FieldLabel>
+                    <FieldLabel>Okupasi (OJK)</FieldLabel>
                     <OccupationCombobox
                       value={slip.occupation ?? ""}
                       onValueChange={(v) =>
@@ -1073,9 +1052,7 @@ function SlipEditor({
                     </FieldDescription>
                   </Field>
                   <Field className="md:col-span-2">
-                    <FieldLabel htmlFor="risk">
-                      Risk Location{isProperty ? " *" : ""}
-                    </FieldLabel>
+                    <FieldLabel htmlFor="risk">Risk Location</FieldLabel>
                     <Textarea
                       id="risk"
                       rows={2}
@@ -1174,15 +1151,6 @@ function SlipEditor({
                   {isProperty ? (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <SelectInput
-                        label="Construction Class"
-                        required
-                        items={CONSTRUCTION_ITEMS}
-                        value={slip.constructionClass ?? ""}
-                        onValueChange={(v) => set({ constructionClass: v })}
-                        placeholder="Pilih kelas konstruksi"
-                        description="Dipakai menentukan batas tarif FLEXAS okupasi."
-                      />
-                      <SelectInput
                         label="Indemnity Period"
                         items={INDEMNITY_ITEMS}
                         value={slip.indemnityPeriod ?? ""}
@@ -1258,50 +1226,32 @@ function SlipEditor({
             )}
           </SectionCard>
 
-          {usesSectionSumInsured(slip.cob) ? (
+          {isProperty ? (
             <SectionCard
-              title="Sum Insured *"
+              title="Lokasi & Sum Insured *"
               {...sectionProps("sumInsured")}
-              summary={money(md + bi, slip.currency)}
+              summary={`${locationCount} lokasi · ${money(tsi, slip.currency)}`}
+              action={
+                unresolved ? (
+                  <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+                    {unresolved} rate butuh alasan
+                  </span>
+                ) : undefined
+              }
             >
-              <div className="flex flex-col gap-5">
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm font-medium">
-                    Section 1 — Material Damage
-                  </p>
-                  <LineItemList
-                    items={slip.sumInsuredSection1}
-                    onChange={(items) => set({ sumInsuredSection1: items })}
-                    descPlaceholder="Deskripsi"
-                    amountPlaceholder="Nilai"
-                  />
-                  <TotalBar
-                    label="Subtotal Material Damage"
-                    value={money(md, slip.currency)}
-                    tone="muted"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm font-medium">
-                    Section 2 — Business Interruption
-                  </p>
-                  <LineItemList
-                    items={slip.sumInsuredSection2}
-                    onChange={(items) => set({ sumInsuredSection2: items })}
-                    descPlaceholder="Deskripsi"
-                    amountPlaceholder="Nilai"
-                  />
-                  <TotalBar
-                    label="Subtotal Business Interruption"
-                    value={money(bi, slip.currency)}
-                    tone="muted"
-                  />
-                </div>
-                <TotalBar
-                  label="Total Sum Insured"
-                  value={money(md + bi, slip.currency)}
-                />
-              </div>
+              <SlipLocations
+                slip={slip}
+                lines={lines}
+                locked={locked}
+                onChange={set}
+                onPickRate={(locationId, label, value, bounds) =>
+                  applyOjkRate(label, value, bounds, locationId)
+                }
+                onPickIndemnity={(months) =>
+                  set({ indemnityPeriod: `${months} months` })
+                }
+                onExceptionChange={setException}
+              />
             </SectionCard>
           ) : null}
 
@@ -1329,6 +1279,13 @@ function SlipEditor({
                         ? "Klik Pilih untuk mengisi dari master data, lalu ubah teksnya bila perlu."
                         : `Belum ada pilihan deductible untuk ${slip.typeOfCover}. Tambahkan di Master Data > Deductible.`}
                   </p>
+                  {locationCount > 1 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Berlaku untuk semua lokasi. Deductible yang beda per
+                      lokasi ditulis sebagai isian terpisah dengan lokasinya,
+                      misalnya &quot;Nil (for Location 1)&quot;.
+                    </p>
+                  ) : null}
                 </div>
                 <DeductiblePerCover
                   slip={slip}
@@ -1459,63 +1416,38 @@ function SlipEditor({
             }
           >
             <div className="flex flex-col gap-4">
-              {(isProperty || isMotor) && !locked ? (
+              {isProperty ? (
+                <p className="text-xs text-muted-foreground">
+                  Rate slip Property diisi per lokasi di bagian Lokasi &amp; Sum
+                  Insured.
+                </p>
+              ) : null}
+
+              {isMotor && !locked ? (
                 <OjkReference
-                  mode={isMotor ? "motor" : "property"}
-                  occupation={slip.occupation}
+                  mode="motor"
                   riskLocation={slip.riskLocation ?? ""}
-                  constructionClass={slip.constructionClass}
-                  onConstructionClassChange={(code) =>
-                    set({ constructionClass: code })
-                  }
                   sumInsured={tsi}
-                  baseRate={biBasis.par}
-                  eqRate={biBasis.eqvet || null}
                   onPickRate={applyOjkRate}
-                  onPickIndemnity={(months) =>
-                    set({ indemnityPeriod: `${months} months` })
-                  }
                 />
               ) : null}
 
-              {isProperty || isMotor ? (
-                <>
-                  <CoverRateTable
-                    lines={lines}
-                    currency={slip.currency}
-                    unit={rateUnitFor(slip.cob)}
-                    exceptions={slip.rateExceptions}
-                    readOnly={locked}
-                    onRateChange={(id, rate) =>
-                      set({
-                        rateLines: slip.rateLines.map((l) =>
-                          l.id === id ? { ...l, rate } : l
-                        ),
-                      })
-                    }
-                    onExceptionChange={setException}
-                    onLossLimitChange={
-                      isProperty
-                        ? (id, lossLimitPct) =>
-                            set({
-                              rateLines: slip.rateLines.map((l) =>
-                                l.id === id ? { ...l, lossLimitPct } : l
-                              ),
-                            })
-                        : undefined
-                    }
-                    autoRateNote={isProperty ? biRateNote : undefined}
-                  />
-                  {isProperty ? (
-                    <p className="text-xs text-muted-foreground">
-                      Rate dalam per mil (‰). Premi = sum insured × rate ×
-                      persentase loss limit; kosongkan loss limit untuk full
-                      value. Baris BI memakai sum insured Section 2, sisanya
-                      Section 1. Batas FLEXAS terisi otomatis dari okupasi dan
-                      kelas konstruksi.
-                    </p>
-                  ) : null}
-                </>
+              {isMotor ? (
+                <CoverRateTable
+                  lines={lines}
+                  currency={slip.currency}
+                  unit={rateUnitFor(slip.cob)}
+                  exceptions={slip.rateExceptions}
+                  readOnly={locked}
+                  onRateChange={(id, rate) =>
+                    set({
+                      rateLines: slip.rateLines.map((l) =>
+                        l.id === id ? { ...l, rate } : l
+                      ),
+                    })
+                  }
+                  onExceptionChange={setException}
+                />
               ) : null}
 
               {isMotor ? (

@@ -1,3 +1,5 @@
+import { Fragment } from "react"
+
 import {
   coverLabel,
   deductibleRows,
@@ -11,6 +13,7 @@ import {
   calculateParEqvet,
   discountAmount,
   ratePermilText,
+  roundCents,
   sumItems,
   totalPayable,
   totalPremium,
@@ -32,6 +35,12 @@ import {
   type SecurityPanelRow,
 } from "@/lib/data"
 import { dateEn, money, moneyCents, num } from "@/lib/format"
+import {
+  isMultiLocation,
+  locationGroups,
+  oneLineAddress,
+  type LocationGroup,
+} from "@/lib/slip-locations"
 import { cn } from "@/lib/utils"
 
 export function DocTitle({
@@ -74,7 +83,7 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
   // Slip PAR + EQVET dengan dua type of cover dicetak seperti CI LCH: satu
   // baris per type of cover, masing-masing diawali tanda hubung.
   const covers = [slip.typeOfCover, slip.typeOfCover2].filter(Boolean)
-  const rows: [string, string][] = [
+  const rows: [string, string | string[]][] = [
     [
       "Type of Cover",
       covers.length > 1
@@ -97,24 +106,62 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
     ["Correspondence Address", slip.correspondenceAddress || "—"],
     ["Period of Insurance", period]
   )
-  if (slip.occupation) rows.push(["Occupation", slipOccupationText(slip)])
-  if (slip.riskLocation) rows.push(["Risk Location", slip.riskLocation])
-  if (slip.cob === "Property" && slip.constructionClass)
-    rows.push([
-      "Construction Class",
-      constructionClassLabel(slip.constructionClass),
-    ])
+  if (isMultiLocation(slip)) {
+    rows.push(...locationRows(slip))
+  } else {
+    if (slip.occupation) rows.push(["Occupation", slipOccupationText(slip)])
+    if (slip.riskLocation) rows.push(["Risk Location", slip.riskLocation])
+    if (slip.cob === "Property" && slip.constructionClass)
+      rows.push([
+        "Construction Class",
+        constructionClassLabel(slip.constructionClass),
+      ])
+  }
   if (slip.cob === "Property" && slip.indemnityPeriod)
     rows.push(["Indemnity Period", slip.indemnityPeriod])
 
   return <InfoTable rows={rows} />
 }
 
+/**
+ * Okupasi, lokasi, dan kelas slip Property multi lokasi, bernomor seperti CI
+ * LCH Ruko & Gudang. Tiap lokasi mencetak sum insured-nya; kelas konstruksi
+ * cukup sekali bila semua lokasi sama.
+ */
+function locationRows(slip: PlacingSlip): [string, string[]][] {
+  const groups = locationGroups(slip)
+  const rows: [string, string[]][] = [
+    [
+      "Occupation",
+      groups.map((g) => slipOccupationText(g.location) || "—"),
+    ],
+    [
+      "Risk(s) Location",
+      groups.map((g) => {
+        const address = oneLineAddress(g.location.riskLocation).replace(/\.$/, "")
+        const amount = sumItems(g.section1) + sumItems(g.section2)
+        return `${address || "—"}. Sum Insured: ${money(amount, slip.currency)}`
+      }),
+    ],
+  ]
+  const classes = groups.map((g) => g.location.constructionClass ?? "")
+  if (classes.some(Boolean)) {
+    rows.push([
+      "Construction Class",
+      new Set(classes).size === 1
+        ? [constructionClassLabel(classes[0])]
+        : classes.map((c) => constructionClassLabel(c) || "—"),
+    ])
+  }
+  return rows
+}
+
 export function InfoTable({
   rows,
   dense = false,
 }: {
-  rows: [string, string][]
+  /** Nilai berupa daftar dicetak bernomor, satu butir per baris. */
+  rows: [string, string | string[]][]
   /** Baris rapat untuk surat yang harus muat satu halaman. */
   dense?: boolean
 }) {
@@ -126,7 +173,17 @@ export function InfoTable({
           <tr key={k} className="align-top">
             <td className={cn("w-[190px] text-muted-foreground", cell)}>{k}</td>
             <td className={cn("w-3", cell)}>:</td>
-            <td className={cn("whitespace-pre-line", cell)}>{v || "—"}</td>
+            <td className={cn("whitespace-pre-line", cell)}>
+              {Array.isArray(v) && v.length > 1 ? (
+                <ol className="list-decimal pl-5">
+                  {v.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ol>
+              ) : (
+                (Array.isArray(v) ? v[0] : v) || "—"
+              )}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -136,6 +193,12 @@ export function InfoTable({
 
 export function InterestBlock({ slip }: { slip: PlacingSlip }) {
   const isProperty = slip.cob === "Property"
+  // Slip multi lokasi menyebut lokasi tiap item sum insured.
+  const multi = isMultiLocation(slip)
+  const sectionItems = (section: "section1" | "section2") =>
+    locationGroups(slip).flatMap((g) =>
+      g[section].map((item) => ({ item, no: g.no }))
+    )
 
   return (
     <>
@@ -149,12 +212,15 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
                 {slip.interestSection1}
               </p>
               <ul className="mt-2 flex flex-col gap-1">
-                {slip.sumInsuredSection1.map((i) => (
+                {sectionItems("section1").map(({ item: i, no }) => (
                   <li
                     key={i.id}
                     className="flex justify-between gap-6 border-b border-dashed py-1"
                   >
-                    <span>{i.description}</span>
+                    <span>
+                      {multi ? `Lokasi ${no} — ` : ""}
+                      {i.description}
+                    </span>
                     <span className="tabular whitespace-nowrap">
                       {money(i.amount, slip.currency)}
                     </span>
@@ -177,12 +243,15 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
                 {slip.interestSection2}
               </p>
               <ul className="mt-2 flex flex-col gap-1">
-                {slip.sumInsuredSection2.map((i) => (
+                {sectionItems("section2").map(({ item: i, no }) => (
                   <li
                     key={i.id}
                     className="flex justify-between gap-6 border-b border-dashed py-1"
                   >
-                    <span>{i.description}</span>
+                    <span>
+                      {multi ? `Lokasi ${no} — ` : ""}
+                      {i.description}
+                    </span>
                     <span className="tabular whitespace-nowrap">
                       {money(i.amount, slip.currency)}
                     </span>
@@ -757,6 +826,157 @@ export function ParEqvetCalculationBlock({ slip }: { slip: PlacingSlip }) {
         </div>
       </div>
     </div>
+  )
+}
+
+/** Objek dan sum insured satu section lokasi, untuk kolom Objek dan Sum Insured. */
+function sectionObject(group: LocationGroup, bi: boolean) {
+  const items = bi ? group.section2 : group.section1
+  return {
+    text:
+      items
+        .map((i) => i.description.trim())
+        .filter(Boolean)
+        .join(", ") || "—",
+    amount: sumItems(items),
+  }
+}
+
+/**
+ * Baris jadwal premi satu polis (PAR atau EQVET). Nomor lokasi tercetak di
+ * baris pertama lokasi itu, objek dan sum insured di baris pertama tiap
+ * section, karena baris BI memakai Section 2.
+ */
+function scheduleRows(lines: ParEqvetLine[], groups: LocationGroup[]) {
+  let previous = ""
+  return lines
+    .filter((l) => l.ratePercent != null)
+    .map((line) => {
+      const bi = BI_RATE_LABELS.includes(line.label)
+      const key = `${line.locationNo}:${bi ? 2 : 1}`
+      const newLocation = !previous.startsWith(`${line.locationNo}:`)
+      const newSection = key !== previous
+      previous = key
+      const group = groups.find((g) => g.no === line.locationNo)
+      return {
+        line,
+        locationNo: newLocation ? line.locationNo : null,
+        object: newSection && group ? sectionObject(group, bi) : null,
+      }
+    })
+}
+
+/**
+ * Rate & premium slip Property multi lokasi (Opsi B, disetujui Harry 5
+ * November 2026): satu baris per lokasi dan cover, PAR dan EQVET terpisah,
+ * lalu Discount, Policy Cost, dan Stamp Duty sebelum Grand Total. Bagian RATE
+ * tidak dicetak karena rate sudah ada di tabel.
+ */
+export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
+  const calc = calculateParEqvet(slip)
+  const groups = locationGroups(slip)
+  const currency = calc.currency
+  const amount = (value: number) => num(value, 2)
+  const policies = [calc.par, calc.eqvet].filter((g) => g.subtotal > 0).length
+  const discount = roundCents(calc.par.discountAmount + calc.eqvet.discountAmount)
+  const sections = [calc.par, calc.eqvet]
+    .map((group) => ({ group, rows: scheduleRows(group.lines, groups) }))
+    .filter((s) => s.rows.length > 0 || s.group.subtotal > 0)
+  const cell = "py-1.5 pr-2 align-top"
+
+  return (
+    <>
+      <InfoTable rows={[["Rate & Premium", "As per schedule below"]]} />
+      <SectionHeading>PREMIUM CALCULATION</SectionHeading>
+      <table className="w-full text-[12px]">
+        <thead>
+          <tr className="border-b text-left text-muted-foreground">
+            <th className="w-14 py-2 pr-2 font-semibold">Lokasi</th>
+            <th className="py-2 pr-2 font-semibold">Objek</th>
+            <th className="py-2 pr-2 text-right font-semibold">
+              Sum Insured ({currency})
+            </th>
+            <th className="py-2 pr-2 font-semibold">Cover</th>
+            <th className="py-2 pr-2 text-right font-semibold">Rate</th>
+            <th className="py-2 text-right font-semibold">
+              Premium ({currency})
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {sections.map(({ group, rows }) => (
+            <Fragment key={group.name}>
+              {rows.map(({ line, locationNo, object }) => (
+                <tr key={line.id} className="avoid-break border-b border-dashed">
+                  <td className={cell}>{locationNo ?? ""}</td>
+                  <td className={cell}>{object?.text ?? ""}</td>
+                  <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
+                    {object ? amount(object.amount) : ""}
+                  </td>
+                  <td className={cn(cell, "whitespace-nowrap")}>
+                    {line.formulaLabel}
+                  </td>
+                  <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
+                    {line.rateText}
+                    {line.lossLimitPct != null
+                      ? ` × ${num(line.lossLimitPct, 0, 4)}%`
+                      : ""}
+                  </td>
+                  <td className="tabular py-1.5 text-right align-top whitespace-nowrap">
+                    {amount(line.premium)}
+                  </td>
+                </tr>
+              ))}
+              <tr className="avoid-break border-b font-semibold">
+                <td colSpan={5} className="py-1.5 pr-2">
+                  Premium {group.name}
+                </td>
+                <td className="tabular py-1.5 text-right whitespace-nowrap">
+                  {amount(group.subtotal)}
+                </td>
+              </tr>
+            </Fragment>
+          ))}
+          {calc.par.discountPct > 0 ? (
+            <tr className="avoid-break border-b">
+              <td colSpan={4} className="py-1.5 pr-2">
+                Discount
+              </td>
+              <td className="tabular py-1.5 pr-2 text-right">
+                {num(calc.par.discountPct, 0, 2)}%
+              </td>
+              <td className="tabular py-1.5 text-right whitespace-nowrap">
+                ({amount(discount)})
+              </td>
+            </tr>
+          ) : null}
+          <tr className="avoid-break border-b">
+            <td colSpan={5} className="py-1.5 pr-2">
+              Policy Cost
+            </td>
+            <td className="tabular py-1.5 text-right whitespace-nowrap">
+              {amount(roundCents((slip.adminCost || 0) * policies))}
+            </td>
+          </tr>
+          <tr className="avoid-break border-b">
+            <td colSpan={5} className="py-1.5 pr-2">
+              Stamp Duty
+            </td>
+            <td className="tabular py-1.5 text-right whitespace-nowrap">
+              {amount(roundCents((slip.stampDuty || 0) * policies))}
+            </td>
+          </tr>
+          <tr className="avoid-break bg-primary/8 font-bold text-primary">
+            <td colSpan={5} className="px-2 py-2">
+              Grand Total Premium (PAR+EQVET)
+            </td>
+            <td className="tabular px-2 py-2 text-right whitespace-nowrap">
+              {amount(calc.grandTotal)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </>
   )
 }
 

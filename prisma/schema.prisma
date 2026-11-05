@@ -320,6 +320,7 @@ model LookupValue {
   cobRateLineKinds      CobRateLine[]       @relation("rate_line_kind_default")
   slipRateLineKinds     SlipRateLine[]      @relation("rate_line_kind_slip")
   slipConstructionClass PlacingSlip[]       @relation("construction_class")
+  locationConstructionClass SlipLocation[] @relation("location_construction_class")
   clientTypes           Client[]            @relation("client_type")
   clientIdTypes         Client[]            @relation("id_type")
   clientIncomeSources   Client[]            @relation("income_source")
@@ -493,6 +494,7 @@ model Occupation {
   tariffs      TariffOccupation[]
   sppa         Sppa[]
   placingSlips PlacingSlip[]
+  slipLocations SlipLocation[]
 
   @@map("occupations")
 }
@@ -1122,6 +1124,7 @@ model PlacingSlip {
   releaser                    User?           @relation("slipReleasedBy", fields: [releasedBy], references: [id])
   creator                     User            @relation("slipCreatedBy", fields: [createdBy], references: [id])
 
+  locations     SlipLocation[]
   items         SlipItem[]
   rateLines     SlipRateLine[]
   securityPanel SlipSecurityPanel[]
@@ -1132,6 +1135,34 @@ model PlacingSlip {
   @@index([clientId])
   @@index([status])
   @@map("placing_slips")
+}
+
+/// Lokasi risiko slip Property (Harry, 5 November 2026). Tiap lokasi punya
+/// okupasi, kelas konstruksi, sum insured, dan rate sendiri. Okupasi, risk
+/// location, dan kelas di placing_slips diisi dari lokasi pertama supaya modul
+/// lain tetap membaca satu nilai.
+model SlipLocation {
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slipId              String  @map("slip_id") @db.Uuid
+  sortOrder           Int     @default(0) @map("sort_order")
+  riskLocation        String? @map("risk_location")
+  occupationId        String? @map("occupation_id") @db.Uuid
+  /// Nama okupasi yang dicetak untuk lokasi ini; kosong berarti nama OJK.
+  occupationLabel     String? @map("occupation_label")
+  /// lookup construction_class: K1, K2, K3.
+  constructionClassId String? @map("construction_class_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slip              PlacingSlip    @relation(fields: [slipId], references: [id], onDelete: Cascade)
+  occupation        Occupation?    @relation(fields: [occupationId], references: [id])
+  constructionClass LookupValue?   @relation("location_construction_class", fields: [constructionClassId], references: [id])
+  items             SlipItem[]
+  rateLines         SlipRateLine[]
+
+  @@index([slipId, sortOrder])
+  @@map("slip_locations")
 }
 
 /// Interest insured, sum insured, dan deductible. Dibedakan lewat kind.
@@ -1146,11 +1177,14 @@ model SlipItem {
   /// Hanya baris Interest slip Motor Vehicle.
   vehicleBrandId String? @map("vehicle_brand_id") @db.Uuid
   vehicleTypeId  String? @map("vehicle_type_id") @db.Uuid
+  /// Lokasi slip Property untuk baris sum insured Section 1 dan 2.
+  locationId     String? @map("location_id") @db.Uuid
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   slip         PlacingSlip   @relation(fields: [slipId], references: [id], onDelete: Cascade)
+  location     SlipLocation? @relation(fields: [locationId], references: [id], onDelete: Cascade)
   vehicleBrand VehicleBrand? @relation(fields: [vehicleBrandId], references: [id], onDelete: Restrict)
   vehicleType  VehicleType?  @relation(fields: [vehicleTypeId], references: [id], onDelete: Restrict)
 
@@ -1180,6 +1214,8 @@ model SlipRateLine {
   /// Persentase loss limit baris Property: premi = sum insured × rate ×
   /// persentase. Kosong berarti full value.
   lossLimitPct      Decimal? @map("loss_limit_pct") @db.Decimal(7, 4)
+  /// Lokasi slip Property untuk baris rate. TPL, PA, dan COB lain kosong.
+  locationId        String?  @map("location_id") @db.Uuid
   /// Alasan bila rate keluar dari batas OJK.
   outOfBoundsReason String?  @map("out_of_bounds_reason")
   /// Tidak dipakai lagi sejak satu cover bisa punya beberapa deductible
@@ -1194,8 +1230,9 @@ model SlipRateLine {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  slip PlacingSlip @relation(fields: [slipId], references: [id], onDelete: Cascade)
-  kind LookupValue @relation("rate_line_kind_slip", fields: [kindId], references: [id])
+  slip     PlacingSlip   @relation(fields: [slipId], references: [id], onDelete: Cascade)
+  location SlipLocation? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  kind     LookupValue   @relation("rate_line_kind_slip", fields: [kindId], references: [id])
 
   @@index([slipId, sortOrder])
   @@map("slip_rate_lines")
