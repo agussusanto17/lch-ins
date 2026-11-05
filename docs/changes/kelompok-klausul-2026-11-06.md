@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `feat/kelompok-klausul` (di atas `feat/blok-exclusions`)
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#147](https://github.com/agussusanto17/lch-ins/pull/147)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
