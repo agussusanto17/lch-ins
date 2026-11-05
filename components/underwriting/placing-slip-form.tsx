@@ -494,12 +494,18 @@ function SlipEditor({
   const eqRate = slip.rateLines.find((l) => l.label === "EQVET")?.rate ?? null
   const brokerageLimit = brokerageLimitText(slip)
   const brokerageIssue = brokerageLimitIssue(slip)
-  // Klausula Section 2 (Business Interruption) hanya berlaku untuk Property.
+  // Klausula tanpa section dan Section 2 (Business Interruption) hanya berlaku
+  // untuk Property.
+  const clauseIds0 = usesSectionSumInsured(slip.cob)
+    ? (slip.clauseIdsGeneral ?? [])
+    : []
   const clauseIds2 = usesSectionSumInsured(slip.cob)
     ? (slip.clauseIdsSection2 ?? [])
     : []
-  const clauseCount = slip.clauseIds.length + clauseIds2.length
+  const clauseCount =
+    clauseIds0.length + slip.clauseIds.length + clauseIds2.length
   const editedClauseCount =
+    clauseIds0.filter((id) => slip.clauseOverridesGeneral?.[id]).length +
     slip.clauseIds.filter((id) => slip.clauseOverrides?.[id]).length +
     clauseIds2.filter((id) => slip.clauseOverridesSection2?.[id]).length
   const customWording = slip.wordingForms.filter(
@@ -1341,6 +1347,30 @@ function SlipEditor({
                 />
               </Field>
 
+              {usesSectionSumInsured(slip.cob) ? (
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <p className="text-sm font-medium">Clauses</p>
+                    <p className="text-xs text-muted-foreground">
+                      Klausula untuk seluruh polis, tanpa section. Dicetak
+                      paling atas, sebelum Section 1.
+                    </p>
+                  </div>
+                  <ClausePicker
+                    cob={slip.cob}
+                    typeOfCover={slip.typeOfCover}
+                    typeOfCover2={slip.typeOfCover2}
+                    selected={clauseIds0}
+                    overrides={slip.clauseOverridesGeneral ?? {}}
+                    onChange={(ids) => set({ clauseIdsGeneral: ids })}
+                    onOverridesChange={(o) =>
+                      set({ clauseOverridesGeneral: o })
+                    }
+                    masterClauses={masterClauses}
+                  />
+                </div>
+              ) : null}
+
               <div className="flex flex-col gap-2">
                 <p className="text-sm font-medium">
                   {usesSectionSumInsured(slip.cob)
@@ -1366,7 +1396,7 @@ function SlipEditor({
                       Clauses Section 2 — Business Interruption
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Pilih klausula khusus Section 2. Setiap klausula hanya boleh dipilih di salah satu section.
+                      Pilih klausula khusus Section 2. Setiap klausula hanya boleh dipilih di satu kelompok.
                     </p>
                   </div>
                   <ClausePicker
@@ -1392,6 +1422,7 @@ function SlipEditor({
                       {
                         clauseIds: slip.clauseIds ?? [],
                         clauseIdsSection2: slip.clauseIdsSection2 ?? [],
+                        clauseIdsGeneral: slip.clauseIdsGeneral ?? [],
                       },
                       clauseTitleLookup
                     )

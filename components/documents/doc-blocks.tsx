@@ -361,8 +361,9 @@ interface ClauseGroup {
 }
 
 /**
- * Slip Property mencetak klausula per section dengan judul yang sama seperti
- * INTEREST INSURED; COB lain satu daftar tanpa judul. Kelompok kosong dilewati.
+ * Slip Property mencetak klausula tanpa section dulu tanpa judul, lalu per
+ * section dengan judul yang sama seperti INTEREST INSURED, sesuai CI LCH. COB
+ * lain satu daftar tanpa judul. Kelompok kosong dilewati.
  */
 function clauseGroups(slip: PlacingSlip, firstNumber: number): ClauseGroup[] {
   const section1 = resolveClauses(
@@ -372,6 +373,14 @@ function clauseGroups(slip: PlacingSlip, firstNumber: number): ClauseGroup[] {
   )
   const groups = usesSectionSumInsured(slip.cob)
     ? [
+        {
+          heading: null,
+          clauses: resolveClauses(
+            slip.clauseIdsGeneral ?? [],
+            slip.clauseOverridesGeneral,
+            slip.clauseCopiesGeneral
+          ),
+        },
         { heading: "Section 1 — Material Damage", clauses: section1 },
         {
           heading: "Section 2 — Business Interruption",

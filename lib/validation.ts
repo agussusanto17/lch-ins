@@ -71,24 +71,37 @@ export const nik = z
 export const money = (label: string) =>
   z.number(`${label} wajib diisi`).nonnegative(`${label} tidak boleh negatif`)
 
-/** Ensures a clause does not appear concurrently in both Section 1 and Section 2. */
+/**
+ * Satu klausula slip Property hanya boleh ada di satu kelompok: tanpa
+ * section, Section 1, atau Section 2.
+ */
 export function validateClauseUniquenessAcrossSections(
   slip: Pick<
     PlacingSlip,
     | "clauseIds"
     | "clauseIdsSection2"
+    | "clauseIdsGeneral"
     | "clauseOverrides"
     | "clauseCopies"
     | "clauseOverridesSection2"
     | "clauseCopiesSection2"
+    | "clauseOverridesGeneral"
+    | "clauseCopiesGeneral"
   >,
   titleLookup?: (id: string) => string | undefined
 ): string[] {
   const issues: string[] = []
-  const section1Clauses = new Set(slip.clauseIds ?? [])
-  const section2Clauses = new Set(slip.clauseIdsSection2 ?? [])
+  const groups = [
+    new Set(slip.clauseIdsGeneral ?? []),
+    new Set(slip.clauseIds ?? []),
+    new Set(slip.clauseIdsSection2 ?? []),
+  ]
+  const seen = new Map<string, number>()
+  for (const group of groups) {
+    for (const id of group) seen.set(id, (seen.get(id) ?? 0) + 1)
+  }
 
-  const duplicates = [...section1Clauses].filter((id) => section2Clauses.has(id))
+  const duplicates = [...seen].filter(([, count]) => count > 1).map(([id]) => id)
   if (duplicates.length) {
     const names = duplicates.map((id) => {
       const fromLookup = titleLookup?.(id)
@@ -96,12 +109,14 @@ export function validateClauseUniquenessAcrossSections(
       const fromSlip =
         slip.clauseOverrides?.[id]?.title ||
         slip.clauseOverridesSection2?.[id]?.title ||
+        slip.clauseOverridesGeneral?.[id]?.title ||
         slip.clauseCopies?.[id]?.title ||
-        slip.clauseCopiesSection2?.[id]?.title
+        slip.clauseCopiesSection2?.[id]?.title ||
+        slip.clauseCopiesGeneral?.[id]?.title
       return fromSlip || id
     })
     issues.push(
-      `Klausula "${names.join(", ")}" muncul di kedua section. Pilih klausula terpisah untuk Section 1 dan Section 2.`
+      `Klausula "${names.join(", ")}" dipilih di lebih dari satu kelompok. Pilih di salah satu saja: Clauses tanpa section, Section 1, atau Section 2.`
     )
   }
   return issues
