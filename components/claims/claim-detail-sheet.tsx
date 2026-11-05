@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
   AlertCircle,
   Calendar,
@@ -12,6 +13,7 @@ import {
   MapPin,
   Pencil,
   Plus,
+  Printer,
   Send,
   Trash2,
   User,
@@ -244,10 +246,24 @@ export function ClaimDetailSheet({
         {claim ? (
           <>
             <SheetHeader className="pb-2">
-              <SheetTitle className="tabular">{claim.claimNo}</SheetTitle>
-              <SheetDescription>
-                {claim.insuredName} · {claim.cob}
-              </SheetDescription>
+              <div className="flex items-start justify-between gap-3 pr-6">
+                <div>
+                  <SheetTitle className="tabular">{claim.claimNo}</SheetTitle>
+                  <SheetDescription>
+                    {claim.insuredName} · {claim.cob}
+                  </SheetDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shrink-0"
+                  render={<Link href={`/claims/print/${claim.id}`} target="_blank" />}
+                  nativeButton={false}
+                >
+                  <Printer className="size-3.5" />
+                  Cetak
+                </Button>
+              </div>
             </SheetHeader>
 
             <div className="flex flex-col gap-4 px-4 pb-8">
