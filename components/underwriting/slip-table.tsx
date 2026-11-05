@@ -203,6 +203,11 @@ export function SlipTable({
         s.typeOfCover,
         s.occupation ?? "",
         s.occupationLabel ?? "",
+        // Okupasi lokasi lain slip Property multi lokasi.
+        ...(s.locations ?? []).flatMap((l) => [
+          l.occupation ?? "",
+          l.occupationLabel ?? "",
+        ]),
       ].some((v) => v.toLowerCase().includes(q))
     })
   }, [slips, query, status, cob])
@@ -338,6 +343,9 @@ export function SlipTable({
                     {s.occupation ? (
                       <p className="truncate text-xs text-muted-foreground">
                         {slipOccupationText(s)}
+                        {(s.locations?.length ?? 0) > 1
+                          ? ` · ${s.locations?.length} lokasi`
+                          : ""}
                       </p>
                     ) : null}
                   </TableCell>

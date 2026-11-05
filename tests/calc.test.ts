@@ -7,8 +7,16 @@ import {
   totalPayable,
   totalPremium,
 } from "../lib/calc"
-import { emptySlip } from "../components/underwriting/slip-model"
-import type { PlacingSlip } from "../lib/data/types"
+import {
+  addLocationPatch,
+  deductibleRows,
+  emptySlip,
+  locationRowsPatch,
+  removeLocationPatch,
+  updateLocationPatch,
+} from "../components/underwriting/slip-model"
+import type { PlacingSlip, RateLine } from "../lib/data/types"
+import { locationGroups, slipRiskLocationText } from "../lib/slip-locations"
 
 /** Slip Property dengan rate FLEXAS 0,5‰ dan Section 1 IDR 1 miliar. */
 function propertySlip(section2: number): PlacingSlip {
@@ -66,4 +74,126 @@ test("rate BI lama tanpa Section 2 tidak dicetak", () => {
   assert.equal(line?.ratePercent, null)
   assert.equal(line?.premium, 0)
   assert.equal(totalPayable(stale), 500_000)
+})
+
+/** Slip contoh usulan multi lokasi: Ruko dan Gudang di Makassar. */
+function twoLocationSlip(): PlacingSlip {
+  const apply = (s: PlacingSlip, patch: Partial<PlacingSlip>) =>
+    recalcSlip({ ...s, ...patch })
+  let slip = recalcSlip({
+    ...emptySlip(),
+    indemnityPeriod: "12 months",
+    discountPct: 10,
+    adminCost: 30_000,
+    stampDuty: 20_000,
+  })
+  const setRates = (no: number, rates: Record<string, number>) => {
+    const group = locationGroups(slip)[no - 1]
+    slip = apply(
+      slip,
+      locationRowsPatch(
+        slip,
+        "rateLines",
+        group.location.id,
+        group.rateLines.map((l) => ({ ...l, rate: rates[l.label] ?? l.rate }))
+      )
+    )
+  }
+  const first = slip.locations![0].id
+  slip = apply(
+    slip,
+    updateLocationPatch(slip, first, { riskLocation: "Jl. Contoh Raya No. 1, Makassar" })
+  )
+  slip = apply(
+    slip,
+    locationRowsPatch(slip, "sumInsuredSection1", first, [
+      { id: "m1", description: "Building & Contents", amount: 10_200_000_000 },
+    ])
+  )
+  setRates(1, { FLEXAS: 0.368, FWTWD: 0.45, RSMDCC: 0.01, "Other Losses": 0.01, EQVET: 1.2 })
+  slip = apply(slip, addLocationPatch(slip))
+  const second = slip.locations![1].id
+  slip = apply(
+    slip,
+    updateLocationPatch(slip, second, { riskLocation: "Jl. Contoh Raya No. 2,\nMakassar" })
+  )
+  slip = apply(
+    slip,
+    locationRowsPatch(slip, "sumInsuredSection1", second, [
+      { id: "m2", description: "Building & Stock", amount: 1_800_000_000 },
+    ])
+  )
+  setRates(2, { FLEXAS: 1.127, FWTWD: 0.45, RSMDCC: 0.01, "Other Losses": 0.01, EQVET: 1.2 })
+  return slip
+}
+
+test("premi slip multi lokasi dihitung per lokasi, sama dengan contoh usulan", () => {
+  const slip = twoLocationSlip()
+  const calc = calculateParEqvet(slip)
+  assert.equal(calc.par.subtotal, 11_422_200)
+  assert.equal(calc.eqvet.subtotal, 14_400_000)
+  assert.equal(calc.grandTotal, 23_339_980)
+  assert.equal(totalPayable(slip), 23_339_980)
+  // FLEXAS lokasi 2 memakai sum insured lokasi 2 saja.
+  const flexas2 = calc.par.lines.find((l) => l.label === "FLEXAS" && l.locationNo === 2)
+  assert.equal(flexas2?.basis, 1_800_000_000)
+  assert.equal(flexas2?.premium, 2_028_600)
+})
+
+test("isian slip mengikuti lokasi, dan hitung ulang tidak mengubah apa pun", () => {
+  const slip = twoLocationSlip()
+  assert.equal(
+    slip.riskLocation,
+    "1. Jl. Contoh Raya No. 1, Makassar\n2. Jl. Contoh Raya No. 2, Makassar"
+  )
+  assert.equal(JSON.stringify(recalcSlip(slip)), JSON.stringify(slip))
+})
+
+test("rate BI dihitung per lokasi, hanya untuk lokasi dengan Section 2", () => {
+  let slip = twoLocationSlip()
+  const second = slip.locations![1].id
+  slip = recalcSlip({
+    ...slip,
+    ...locationRowsPatch(slip, "sumInsuredSection2", second, [
+      { id: "b2", description: "Gross Profit", amount: 500_000_000 },
+    ]),
+  })
+  const [one, two] = locationGroups(slip)
+  const biPar = (lines: RateLine[]) => lines.find((l) => l.label.startsWith("BI PAR"))
+  assert.equal(biPar(one.rateLines)?.rate, null)
+  // 1,127 + 0,45 + 0,01 + 0,01 = 1,597‰ dari baris lokasi 2 sendiri.
+  assert.equal(biPar(two.rateLines)?.rate, 1.597)
+  assert.equal(biPar(two.rateLines)?.premium, 798_500)
+})
+
+test("hapus lokasi pertama memindahkan deductible ke lokasi berikutnya", () => {
+  let slip = twoLocationSlip()
+  const first = locationGroups(slip)[0]
+  slip = recalcSlip({
+    ...slip,
+    rateLines: slip.rateLines.map((l) =>
+      l.id === first.rateLines[0].id ? { ...l, deductibles: ["Nil (for Location 1)"] } : l
+    ),
+  })
+  slip = recalcSlip({ ...slip, ...removeLocationPatch(slip, first.location.id) })
+  assert.equal(slip.locations?.length, 1)
+  assert.equal(slip.riskLocation, "Jl. Contoh Raya No. 2,\nMakassar")
+  assert.deepEqual(
+    deductibleRows(slip).find((r) => r.cover === "FLEXAS")?.deductibles,
+    ["Nil (for Location 1)"]
+  )
+})
+
+test("slip tanpa daftar lokasi menjadi satu lokasi dari isian slip", () => {
+  const legacy: PlacingSlip = {
+    ...propertySlip(0),
+    locations: undefined,
+    riskLocation: "Jakarta",
+    occupation: "2971 - Ruko",
+  }
+  const slip = recalcSlip(legacy)
+  assert.equal(slip.locations?.length, 1)
+  assert.equal(slip.locations?.[0].riskLocation, "Jakarta")
+  assert.ok(slip.rateLines.every((l) => l.locationId === slip.locations?.[0].id))
+  assert.equal(slipRiskLocationText(slip.locations ?? []), "Jakarta")
 })

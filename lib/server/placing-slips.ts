@@ -1,5 +1,6 @@
 import "server-only"
 
+import { randomUUID } from "node:crypto"
 import { cache } from "react"
 
 import { Prisma, type SlipItemKind, type SlipStatus } from "@/lib/generated/prisma/client"
@@ -15,6 +16,7 @@ import {
   type RateExceptionReason,
   type RateLine,
   type SecurityPanelRow,
+  type SlipLocation,
 } from "@/lib/data/types"
 import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
 import { CLIENTS } from "@/lib/data/clients"
@@ -25,6 +27,7 @@ import {
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
+import { slipRiskLocationText } from "@/lib/slip-locations"
 import { cobLookupKeys } from "@/lib/server/cob"
 import { prisma } from "@/lib/prisma"
 import { getSppaById } from "@/lib/server/sppa"
@@ -41,6 +44,14 @@ const SLIP_ITEM_VEHICLE = {
   vehicleBrand: { select: { name: true } },
   vehicleType: { select: { name: true } },
 } satisfies Prisma.SlipItemInclude
+
+const SLIP_LOCATIONS = {
+  include: {
+    occupation: { select: { id: true, code: true, name: true } },
+    constructionClass: { select: { id: true, code: true, name: true } },
+  },
+  orderBy: { sortOrder: "asc" },
+} satisfies Prisma.SlipLocationFindManyArgs
 
 export interface PlacingSlipRecord extends PlacingSlip {
   dbId: string
@@ -69,6 +80,8 @@ export interface PlacingSlipInput {
   occupationId?: string | null
   riskLocation?: string | null
   occupationLabel?: string | null
+  /** Lokasi slip Property; tanpa daftar ini isian okupasi dan lokasi slip menjadi satu lokasi. */
+  locations?: SlipLocation[]
   coverage?: string | null
   constructionClass?: string | null
   indemnityPeriod?: string | null
@@ -311,6 +324,7 @@ type PrismaPlacingSlipWithRelations = Prisma.PlacingSlipGetPayload<{
     constructionClass: { select: { id: true; code: true; name: true } }
     currency: { select: { code: true } }
     creator: { select: { id: true; name: true } }
+    locations: typeof SLIP_LOCATIONS
     items: {
       include: { vehicleBrand: { select: { name: true } }; vehicleType: { select: { name: true } } }
       orderBy: { sortOrder: "asc" }
@@ -369,12 +383,14 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
         id: it.id,
         description: it.description,
         amount: it.amount ? Number(it.amount) : 0,
+        locationId: it.locationId,
       })
     } else if (it.kind === "SumInsuredSection2") {
       sumInsuredSection2.push({
         id: it.id,
         description: it.description,
         amount: it.amount ? Number(it.amount) : 0,
+        locationId: it.locationId,
       })
     }
   }
@@ -397,6 +413,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
       max: rl.rateMax != null ? Number(rl.rateMax) : null,
       lossLimitPct: rl.lossLimitPct != null ? Number(rl.lossLimitPct) : null,
       deductibles: rl.deductibles,
+      locationId: rl.locationId,
     }
 
     if (kindCode === "tpl") {
@@ -459,6 +476,20 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
   // Wording forms
   const wordingForms = raw.wordingForms.map((wf) => wf.wordingForm.name)
 
+  // Lokasi slip Property. Slip tanpa baris lokasi (data contoh) dibaca sebagai
+  // satu lokasi dari isian slip oleh `slipLocations`.
+  const locations: SlipLocation[] | undefined = raw.locations.length
+    ? raw.locations.map((loc) => ({
+        id: loc.id,
+        riskLocation: loc.riskLocation ?? "",
+        occupation: loc.occupation
+          ? `${loc.occupation.code} - ${loc.occupation.name}`
+          : undefined,
+        occupationLabel: loc.occupationLabel || undefined,
+        constructionClass: loc.constructionClass?.code || undefined,
+      }))
+    : undefined
+
   // Inception & Expiry formatting
   const inceptionDate = raw.inceptionDate
     ? raw.inceptionDate.toISOString().slice(0, 10)
@@ -505,6 +536,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
       : undefined,
     occupationLabel: raw.occupationLabel || undefined,
     riskLocation: raw.riskLocation || undefined,
+    locations,
     coverage: raw.coverage || undefined,
     constructionClass: raw.constructionClass?.code || undefined,
     indemnityPeriod: raw.indemnityMonths ? `${raw.indemnityMonths} bulan` : undefined,
@@ -604,6 +636,7 @@ export async function listPlacingSlips(
       constructionClass: { select: { id: true, code: true, name: true } },
       currency: { select: { code: true } },
       creator: { select: { id: true, name: true } },
+      locations: SLIP_LOCATIONS,
       items: { include: SLIP_ITEM_VEHICLE, orderBy: { sortOrder: "asc" } },
       rateLines: {
         include: { kind: { select: { id: true, code: true, name: true } } },
@@ -657,6 +690,7 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
       constructionClass: { select: { id: true, code: true, name: true } },
       currency: { select: { code: true } },
       creator: { select: { id: true, name: true } },
+      locations: SLIP_LOCATIONS,
       items: { include: SLIP_ITEM_VEHICLE, orderBy: { sortOrder: "asc" } },
       rateLines: {
         include: { kind: { select: { id: true, code: true, name: true } } },
@@ -697,6 +731,106 @@ function cleanDeductibles(deductibles: string[] | undefined) {
 function slipAdditionalFee(cobName: string, fee: number | undefined) {
   return new Prisma.Decimal(
     usesAdditionalFee(normalizeCob(cobName)) ? (fee ?? 0) : 0
+  )
+}
+
+interface SavedLocation {
+  /** Id baru di slip_locations. */
+  id: string
+  /** Id lokasi di form, yang dirujuk `locationId` baris sum insured dan rate. */
+  sourceId: string
+  riskLocation: string | null
+  occupationId: string | null
+  occupationLabel: string | null
+  constructionClassId: string | null
+}
+
+/**
+ * Lokasi slip Property yang akan disimpan, dengan id baru. Input tanpa daftar
+ * lokasi menjadi satu lokasi dari isian okupasi, risk location, dan kelas
+ * slip. COB lain tidak punya lokasi.
+ */
+async function resolveSlipLocations(
+  input: PlacingSlipInput,
+  cobName: string
+): Promise<SavedLocation[]> {
+  if (normalizeCob(cobName) !== "Property") return []
+  const cache = await getLookupsCache()
+  const occupationIdFor = (occupation?: string | null) => {
+    const code = occupation?.trim().split(/[^0-9A-Za-z]/)[0].toLowerCase()
+    return (code && cache.occupationsByCode.get(code)?.id) || null
+  }
+  const classIdFor = (code?: string | null) =>
+    (code && cache.constructionClasses.get(code)) || null
+
+  if (!input.locations?.length) {
+    return [
+      {
+        id: randomUUID(),
+        sourceId: "",
+        riskLocation: input.riskLocation?.trim() || null,
+        occupationId: input.occupationId || occupationIdFor(input.occupation),
+        occupationLabel: input.occupationLabel?.trim() || null,
+        constructionClassId: classIdFor(input.constructionClass),
+      },
+    ]
+  }
+  return input.locations.map((loc) => ({
+    id: randomUUID(),
+    sourceId: loc.id,
+    riskLocation: loc.riskLocation.trim() || null,
+    occupationId: occupationIdFor(loc.occupation),
+    occupationLabel: loc.occupationLabel?.trim() || null,
+    constructionClassId: classIdFor(loc.constructionClass),
+  }))
+}
+
+/**
+ * Okupasi, risk location, dan kelas slip Property diisi dari lokasinya, supaya
+ * polis, daftar slip, dan pencarian tetap membaca satu nilai.
+ */
+function slipLocationFields(locations: SavedLocation[]) {
+  if (!locations.length) return {}
+  const first = locations[0]
+  return {
+    occupationId: first.occupationId,
+    occupationLabel: first.occupationLabel,
+    constructionClassId: first.constructionClassId,
+    riskLocation:
+      slipRiskLocationText(
+        locations.map((l) => ({ riskLocation: l.riskLocation ?? "" }))
+      ) || null,
+  }
+}
+
+async function insertSlipLocations(
+  tx: Prisma.TransactionClient,
+  slipId: string,
+  locations: SavedLocation[]
+) {
+  if (!locations.length) return
+  await tx.slipLocation.createMany({
+    data: locations.map((l, i) => ({
+      id: l.id,
+      slipId,
+      sortOrder: i,
+      riskLocation: l.riskLocation,
+      occupationId: l.occupationId,
+      occupationLabel: l.occupationLabel,
+      constructionClassId: l.constructionClassId,
+    })),
+  })
+}
+
+/** Lokasi tersimpan untuk `locationId` dari form; yang tidak dikenal ikut lokasi pertama. */
+function savedLocationId(
+  locations: SavedLocation[],
+  sourceId?: string | null
+) {
+  if (!locations.length) return null
+  return (
+    locations.find((l) => sourceId && l.sourceId === sourceId)?.id ??
+    locations[0].id
   )
 }
 
@@ -806,6 +940,7 @@ export async function createPlacingSlip(
   const inceptionDate = input.inceptionDate ? new Date(input.inceptionDate) : null
   const expiryDate = input.expiryDate ? new Date(input.expiryDate) : null
   const resolvedSppaId = await resolveSppaId(input.sppaId)
+  const locations = await resolveSlipLocations(input, resolvedCob.name)
 
   const record = await prisma.$transaction(async (tx) => {
     const slip = await tx.placingSlip.create({
@@ -828,6 +963,7 @@ export async function createPlacingSlip(
         riskLocation: input.riskLocation?.trim() || null,
         coverage: input.coverage?.trim() || null,
         constructionClassId,
+        ...slipLocationFields(locations),
         indemnityMonths,
         interestSection1: input.interestSection1?.trim() || null,
         interestSection2: input.interestSection2?.trim() || null,
@@ -845,6 +981,8 @@ export async function createPlacingSlip(
       },
     })
 
+    await insertSlipLocations(tx, slip.id, locations)
+
     // Insert items
     let sortIdx = 0
     const itemsToCreate: {
@@ -855,6 +993,7 @@ export async function createPlacingSlip(
       sortOrder: number
       vehicleBrandId?: string | null
       vehicleTypeId?: string | null
+      locationId?: string | null
     }[] = []
 
     if (input.interestItems) {
@@ -893,6 +1032,7 @@ export async function createPlacingSlip(
             description: it.description.trim(),
             amount: new Prisma.Decimal(it.amount || 0),
             sortOrder: sortIdx++,
+            locationId: savedLocationId(locations, it.locationId),
           })
         }
       }
@@ -907,6 +1047,7 @@ export async function createPlacingSlip(
             description: it.description.trim(),
             amount: new Prisma.Decimal(it.amount || 0),
             sortOrder: sortIdx++,
+            locationId: savedLocationId(locations, it.locationId),
           })
         }
       }
@@ -935,6 +1076,7 @@ export async function createPlacingSlip(
       deductibles: string[]
       outOfBoundsReason: string | null
       sortOrder: number
+      locationId?: string | null
     }[] = []
 
     if (input.rateLines) {
@@ -955,6 +1097,7 @@ export async function createPlacingSlip(
           deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
+          locationId: savedLocationId(locations, rl.locationId),
         })
       }
     }
@@ -1130,6 +1273,7 @@ export async function updatePlacingSlip(
   const expiryDate = input.expiryDate ? new Date(input.expiryDate) : null
   const resolvedSppaId =
     input.sppaId !== undefined ? await resolveSppaId(input.sppaId) : existing.sppaId
+  const locations = await resolveSlipLocations(input, resolvedCob.name)
 
   await prisma.$transaction(async (tx) => {
     await tx.placingSlip.update({
@@ -1153,6 +1297,7 @@ export async function updatePlacingSlip(
         riskLocation: input.riskLocation?.trim() || null,
         coverage: input.coverage?.trim() || null,
         constructionClassId,
+        ...slipLocationFields(locations),
         indemnityMonths,
         interestSection1: input.interestSection1?.trim() || null,
         interestSection2: input.interestSection2?.trim() || null,
@@ -1169,6 +1314,10 @@ export async function updatePlacingSlip(
       },
     })
 
+    // Lokasi lama terhapus bersama baris sum insured dan rate-nya.
+    await tx.slipLocation.deleteMany({ where: { slipId: id } })
+    await insertSlipLocations(tx, id, locations)
+
     // Refresh items
     await tx.slipItem.deleteMany({ where: { slipId: id } })
     let sortIdx = 0
@@ -1180,6 +1329,7 @@ export async function updatePlacingSlip(
       sortOrder: number
       vehicleBrandId?: string | null
       vehicleTypeId?: string | null
+      locationId?: string | null
     }[] = []
 
     if (input.interestItems) {
@@ -1218,6 +1368,7 @@ export async function updatePlacingSlip(
             description: it.description.trim(),
             amount: new Prisma.Decimal(it.amount || 0),
             sortOrder: sortIdx++,
+            locationId: savedLocationId(locations, it.locationId),
           })
         }
       }
@@ -1232,6 +1383,7 @@ export async function updatePlacingSlip(
             description: it.description.trim(),
             amount: new Prisma.Decimal(it.amount || 0),
             sortOrder: sortIdx++,
+            locationId: savedLocationId(locations, it.locationId),
           })
         }
       }
@@ -1261,6 +1413,7 @@ export async function updatePlacingSlip(
       deductibles: string[]
       outOfBoundsReason: string | null
       sortOrder: number
+      locationId?: string | null
     }[] = []
 
     if (input.rateLines) {
@@ -1281,6 +1434,7 @@ export async function updatePlacingSlip(
           deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
           sortOrder: rateSortIdx++,
+          locationId: savedLocationId(locations, rl.locationId),
         })
       }
     }

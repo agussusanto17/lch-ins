@@ -149,6 +149,8 @@ export interface LineItem {
   year?: number | string | null
   color?: string | null
   vehicleModel?: string | null
+  /** Lokasi slip Property untuk baris sum insured Section 1 dan 2. */
+  locationId?: string | null
 }
 
 export interface RateLine {
@@ -168,6 +170,24 @@ export interface RateLine {
   lossLimitPct?: number | null
   /** Deductible untuk cover ini, teks bebas, paling banyak MAX_DEDUCTIBLES. */
   deductibles?: string[]
+  /** Lokasi slip Property untuk baris rate. TPL, PA, dan COB lain kosong. */
+  locationId?: string | null
+}
+
+/**
+ * Lokasi risiko slip Property (Harry, 5 November 2026). Tiap lokasi punya
+ * okupasi, kelas konstruksi, sum insured, dan rate sendiri; baris sum insured
+ * dan rate menunjuk lokasinya lewat `locationId`.
+ */
+export interface SlipLocation {
+  id: string
+  riskLocation: string
+  /** Okupasi OJK "kode - nama", seperti `PlacingSlip.occupation`. */
+  occupation?: string
+  /** Nama okupasi di dokumen, tanpa kode. Kosong berarti nama OJK. */
+  occupationLabel?: string
+  /** Kode kelas konstruksi: K1, K2, atau K3. */
+  constructionClass?: string
 }
 
 /** Batas isian deductible per cover (permintaan 4 November 2026). */
@@ -220,6 +240,12 @@ export interface PlacingSlip {
   /** Nama okupasi di dokumen slip ini, tanpa kode. Kosong berarti nama OJK. */
   occupationLabel?: string
   riskLocation?: string
+  /**
+   * Lokasi risiko slip Property, paling sedikit satu. Okupasi, risk location,
+   * dan kelas konstruksi slip diisi dari lokasi: lokasi pertama, dan semua
+   * alamat bernomor di risk location bila lokasinya lebih dari satu.
+   */
+  locations?: SlipLocation[]
   wordingForms: string[]
   coverage?: string
   constructionClass?: string

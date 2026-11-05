@@ -6,6 +6,7 @@ import { z } from "zod"
 import type { SlipStatus } from "@/lib/generated/prisma/client"
 import { MAX_DEDUCTIBLES, type PlacingSlip } from "@/lib/data/types"
 import { brokerageLimitIssue, rateUnitFor } from "@/lib/calc"
+import { rateLineName } from "@/components/underwriting/slip-model"
 import {
   createPlacingSlip,
   deletePlacingSlip,
@@ -50,6 +51,7 @@ const lineItemSchema = z.object({
   year: z.union([z.number(), z.string()]).nullish(),
   color: z.string().nullish(),
   vehicleModel: z.string().nullish(),
+  locationId: z.string().nullish(),
 })
 
 const rateLineSchema = z
@@ -74,11 +76,23 @@ const rateLineSchema = z
     // Forms opened before the 4 Nov 2026 deploy still send a single string;
     // without this it would be stripped and the deductible silently lost.
     deductible: z.string().max(500).optional(),
+    locationId: z.string().nullish(),
   })
   .transform(({ deductible, ...line }) => ({
     ...line,
     deductibles: line.deductibles ?? (deductible ? [deductible] : undefined),
   }))
+
+const slipLocationSchema = z.object({
+  id: z.string(),
+  riskLocation: z.string().max(2000, "Alamat lokasi maksimal 2000 karakter"),
+  occupation: z.string().nullish(),
+  occupationLabel: z
+    .string()
+    .max(500, "Nama okupasi di slip maksimal 500 karakter")
+    .nullish(),
+  constructionClass: z.string().nullish(),
+})
 
 const securityPanelRowSchema = z.object({
   id: z.string(),
@@ -105,6 +119,10 @@ const placingSlipSchema = z.object({
   occupationId: z.string().nullish(),
   occupationLabel: z.string().max(500, "Nama okupasi di slip maksimal 500 karakter").nullish(),
   riskLocation: z.string().nullish(),
+  locations: z
+    .array(slipLocationSchema)
+    .max(500, "Lokasi slip maksimal 500.")
+    .optional(),
   coverage: z.string().nullish(),
   constructionClass: z.string().nullish(),
   indemnityPeriod: z.string().nullish(),
@@ -277,7 +295,7 @@ export async function releasePlacingSlipAction(
                 ? `maksimal ${line.max}${unit}`
                 : `${line.min}${unit} sampai ${line.max}${unit}`
           errorDetails.push(
-            `Rate ${line.label} (${line.rate}${unit}) berada ${
+            `Rate ${rateLineName(target, line)} (${line.rate}${unit}) berada ${
               reason === "below" ? "di bawah batas minimal" : "di atas batas maksimal"
             } OJK (${range}) dan belum memiliki catatan justifikasi exception.`
           )
@@ -395,6 +413,7 @@ export async function duplicatePlacingSlipAction(
       occupation: source.occupation,
       occupationLabel: source.occupationLabel,
       riskLocation: source.riskLocation,
+      locations: source.locations,
       coverage: source.coverage,
       constructionClass: source.constructionClass,
       indemnityPeriod: source.indemnityPeriod,
