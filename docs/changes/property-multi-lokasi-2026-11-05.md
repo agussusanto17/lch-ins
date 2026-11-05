@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `feat/property-multi-lokasi`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#129](https://github.com/agussusanto17/lch-ins/pull/129)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
