@@ -13,6 +13,7 @@ import {
   DocTitle,
   InsurerSignatureGrid,
   InterestBlock,
+  LocationPremiumSchedule,
   ParEqvetCalculationBlock,
   ParEqvetRateBlock,
   PayableTable,
@@ -30,6 +31,7 @@ import { Button } from "@/components/ui/button"
 import { rateUnitFor } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data"
 import { dateLong } from "@/lib/format"
+import { isMultiLocation } from "@/lib/slip-locations"
 import { useRecord } from "@/lib/store"
 
 /*
@@ -63,6 +65,9 @@ function Missing() {
  * 2026); Placing Slip dan Closing Instruction mencetaknya di BrokerageBlock.
  */
 function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
+  // Slip multi lokasi mencetak jadwal premi per lokasi saja (Opsi B); slip
+  // satu lokasi tetap mencetak bagian RATE.
+  if (isMultiLocation(slip)) return <LocationPremiumSchedule slip={slip} />
   if (isParEqvetSlip(slip)) {
     return (
       <>

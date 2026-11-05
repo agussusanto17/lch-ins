@@ -1,7 +1,11 @@
 import "server-only"
 
-import type { PlacingSlip, RateLine } from "@/lib/data/types"
-import { usesSectionSumInsured } from "@/components/underwriting/slip-model"
+import type { PlacingSlip, RateLine, SlipLocation } from "@/lib/data/types"
+import {
+  locationIssues,
+  usesSectionSumInsured,
+} from "@/components/underwriting/slip-model"
+import { locationOwner, slipLocations } from "@/lib/slip-locations"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
   brokerageLimitIssue,
@@ -53,13 +57,21 @@ export function getOccupationBounds(
   }
 }
 
+/**
+ * Batas OJK satu lokasi slip Property: FLEXAS dari okupasi dan kelas
+ * konstruksi, gempa dan banjir dari wilayah alamatnya.
+ */
 export function getPropertyRateBounds(
-  slip: PlacingSlip
+  location: Pick<SlipLocation, "occupation" | "constructionClass" | "riskLocation">
 ): Record<string, RateBounds> {
   const bounds: Record<string, RateBounds> = {}
-  const occupationCode = (slip.occupation ?? "").trim()
-  const constructionClass = slip.constructionClass as "K1" | "K2" | "K3" | undefined
-  const riskLocation = slip.riskLocation ?? ""
+  const occupationCode = (location.occupation ?? "").trim()
+  const constructionClass = location.constructionClass as
+    | "K1"
+    | "K2"
+    | "K3"
+    | undefined
+  const riskLocation = location.riskLocation ?? ""
 
   const flexasBounds = getOccupationBounds(occupationCode, constructionClass)
   if (flexasBounds) {
@@ -127,10 +139,16 @@ export function getMotorExtensionBounds(
 
 export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
   if (slip.cob === "Property") {
-    const propBounds = getPropertyRateBounds(slip)
+    const owner = locationOwner(slip)
+    const byLocation = new Map(
+      slipLocations(slip).map((location) => [
+        location.id,
+        getPropertyRateBounds(location),
+      ])
+    )
     return slip.rateLines.map((l) => {
       if (l.min != null || l.max != null) return l
-      const b = propBounds[l.label]
+      const b = byLocation.get(owner(l.locationId))?.[l.label]
       if (b) {
         return { ...l, min: b.min, max: b.max, boundSource: b.source }
       }
@@ -226,11 +244,7 @@ export async function validatePlacingSlipForRelease(
       releaseIssues.push("Expiry date harus setelah inception date.")
     }
   }
-  if (slip.cob === "Property") {
-    if (!slip.occupation) releaseIssues.push("Pilih okupasi OJK.")
-    if (!slip.constructionClass) releaseIssues.push("Pilih kelas konstruksi.")
-    if (!slip.riskLocation?.trim()) releaseIssues.push("Isi risk location.")
-  }
+  releaseIssues.push(...locationIssues(slip))
   if (usesSectionSumInsured(slip.cob)) {
     const clauseIssues = validateClauseUniquenessAcrossSections(slip)
     if (clauseIssues.length) releaseIssues.push(...clauseIssues)

@@ -1,4 +1,9 @@
-import { brokerageLimitIssue, recalcSlip, totalSumInsured } from "@/lib/calc"
+import {
+  brokerageLimitIssue,
+  recalcSlip,
+  sumItems,
+  totalSumInsured,
+} from "@/lib/calc"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
   correspondenceAddress,
@@ -10,6 +15,7 @@ import {
   type LineItem,
   type PlacingSlip,
   type RateLine,
+  type SlipLocation,
   type Sppa,
 } from "@/lib/data"
 import { OCCUPATION_TARIFFS } from "@/lib/data/ojk-tariff"
@@ -22,6 +28,12 @@ import {
 } from "@/lib/data/ojk-motor"
 import { todayIso } from "@/lib/date"
 import { normalizeCob } from "@/lib/format"
+import {
+  isMultiLocation,
+  locationGroups,
+  locationOwner,
+  slipLocations,
+} from "@/lib/slip-locations"
 
 let seq = 0
 export const uid = (prefix: string) =>
@@ -129,7 +141,8 @@ export function deductibleRows(
   slip: PlacingSlip,
   added: DeductibleGroup[] = []
 ): DeductibleRow[] {
-  const rows: DeductibleRow[] = slip.rateLines.map((l) => ({
+  const lines = deductibleLines(slip)
+  const rows: DeductibleRow[] = lines.map((l) => ({
     group: "rateLines",
     lineId: l.id,
     cover: coverLabel(slip, l),
@@ -151,9 +164,21 @@ export function deductibleRows(
         ]
       : []
   })
-  const after = slip.rateLines.findIndex((l) => l.label === MOTOR_EXTRA_AFTER)
+  const after = lines.findIndex((l) => l.label === MOTOR_EXTRA_AFTER)
   rows.splice(after < 0 ? rows.length : after + 1, 0, ...extras)
   return rows
+}
+
+/**
+ * Baris rate yang menyimpan deductible per cover. Slip Property punya satu
+ * daftar deductible per cover untuk semua lokasi (Harry, 5 November 2026),
+ * disimpan di baris lokasi pertama; deductible yang beda per lokasi ditulis di
+ * teksnya.
+ */
+function deductibleLines(slip: PlacingSlip) {
+  return slip.cob === "Property"
+    ? locationGroups(slip)[0].rateLines
+    : slip.rateLines
 }
 
 /**
@@ -253,9 +278,116 @@ export function switchCob(
     typeOfCover: "",
     typeOfCover2: "",
     coverCode: null,
+    // Slip Property mulai lagi dengan satu lokasi dari isian slip.
+    locations: undefined,
     rateLines: makeRateLines(normCob),
     ...sub,
   })
+}
+
+// Lokasi slip Property. Fungsi di bawah mengembalikan patch untuk `set` form.
+
+/**
+ * Lokasi baru di akhir daftar: isian kosong, satu baris sum insured per
+ * section, dan baris rate dengan cover yang sama seperti lokasi pertama.
+ */
+export function addLocationPatch(slip: PlacingSlip): Partial<PlacingSlip> {
+  const locationId = uid("loc")
+  const labels = locationGroups(slip)[0].rateLines.map((l) => l.label)
+  return {
+    locations: [...slipLocations(slip), { id: locationId, riskLocation: "" }],
+    sumInsuredSection1: [
+      ...slip.sumInsuredSection1,
+      { id: uid("m"), description: "", amount: 0, locationId },
+    ],
+    sumInsuredSection2: [
+      ...slip.sumInsuredSection2,
+      { id: uid("b"), description: "", amount: 0, locationId },
+    ],
+    rateLines: [
+      ...slip.rateLines,
+      ...(labels.length ? labels : PROPERTY_RATE_LINES).map((label) => ({
+        id: uid("r"),
+        label,
+        rate: null,
+        premium: 0,
+        locationId,
+      })),
+    ],
+  }
+}
+
+/**
+ * Hapus lokasi beserta sum insured, baris rate, dan alasan rate-nya. Saat
+ * lokasi pertama dihapus, deductible per cover pindah ke lokasi yang menjadi
+ * pertama supaya tidak hilang.
+ */
+export function removeLocationPatch(
+  slip: PlacingSlip,
+  locationId: string
+): Partial<PlacingSlip> {
+  const groups = locationGroups(slip)
+  const removed = groups.find((g) => g.location.id === locationId)
+  if (!removed || groups.length < 2) return {}
+  const owner = locationOwner(slip)
+  const keep = (row: { locationId?: string | null }) =>
+    owner(row.locationId) !== locationId
+
+  let rateLines = slip.rateLines.filter(keep)
+  if (removed.no === 1) {
+    const next = groups[1].location.id
+    const carried = new Map(
+      removed.rateLines.map((l) => [l.label, l.deductibles ?? []])
+    )
+    rateLines = rateLines.map((l) =>
+      owner(l.locationId) === next && carried.get(l.label)?.length
+        ? { ...l, deductibles: carried.get(l.label) }
+        : l
+    )
+  }
+  const removedLines = new Set(removed.rateLines.map((l) => l.id))
+  return {
+    locations: slipLocations(slip).filter((l) => l.id !== locationId),
+    sumInsuredSection1: slip.sumInsuredSection1.filter(keep),
+    sumInsuredSection2: slip.sumInsuredSection2.filter(keep),
+    rateLines,
+    rateExceptions: Object.fromEntries(
+      Object.entries(slip.rateExceptions ?? {}).filter(
+        ([lineId]) => !removedLines.has(lineId)
+      )
+    ),
+  }
+}
+
+export function updateLocationPatch(
+  slip: PlacingSlip,
+  locationId: string,
+  patch: Partial<Omit<SlipLocation, "id">>
+): Partial<PlacingSlip> {
+  return {
+    locations: slipLocations(slip).map((l) =>
+      l.id === locationId ? { ...l, ...patch } : l
+    ),
+  }
+}
+
+/** Ganti baris satu lokasi; baris tetap berurutan per lokasi. */
+export function locationRowsPatch<
+  K extends "sumInsuredSection1" | "sumInsuredSection2" | "rateLines",
+>(
+  slip: PlacingSlip,
+  key: K,
+  locationId: string,
+  rows: PlacingSlip[K]
+): Partial<PlacingSlip> {
+  const owner = locationOwner(slip)
+  const current = slip[key] as (LineItem | RateLine)[]
+  const next = slipLocations(slip).flatMap((location) =>
+    location.id === locationId
+      ? (rows as (LineItem | RateLine)[]).map((r) => ({ ...r, locationId }))
+      : current.filter((r) => owner(r.locationId) === location.id)
+  )
+  return { [key]: next } as Partial<PlacingSlip>
 }
 
 /**
@@ -323,11 +455,24 @@ export function occupationBounds(
  */
 export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
   if (slip.cob === "Property") {
-    const auto = occupationBounds(slip.occupation, slip.constructionClass)
+    // Tiap lokasi punya okupasi dan kelas konstruksi sendiri.
+    const owner = locationOwner(slip)
+    const auto = new Map(
+      slipLocations(slip).map((location) => [
+        location.id,
+        occupationBounds(location.occupation, location.constructionClass),
+      ])
+    )
     return slip.rateLines.map((l) => {
       if (l.min != null || l.max != null) return l
-      if (auto && l.label === "FLEXAS") {
-        return { ...l, min: auto.min, max: auto.max, boundSource: auto.source }
+      const bounds = auto.get(owner(l.locationId))
+      if (bounds && l.label === "FLEXAS") {
+        return {
+          ...l,
+          min: bounds.min,
+          max: bounds.max,
+          boundSource: bounds.source,
+        }
       }
       return l
     })
@@ -415,11 +560,7 @@ export function releaseIssues(slip: PlacingSlip) {
       issues.push("Expiry date harus setelah inception date.")
     }
   }
-  if (slip.cob === "Property") {
-    if (!slip.occupation) issues.push("Pilih okupasi OJK.")
-    if (!slip.constructionClass) issues.push("Pilih kelas konstruksi.")
-    if (!slip.riskLocation?.trim()) issues.push("Isi risk location.")
-  }
+  issues.push(...locationIssues(slip))
   if (usesSectionSumInsured(slip.cob)) {
     const clauseIssues = validateClauseUniquenessAcrossSections(slip)
     if (clauseIssues.length) issues.push(...clauseIssues)
@@ -445,7 +586,7 @@ export function releaseIssues(slip: PlacingSlip) {
   for (const line of allLines) {
     if (isOutOfBounds(line) && !slip.rateExceptions?.[line.id]?.note?.trim()) {
       issues.push(
-        `Rate ${line.label} di luar batas OJK dan belum ada alasannya.`
+        `Rate ${rateLineName(slip, line)} di luar batas OJK dan belum ada alasannya.`
       )
     }
   }
@@ -454,6 +595,44 @@ export function releaseIssues(slip: PlacingSlip) {
   if (brokerageIssue) issues.push(brokerageIssue)
 
   return issues
+}
+
+/**
+ * Isian lokasi slip Property yang wajib sebelum release. Slip satu lokasi
+ * memakai pesan yang sama seperti sebelum ada daftar lokasi.
+ */
+export function locationIssues(slip: PlacingSlip): string[] {
+  if (slip.cob !== "Property") return []
+  const groups = locationGroups(slip)
+  if (groups.length === 1) {
+    const { location } = groups[0]
+    const issues: string[] = []
+    if (!location.occupation) issues.push("Pilih okupasi OJK.")
+    if (!location.constructionClass) issues.push("Pilih kelas konstruksi.")
+    if (!location.riskLocation.trim()) issues.push("Isi risk location.")
+    return issues
+  }
+  return groups.flatMap(({ location, no, section1, section2 }) => {
+    const issues: string[] = []
+    if (!location.riskLocation.trim()) issues.push(`Isi alamat lokasi ${no}.`)
+    if (!location.occupation)
+      issues.push(`Pilih okupasi OJK untuk lokasi ${no}.`)
+    if (!location.constructionClass)
+      issues.push(`Pilih kelas konstruksi untuk lokasi ${no}.`)
+    if (sumItems(section1) + sumItems(section2) <= 0)
+      issues.push(`Isi sum insured lokasi ${no}.`)
+    return issues
+  })
+}
+
+/** Nama baris rate di pesan validasi; slip multi lokasi menyebut lokasinya. */
+export function rateLineName(slip: PlacingSlip, line: RateLine) {
+  if (!isMultiLocation(slip) || !slip.rateLines.some((l) => l.id === line.id)) {
+    return line.label
+  }
+  const owner = locationOwner(slip)(line.locationId)
+  const no = slipLocations(slip).findIndex((l) => l.id === owner) + 1
+  return `${line.label} lokasi ${no}`
 }
 
 // Penomoran
@@ -526,6 +705,16 @@ export function slipFromSppa(
   }
   return recalc({
     ...base,
+    // Okupasi dan lokasi slip Property tersimpan di lokasi pertama.
+    locations: property
+      ? [
+          {
+            ...slipLocations(base)[0],
+            occupation: sppa.occupation ?? "",
+            riskLocation: sppa.riskLocation,
+          },
+        ]
+      : base.locations,
     sppaId: sppa.id,
     clientId: sppa.clientId,
     insuredName: sppa.insuredName,
