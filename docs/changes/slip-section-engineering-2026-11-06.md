@@ -60,6 +60,9 @@ daftar Interest, satu daftar deductible, dan satu daftar klausul.
   isian di Master Data.
 - `lib/server/placing-slips.ts`, `lib/server/tariffs.ts`,
   `app/(app)/underwriting/actions.ts`: simpan, baca, validasi, dan duplikat.
+  `insertSlipClauses` menyimpan klausul tanpa section dan Section 2 untuk
+  semua slip ber-section, tidak hanya Property, dan menolak klausul yang
+  dipilih di dua kelompok.
 - `tests/calc.test.ts`: tiga tes baru.
 
 ## Dampak
@@ -82,6 +85,15 @@ daftar Interest, satu daftar deductible, dan satu daftar klausul.
   - Tanda section, section objek, dan deductible per section tersimpan dan
     terbaca kembali.
   - TPL tersimpan sebagai limit.
+- **Script uji klausul** (sudah dihapus, ditambahkan setelah PR dibuka):
+  - Slip CAR dengan satu klausul di tiap kelompok (tanpa section, Section 1,
+    Section 2), termasuk judul yang diedit, tersimpan dan tetap utuh setelah
+    update.
+  - Klausul yang sama di dua kelompok ditolak.
+  - Setelah section dimatikan, hanya daftar utama yang tersimpan.
+  - Sebelum perbaikan, script yang sama gagal: klausul tanpa section dan
+    Section 2 hilang saat disimpan, karena server hanya menyimpannya untuk
+    Property.
 - **Browser lokal**, di halaman uji sementara yang sudah dihapus:
   - Memilih type of cover CAR menyalakan section dan memunculkan label
     proyek.
