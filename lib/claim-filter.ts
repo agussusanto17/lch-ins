@@ -2,8 +2,8 @@ import { CLAIM_STAGES, CLAIM_STATUSES } from "@/lib/data/reference"
 import type { ClaimStage, ClaimStatus } from "@/lib/data/types"
 
 /**
- * Bentuk minimal baris klaim yang cukup untuk disaring oleh filter.
- * Dipakai bersama oleh tabel UI claims-view dan halaman cetak daftar klaim.
+ * Minimal claim record shape required for filtering.
+ * Shared by the interactive claims view and the printable report.
  */
 export interface FilterableClaim {
   id: string
@@ -39,8 +39,8 @@ function readString(value: string | string[] | undefined): string | undefined {
 }
 
 /**
- * Membaca parameter query URL menjadi filter klaim yang tervalidasi.
- * Nilai di luar daftar referensi dikembalikan ke 'all' atau ''.
+ * Parse URL query parameters into validated claim filters.
+ * Values outside allowed references fall back to "all" or empty string.
  */
 export function parseClaimFilters(input: RawFilterInput): ClaimFilterParams {
   const rawStatus = readString(input.status)?.trim()
@@ -69,8 +69,7 @@ export function parseClaimFilters(input: RawFilterInput): ClaimFilterParams {
 }
 
 /**
- * Menyusun query string URL dari filter klaim yang aktif.
- * Parameter yang bernilai default tidak disertakan agar URL tetap bersih.
+ * Build URL search params from active claim filters, omitting default values.
  */
 export function claimFilterQuery(filters: ClaimFilterParams): string {
   const params = new URLSearchParams()
@@ -81,25 +80,21 @@ export function claimFilterQuery(filters: ClaimFilterParams): string {
   return params.toString()
 }
 
-/**
- * URL cetak daftar klaim dengan membawa filter aktif saat ini.
- */
+/** Link to the printable claims list preserving active filters. */
 export function claimPrintHref(filters: ClaimFilterParams): string {
   const query = claimFilterQuery(filters)
   return query ? `/claims/print?${query}` : "/claims/print"
 }
 
-/**
- * URL kembali dari halaman cetak ke layar klaim dengan filter yang sama.
- */
+/** Link back to the claims view preserving the filter state. */
 export function claimBackHref(filters: ClaimFilterParams): string {
   const query = claimFilterQuery(filters)
   return query ? `/claims?${query}` : "/claims"
 }
 
 /**
- * Menyaring baris klaim berdasarkan status, tahapan, COB, dan pencarian bebas.
- * Mengikuti aturan yang sama antara tampilan layar dan dokumen cetak.
+ * Filter claim records by status, stage, COB, and search query.
+ * Keeps table screen and print report row sets identical.
  */
 export function filterClaims<T extends FilterableClaim>(
   items: T[],

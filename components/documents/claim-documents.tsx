@@ -23,8 +23,8 @@ function summarizeFilters(filters: ClaimFilterParams, today: string): string {
 }
 
 /**
- * Dokumen cetak rekap daftar klaim lengkap (A4 landscape / wide container).
- * Menampilkan semua baris yang cocok dengan filter aktif, tanpa paginasi layar.
+ * Full claim list report for print/PDF (wide container).
+ * Shows all matching rows without screen pagination.
  */
 export function ClaimListDocument({
   rows,
@@ -57,7 +57,7 @@ export function ClaimListDocument({
         muted
       />
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto print:overflow-visible">
         <table className="w-full text-[10.5px]">
           <thead>
             <tr className="border-y border-primary text-left">
@@ -157,9 +157,8 @@ export function ClaimListDocument({
 }
 
 /**
- * Dokumen cetak lembar detail per klaim (A4 portrait).
- * Memuat identitas polis, kronologi kerugian, rincian biaya, status,
- * checklist kelengkapan berkas, dan histori tindak lanjut.
+ * Detailed claim sheet for print/PDF (A4 portrait).
+ * Displays policy data, incident chronology, claim values, document checklist, and follow-ups.
  */
 export function ClaimDetailDocument({
   claim,
@@ -181,7 +180,6 @@ export function ClaimDetailDocument({
       />
 
       <div className="flex flex-col gap-5 text-[11px]">
-        {/* Identitas Polis & Tertanggung */}
         <section>
           <h3 className="mb-1.5 font-semibold text-primary uppercase tracking-wide text-[10.5px]">
             1. Data Polis & Tertanggung
@@ -196,7 +194,6 @@ export function ClaimDetailDocument({
           />
         </section>
 
-        {/* Informasi Kerugian & Kejadian */}
         <section>
           <h3 className="mb-1.5 font-semibold text-primary uppercase tracking-wide text-[10.5px]">
             2. Informasi Kejadian & Kerugian
@@ -211,7 +208,6 @@ export function ClaimDetailDocument({
           />
         </section>
 
-        {/* Nilai Klaim */}
         <section>
           <h3 className="mb-1.5 font-semibold text-primary uppercase tracking-wide text-[10.5px]">
             3. Rincian Nilai Klaim
@@ -229,7 +225,6 @@ export function ClaimDetailDocument({
           />
         </section>
 
-        {/* Status, Tahapan, & Timeline */}
         <section>
           <h3 className="mb-1.5 font-semibold text-primary uppercase tracking-wide text-[10.5px]">
             4. Status & Kronologi Penanganan
@@ -257,7 +252,6 @@ export function ClaimDetailDocument({
           />
         </section>
 
-        {/* Catatan Tambahan */}
         {claim.notes && (
           <section>
             <h3 className="mb-1.5 font-semibold text-primary uppercase tracking-wide text-[10.5px]">
@@ -269,7 +263,6 @@ export function ClaimDetailDocument({
           </section>
         )}
 
-        {/* Kelengkapan Berkas Dokumen */}
         <section>
           <h3 className="mb-1.5 font-semibold text-primary uppercase tracking-wide text-[10.5px]">
             {claim.notes ? "6." : "5."} Kelengkapan Berkas Dokumen
@@ -326,7 +319,6 @@ export function ClaimDetailDocument({
           </table>
         </section>
 
-        {/* Catatan Tindak Lanjut / Follow-up */}
         <section>
           <h3 className="mb-1.5 font-semibold text-primary uppercase tracking-wide text-[10.5px]">
             {claim.notes ? "7." : "6."} Histori Tindak Lanjut (Follow-up)
