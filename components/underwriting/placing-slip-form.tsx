@@ -1534,6 +1534,7 @@ function SlipEditor({
                     typeOfCover={slip.typeOfCover}
                     typeOfCover2={slip.typeOfCover2}
                     selected={clauseIds0}
+                    taken={[...slip.clauseIds, ...clauseIds2]}
                     overrides={slip.clauseOverridesGeneral ?? {}}
                     copies={slip.clauseCopiesGeneral}
                     onChange={(ids) => set({ clauseIdsGeneral: ids })}
@@ -1554,6 +1555,7 @@ function SlipEditor({
                   typeOfCover={slip.typeOfCover}
                   typeOfCover2={slip.typeOfCover2}
                   selected={slip.clauseIds}
+                  taken={sectionTitles ? [...clauseIds0, ...clauseIds2] : undefined}
                   overrides={slip.clauseOverrides ?? {}}
                   copies={slip.clauseCopies}
                   onChange={(ids) => set({ clauseIds: ids })}
@@ -1586,6 +1588,7 @@ function SlipEditor({
                     typeOfCover={slip.typeOfCover}
                     typeOfCover2={slip.typeOfCover2}
                     selected={clauseIds2}
+                    taken={[...clauseIds0, ...slip.clauseIds]}
                     overrides={slip.clauseOverridesSection2 ?? {}}
                     copies={slip.clauseCopiesSection2}
                     onChange={(ids) => set({ clauseIdsSection2: ids })}

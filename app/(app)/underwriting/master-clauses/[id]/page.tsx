@@ -40,6 +40,9 @@ export default async function EditClausePage({
         sourceGroup: clause.sourceGroup,
         cobId: clause.cobId,
         coverTypeId: clause.coverTypeId,
+        inPackage: clause.inPackage,
+        packageGroup: clause.packageGroup,
+        packageOrder: clause.packageOrder,
       }}
       cobs={cobs}
       coverTypes={coverTypes}

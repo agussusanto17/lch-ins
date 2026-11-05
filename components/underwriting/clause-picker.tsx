@@ -6,6 +6,7 @@ import {
   ArrowUp,
   BookOpenText,
   Check,
+  PackagePlus,
   Pencil,
   RotateCcw,
   Search,
@@ -46,9 +47,11 @@ import {
   clauseGroupBlocks,
   clauseGroupOf,
   groupedClauseOrder,
+  installPackage,
   moveClause,
   moveClauseGroup,
   moveClauseToGroup,
+  packageToInstall,
   renameClauseGroup,
   type ClauseGroups,
 } from "@/lib/clause-groups"
@@ -127,6 +130,7 @@ export function ClausePicker({
   onOverridesChange,
   groups,
   onGroupsChange,
+  taken,
   masterClauses: propMasterClauses,
 }: {
   cob: ClassOfBusiness
@@ -150,6 +154,8 @@ export function ClausePicker({
    */
   groups?: ClauseGroups
   onGroupsChange?: (groups: ClauseGroups) => void
+  /** Klausula yang sudah dipilih di kelompok section lain slip ini. */
+  taken?: string[]
   masterClauses?: ClausePickerItem[]
 }) {
   /** Dua picker bisa membuka klausula yang sama, jadi id input dibuat unik per picker. */
@@ -197,18 +203,26 @@ export function ClausePicker({
     [options, cob]
   )
 
+  const fitting = React.useMemo(() => {
+    const slipCovers = [typeOfCover, typeOfCover2 ?? ""]
+    return pool.filter((c) => clauseFitsSlip(c, cob, slipCovers, knownCovers))
+  }, [pool, cob, typeOfCover, typeOfCover2, knownCovers])
+
   const available = React.useMemo(() => {
     const q = query.trim().toLowerCase()
-    const slipCovers = [typeOfCover, typeOfCover2 ?? ""]
-    return pool.filter((c) => {
-      if (!clauseFitsSlip(c, cob, slipCovers, knownCovers)) return false
-      if (!q) return true
-      return (
+    if (!q) return fitting
+    return fitting.filter(
+      (c) =>
         c.title.toLowerCase().includes(q) ||
         (plainWording.get(c.id) ?? "").toLowerCase().includes(q)
-      )
-    })
-  }, [pool, plainWording, cob, typeOfCover, typeOfCover2, knownCovers, query])
+    )
+  }, [fitting, plainWording, query])
+
+  // Paket klausul bawaan type of cover (Master Clauses) yang belum terpasang
+  // di kelompok mana pun slip ini.
+  const packageItems = typeOfCover
+    ? packageToInstall(fitting, [...selected, ...(taken ?? [])])
+    : []
 
   const selectedClauses = React.useMemo(() => {
     const inactive = Object.entries(copies ?? {})
@@ -319,6 +333,21 @@ export function ClausePicker({
           <BookOpenText />
           {available.length} klausula relevan
         </Badge>
+        {packageItems.length ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const next = installPackage(selected, groups, packageItems, grouping)
+              if (grouping && next.groups && onGroupsChange) onGroupsChange(next.groups)
+              onChange(next.ids)
+            }}
+          >
+            <PackagePlus data-icon="inline-start" />
+            Pasang paket klausula ({packageItems.length})
+          </Button>
+        ) : null}
       </div>
 
       {!typeOfCover ? (

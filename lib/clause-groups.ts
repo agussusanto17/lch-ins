@@ -151,3 +151,51 @@ export function moveClauseGroup(
   ;[blocks[i], blocks[j]] = [blocks[j], blocks[i]]
   return blocks.flatMap((b) => b.ids)
 }
+
+/** Klausul master dengan isian paket klausul bawaan. */
+export interface PackageClause {
+  id: string
+  title: string
+  inPackage?: boolean
+  packageGroup?: string | null
+  packageOrder?: number
+}
+
+/**
+ * Klausul paket yang belum terpasang di slip, menurut urutan paket lalu
+ * judul. `fitting` adalah klausul master yang cocok dengan COB dan type of
+ * cover slip; `exclude` klausul yang sudah dipilih di kelompok mana pun.
+ */
+export function packageToInstall<T extends PackageClause>(
+  fitting: T[],
+  exclude: Iterable<string>
+): T[] {
+  const skip = new Set(exclude)
+  return fitting
+    .filter((c) => c.inPackage && !skip.has(c.id))
+    .sort(
+      (a, b) =>
+        (a.packageOrder ?? 0) - (b.packageOrder ?? 0) ||
+        a.title.localeCompare(b.title)
+    )
+}
+
+/**
+ * Pasang klausul paket di akhir daftar. Bila daftar memakai kelompok, tiap
+ * klausul masuk kelompok paketnya, dan klausul sekelompok tetap berdampingan.
+ */
+export function installPackage(
+  ids: string[],
+  groups: ClauseGroups | undefined,
+  items: PackageClause[],
+  grouping: boolean
+): { ids: string[]; groups: ClauseGroups | undefined } {
+  const added = items.map((c) => c.id).filter((id) => !ids.includes(id))
+  if (!grouping) return { ids: [...ids, ...added], groups }
+  const next = { ...(groups ?? {}) }
+  for (const c of items) {
+    const title = c.packageGroup?.trim()
+    if (title && added.includes(c.id)) next[c.id] = title
+  }
+  return { ids: groupedClauseOrder([...ids, ...added], next), groups: next }
+}
