@@ -653,19 +653,20 @@ export function ParEqvetRateBlock({ slip }: { slip: PlacingSlip }) {
   )
 
   return (
-    <ul className="space-y-1.5 text-[12.5px]">
-      {allLines.map((line) => (
-        <li
-          key={line.id}
-          className="flex items-baseline justify-between gap-4"
-        >
-          <span>- {line.fullName}</span>
-          <span className="tabular font-medium whitespace-nowrap text-right">
-            : {rateFormula(line, bi)}
-          </span>
-        </li>
-      ))}
-    </ul>
+    // Columns keep every colon and rate aligned, as on the LCH CI.
+    <table className="w-full text-[12.5px]">
+      <tbody>
+        {allLines.map((line) => (
+          <tr key={line.id} className="align-top">
+            <td className="py-0.5 pr-2">- {line.fullName}</td>
+            <td className="w-3 py-0.5">:</td>
+            <td className="tabular py-0.5 font-medium whitespace-nowrap">
+              {rateFormula(line, bi)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 
@@ -680,62 +681,74 @@ function ParEqvetGroupSection({
   const lastIndex = group.lines.length - 1
 
   return (
-    <div className="space-y-1">
-      <table className="w-full text-[12.5px]">
-        <tbody>
-          {group.lines.map((l, i) => (
-            <tr key={l.id} className="border-b/40 border-b">
-              <td className="py-1 pr-2">
-                {l.formulaLabel} : {moneyCents(l.basis, currency)} x {l.rateText}
-                {l.lossLimitPct != null ? ` x ${num(l.lossLimitPct, 0, 4)}%` : ""} =
-              </td>
-              <td className="tabular py-1 text-right whitespace-nowrap">
-                {moneyCents(l.premium, currency)}
-                {i === lastIndex && group.lines.length > 1 ? " +" : ""}
-              </td>
-            </tr>
-          ))}
+    <tbody>
+      {group.lines.map((l, i) => (
+        <tr key={l.id} className="border-b border-border/40 align-top">
+          <td className="py-1 pr-2">{l.formulaLabel}</td>
+          <td className="w-3 py-1">:</td>
+          <td className="tabular py-1 pr-2 text-right whitespace-nowrap">
+            {moneyCents(l.basis, currency)}
+          </td>
+          <td className="tabular py-1 pr-2 whitespace-nowrap">
+            x {l.rateText}
+            {l.lossLimitPct != null ? ` x ${num(l.lossLimitPct, 0, 4)}%` : ""}
+          </td>
+          <td className="w-4 py-1">=</td>
+          <td className="tabular py-1 text-right whitespace-nowrap">
+            {moneyCents(l.premium, currency)}
+            {i === lastIndex && group.lines.length > 1 ? " +" : ""}
+          </td>
+        </tr>
+      ))}
 
-          <tr className="border-t font-semibold">
-            <td className="py-1">Premium {group.name}</td>
+      <tr className="border-t font-semibold">
+        <td colSpan={5} className="py-1">
+          Premium {group.name}
+        </td>
+        <td className="tabular py-1 text-right whitespace-nowrap">
+          {moneyCents(group.subtotal, currency)}
+        </td>
+      </tr>
+
+      {group.discountPct > 0 ? (
+        <>
+          <tr className="text-muted-foreground">
+            <td colSpan={5} className="py-1">
+              Discount ({num(group.discountPct, 2)}%)
+            </td>
             <td className="tabular py-1 text-right whitespace-nowrap">
-              {moneyCents(group.subtotal, currency)}
+              ({moneyCents(group.discountAmount, currency)}) -
             </td>
           </tr>
-
-          {group.discountPct > 0 ? (
-            <>
-              <tr className="text-muted-foreground">
-                <td className="py-1">Discount ({num(group.discountPct, 2)}%)</td>
-                <td className="tabular py-1 text-right whitespace-nowrap">
-                  ({moneyCents(group.discountAmount, currency)}) -
-                </td>
-              </tr>
-              <tr>
-                <td className="py-1">Premium after discount</td>
-                <td className="tabular py-1 text-right whitespace-nowrap">
-                  {moneyCents(group.afterDiscount, currency)}
-                </td>
-              </tr>
-            </>
-          ) : null}
-
           <tr>
-            <td className="py-1">Policy Cost + Stamp Duty</td>
+            <td colSpan={5} className="py-1">
+              Premium after discount
+            </td>
             <td className="tabular py-1 text-right whitespace-nowrap">
-              {moneyCents(group.policyCost, currency)} +
+              {moneyCents(group.afterDiscount, currency)}
             </td>
           </tr>
+        </>
+      ) : null}
 
-          <tr className="border-t border-b font-bold">
-            <td className="py-1.5">Total Premium {group.name}</td>
-            <td className="tabular py-1.5 text-right whitespace-nowrap">
-              {moneyCents(group.total, currency)}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <tr>
+        <td colSpan={5} className="py-1">
+          Policy Cost + Stamp Duty
+        </td>
+        <td className="tabular py-1 text-right whitespace-nowrap">
+          {moneyCents(group.policyCost, currency)} +
+        </td>
+      </tr>
+
+      <tr className="border-t border-b font-bold">
+        <td colSpan={5} className="py-1.5">
+          Total Premium {group.name}
+        </td>
+        <td className="tabular py-1.5 text-right whitespace-nowrap">
+          {moneyCents(group.total, currency)}
+        </td>
+      </tr>
+    </tbody>
   )
 }
 
@@ -745,8 +758,18 @@ export function ParEqvetCalculationBlock({ slip }: { slip: PlacingSlip }) {
 
   return (
     <div className="space-y-4 text-[12.5px]">
-      <ParEqvetGroupSection group={calc.par} currency={calc.currency} />
-      <ParEqvetGroupSection group={calc.eqvet} currency={calc.currency} />
+      {/* One table so PAR and EQVET share column widths and stay aligned. */}
+      <table className="w-full">
+        <ParEqvetGroupSection group={calc.par} currency={calc.currency} />
+        {calc.par.lines.length > 0 && calc.eqvet.lines.length > 0 ? (
+          <tbody aria-hidden>
+            <tr>
+              <td colSpan={6} className="h-4" />
+            </tr>
+          </tbody>
+        ) : null}
+        <ParEqvetGroupSection group={calc.eqvet} currency={calc.currency} />
+      </table>
 
       <div className="border-t-2 border-primary/40 pt-2">
         <div className="flex items-center justify-between text-[13px] font-bold">
