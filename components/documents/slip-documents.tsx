@@ -15,6 +15,7 @@ import {
   InsurerSignatureGrid,
   InterestBlock,
   LocationPremiumSchedule,
+  ObjectPremiumSchedule,
   ParEqvetCalculationBlock,
   ParEqvetRateBlock,
   PayableTable,
@@ -34,6 +35,7 @@ import { rateUnitFor } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data"
 import { dateLong } from "@/lib/format"
 import { isMultiLocation } from "@/lib/slip-locations"
+import { isMultiItem } from "@/lib/slip-items"
 import { isMultiVehicle } from "@/lib/slip-vehicles"
 import { useRecord } from "@/lib/store"
 
@@ -71,11 +73,16 @@ function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
   // Slip multi lokasi mencetak jadwal premi per lokasi saja (Opsi B); slip
   // satu lokasi tetap mencetak bagian RATE.
   if (isMultiLocation(slip)) return <LocationPremiumSchedule slip={slip} />
-  // Slip multi kendaraan: jadwal premi per kendaraan, lalu diskon dan biaya.
-  if (isMultiVehicle(slip)) {
+  // Slip multi kendaraan atau multi objek: jadwal premi per kendaraan atau
+  // objek, lalu diskon dan biaya.
+  if (isMultiItem(slip)) {
     return (
       <>
-        <VehiclePremiumSchedule slip={slip} />
+        {isMultiVehicle(slip) ? (
+          <VehiclePremiumSchedule slip={slip} />
+        ) : (
+          <ObjectPremiumSchedule slip={slip} />
+        )}
         <PayableTable slip={slip} />
       </>
     )

@@ -35,12 +35,18 @@ import {
   slipLocations,
 } from "@/lib/slip-locations"
 import {
+  GENERIC_RATE_LABEL,
+  itemGroups,
+  itemOwner,
+  usesItemRates,
+} from "@/lib/slip-items"
+import {
   isCascoLine,
   isMultiVehicle,
-  vehicleGroups,
-  vehicleOwner,
   vehicleTariff,
 } from "@/lib/slip-vehicles"
+
+export { GENERIC_RATE_LABEL }
 
 let seq = 0
 export const uid = (prefix: string) =>
@@ -65,9 +71,6 @@ export function makeRateLines(cob: ClassOfBusiness): RateLine[] {
   }
   return [{ id: "r1", label: GENERIC_RATE_LABEL, rate: null, premium: 0 }]
 }
-
-/** Label baris rate tunggal di COB selain Property dan Motor Vehicle. */
-export const GENERIC_RATE_LABEL = "Rate (%)"
 
 /** Okupasi slip dipecah jadi kode OJK dan namanya ("29371 - Private …"). */
 export function occupationParts(occupation: string | undefined) {
@@ -177,10 +180,10 @@ export function deductibleRows(
 }
 
 /**
- * Baris yang menyimpan deductible per cover. Slip Property dan Motor Vehicle
- * punya satu daftar deductible per cover untuk semua lokasi atau kendaraan
- * (Harry, 5 November 2026), disimpan di baris lokasi atau kendaraan pertama;
- * yang beda per lokasi atau kendaraan ditulis di teksnya.
+ * Baris yang menyimpan deductible per cover. Satu daftar deductible per cover
+ * berlaku untuk semua lokasi, kendaraan, atau objek (Harry, 5 November 2026),
+ * disimpan di baris lokasi atau objek pertama; yang beda per lokasi atau
+ * objek ditulis di teksnya.
  */
 function deductibleSource(
   slip: PlacingSlip
@@ -188,8 +191,8 @@ function deductibleSource(
   if (slip.cob === "Property") {
     return { rateLines: locationGroups(slip)[0].rateLines, tplLines: [], paLines: [] }
   }
-  if (slip.cob === "Motor Vehicle" && slip.interestItems.length) {
-    return vehicleGroups(slip)[0]
+  if (usesItemRates(slip.cob) && slip.interestItems.length) {
+    return itemGroups(slip)[0]
   }
   return slip
 }
@@ -403,18 +406,21 @@ export function locationRowsPatch<
   return { [key]: next } as Partial<PlacingSlip>
 }
 
-/** Ganti baris rate, TPL, atau PA satu kendaraan; baris tetap berurutan per kendaraan. */
-export function vehicleRowsPatch(
+/**
+ * Ganti baris rate, TPL, atau PA satu kendaraan atau objek; baris tetap
+ * berurutan sesuai Interest Insured.
+ */
+export function itemRowsPatch(
   slip: PlacingSlip,
   key: "rateLines" | "tplLines" | "paLines",
-  vehicleId: string,
+  itemId: string,
   rows: RateLine[]
 ): Partial<PlacingSlip> {
-  const owner = vehicleOwner(slip)
-  const next = slip.interestItems.flatMap((vehicle) =>
-    vehicle.id === vehicleId
-      ? rows.map((r) => ({ ...r, vehicleId }))
-      : slip[key].filter((r) => owner(r.vehicleId) === vehicle.id)
+  const owner = itemOwner(slip)
+  const next = slip.interestItems.flatMap((item) =>
+    item.id === itemId
+      ? rows.map((r) => ({ ...r, vehicleId: itemId }))
+      : slip[key].filter((r) => owner(r.vehicleId) === item.id)
   )
   return { [key]: next }
 }
@@ -509,7 +515,7 @@ export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
 
   if (slip.cob === "Motor Vehicle") {
     // Kategori dan wilayah OJK dihitung per kendaraan.
-    const owner = vehicleOwner(slip)
+    const owner = itemOwner(slip)
     const tariffs = new Map(
       slip.interestItems.map((v) => [v.id, vehicleTariff(slip, v)])
     )
@@ -662,9 +668,9 @@ export function locationIssues(slip: PlacingSlip): string[] {
  */
 export function vehicleIssues(slip: PlacingSlip): string[] {
   if (!isMultiVehicle(slip)) return []
-  return vehicleGroups(slip).flatMap(({ vehicle, no, rateLines }) => {
+  return itemGroups(slip).flatMap(({ item, no, rateLines }) => {
     const issues: string[] = []
-    if ((vehicle.amount || 0) <= 0) issues.push(`Isi TSI kendaraan ${no}.`)
+    if ((item.amount || 0) <= 0) issues.push(`Isi TSI kendaraan ${no}.`)
     if (!rateLines.some((l) => (l.rate ?? 0) > 0))
       issues.push(`Isi minimal satu rate untuk kendaraan ${no}.`)
     return issues
@@ -677,7 +683,7 @@ export function vehicleIssues(slip: PlacingSlip): string[] {
  */
 export function rateLineName(slip: PlacingSlip, line: RateLine) {
   if (isMultiVehicle(slip)) {
-    const owner = vehicleOwner(slip)(line.vehicleId)
+    const owner = itemOwner(slip)(line.vehicleId)
     const no = slip.interestItems.findIndex((v) => v.id === owner) + 1
     return no ? `${line.label} kendaraan ${no}` : line.label
   }

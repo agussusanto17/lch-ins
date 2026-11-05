@@ -16,11 +16,11 @@ import {
   removeLocationPatch,
   switchCob,
   updateLocationPatch,
-  vehicleRowsPatch,
+  itemRowsPatch,
 } from "../components/underwriting/slip-model"
 import type { PlacingSlip, RateLine } from "../lib/data/types"
 import { locationGroups, slipRiskLocationText } from "../lib/slip-locations"
-import { vehicleGroups } from "../lib/slip-vehicles"
+import { itemGroups } from "../lib/slip-items"
 
 /** Slip Property dengan rate FLEXAS 0,5‰ dan Section 1 IDR 1 miliar. */
 function propertySlip(section2: number): PlacingSlip {
@@ -222,10 +222,10 @@ function twoVehicleSlip(): PlacingSlip {
     "Terrorism & Sabotage": 0.05,
   })
   const set = (vehicleId: string, rates: Record<string, number>, tpl: [number, number][], pa: [number, number][]) => {
-    const g = vehicleGroups(slip).find((x) => x.vehicle.id === vehicleId)!
-    slip = recalcSlip({ ...slip, ...vehicleRowsPatch(slip, "rateLines", vehicleId, g.rateLines.map((l) => ({ ...l, rate: rates[l.label] ?? null }))) })
-    slip = recalcSlip({ ...slip, ...vehicleRowsPatch(slip, "tplLines", vehicleId, tpl.map(([limit, rate], i) => ({ id: `${vehicleId}-tpl${i}`, label: "Third Party Liability", basis: String(limit), rate, premium: 0 }))) })
-    slip = recalcSlip({ ...slip, ...vehicleRowsPatch(slip, "paLines", vehicleId, g.paLines.map((l, i) => ({ ...l, basis: String(pa[i][0]), rate: pa[i][1] }))) })
+    const g = itemGroups(slip).find((x) => x.item.id === vehicleId)!
+    slip = recalcSlip({ ...slip, ...itemRowsPatch(slip, "rateLines", vehicleId, g.rateLines.map((l) => ({ ...l, rate: rates[l.label] ?? null }))) })
+    slip = recalcSlip({ ...slip, ...itemRowsPatch(slip, "tplLines", vehicleId, tpl.map(([limit, rate], i) => ({ id: `${vehicleId}-tpl${i}`, label: "Third Party Liability", basis: String(limit), rate, premium: 0 }))) })
+    slip = recalcSlip({ ...slip, ...itemRowsPatch(slip, "paLines", vehicleId, g.paLines.map((l, i) => ({ ...l, basis: String(pa[i][0]), rate: pa[i][1] }))) })
   }
   set("v1", casco(1.79), [[25_000_000, 1]], [[5_000_000, 0.5], [20_000_000, 0.1]])
   set("v2", casco(2.23), [[25_000_000, 1], [25_000_000, 0.5]], [[5_000_000, 0.5], [10_000_000, 0.1]])
@@ -234,7 +234,7 @@ function twoVehicleSlip(): PlacingSlip {
 
 test("premi slip multi kendaraan dihitung per kendaraan, sama dengan contoh usulan", () => {
   const slip = twoVehicleSlip()
-  const [one, two] = vehicleGroups(slip)
+  const [one, two] = itemGroups(slip)
   const premium = (g: (typeof one)) =>
     [...g.rateLines, ...g.tplLines, ...g.paLines].reduce((a, l) => a + l.premium, 0)
   assert.equal(premium(one), 5_395_000)
@@ -253,7 +253,7 @@ test("kendaraan baru mendapat baris rate, TPL, dan PA sendiri", () => {
     ...slip,
     interestItems: [...slip.interestItems, { id: "v3", description: "", amount: 100_000_000 }],
   })
-  const three = vehicleGroups(added)[2]
+  const three = itemGroups(added)[2]
   assert.equal(three.rateLines.length, 8)
   assert.equal(three.tplLines.length, 2)
   assert.deepEqual(three.paLines.map((l) => l.label), ["Driver", "Passenger"])
@@ -263,7 +263,7 @@ test("kendaraan baru mendapat baris rate, TPL, dan PA sendiri", () => {
 
 test("hapus kendaraan pertama membuang barisnya dan memindahkan deductible", () => {
   let slip = twoVehicleSlip()
-  const casco = vehicleGroups(slip)[0].rateLines[0]
+  const casco = itemGroups(slip)[0].rateLines[0]
   slip = recalcSlip({
     ...slip,
     rateLines: slip.rateLines.map((l) =>
@@ -297,4 +297,65 @@ test("Loading Rate Comprehensive tidak memakai batas casco OJK", () => {
   assert.ok(casco?.min != null)
   assert.equal(loading?.min ?? null, null)
   assert.equal(loading?.max ?? null, null)
+})
+
+/** Slip contoh CI Money Insurance LCH: CIT dan CIS dengan rate berbeda. */
+function moneySlip(): PlacingSlip {
+  let slip = switchCob(emptySlip(), "Miscellaneous")
+  slip = recalcSlip({
+    ...slip,
+    interestItems: [
+      { id: "cit", description: "Money in Transit", amount: 1_200_000_000 },
+      { id: "cis", description: "Money in Premises", amount: 250_000_000 },
+    ],
+  })
+  const setRate = (itemId: string, rate: number) => {
+    const g = itemGroups(slip).find((x) => x.item.id === itemId)!
+    slip = recalcSlip({
+      ...slip,
+      ...itemRowsPatch(slip, "rateLines", itemId, g.rateLines.map((l) => ({ ...l, rate }))),
+    })
+  }
+  setRate("cit", 0.025)
+  setRate("cis", 0.25)
+  return slip
+}
+
+test("premi COB lain dihitung per objek, sama dengan CI Money Insurance LCH", () => {
+  const slip = moneySlip()
+  const [cit, cis] = itemGroups(slip)
+  assert.equal(cit.rateLines[0].premium, 300_000)
+  assert.equal(cis.rateLines[0].premium, 625_000)
+  assert.equal(totalPremium(slip), 925_000)
+  // Deductible per cover tetap satu daftar, di objek pertama.
+  assert.equal(deductibleRows(slip).length, 1)
+  assert.equal(JSON.stringify(recalcSlip(slip)), JSON.stringify(slip))
+})
+
+test("objek baru di COB lain mendapat satu baris rate kosong sendiri", () => {
+  const slip = moneySlip()
+  const added = recalcSlip({
+    ...slip,
+    interestItems: [
+      ...slip.interestItems,
+      { id: "baru", description: "Money in Safe Deposit", amount: 100_000_000 },
+    ],
+  })
+  assert.deepEqual(
+    itemGroups(added)[2].rateLines.map((l) => [l.label, l.rate]),
+    [["Rate (%)", null]]
+  )
+  assert.equal(totalPremium(added), 925_000)
+})
+
+test("rate COB lain dari slip lama ikut objek pertama", () => {
+  const base = switchCob(emptySlip(), "Engineering")
+  const slip = recalcSlip({
+    ...base,
+    interestItems: [{ id: "mesin", description: "Boiler", amount: 1_000_000_000 }],
+    rateLines: base.rateLines.map((l) => ({ ...l, vehicleId: null, rate: 0.2 })),
+  })
+  assert.equal(slip.rateLines.length, 1)
+  assert.equal(slip.rateLines[0].vehicleId, "mesin")
+  assert.equal(slip.rateLines[0].premium, 2_000_000)
 })

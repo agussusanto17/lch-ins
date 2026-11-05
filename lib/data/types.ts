@@ -173,8 +173,9 @@ export interface RateLine {
   /** Lokasi slip Property untuk baris rate. TPL, PA, dan COB lain kosong. */
   locationId?: string | null
   /**
-   * Kendaraan slip Motor Vehicle (id baris Interest) untuk baris rate, TPL,
-   * dan PA. COB lain kosong.
+   * Baris Interest pemilik baris rate, TPL, atau PA: kendaraan di Motor
+   * Vehicle, objek di COB lain selain Property. Namanya tetap `vehicleId`
+   * karena mula-mula dipakai untuk kendaraan.
    */
   vehicleId?: string | null
 }

@@ -6,7 +6,7 @@ import { BI_SCALE_OJK } from "./data/ojk-tariff"
 import type { PlacingSlip, RateLine, SlipPart } from "./data/types"
 import { num } from "./format"
 import { locationGroups, locationOwner, withLocations } from "./slip-locations"
-import { vehicleOwner, withVehicles } from "./slip-vehicles"
+import { itemOwner, withItemRates } from "./slip-items"
 
 /** Demo exchange rates for report aggregation. */
 export const FX: Record<string, number> = {
@@ -371,27 +371,22 @@ export function brokerageLimitIssue(slip: PlacingSlip) {
 /**
  * Recalculate all premiums from rate and sum insured. Property lines use the
  * Section 1 sum insured of their location × rate × loss limit percentage, BI
- * lines the location's Section 2; Motor Vehicle lines the TSI of their
- * vehicle; TPL and PA lines use their liability limits.
+ * lines the location's Section 2. Other COBs use the value of their interest
+ * item (vehicle or object) × rate; TPL and PA lines use their liability limits.
  */
 export function recalcSlip(input: PlacingSlip): PlacingSlip {
-  const slip = withVehicles(withLocations(input))
+  const slip = withItemRates(withLocations(input))
   const mode = rateModeFor(slip.cob)
   const property = slip.cob === "Property"
-  const motor = slip.cob === "Motor Vehicle"
-  const interestBasis = sumItems(slip.interestItems)
   const bases = locationBases(slip)
   const owner = locationOwner(slip)
-  const vehicleOf = vehicleOwner(slip)
-  const vehicleTsi = new Map(slip.interestItems.map((v) => [v.id, v.amount || 0]))
+  const itemOf = itemOwner(slip)
+  const itemValue = new Map(slip.interestItems.map((v) => [v.id, v.amount || 0]))
 
   const rateLines = (property ? withBiRates(slip) : slip.rateLines).map((l) => {
-    if (motor) {
-      const tsi = vehicleTsi.get(vehicleOf(l.vehicleId) ?? "") ?? 0
-      return { ...l, premium: premiumFromRate(tsi, l.rate, mode) }
-    }
     if (!property) {
-      return { ...l, premium: premiumFromRate(interestBasis, l.rate, mode) }
+      const value = itemValue.get(itemOf(l.vehicleId) ?? "") ?? 0
+      return { ...l, premium: premiumFromRate(value, l.rate, mode) }
     }
     const location = bases.get(owner(l.locationId))!
     return {

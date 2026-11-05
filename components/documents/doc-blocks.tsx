@@ -44,11 +44,8 @@ import {
   oneLineAddress,
   type LocationGroup,
 } from "@/lib/slip-locations"
-import {
-  isMultiVehicle,
-  vehicleGroups,
-  vehicleTitle,
-} from "@/lib/slip-vehicles"
+import { isMultiItem, itemGroups, type ItemGroup } from "@/lib/slip-items"
+import { isMultiVehicle, vehicleTitle } from "@/lib/slip-vehicles"
 import { cn } from "@/lib/utils"
 
 export function DocTitle({
@@ -346,6 +343,8 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
                 className="flex justify-between gap-6 border-b border-dashed py-1"
               >
                 <span className="leading-relaxed whitespace-pre-line">
+                  {/* Nomor objek dirujuk jadwal premi slip multi objek. */}
+                  {isMultiItem(slip) ? `${index + 1}. ` : ""}
                   {vehicleLabel ? (
                     <span className="mr-1.5 font-semibold text-foreground">
                       {vehicleLabel}
@@ -1076,7 +1075,7 @@ export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
  * cost, stamp duty, dan Total Payable dicetak di bawahnya oleh PayableTable.
  */
 export function VehiclePremiumSchedule({ slip }: { slip: PlacingSlip }) {
-  const groups = vehicleGroups(slip)
+  const groups = itemGroups(slip)
   const currency = slip.currency || "IDR"
   const amount = (value: number) => num(value, 2)
   const shown = (l: RateLine) => l.rate !== null || l.premium > 0
@@ -1113,13 +1112,13 @@ export function VehiclePremiumSchedule({ slip }: { slip: PlacingSlip }) {
             const subtotal =
               sumPremium(g.rateLines) + sumPremium(g.tplLines) + sumPremium(g.paLines)
             return (
-              <Fragment key={g.vehicle.id}>
+              <Fragment key={g.item.id}>
                 {casco.map((l, i) => (
                   <tr key={l.id} className="avoid-break border-b border-dashed">
                     <td className={cell}>{i === 0 ? g.no : ""}</td>
-                    <td className={cell}>{i === 0 ? vehicleTitle(g.vehicle) : ""}</td>
+                    <td className={cell}>{i === 0 ? vehicleTitle(g.item) : ""}</td>
                     <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
-                      {i === 0 ? amount(g.vehicle.amount || 0) : ""}
+                      {i === 0 ? amount(g.item.amount || 0) : ""}
                     </td>
                     <td className={cell}>{l.label}</td>
                     <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
@@ -1134,7 +1133,7 @@ export function VehiclePremiumSchedule({ slip }: { slip: PlacingSlip }) {
                   <tr key={line.id} className="avoid-break border-b border-dashed">
                     <td className={cell}>{!casco.length && i === 0 ? g.no : ""}</td>
                     <td className={cell}>
-                      {!casco.length && i === 0 ? vehicleTitle(g.vehicle) : ""}
+                      {!casco.length && i === 0 ? vehicleTitle(g.item) : ""}
                     </td>
                     <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
                       {amount(Number(line.basis ?? 0))}
@@ -1161,6 +1160,82 @@ export function VehiclePremiumSchedule({ slip }: { slip: PlacingSlip }) {
           })}
           <tr className="avoid-break bg-muted/60 font-bold">
             <td colSpan={5} className="px-2 py-2">
+              Total Premium
+            </td>
+            <td className="tabular px-2 py-2 text-right whitespace-nowrap">
+              {amount(totalPremium(slip))}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </>
+  )
+}
+
+/** Uraian objek di jadwal premi: baris pertamanya saja, karena uraian lengkap sudah dicetak di INTEREST INSURED. */
+function objectName(group: ItemGroup) {
+  return group.item.description.split("\n")[0].trim() || `Objek ${group.no}`
+}
+
+/**
+ * Rate & premium slip multi objek COB selain Property dan Motor Vehicle
+ * (Agus, 5 November 2026), misalnya peserta PA atau unit MB dan CPM: satu
+ * baris per objek dengan nilai, rate, dan preminya, lalu Total Premium.
+ * Diskon, admin cost, stamp duty, dan Total Payable dicetak di bawahnya oleh
+ * PayableTable.
+ */
+export function ObjectPremiumSchedule({ slip }: { slip: PlacingSlip }) {
+  const groups = itemGroups(slip)
+  const currency = slip.currency || "IDR"
+  const amount = (value: number) => num(value, 2)
+  const cell = "py-1.5 pr-2 align-top"
+
+  return (
+    <>
+      <div className="mt-6">
+        <InfoTable rows={[["Rate & Premium", "As per schedule below"]]} />
+      </div>
+      <SectionHeading>PREMIUM CALCULATION</SectionHeading>
+      <table className="w-full text-[12px]">
+        <thead>
+          <tr className="border-b text-left text-muted-foreground">
+            <th className="w-12 py-2 pr-2 font-semibold">No</th>
+            <th className="py-2 pr-2 font-semibold">Objek</th>
+            <th className="py-2 pr-2 text-right font-semibold">
+              Sum Insured ({currency})
+            </th>
+            <th className="py-2 pr-2 text-right font-semibold">Rate</th>
+            <th className="py-2 text-right font-semibold">
+              Premium ({currency})
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((g) => {
+            // Satu baris rate per objek; slip lama bisa punya lebih.
+            const lines = g.rateLines.length ? g.rateLines : [null]
+            return lines.map((l, i) => (
+              <tr key={l?.id ?? g.item.id} className="avoid-break border-b border-dashed">
+                <td className={cell}>{i === 0 ? g.no : ""}</td>
+                <td className={cell}>
+                  {i === 0 ? (
+                    <span className="line-clamp-2">{objectName(g)}</span>
+                  ) : null}
+                </td>
+                <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
+                  {i === 0 ? amount(g.item.amount || 0) : ""}
+                </td>
+                <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
+                  {l?.rate != null ? `${rateText(l.rate)}%` : "—"}
+                </td>
+                <td className="tabular py-1.5 text-right align-top whitespace-nowrap">
+                  {amount(l?.premium ?? 0)}
+                </td>
+              </tr>
+            ))
+          })}
+          <tr className="avoid-break bg-muted/60 font-bold">
+            <td colSpan={4} className="px-2 py-2">
               Total Premium
             </td>
             <td className="tabular px-2 py-2 text-right whitespace-nowrap">
