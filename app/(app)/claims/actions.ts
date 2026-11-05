@@ -15,6 +15,7 @@ import {
   toggleClaimDocument,
   updateClaimDocument,
   addClaimDocument,
+  attachClaimDocumentFile,
   deleteClaimDocument,
   listClaimFollowups,
   addClaimFollowup,
@@ -25,6 +26,7 @@ import {
   type ClaimFollowupRecord,
 } from "@/lib/server/claims"
 import { requireAccess, requireManage } from "@/lib/server/session"
+import { saveUploadedFile } from "@/lib/server/stored-files"
 
 export interface ActionResponse<T = unknown> {
   ok: boolean
@@ -178,18 +180,43 @@ export async function updateClaimDocumentAction(
   documentId: string,
   input: {
     notes?: string | null
-    filePath?: string | null
     receivedDate?: string | null
   }
 ): Promise<ActionResponse<ClaimDocumentRecord>> {
   try {
     const session = await requireManage("/claims")
-    const doc = await updateClaimDocument(documentId, input, session.id)
+    // File paths only change through uploadClaimDocumentFileAction, which checks ownership.
+    const doc = await updateClaimDocument(
+      documentId,
+      { notes: input.notes, receivedDate: input.receivedDate },
+      session.id
+    )
     revalidatePath("/claims")
     return { ok: true, data: doc }
   } catch (err) {
     unstable_rethrow(err)
     const message = err instanceof Error ? err.message : "Gagal memperbarui informasi berkas klaim"
+    return { ok: false, error: message }
+  }
+}
+
+export async function uploadClaimDocumentFileAction(
+  documentId: string,
+  formData: FormData
+): Promise<ActionResponse<ClaimDocumentRecord>> {
+  try {
+    const session = await requireManage("/claims")
+    const file = formData.get("file")
+    if (!(file instanceof File)) {
+      return { ok: false, error: "File tidak ditemukan." }
+    }
+    const stored = await saveUploadedFile(file, "claim_document", session.id)
+    const doc = await attachClaimDocumentFile(documentId, stored.id, session.id)
+    revalidatePath("/claims")
+    return { ok: true, data: doc }
+  } catch (err) {
+    unstable_rethrow(err)
+    const message = err instanceof Error ? err.message : "Gagal mengunggah berkas klaim"
     return { ok: false, error: message }
   }
 }

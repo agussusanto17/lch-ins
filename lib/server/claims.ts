@@ -8,6 +8,12 @@ import { prisma } from "@/lib/prisma"
 import { recordAudit } from "@/server/services/audit"
 import { nextDocumentNumber } from "@/server/services/number-generator"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
+import {
+  assertClaimableFile,
+  deleteStoredFiles,
+  storedFilePath,
+  storedFileUrl,
+} from "@/lib/server/stored-files"
 
 export interface ClaimRecord extends Claim {
   dbId: string
@@ -23,6 +29,8 @@ export interface ClaimDocumentRecord {
   isReceived: boolean
   receivedDate: string | null
   filePath: string | null
+  /** Link to the uploaded file, or undefined when only a sample path exists. */
+  fileUrl?: string
   notes: string | null
   sortOrder: number
 }
@@ -483,7 +491,15 @@ export async function deleteClaim(id: string, userId: string): Promise<void> {
     throw new Error("Klaim sudah memiliki catatan pembayaran dan tidak dapat dihapus.")
   }
 
-  await prisma.claim.delete({ where: { id } })
+  // Documents cascade with the claim, but their stored files do not.
+  await prisma.$transaction(async (tx) => {
+    const docs = await tx.claimDocument.findMany({
+      where: { claimId: id },
+      select: { filePath: true },
+    })
+    await tx.claim.delete({ where: { id } })
+    await deleteStoredFiles(tx, docs.map((d) => d.filePath))
+  })
 
   await recordAudit(prisma, {
     userId,
@@ -720,6 +736,7 @@ function toClaimDocumentRecord(doc: {
     isReceived: doc.isReceived,
     receivedDate: doc.receivedDate ? doc.receivedDate.toISOString().slice(0, 10) : null,
     filePath: doc.filePath,
+    fileUrl: storedFileUrl(doc.filePath),
     notes: doc.notes,
     sortOrder: doc.documentType?.sortOrder ?? 0,
   }
@@ -946,6 +963,41 @@ export async function updateClaimDocument(
   return record
 }
 
+/**
+ * Link an uploaded file to a claim document and drop the file it replaces.
+ * The received checkbox stays manual because it drives documentCompleteDate.
+ */
+export async function attachClaimDocumentFile(
+  documentId: string,
+  fileId: string,
+  userId: string
+): Promise<ClaimDocumentRecord> {
+  const before = await findClaimDocument(documentId)
+
+  return prisma.$transaction(async (tx) => {
+    await assertClaimableFile(tx, fileId, "claim_document", userId)
+    const updated = await tx.claimDocument.update({
+      where: { id: documentId },
+      data: { filePath: storedFilePath(fileId) },
+      include: { documentType: true },
+    })
+    if (before.filePath !== updated.filePath) {
+      await deleteStoredFiles(tx, [before.filePath])
+    }
+    const next = toClaimDocumentRecord(updated)
+    await recordAudit(tx, {
+      userId,
+      entity: "claims",
+      entityId: next.claimId,
+      action: "Update",
+      before: documentSnapshot(before),
+      after: documentSnapshot(next),
+      context: { document: next.documentTypeName },
+    })
+    return next
+  })
+}
+
 export async function addClaimDocument(
   claimId: string,
   input: {
@@ -1009,8 +1061,9 @@ export async function addClaimDocument(
 
 export async function deleteClaimDocument(documentId: string, userId: string): Promise<void> {
   const before = await findClaimDocument(documentId)
-  await prisma.claimDocument.delete({
-    where: { id: documentId },
+  await prisma.$transaction(async (tx) => {
+    await tx.claimDocument.delete({ where: { id: documentId } })
+    await deleteStoredFiles(tx, [before.filePath])
   })
   await recordAudit(prisma, {
     userId,
