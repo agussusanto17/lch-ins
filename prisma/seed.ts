@@ -900,7 +900,8 @@ function toHtml(text: string) {
  */
 const CLAUSE_GROUP_COB: Record<string, { cob: string; cover?: string }> = {
   PAR: { cob: "01" },
-  EQVET: { cob: "01" },
+  // PSAGBI; migrasi 20261105180000_clause_eqvet_psagbi.
+  EQVET: { cob: "01", cover: "0105" },
   MV: { cob: "02" },
   Cargo: { cob: "03" },
   CIT: { cob: "03", cover: "0308" },

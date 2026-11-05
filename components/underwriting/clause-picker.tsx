@@ -21,6 +21,7 @@ import {
   type ClassOfBusiness,
   type ClauseOverride,
 } from "@/lib/data"
+import { clauseFitsSlip } from "@/lib/clause-filter"
 import { cn } from "@/lib/utils"
 import {
   getClausesForPickerAction,
@@ -102,25 +103,9 @@ export function ClausePicker({
 
   const available = React.useMemo(() => {
     const q = query.trim().toLowerCase()
-    // Klausula khusus type of cover tampil bila cocok dengan salah satu type of cover slip.
-    const slipCovers = [typeOfCover, typeOfCover2]
-      .filter((t): t is string => Boolean(t))
-      .map((t) => t.toLowerCase())
+    const slipCovers = [typeOfCover, typeOfCover2 ?? ""]
     return pool.filter((c) => {
-      if (c.cobName && c.cobName.toLowerCase() !== "all" && c.cobName.toLowerCase() !== cob.toLowerCase()) {
-        return false
-      }
-      if (c.coverTypeName && slipCovers.length) {
-        const cCoverNorm = c.coverTypeName.toLowerCase()
-        if (
-          !slipCovers.some(
-            (coverNorm) =>
-              coverNorm.includes(cCoverNorm) || cCoverNorm.includes(coverNorm)
-          )
-        ) {
-          return false
-        }
-      }
+      if (!clauseFitsSlip(c, cob, slipCovers)) return false
       if (!q) return true
       return (
         c.title.toLowerCase().includes(q) ||
