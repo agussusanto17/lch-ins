@@ -146,8 +146,6 @@ export interface ParEqvetCalculation {
   par: ParEqvetGroup
   eqvet: ParEqvetGroup
   grandTotal: number
-  brokeragePct: number
-  includeVat: boolean
 }
 
 /**
@@ -224,8 +222,6 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
     par,
     eqvet,
     grandTotal,
-    brokeragePct: slip.brokeragePct || 0,
-    includeVat: Boolean(slip.includeVat),
   }
 }
 

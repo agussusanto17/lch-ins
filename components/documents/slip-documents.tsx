@@ -58,23 +58,18 @@ function Missing() {
   )
 }
 
-function SlipRateAndPremium({
-  slip,
-  showBrokerageIndicator = false,
-}: {
-  slip: PlacingSlip
-  showBrokerageIndicator?: boolean
-}) {
+/**
+ * Brokerage tidak dicetak di bawah GRAND TOTAL PREMIUM (Harry, 5 November
+ * 2026); Placing Slip dan Closing Instruction mencetaknya di BrokerageBlock.
+ */
+function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
   if (isParEqvetSlip(slip)) {
     return (
       <>
         <SectionHeading>RATE</SectionHeading>
         <ParEqvetRateBlock slip={slip} />
         <SectionHeading>PREMIUM CALCULATION</SectionHeading>
-        <ParEqvetCalculationBlock
-          slip={slip}
-          showBrokerage={showBrokerageIndicator}
-        />
+        <ParEqvetCalculationBlock slip={slip} />
       </>
     )
   }
@@ -114,7 +109,7 @@ export function PlacingSlipDocument(props: DocProps) {
       <DeductibleBlock slip={slip} />
       <ClausesBlock slip={slip} />
 
-      <SlipRateAndPremium slip={slip} showBrokerageIndicator />
+      <SlipRateAndPremium slip={slip} />
 
       <BrokerageBlock slip={slip} />
 
@@ -159,7 +154,7 @@ export function QuotationSlipDocument(props: DocProps) {
 
       <ClausesBlock slip={slip} inline />
 
-      <SlipRateAndPremium slip={slip} showBrokerageIndicator={false} />
+      <SlipRateAndPremium slip={slip} />
 
       <SecurityPanelBlock slip={slip} />
 
@@ -195,7 +190,7 @@ export function CoverNoteDocument(props: DocProps) {
       <DeductibleBlock slip={slip} />
       <ClausesBlock slip={slip} inline />
 
-      <SlipRateAndPremium slip={slip} showBrokerageIndicator={false} />
+      <SlipRateAndPremium slip={slip} />
 
       <SecurityPanelBlock slip={slip} />
 
@@ -245,7 +240,7 @@ export function ClosingInstructionDocument(props: DocProps) {
 
       <ClausesBlock slip={slip} inline />
 
-      <SlipRateAndPremium slip={slip} showBrokerageIndicator />
+      <SlipRateAndPremium slip={slip} />
 
       <BrokerageBlock slip={slip} />
 

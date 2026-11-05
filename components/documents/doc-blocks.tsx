@@ -709,13 +709,7 @@ function ParEqvetGroupSection({
 }
 
 /** Grouped PAR and EQVET calculation with open formulas, group deductions, and grand total per Image 4. */
-export function ParEqvetCalculationBlock({
-  slip,
-  showBrokerage = true,
-}: {
-  slip: PlacingSlip
-  showBrokerage?: boolean
-}) {
+export function ParEqvetCalculationBlock({ slip }: { slip: PlacingSlip }) {
   const calc = calculateParEqvet(slip)
 
   return (
@@ -730,12 +724,6 @@ export function ParEqvetCalculationBlock({
             {moneyCents(calc.grandTotal, calc.currency)}
           </span>
         </div>
-        {showBrokerage ? (
-          <div className="mt-2 text-[12px] text-muted-foreground">
-            Brokerage : {num(calc.brokeragePct, 2)}% (
-            {calc.includeVat ? "INCL. VAT" : "EXCL. VAT"})
-          </div>
-        ) : null}
       </div>
     </div>
   )
