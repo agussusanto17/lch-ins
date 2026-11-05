@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `fix/premi-bi-tanpa-section-2`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#127](https://github.com/agussusanto17/lch-ins/pull/127)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
