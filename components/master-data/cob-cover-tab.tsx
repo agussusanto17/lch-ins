@@ -73,6 +73,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
   // Satu label per baris; disimpan sebagai daftar label bawaan Detail tambahan.
   const [coverDetailLabels, setCoverDetailLabels] = React.useState("")
   const [coverUsesSections, setCoverUsesSections] = React.useState(false)
+  const [coverPeriodLabel, setCoverPeriodLabel] = React.useState("")
   const [coverIsActive, setCoverIsActive] = React.useState(true)
 
   const [prevInitialCobs, setPrevInitialCobs] = React.useState(initialCobs)
@@ -115,6 +116,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverAbbreviation("")
     setCoverDetailLabels("")
     setCoverUsesSections(false)
+    setCoverPeriodLabel("")
     setCoverIsActive(true)
     setCoverDialogOpen(true)
   }
@@ -127,6 +129,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverAbbreviation(cover.abbreviation ?? "")
     setCoverDetailLabels((cover.detailLabels ?? []).join("\n"))
     setCoverUsesSections(cover.usesSections ?? false)
+    setCoverPeriodLabel(cover.periodLabel ?? "")
     setCoverIsActive(cover.isActive)
     setCoverDialogOpen(true)
   }
@@ -148,6 +151,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           abbreviation: coverAbbreviation,
           detailLabels,
           usesSections: coverUsesSections,
+          periodLabel: coverPeriodLabel,
           isActive: coverIsActive,
         })
         if (!res.ok) {
@@ -169,6 +173,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                           abbreviation: res.data?.abbreviation ?? null,
                           detailLabels: res.data?.detailLabels ?? [],
                           usesSections: res.data?.usesSections ?? false,
+                          periodLabel: res.data?.periodLabel ?? null,
                           isActive: coverIsActive,
                         }
                       : ct
@@ -185,6 +190,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           abbreviation: coverAbbreviation,
           detailLabels,
           usesSections: coverUsesSections,
+          periodLabel: coverPeriodLabel,
           isActive: coverIsActive,
         })
         if (!res.ok || !res.data) {
@@ -558,6 +564,22 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                 Satu label per baris. Label ini otomatis muncul di Detail
                 tambahan placing slip saat type of cover ini dipilih, lalu
                 dicetak di tabel detail dokumen bila isinya diisi.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cover-period-label">Label Periode di Dokumen</Label>
+              <Input
+                id="cover-period-label"
+                placeholder="Period of Insurance"
+                maxLength={200}
+                value={coverPeriodLabel}
+                onChange={(e) => setCoverPeriodLabel(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Pengganti label Period of Insurance di dokumen slip, misalnya
+                Estimated Time of Departure (ETD) atau Date of Tournament.
+                Kosongkan untuk Period of Insurance.
               </p>
             </div>
 

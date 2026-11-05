@@ -56,9 +56,10 @@ const policyInputSchema = z
     placementLocationId: z.uuid("Lokasi penempatan tidak valid").nullable().optional(),
     groupingInsured: z.string().trim().max(200, "Grouping insured maksimal 200 karakter").optional(),
   })
-  .refine((d) => d.expiryDate > d.inceptionDate, {
+  // Tanggal sama boleh: polis acara satu hari, misalnya Hole in One.
+  .refine((d) => d.expiryDate >= d.inceptionDate, {
     path: ["expiryDate"],
-    message: "Tanggal berakhir harus setelah tanggal mulai",
+    message: "Tanggal berakhir tidak boleh sebelum tanggal mulai",
   })
   .refine((d) => new Set(d.insurers.map((i) => i.insurer.toLowerCase())).size === d.insurers.length, {
     path: ["insurers"],

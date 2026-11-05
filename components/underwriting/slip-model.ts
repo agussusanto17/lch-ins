@@ -27,7 +27,7 @@ import {
   matchMotorRegion,
 } from "@/lib/data/ojk-motor"
 import { todayIso } from "@/lib/date"
-import { normalizeCob } from "@/lib/format"
+import { dateEn, normalizeCob } from "@/lib/format"
 import { withDetailLabels } from "@/lib/slip-details"
 import {
   isMultiLocation,
@@ -267,6 +267,51 @@ export function makeMotorSubLines(): {
 export const DEFAULT_PERIOD_NOTE =
   "Both days at 12 o'clock noon local time at the location of the insured object."
 
+/** Label periode di dokumen bila slip dan type of cover-nya tidak mengaturnya. */
+export const DEFAULT_PERIOD_LABEL = "Period of Insurance"
+
+/**
+ * Baris periode di tabel detail dokumen: label, lalu isinya.
+ * - Teks periode yang diketik menggantikan tanggal dan keterangannya, misalnya
+ *   "23rd / 24th / 25th October 2026 until final destination" (ETD single
+ *   shipment) atau periode proyek T.B.A.
+ * - Period TBA tanpa teks: "To Be Advised".
+ * - Tanggal mulai sama dengan tanggal akhir dicetak satu tanggal, misalnya
+ *   hari turnamen Hole in One.
+ * - Keterangan periode dicetak di baris berikutnya, seperti CI LCH.
+ */
+export function slipPeriodRow(
+  slip: Pick<
+    PlacingSlip,
+    "periodTba" | "inceptionDate" | "expiryDate" | "periodNote" | "periodLabel" | "periodText"
+  >
+): [string, string] {
+  const label = slip.periodLabel?.trim() || DEFAULT_PERIOD_LABEL
+  const text = slip.periodText?.trim()
+  if (text) return [label, text]
+  if (slip.periodTba) return [label, "To Be Advised"]
+  const dates =
+    slip.inceptionDate && slip.inceptionDate === slip.expiryDate
+      ? dateEn(slip.inceptionDate)
+      : `${dateEn(slip.inceptionDate)} to ${dateEn(slip.expiryDate)}`
+  return [label, [dates, slip.periodNote?.trim()].filter(Boolean).join("\n")]
+}
+
+/**
+ * Label periode setelah type of cover diganti: label bawaan type of cover
+ * baru, kecuali label yang diketik sendiri (beda dari bawaan type of cover
+ * lama) tetap dipakai.
+ */
+export function nextPeriodLabel(
+  current: string | undefined,
+  oldDefault: string | null | undefined,
+  newDefault: string | null | undefined
+) {
+  const typed = current?.trim()
+  if (typed && typed !== (oldDefault?.trim() ?? "")) return current
+  return newDefault?.trim() || undefined
+}
+
 export function emptySlip(): PlacingSlip {
   return {
     id: "new",
@@ -330,6 +375,7 @@ export function switchCob(
     typeOfCoverLabel: undefined,
     typeOfCover2Label: undefined,
     usesSections: false,
+    periodLabel: undefined,
     // Label bawaan type of cover lama dibuang; baris yang sudah diisi tetap.
     detailRows: withDetailLabels(slip.detailRows, []),
     coverCode: null,
@@ -670,8 +716,9 @@ export function releaseIssues(slip: PlacingSlip) {
   if (!slip.periodTba) {
     if (!slip.inceptionDate || !slip.expiryDate) {
       issues.push("Isi periode asuransi atau aktifkan Period TBA.")
-    } else if (slip.expiryDate <= slip.inceptionDate) {
-      issues.push("Expiry date harus setelah inception date.")
+    } else if (slip.expiryDate < slip.inceptionDate) {
+      // Tanggal sama boleh: acara satu hari, misalnya turnamen Hole in One.
+      issues.push("Expiry date tidak boleh sebelum inception date.")
     }
   }
   issues.push(...locationIssues(slip), ...vehicleIssues(slip))
@@ -809,7 +856,7 @@ export function slipFromSppa(
   sppa: Sppa,
   client: Client | null,
   covers?: (Pick<CoverOption, "name" | "abbreviation"> &
-    Partial<Pick<CoverOption, "detailLabels" | "usesSections">>)[]
+    Partial<Pick<CoverOption, "detailLabels" | "usesSections" | "periodLabel">>)[]
 ): PlacingSlip {
   const cob = normalizeCob(sppa.cob)
   const base = switchCob(emptySlip(), cob)
@@ -867,6 +914,9 @@ export function slipFromSppa(
     ),
     usesSections:
       covers?.find((c) => c.name === sppa.typeOfCover)?.usesSections ?? false,
+    periodLabel:
+      covers?.find((c) => c.name === sppa.typeOfCover)?.periodLabel?.trim() ||
+      undefined,
     coverCode: coverCodeFor(cob, sppa.typeOfCover, covers),
     currency: sppa.currency,
     inceptionDate: sppa.periodStart,

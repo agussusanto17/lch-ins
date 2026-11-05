@@ -4,6 +4,7 @@ import {
   coverLabel,
   deductibleRows,
   slipOccupationText,
+  slipPeriodRow,
   slipSectionTitles,
   usesPropertyBlocks,
 } from "@/components/underwriting/slip-model"
@@ -39,7 +40,7 @@ import {
   type SecurityPanelRow,
   wordingText,
 } from "@/lib/data"
-import { CURRENCY_SYMBOL, dateEn, money, moneyCents, num } from "@/lib/format"
+import { CURRENCY_SYMBOL, money, moneyCents, num } from "@/lib/format"
 import {
   isMultiLocation,
   locationGroups,
@@ -92,16 +93,9 @@ export function SectionHeading({ children }: { children: React.ReactNode }) {
 }
 
 export function DetailTable({ slip }: { slip: PlacingSlip }) {
-  // Keterangan periode dicetak di baris berikutnya, seperti CI LCH: "Both
-  // days at 12 o'clock noon local time at the location of the insured object."
-  const period = slip.periodTba
-    ? "To Be Advised"
-    : [
-        `${dateEn(slip.inceptionDate)} to ${dateEn(slip.expiryDate)}`,
-        slip.periodNote?.trim(),
-      ]
-        .filter(Boolean)
-        .join("\n")
+  // Label dan isi periode, misalnya "Estimated Time of Departure (ETD)" atau
+  // satu tanggal turnamen; keterangan periode di baris berikutnya.
+  const period = slipPeriodRow(slip)
 
   // Slip PAR + EQVET dengan dua type of cover dicetak seperti CI LCH: satu
   // baris per type of cover, masing-masing diawali tanda hubung. Nama di
@@ -137,7 +131,7 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
         .join("\n"),
     ],
     ["Correspondence Address", slip.correspondenceAddress || "—"],
-    ["Period of Insurance", period]
+    period
   )
   if (isMultiLocation(slip)) {
     rows.push(...locationRows(slip))

@@ -38,6 +38,8 @@ const FIELD_LABELS: Record<string, string> = {
   detailLabels: "Label detail tambahan",
   detailRows: "Detail tambahan",
   periodNote: "Keterangan periode",
+  periodLabel: "Label periode",
+  periodText: "Teks periode",
   insuredDescription: "Uraian tertanggung",
   typeOfCoverLabel: "Type of cover di dokumen",
   typeOfCover2Label: "Type of cover Earthquake di dokumen",

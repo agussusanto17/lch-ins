@@ -279,6 +279,18 @@ export interface PlacingSlip {
   /** Keterangan di bawah periode asuransi di dokumen, seperti CI LCH. */
   periodNote?: string
   /**
+   * Label periode di dokumen, misalnya "Estimated Time of Departure (ETD)"
+   * atau "Date of Tournament". Kosong berarti "Period of Insurance". Nilai
+   * awalnya dari type of cover di Master Data.
+   */
+  periodLabel?: string
+  /**
+   * Teks periode di dokumen yang menggantikan tanggal dan keterangannya,
+   * misalnya ETD single shipment atau periode proyek T.B.A. Tanggal tetap
+   * disimpan untuk polis.
+   */
+  periodText?: string
+  /**
    * Detail tambahan yang dicetak di tabel detail dokumen setelah baris
    * bawaan, misalnya Retroactive Date atau Voyage. Label bawaannya datang dari
    * type of cover di Master Data.
