@@ -3,6 +3,7 @@
 import * as React from "react"
 import { EditorContent, useEditor, type Editor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
+import TextAlign from "@tiptap/extension-text-align"
 import {
   Bold,
   Heading2,
@@ -14,6 +15,10 @@ import {
   Redo2,
   RemoveFormatting,
   Strikethrough,
+  TextAlignCenter,
+  TextAlignEnd,
+  TextAlignJustify,
+  TextAlignStart,
   Underline as UnderlineIcon,
   Undo2,
 } from "lucide-react"
@@ -80,6 +85,38 @@ const BLOCKS: ToolItem[] = [
   },
 ]
 
+const CENTER = { textAlign: "center" }
+const RIGHT = { textAlign: "right" }
+const JUSTIFY = { textAlign: "justify" }
+
+const ALIGNS: ToolItem[] = [
+  {
+    icon: TextAlignStart,
+    label: "Rata kiri",
+    // Left is the default, so it removes the alignment instead of storing it.
+    run: (e) => e.chain().focus().unsetTextAlign().run(),
+    active: (e) => !e.isActive(CENTER) && !e.isActive(RIGHT) && !e.isActive(JUSTIFY),
+  },
+  {
+    icon: TextAlignCenter,
+    label: "Rata tengah",
+    run: (e) => e.chain().focus().setTextAlign("center").run(),
+    active: (e) => e.isActive(CENTER),
+  },
+  {
+    icon: TextAlignEnd,
+    label: "Rata kanan",
+    run: (e) => e.chain().focus().setTextAlign("right").run(),
+    active: (e) => e.isActive(RIGHT),
+  },
+  {
+    icon: TextAlignJustify,
+    label: "Rata kiri-kanan",
+    run: (e) => e.chain().focus().setTextAlign("justify").run(),
+    active: (e) => e.isActive(JUSTIFY),
+  },
+]
+
 function ToolButton({ item, editor }: { item: ToolItem; editor: Editor }) {
   const active = item.active?.(editor) ?? false
   return (
@@ -119,7 +156,11 @@ export function RichTextEditor({
   editable?: boolean
 }) {
   const editor = useEditor({
-    extensions: [StarterKit.configure({ link: { openOnClick: false } })],
+    extensions: [
+      StarterKit.configure({ link: { openOnClick: false } }),
+      // Same blocks lib/sanitize.ts lets keep text-align.
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+    ],
     content: value,
     editable,
     immediatelyRender: false,
@@ -164,6 +205,10 @@ export function RichTextEditor({
             <ToolButton key={item.label} item={item} editor={editor} />
           ))}
           <Separator orientation="vertical" className="mx-1 h-5" />
+          {ALIGNS.map((item) => (
+            <ToolButton key={item.label} item={item} editor={editor} />
+          ))}
+          <Separator orientation="vertical" className="mx-1 h-5" />
           <Button
             type="button"
             variant="ghost"
@@ -172,7 +217,7 @@ export function RichTextEditor({
             title="Hapus format"
             className="rounded-md"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().unsetTextAlign().run()}
           >
             <RemoveFormatting />
           </Button>
