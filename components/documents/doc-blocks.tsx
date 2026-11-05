@@ -82,8 +82,16 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
         : slip.typeOfCover || "—",
     ],
   ]
-  if (slip.wordingForms.filter(Boolean).length)
-    rows.push(["Wording Form", slip.wordingForms.filter(Boolean).join("; ")])
+  // Wording form hanya dicetak di sini, tidak di CLAUSES (Harry, 5 November
+  // 2026). Lebih dari satu dicetak satu baris per wording seperti CI LCH.
+  const wordingForms = slip.wordingForms.filter(Boolean)
+  if (wordingForms.length)
+    rows.push([
+      "Wording Form",
+      wordingForms.length > 1
+        ? wordingForms.map((w) => `- ${w}`).join("\n")
+        : wordingForms[0],
+    ])
   rows.push(
     ["Insured Name", slip.insuredName.toUpperCase() || "—"],
     ["Correspondence Address", slip.correspondenceAddress || "—"],
@@ -420,27 +428,18 @@ export function ClausesBlock({
   slip: PlacingSlip
   inline?: boolean
 }) {
-  const wordingForms = slip.wordingForms.filter(Boolean)
-  const groups = clauseGroups(slip, wordingForms.length + 1)
+  const groups = clauseGroups(slip, 1)
   if (!groups.length) return null
 
   return (
     <>
       <SectionHeading>CLAUSES</SectionHeading>
       <ol className="flex flex-col gap-2 text-[12px]">
-        {wordingForms.map((w, i) => (
-          <li key={w} className="avoid-break">
-            <p className={inline ? "font-semibold" : undefined}>
-              {i + 1}. {w}
-            </p>
-            <p className="ml-4 text-muted-foreground">As Attached</p>
-          </li>
-        ))}
         {groups.map((g, gi) =>
           g.clauses.map((c, i) => (
             <li key={`${gi}-${c.id}`} className="avoid-break">
               {g.heading && i === 0 ? (
-                <ClauseGroupHeading first={gi === 0 && !wordingForms.length}>
+                <ClauseGroupHeading first={gi === 0}>
                   {g.heading}
                 </ClauseGroupHeading>
               ) : null}
