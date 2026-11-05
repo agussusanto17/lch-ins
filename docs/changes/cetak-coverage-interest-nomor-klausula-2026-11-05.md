@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `fix/cetak-coverage-interest-nomor-klausula`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#134](https://github.com/agussusanto17/lch-ins/pull/134)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
