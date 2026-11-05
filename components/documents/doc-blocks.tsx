@@ -4,6 +4,7 @@ import {
   coverLabel,
   deductibleRows,
   slipOccupationText,
+  usesPropertyBlocks,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
 import {
@@ -344,7 +345,7 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
                 key={i.id}
                 className="flex justify-between gap-6 border-b border-dashed py-1"
               >
-                <span className="leading-relaxed">
+                <span className="leading-relaxed whitespace-pre-line">
                   {vehicleLabel ? (
                     <span className="mr-1.5 font-semibold text-foreground">
                       {vehicleLabel}
@@ -368,6 +369,22 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
           {money(totalSumInsured(slip), slip.currency)}
         </span>
       </p>
+    </>
+  )
+}
+
+/**
+ * Coverage dari Detail Coverage & Ketentuan, dicetak setelah INTEREST INSURED
+ * seperti CI Machinery Breakdown LCH (Agus, 5 November 2026). Paragraf dan
+ * baris barunya dipertahankan. Motor Vehicle tidak punya isian ini.
+ */
+export function CoverageBlock({ slip }: { slip: PlacingSlip }) {
+  const text = slip.coverage?.trim()
+  if (!text || !usesPropertyBlocks(slip.cob)) return null
+  return (
+    <>
+      <SectionHeading>COVERAGE</SectionHeading>
+      <p className="text-[13px] leading-relaxed whitespace-pre-line">{text}</p>
     </>
   )
 }
@@ -433,16 +450,15 @@ function resolveClauses(
 interface ClauseGroup {
   heading: string | null
   clauses: ResolvedClause[]
-  /** Nomor klausula pertama; penomoran menyambung lintas section. */
-  start: number
 }
 
 /**
  * Slip Property mencetak klausula tanpa section dulu tanpa judul, lalu per
  * section dengan judul yang sama seperti INTEREST INSURED, sesuai CI LCH. COB
- * lain satu daftar tanpa judul. Kelompok kosong dilewati.
+ * lain satu daftar tanpa judul. Kelompok kosong dilewati. Nomor klausula
+ * mulai dari 1 lagi di tiap kelompok (Agus, 5 November 2026).
  */
-function clauseGroups(slip: PlacingSlip, firstNumber: number): ClauseGroup[] {
+function clauseGroups(slip: PlacingSlip): ClauseGroup[] {
   const section1 = resolveClauses(
     slip.clauseIds,
     slip.clauseOverrides,
@@ -470,14 +486,7 @@ function clauseGroups(slip: PlacingSlip, firstNumber: number): ClauseGroup[] {
       ]
     : [{ heading: null, clauses: section1 }]
 
-  let start = firstNumber
-  return groups
-    .filter((g) => g.clauses.length > 0)
-    .map((g) => {
-      const group = { ...g, start }
-      start += g.clauses.length
-      return group
-    })
+  return groups.filter((g) => g.clauses.length > 0)
 }
 
 /**
@@ -506,7 +515,7 @@ export function ClausesBlock({
   slip: PlacingSlip
   inline?: boolean
 }) {
-  const groups = clauseGroups(slip, 1)
+  const groups = clauseGroups(slip)
   if (!groups.length) return null
 
   return (
@@ -522,7 +531,7 @@ export function ClausesBlock({
                 </ClauseGroupHeading>
               ) : null}
               <p className={inline ? "font-semibold" : undefined}>
-                {g.start + i}. {inline ? c.title : clauseTitleCase(c.title)}
+                {i + 1}. {inline ? c.title : clauseTitleCase(c.title)}
               </p>
               {inline ? (
                 <div
@@ -540,7 +549,7 @@ export function ClausesBlock({
 
 /** Wording lengkap di akhir dokumen — dipakai Placing Slip. */
 export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
-  const groups = clauseGroups(slip, 1)
+  const groups = clauseGroups(slip)
   if (!groups.length) return null
 
   return (
@@ -556,7 +565,7 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
                 </ClauseGroupHeading>
               ) : null}
               <p className="font-semibold">
-                {g.start + i}. {c.title}
+                {i + 1}. {c.title}
               </p>
               <div
                 className="rte-prose mt-0.5 text-[12px] text-muted-foreground"
