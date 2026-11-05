@@ -59,7 +59,7 @@ const lineItemSchema = z.object({
 const rateLineSchema = z
   .object({
     id: z.string(),
-    label: z.string(),
+    label: z.string().max(200, "Nama cover maksimal 200 karakter."),
     rate: z.coerce.number().nullable().optional(),
     premium: z.coerce.number(),
     flatPremium: z.boolean().optional(),

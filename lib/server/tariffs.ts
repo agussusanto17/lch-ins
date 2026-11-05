@@ -7,7 +7,7 @@ import {
   vehicleIssues,
 } from "@/components/underwriting/slip-model"
 import { locationOwner, slipLocations } from "@/lib/slip-locations"
-import { itemOwner, missingRateIssue } from "@/lib/slip-items"
+import { coverNameIssues, itemOwner, missingRateIssue } from "@/lib/slip-items"
 import { isCascoLine, vehicleTariff } from "@/lib/slip-vehicles"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
@@ -259,6 +259,7 @@ export async function validatePlacingSlipForRelease(
   }
   const rateIssue = missingRateIssue(slip)
   if (rateIssue) releaseIssues.push(rateIssue)
+  releaseIssues.push(...coverNameIssues(slip))
 
   const boundedRateLines = attachSlipRateBounds(slip)
   const boundedTpl = (slip.tplLines ?? []).map((l) => {

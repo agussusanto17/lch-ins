@@ -28,7 +28,13 @@ import {
   locationsShareRates,
   slipRiskLocationText,
 } from "../lib/slip-locations"
-import { itemGroups, missingRateIssue } from "../lib/slip-items"
+import {
+  addItemCover,
+  coverNameIssues,
+  itemGroups,
+  missingRateIssue,
+  removeItemCover,
+} from "../lib/slip-items"
 
 /** Slip Property dengan rate FLEXAS 0,5‰ dan Section 1 IDR 1 miliar. */
 function propertySlip(section2: number): PlacingSlip {
@@ -499,4 +505,86 @@ test("judul section hanya untuk Property dan slip ber-section COB objek", () => 
   assert.equal(slipSectionTitles({ cob: "Engineering" }), null)
   assert.equal(slipSectionTitles({ cob: "Engineering", usesSections: true })?.[1], "Section 2 — Third Party Liability")
   assert.equal(slipSectionTitles({ cob: "Motor Vehicle", usesSections: true }), null)
+})
+
+/** CI single shipment CV Unggul Utama Jaya: USD 32.400, ICC "A" 0,07% dan War 0,50%. */
+function shipmentSlip(): PlacingSlip {
+  let slip = recalcSlip({
+    ...switchCob(emptySlip(), "Marine Cargo"),
+    currency: "USD",
+    interestItems: [{ id: "briket", description: "Coconut briquette", amount: 32_400 }],
+  })
+  slip = recalcSlip({ ...slip, rateLines: addItemCover(slip, "briket") })
+  const [icc, war] = itemGroups(slip)[0].rateLines
+  return recalcSlip({
+    ...slip,
+    rateLines: slip.rateLines.map((l) =>
+      l.id === icc.id
+        ? { ...l, label: 'ICC "A"', rate: 0.07 }
+        : l.id === war.id
+          ? { ...l, label: "War Risks", rate: 0.5 }
+          : l
+    ),
+  })
+}
+
+test("dua cover per objek: premi tiap cover dijumlah (single shipment ICC A + War)", () => {
+  const slip = shipmentSlip()
+  const lines = itemGroups(slip)[0].rateLines
+  assert.deepEqual(
+    lines.map((l) => [l.label, l.premium]),
+    [
+      ['ICC "A"', 22.68],
+      ["War Risks", 162],
+    ]
+  )
+  assert.equal(totalPremium(slip), 184.68)
+  assert.equal(totalSumInsured(slip), 32_400)
+  assert.deepEqual(coverNameIssues(slip), [])
+  assert.equal(JSON.stringify(recalcSlip(slip)), JSON.stringify(slip))
+})
+
+test("cover tambahan tanpa nama ditolak saat release, cover pertama boleh tanpa nama", () => {
+  let slip = recalcSlip({
+    ...switchCob(emptySlip(), "Marine Cargo"),
+    interestItems: [{ id: "a", description: "Cargo", amount: 1_000 }],
+  })
+  slip = recalcSlip({ ...slip, rateLines: addItemCover(slip, "a") })
+  assert.deepEqual(coverNameIssues(slip), ["Isi nama cover tambahan objek 1."])
+  const [first, extra] = itemGroups(slip)[0].rateLines
+  assert.equal(first.label, "Rate (%)")
+  const named = { ...slip, rateLines: slip.rateLines.map((l) => (l.id === extra.id ? { ...l, label: "War" } : l)) }
+  assert.deepEqual(coverNameIssues(named), [])
+  // Motor Vehicle tidak memakai cover tambahan.
+  assert.deepEqual(coverNameIssues(switchCob(emptySlip(), "Motor Vehicle")), [])
+})
+
+test("hapus cover: deductible pindah ke cover yang tersisa, cover terakhir tidak bisa dihapus", () => {
+  const slip = shipmentSlip()
+  const [icc, war] = itemGroups(slip)[0].rateLines
+  const withDeductible = {
+    ...slip,
+    rateLines: slip.rateLines.map((l) =>
+      l.id === icc.id ? { ...l, deductibles: ["0.5% of TSI any one container"] } : l
+    ),
+  }
+  const removed = removeItemCover(withDeductible, icc.id)
+  assert.deepEqual(removed.map((l) => [l.id, l.deductibles]), [[war.id, ["0.5% of TSI any one container"]]])
+  assert.deepEqual(removeItemCover({ ...slip, rateLines: removed }, war.id), removed)
+})
+
+test("objek baru ikut cover objek pertama, objek limit saja cukup satu baris", () => {
+  const slip = shipmentSlip()
+  const next = recalcSlip({
+    ...slip,
+    interestItems: [
+      ...slip.interestItems,
+      { id: "kedua", description: "Kontainer kedua", amount: 10_000 },
+      { id: "batas", description: "Limit any one conveyance", amount: 50_000, limitOnly: true },
+    ],
+  })
+  const [, kedua, batas] = itemGroups(next)
+  assert.deepEqual(kedua.rateLines.map((l) => l.label), ['ICC "A"', "War Risks"])
+  assert.deepEqual(batas.rateLines.map((l) => l.label), ["Rate (%)"])
+  assert.equal(new Set(next.rateLines.map((l) => l.id)).size, next.rateLines.length)
 })
