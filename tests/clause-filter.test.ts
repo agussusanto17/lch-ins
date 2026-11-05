@@ -41,3 +41,28 @@ test("cover-specific clauses keep the COB filter and exact cover match", () => {
 test("a slip without a type of cover yet shows every clause of its COB", () => {
   assert.equal(clauseFitsSlip(eqvet, "PROPERTY", []), true)
 })
+
+const cargo = { cobName: "MARINE CARGO", coverTypeName: null, sourceGroup: "Cargo" }
+const engineering = { cobName: "ENGINEERING", coverTypeName: null, sourceGroup: "MB" }
+
+test("general Cargo clauses are hidden on a Cash In Transit slip", () => {
+  assert.equal(clauseFitsSlip(cargo, "MARINE CARGO", ["Cash In Transit"]), false)
+  assert.equal(clauseFitsSlip(cit, "MARINE CARGO", ["Cash In Transit"]), true)
+})
+
+test("general Cargo clauses still show on other Marine Cargo slips", () => {
+  assert.equal(clauseFitsSlip(cargo, "MARINE CARGO", ["Marine Cargo Open Cover"]), true)
+  assert.equal(clauseFitsSlip(cargo, "MARINE CARGO", ["Cash In Transit", "Marine Cargo"]), true)
+  assert.equal(clauseFitsSlip(cargo, "MARINE CARGO", []), true)
+})
+
+test("Engineering clauses without a type of cover fit every Engineering slip", () => {
+  for (const cover of [
+    "Contractors All Risk",
+    "Erection All Risk",
+    "Machinery Breakdown Insurance",
+    "Electronic Equipment Insurance",
+  ]) {
+    assert.equal(clauseFitsSlip(engineering, "ENGINEERING", [cover]), true)
+  }
+})

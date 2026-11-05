@@ -933,7 +933,8 @@ const CLAUSE_GROUP_COB: Record<string, { cob: string; cover?: string }> = {
   MV: { cob: "02" },
   Cargo: { cob: "03" },
   CIT: { cob: "03", cover: "0308" },
-  MB: { cob: "08", cover: "0803" },
+  // Semua TOC Engineering; migrasi 20261105233000_klausula_engineering_semua_toc.
+  MB: { cob: "08" },
   PL: { cob: "09" },
   PA: { cob: "10" },
   CIS: { cob: "12", cover: "1203" },
