@@ -53,6 +53,8 @@ export interface CoverTypeInput {
   abbreviation?: string | null
   /** Label bawaan Detail tambahan slip. Tidak dikirim berarti tidak diubah. */
   detailLabels?: string[]
+  /** Slip type of cover ini dibagi Section 1 dan 2 (CAR, EAR). */
+  usesSections?: boolean
   isActive?: boolean
 }
 
@@ -447,6 +449,7 @@ export async function createCoverType(
         name: input.name.trim(),
         abbreviation: input.abbreviation?.trim() || null,
         detailLabels: cleanDetailLabels(input.detailLabels),
+        usesSections: input.usesSections ?? false,
         isActive: input.isActive ?? true,
       },
     })
@@ -478,6 +481,7 @@ export async function updateCoverType(
         detailLabels: input.detailLabels
           ? cleanDetailLabels(input.detailLabels)
           : undefined,
+        usesSections: input.usesSections ?? before.usesSections,
         isActive: input.isActive ?? before.isActive,
       },
     })

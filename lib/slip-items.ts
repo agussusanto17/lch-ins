@@ -30,6 +30,11 @@ export function allowsFlatPremium(cob: ClassOfBusiness) {
   return usesItemRates(cob) && cob !== "Motor Vehicle"
 }
 
+/** Section objek di slip ber-section: 2 untuk Third Party Liability, selain itu 1. */
+export function itemSection(item: Pick<LineItem, "section">): 1 | 2 {
+  return item.section === 2 ? 2 : 1
+}
+
 /**
  * Objek yang nilainya hanya batas (limit): tidak ikut total sum insured dan
  * premi, misalnya limit any one carrying CIT di samping estimasi carrying

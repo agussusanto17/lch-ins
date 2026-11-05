@@ -24,6 +24,7 @@ import { CLIENTS } from "@/lib/data/clients"
 import {
   coverCodeFor,
   joinCoverCodes,
+  slipSectionTitles,
   usesAdditionalFee,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
@@ -82,6 +83,7 @@ export interface PlacingSlipInput {
   inceptionDate?: string | null
   expiryDate?: string | null
   periodNote?: string | null
+  usesSections?: boolean
   insuredDescription?: string | null
   detailRows?: SlipDetailRow[] | null
   occupation?: string | null
@@ -376,6 +378,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
         description: it.description,
         amount: it.amount ? Number(it.amount) : 0,
         limitOnly: it.isLimitOnly || undefined,
+        section: it.sectionNo === 2 ? 2 : undefined,
         vehicleBrandId: it.vehicleBrandId,
         vehicleTypeId: it.vehicleTypeId,
         vehicleBrandName: it.vehicleBrand?.name ?? null,
@@ -545,6 +548,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     inceptionDate,
     expiryDate,
     periodNote: raw.periodNote || undefined,
+    usesSections: raw.usesSections || undefined,
     insuredDescription: raw.insuredDescription || undefined,
     detailRows: cleanDetailRows(raw.detailRows),
     occupation: raw.occupation
@@ -874,7 +878,8 @@ function savedLocationId(
 
 /**
  * Copies selected clauses to slip_clauses with wording from slip override or master.
- * Section 2 (Business Interruption) is stored only for Property slips.
+ * The general group (section 0) and Section 2 are stored only for slips with
+ * sections: Property, and CAR/EAR-style slips with sections switched on.
  */
 async function insertSlipClauses(
   tx: Prisma.TransactionClient,
@@ -888,11 +893,14 @@ async function insertSlipClauses(
     | "clauseOverridesSection2"
     | "clauseIdsGeneral"
     | "clauseOverridesGeneral"
+    | "usesSections"
   >
 ) {
   // Satu klausula hanya di satu kelompok: tanpa section, Section 1, atau Section 2.
   const cob = normalizeCob(cobName)
-  if (usesSectionSumInsured(cob)) {
+  const sectioned =
+    slipSectionTitles({ cob, usesSections: input.usesSections === true }) !== null
+  if (sectioned) {
     const issues = validateClauseUniquenessAcrossSections({
       clauseIds: input.clauseIds ?? [],
       clauseIdsSection2: input.clauseIdsSection2 ?? [],
@@ -906,7 +914,7 @@ async function insertSlipClauses(
   const sections = [
     { section: 1, ids: input.clauseIds, overrides: input.clauseOverrides },
   ]
-  if (usesSectionSumInsured(normalizeCob(cobName))) {
+  if (sectioned) {
     sections.push(
       {
         section: 0,
@@ -1003,6 +1011,7 @@ export async function createPlacingSlip(
         inceptionDate,
         expiryDate,
         periodNote: input.periodNote?.trim() || null,
+        usesSections: input.usesSections === true,
         insuredDescription: input.insuredDescription?.trim() || null,
         detailRows: detailRowsData(input.detailRows),
         occupationId,
@@ -1040,6 +1049,7 @@ export async function createPlacingSlip(
       description: string
       amount: Prisma.Decimal | null
       isLimitOnly?: boolean
+      sectionNo?: number | null
       sortOrder: number
       vehicleBrandId?: string | null
       vehicleTypeId?: string | null
@@ -1073,6 +1083,7 @@ export async function createPlacingSlip(
             description: finalDesc,
             amount: new Prisma.Decimal(it.amount || 0),
             isLimitOnly: it.limitOnly === true,
+            sectionNo: it.section === 2 ? 2 : null,
             sortOrder: sortIdx++,
             ...(motor ? await checkVehiclePair(tx, it.vehicleBrandId, it.vehicleTypeId) : {}),
           })
@@ -1374,6 +1385,7 @@ export async function updatePlacingSlip(
         inceptionDate,
         expiryDate,
         periodNote: input.periodNote?.trim() || null,
+        usesSections: input.usesSections === true,
         insuredDescription: input.insuredDescription?.trim() || null,
         detailRows: detailRowsData(input.detailRows),
         occupationId,
@@ -1413,6 +1425,7 @@ export async function updatePlacingSlip(
       description: string
       amount: Prisma.Decimal | null
       isLimitOnly?: boolean
+      sectionNo?: number | null
       sortOrder: number
       vehicleBrandId?: string | null
       vehicleTypeId?: string | null
@@ -1446,6 +1459,7 @@ export async function updatePlacingSlip(
             description: finalDesc,
             amount: new Prisma.Decimal(it.amount || 0),
             isLimitOnly: it.limitOnly === true,
+            sectionNo: it.section === 2 ? 2 : null,
             sortOrder: sortIdx++,
             ...(motor ? await checkVehiclePair(tx, it.vehicleBrandId, it.vehicleTypeId) : {}),
           })
@@ -1939,6 +1953,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
           description: string
           amount: Prisma.Decimal | null
           isLimitOnly?: boolean
+          sectionNo?: number | null
           sortOrder: number
         }[] = []
 
@@ -1949,6 +1964,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             description: it.description,
             amount: new Prisma.Decimal(it.amount || 0),
             isLimitOnly: it.limitOnly === true,
+            sectionNo: it.section === 2 ? 2 : null,
             sortOrder: itIdx++,
           })
         }

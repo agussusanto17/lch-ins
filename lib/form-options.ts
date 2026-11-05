@@ -16,6 +16,8 @@ export interface CoverOption {
   abbreviation: string | null
   /** Label bawaan Detail tambahan slip, misalnya Retroactive Date. */
   detailLabels: string[]
+  /** Slip type of cover ini dibagi Section 1 dan 2, misalnya CAR dan EAR. */
+  usesSections: boolean
 }
 
 /** Pilihan deductible dari Master Data > Deductible. */

@@ -25,7 +25,13 @@ import { rateUnitFor } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data"
 import { money } from "@/lib/format"
 import type { LineItem, RateLine } from "@/lib/data/types"
-import { allowsFlatPremium, isLimitOnlyItem, itemGroups } from "@/lib/slip-items"
+import { slipSectionTitles } from "@/components/underwriting/slip-model"
+import {
+  allowsFlatPremium,
+  isLimitOnlyItem,
+  itemGroups,
+  itemSection,
+} from "@/lib/slip-items"
 
 const BASIS_ITEMS = [
   { label: "Rate", value: "rate" },
@@ -54,6 +60,7 @@ export function SlipItemRates({
   const unit = rateUnitFor(slip.cob)
   const [rateForAll, setRateForAll] = React.useState<number | null>(null)
   const flatAllowed = allowsFlatPremium(slip.cob)
+  const sectioned = slipSectionTitles(slip) !== null
   const isFlat = (l: RateLine) => flatAllowed && l.flatPremium === true
   const isLimit = (item: LineItem) => isLimitOnlyItem(slip.cob, item)
   const anyFlat = slip.rateLines.some(isFlat)
@@ -153,6 +160,11 @@ export function SlipItemRates({
                     >
                       {g.item.description.split("\n")[0].trim() ||
                         `Objek ${g.no}`}
+                    </span>
+                  ) : null}
+                  {i === 0 && sectioned ? (
+                    <span className="block text-xs text-muted-foreground">
+                      Section {itemSection(g.item)}
                     </span>
                   ) : null}
                   {/* Slip lama bisa punya lebih dari satu baris rate per objek. */}

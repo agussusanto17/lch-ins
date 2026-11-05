@@ -42,6 +42,7 @@ const lineItemSchema = z.object({
   description: z.string(),
   amount: z.coerce.number().optional(),
   limitOnly: z.boolean().optional(),
+  section: z.union([z.literal(1), z.literal(2)]).optional(),
   vehicleBrandId: z.string().nullish(),
   vehicleTypeId: z.string().nullish(),
   vehicleBrandName: z.string().nullish(),
@@ -134,6 +135,7 @@ const placingSlipSchema = z.object({
     .string()
     .max(2000, "Uraian tertanggung maksimal 2000 karakter")
     .nullish(),
+  usesSections: z.boolean().optional(),
   detailRows: z
     .array(
       z.object({
@@ -442,6 +444,7 @@ export async function duplicatePlacingSlipAction(
       expiryDate: source.expiryDate,
       periodNote: source.periodNote,
       insuredDescription: source.insuredDescription,
+      usesSections: source.usesSections,
       detailRows: source.detailRows,
       occupation: source.occupation,
       occupationLabel: source.occupationLabel,

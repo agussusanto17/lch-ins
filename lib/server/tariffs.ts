@@ -3,7 +3,7 @@ import "server-only"
 import type { PlacingSlip, RateLine, SlipLocation } from "@/lib/data/types"
 import {
   locationIssues,
-  usesSectionSumInsured,
+  slipSectionTitles,
   vehicleIssues,
 } from "@/components/underwriting/slip-model"
 import { locationOwner, slipLocations } from "@/lib/slip-locations"
@@ -250,7 +250,7 @@ export async function validatePlacingSlipForRelease(
     }
   }
   releaseIssues.push(...locationIssues(slip), ...vehicleIssues(slip))
-  if (usesSectionSumInsured(slip.cob)) {
+  if (slipSectionTitles(slip)) {
     const clauseIssues = validateClauseUniquenessAcrossSections(slip)
     if (clauseIssues.length) releaseIssues.push(...clauseIssues)
   }
