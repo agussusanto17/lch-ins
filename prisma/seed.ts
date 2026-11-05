@@ -467,6 +467,9 @@ const COB_FORM: Record<string, { rateMode: string; formVariant: string }> = {
  */
 const COVER_ABBREVIATIONS: Record<string, string> = {
   "0103": "BI",
+  // PSAGBI dipakai sebagai type of cover Earthquake; EQ supaya slip PAR + EQ
+  // bernomor PS-PAREQ seperti CI LCH (Agus, 5 November 2026).
+  "0105": "EQ",
   "0109": "PAR",
   "0110": "IAR",
   "0311": "MC",
