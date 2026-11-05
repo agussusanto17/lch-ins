@@ -8,6 +8,7 @@ import {
   BrokerageBlock,
   ClauseWordingAppendix,
   ClausesBlock,
+  CoverageBlock,
   DeductibleBlock,
   DetailTable,
   DocTitle,
@@ -122,6 +123,7 @@ export function PlacingSlipDocument(props: DocProps) {
       />
       <DetailTable slip={slip} />
       <InterestBlock slip={slip} />
+      <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
       <ClausesBlock slip={slip} />
 
@@ -157,6 +159,7 @@ export function QuotationSlipDocument(props: DocProps) {
       />
       <DetailTable slip={slip} />
       <InterestBlock slip={slip} />
+      <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
 
       {slip.subjectivity ? (
@@ -203,6 +206,7 @@ export function CoverNoteDocument(props: DocProps) {
       />
       <DetailTable slip={slip} />
       <InterestBlock slip={slip} />
+      <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
       <ClausesBlock slip={slip} inline />
 
@@ -243,6 +247,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       />
       <DetailTable slip={slip} />
       <InterestBlock slip={slip} />
+      <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
 
       {slip.subjectivity ? (
