@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-05
 - **Branch:** `fix/filter-klausula-cit-engineering`
-- **PR:** belum dibuat
+- **PR:** [#128](https://github.com/agussusanto17/lch-ins/pull/128)
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
