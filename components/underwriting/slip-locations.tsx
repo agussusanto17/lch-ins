@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { Plus, Trash2 } from "lucide-react"
 
 import { SelectInput } from "@/components/shared/form-fields"
@@ -12,11 +13,13 @@ import {
 import { CoverRateTable } from "@/components/underwriting/rate-tables"
 import {
   addLocationPatch,
+  isOutOfBounds,
   locationRowsPatch,
   occupationParts,
   removeLocationPatch,
   updateLocationPatch,
 } from "@/components/underwriting/slip-model"
+import { UnitCard } from "@/components/underwriting/unit-card"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -31,12 +34,17 @@ import {
 } from "@/lib/calc"
 import {
   CONSTRUCTION_CLASSES,
+  constructionClassLabel,
   type PlacingSlip,
   type RateException,
   type RateLine,
 } from "@/lib/data"
 import { money, num } from "@/lib/format"
-import { locationGroups, type LocationGroup } from "@/lib/slip-locations"
+import {
+  locationGroups,
+  oneLineAddress,
+  type LocationGroup,
+} from "@/lib/slip-locations"
 
 const CONSTRUCTION_ITEMS = CONSTRUCTION_CLASSES.map((c) => ({
   label: `${c.label} — ${c.description}`,
@@ -118,9 +126,47 @@ export function SlipLocations({
       ),
     })
 
+  // Kartu terbuka dicatat per urutan, bukan per id: id lokasi berganti setiap
+  // slip disimpan. Slip yang dibuka dengan beberapa lokasi mulai terlipat;
+  // lokasi yang baru ditambah langsung terbuka.
+  const [startOpen] = React.useState(() => groups.length <= 1)
+  const [openAt, setOpenAt] = React.useState<Record<number, boolean>>({})
+  const isOpen = (index: number) => openAt[index] ?? startOpen
+  const allOpen = groups.every((_, i) => isOpen(i))
+
+  function addLocation() {
+    setOpenAt((o) => ({ ...o, [groups.length]: true }))
+    onChange(addLocationPatch(slip))
+  }
+
+  function removeLocation(index: number, locationId: string) {
+    setOpenAt((o) =>
+      Object.fromEntries(
+        Object.entries(o)
+          .filter(([i]) => Number(i) !== index)
+          .map(([i, v]) => [Number(i) > index ? Number(i) - 1 : Number(i), v])
+      )
+    )
+    onChange(removeLocationPatch(slip, locationId))
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      {groups.map((g) => {
+      {multi ? (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setOpenAt(Object.fromEntries(groups.map((_, i) => [i, !allOpen])))
+            }
+          >
+            {allOpen ? "Tutup semua lokasi" : "Buka semua lokasi"}
+          </Button>
+        </div>
+      ) : null}
+      {groups.map((g, index) => {
         const { location } = g
         const key = `lokasi-${g.no}`
         const update = (patch: Parameters<typeof updateLocationPatch>[2]) =>
@@ -134,35 +180,66 @@ export function SlipLocations({
           rateLines: g.rateLines,
           indemnityPeriod: slip.indemnityPeriod,
         })
+        const incomplete =
+          !location.riskLocation.trim() ||
+          !location.occupation ||
+          !location.constructionClass ||
+          md + bi <= 0
+        const unresolved = locationLines.filter(
+          (l) => isOutOfBounds(l) && !slip.rateExceptions?.[l.id]
+        ).length
+        const facts = [
+          occupationParts(location.occupation).code,
+          location.constructionClass
+            ? constructionClassLabel(location.constructionClass)
+            : "",
+          `Sum insured ${money(md + bi, slip.currency)}`,
+          `Premi ${money(sumPremium(g.rateLines), slip.currency)}`,
+        ].filter(Boolean)
 
         return (
-          <div
+          <UnitCard
             key={location.id}
-            className="flex flex-col gap-4 rounded-xl border p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">Lokasi {g.no}</p>
-                <p className="text-xs text-muted-foreground">
-                  Sum insured {money(md + bi, slip.currency)}
-                </p>
-              </div>
-              {multi && !locked ? (
+            title={`Lokasi ${g.no}`}
+            open={isOpen(index)}
+            onOpenChange={(open) => setOpenAt((o) => ({ ...o, [index]: open }))}
+            status={
+              <>
+                {incomplete ? (
+                  <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                    Belum lengkap
+                  </span>
+                ) : null}
+                {unresolved ? (
+                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                    {unresolved} rate butuh alasan
+                  </span>
+                ) : null}
+              </>
+            }
+            summary={
+              <>
+                <span className="block truncate">
+                  {oneLineAddress(location.riskLocation) || "Alamat belum diisi"}
+                </span>
+                <span className="block">{facts.join(" · ")}</span>
+              </>
+            }
+            action={
+              multi && !locked ? (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() =>
-                    onChange(removeLocationPatch(slip, location.id))
-                  }
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => removeLocation(index, location.id)}
                 >
                   <Trash2 data-icon="inline-start" />
                   Hapus lokasi
                 </Button>
-              ) : null}
-            </div>
-
+              ) : null
+            }
+          >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Field className="md:col-span-2">
                 <FieldLabel htmlFor={`${key}-risk`}>Risk Location *</FieldLabel>
@@ -316,7 +393,7 @@ export function SlipLocations({
                 tone="muted"
               />
             ) : null}
-          </div>
+          </UnitCard>
         )
       })}
 
@@ -326,7 +403,7 @@ export function SlipLocations({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => onChange(addLocationPatch(slip))}
+            onClick={addLocation}
           >
             <Plus data-icon="inline-start" />
             Tambah lokasi

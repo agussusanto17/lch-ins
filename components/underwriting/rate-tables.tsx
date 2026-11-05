@@ -185,8 +185,12 @@ export function CoverRateTable({
               <TableRow key={l.id}>
                 <TableCell className="text-sm">
                   {l.label}
+                  {/*
+                   * Keterangan boleh pindah baris. Tanpa itu kolom Cover di
+                   * kartu lokasi melebar dan kolom Premium terpotong.
+                   */}
                   {autoNote ? (
-                    <span className="mt-1 block text-[11px] text-muted-foreground">
+                    <span className="mt-1 block text-[11px] whitespace-normal text-muted-foreground">
                       {autoNote}
                     </span>
                   ) : null}
