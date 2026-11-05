@@ -23,6 +23,8 @@ export interface ClauseListItem {
   wordingHtml: string
   cobName: string | null
   coverTypeName: string | null
+  inPackage: boolean
+  packageGroup: string | null
 }
 
 /** Ubah filter jadi where Prisma. Nilai kosong berarti tidak menyaring. */
@@ -71,6 +73,8 @@ export async function listClauses(filter: ClauseFilter) {
     wordingHtml: c.wordingHtml,
     cobName: c.cob?.name ?? null,
     coverTypeName: c.coverType?.name ?? null,
+    inPackage: c.inPackage,
+    packageGroup: c.packageGroup,
   }))
 
   return {
@@ -123,6 +127,10 @@ export interface ClauseInput {
   sourceGroup: string
   cobId: string | null
   coverTypeId: string | null
+  /** Paket klausul bawaan; tidak dikirim berarti tidak masuk paket. */
+  inPackage?: boolean
+  packageGroup?: string | null
+  packageOrder?: number | null
 }
 
 /** Rapikan dan validasi isian sebelum disimpan. */
@@ -137,6 +145,12 @@ function normalize(input: ClauseInput) {
   const sanitized = sanitizeHtml(input.wordingHtml).trim()
   const wordingHtml = wordingText(sanitized) ? sanitized : ""
 
+  const packageGroup = input.packageGroup?.trim() ?? ""
+  if (packageGroup.length > 200) {
+    throw new Error("Kelompok di paket maksimal 200 karakter.")
+  }
+  const order = Number(input.packageOrder ?? 0)
+
   return {
     title,
     wordingHtml,
@@ -144,6 +158,12 @@ function normalize(input: ClauseInput) {
     cobId: input.cobId || null,
     // Type of cover hanya berarti kalau COB-nya dipilih.
     coverTypeId: (input.cobId && input.coverTypeId) || null,
+    // Klausul untuk semua class tidak masuk paket: paketnya per type of cover.
+    inPackage: input.inPackage === true && Boolean(input.cobId),
+    packageGroup: packageGroup || null,
+    packageOrder: Number.isFinite(order)
+      ? Math.min(9999, Math.max(0, Math.round(order)))
+      : 0,
   }
 }
 

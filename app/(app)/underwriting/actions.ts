@@ -35,6 +35,10 @@ export interface ClausePickerItem {
   sourceGroup: string
   cobName: string | null
   coverTypeName: string | null
+  /** Masuk paket klausul bawaan, dengan kelompok dan urutannya. */
+  inPackage?: boolean
+  packageGroup?: string | null
+  packageOrder?: number
 }
 
 const lineItemSchema = z.object({
@@ -517,6 +521,9 @@ export async function getClausesForPickerAction(): Promise<ActionResponse<Clause
         title: true,
         wordingHtml: true,
         sourceGroup: true,
+        inPackage: true,
+        packageGroup: true,
+        packageOrder: true,
         cob: { select: { name: true } },
         coverType: { select: { name: true } },
       },
@@ -530,6 +537,9 @@ export async function getClausesForPickerAction(): Promise<ActionResponse<Clause
       sourceGroup: r.sourceGroup,
       cobName: r.cob?.name ?? null,
       coverTypeName: r.coverType?.name ?? null,
+      inPackage: r.inPackage,
+      packageGroup: r.packageGroup,
+      packageOrder: r.packageOrder,
     }))
 
     return { ok: true, data: items }

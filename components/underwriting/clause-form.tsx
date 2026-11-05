@@ -33,7 +33,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { Switch } from "@/components/ui/switch"
+import {
+  CLAUSE_GROUP_SUGGESTIONS,
+  CLAUSE_GROUP_TITLE_MAX,
+} from "@/lib/clause-groups"
 import {
   Select,
   SelectContent,
@@ -53,6 +59,9 @@ export interface ClauseFormValue {
   sourceGroup: string
   cobId: string | null
   coverTypeId: string | null
+  inPackage: boolean
+  packageGroup: string | null
+  packageOrder: number
 }
 
 export function ClauseForm({
@@ -82,6 +91,13 @@ export function ClauseForm({
   const [cobId, setCobId] = React.useState(clause?.cobId ?? "")
   const [coverTypeId, setCoverTypeId] = React.useState(
     clause?.coverTypeId ?? ""
+  )
+  const [inPackage, setInPackage] = React.useState(clause?.inPackage ?? false)
+  const [packageGroup, setPackageGroup] = React.useState(
+    clause?.packageGroup ?? ""
+  )
+  const [packageOrder, setPackageOrder] = React.useState<number | null>(
+    clause?.packageOrder ?? null
   )
   const [saving, setSaving] = React.useState(false)
 
@@ -116,6 +132,9 @@ export function ClauseForm({
       sourceGroup,
       cobId: cobId || null,
       coverTypeId: coverTypeId || null,
+      inPackage,
+      packageGroup,
+      packageOrder: packageOrder ?? 0,
     })
     setSaving(false)
 
@@ -266,6 +285,71 @@ export function ClauseForm({
                 </p>
               </Field>
             </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Paket Klausul"
+          description="Klausul paket dipasang sekaligus lewat tombol Pasang paket klausula di placing slip, untuk type of cover di atas atau semua type of cover class ini bila kosong."
+        >
+          <div className="flex flex-col gap-4">
+            <Field orientation="horizontal">
+              <Switch
+                id="cl-in-package"
+                checked={inPackage}
+                disabled={!canManageEffective || !cobId}
+                onCheckedChange={setInPackage}
+              />
+              <FieldLabel htmlFor="cl-in-package" className="font-normal">
+                Masuk paket klausul bawaan
+              </FieldLabel>
+            </Field>
+            {!cobId ? (
+              <p className="text-xs text-muted-foreground">
+                Pilih class of business dulu. Klausul untuk semua class tidak
+                masuk paket.
+              </p>
+            ) : null}
+            {inPackage && cobId ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <Field className="md:col-span-2">
+                  <FieldLabel htmlFor="cl-package-group">
+                    Kelompok di slip
+                  </FieldLabel>
+                  <Input
+                    id="cl-package-group"
+                    list="cl-package-group-options"
+                    maxLength={CLAUSE_GROUP_TITLE_MAX}
+                    value={packageGroup}
+                    placeholder="Kosongkan bila tanpa judul kelompok"
+                    disabled={!canManageEffective}
+                    onChange={(e) => setPackageGroup(e.target.value)}
+                  />
+                  <datalist id="cl-package-group-options">
+                    {CLAUSE_GROUP_SUGGESTIONS.map((t) => (
+                      <option key={t} value={t} />
+                    ))}
+                  </datalist>
+                  <p className="text-xs text-muted-foreground">
+                    Misalnya Extensions atau General Conditions. Hanya dipakai
+                    slip tanpa section.
+                  </p>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="cl-package-order">Urutan</FieldLabel>
+                  <NumberInput
+                    id="cl-package-order"
+                    value={packageOrder}
+                    placeholder="0"
+                    disabled={!canManageEffective}
+                    onValueChange={(v) => setPackageOrder(v)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Kecil lebih dulu. Urutan sama diurutkan menurut judul.
+                  </p>
+                </Field>
+              </div>
+            ) : null}
           </div>
         </SectionCard>
 

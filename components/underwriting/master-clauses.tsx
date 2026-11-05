@@ -197,7 +197,14 @@ export function MasterClauses({
                     <RowActions actions={actionsFor(c)} />
                   </TableCell>
                   <TableCell className="max-w-120 whitespace-normal">
-                    <p className="font-medium">{c.title}</p>
+                    <p className="font-medium">
+                      {c.title}
+                      {c.inPackage ? (
+                        <Badge variant="outline" className="ml-2 align-middle">
+                          Paket{c.packageGroup ? ` · ${c.packageGroup}` : ""}
+                        </Badge>
+                      ) : null}
+                    </p>
                     <p className="line-clamp-2 text-xs text-muted-foreground">
                       {wordingText(c.wordingHtml)}
                     </p>

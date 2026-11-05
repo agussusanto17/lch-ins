@@ -4,6 +4,8 @@ import test from "node:test"
 import {
   cleanClauseGroups,
   clauseGroupBlocks,
+  installPackage,
+  packageToInstall,
   groupedClauseOrder,
   hasClauseGroups,
   moveClause,
@@ -62,4 +64,22 @@ test("peta kelompok yang disimpan: hanya klausul terpilih dengan judul", () => {
   })
   assert.equal(cleanClauseGroups(["x"], {}), undefined)
   assert.equal(cleanClauseGroups(["x"], { x: "a".repeat(250) })?.x.length, 200)
+})
+
+test("paket klausul: urut paket lalu judul, tanpa yang sudah terpasang", () => {
+  const master = [
+    { id: "b", title: "B clause", inPackage: true, packageOrder: 2, packageGroup: "General Conditions" },
+    { id: "a", title: "A clause", inPackage: true, packageOrder: 2, packageGroup: "General Conditions" },
+    { id: "x", title: "X clause", inPackage: true, packageOrder: 1, packageGroup: "Extensions" },
+    { id: "n", title: "Not in package", inPackage: false },
+    { id: "s", title: "Selected", inPackage: true, packageOrder: 0 },
+  ]
+  const picked = packageToInstall(master, ["s"])
+  assert.deepEqual(picked.map((c) => c.id), ["x", "a", "b"])
+  // Slip dengan kelompok: klausul paket masuk kelompoknya.
+  const grouped = installPackage(["s"], undefined, picked, true)
+  assert.deepEqual(grouped.ids, ["s", "x", "a", "b"])
+  assert.deepEqual(grouped.groups, { x: "Extensions", a: "General Conditions", b: "General Conditions" })
+  // Slip ber-section: tanpa kelompok, ditambah di akhir.
+  assert.deepEqual(installPackage(["s"], undefined, picked, false), { ids: ["s", "x", "a", "b"], groups: undefined })
 })

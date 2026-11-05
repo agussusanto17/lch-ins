@@ -795,6 +795,14 @@ model Clause {
   /// aplikasi. Dipakai membedakan 66 judul yang dipakai beberapa produk dengan
   /// wording berbeda, dan jadi dasar pemetaan ke COB (CLAUSE_GROUP_COB di seed).
   sourceGroup String  @default("") @map("source_group")
+  /// Masuk paket klausul bawaan type of cover-nya, atau semua type of cover
+  /// COB-nya bila type of cover kosong. Satu tombol di placing slip memasang
+  /// semua klausul paket (analisa contoh slip LCH: 40 sampai 62 klausul).
+  inPackage    Boolean @default(false) @map("in_package")
+  /// Judul kelompok saat dipasang dari paket, misalnya "Extensions".
+  packageGroup String? @map("package_group")
+  /// Urutan di paket: kecil lebih dulu, lalu judul.
+  packageOrder Int     @default(0) @map("package_order")
   isActive    Boolean @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
