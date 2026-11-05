@@ -72,7 +72,7 @@ Keputusan dari usulan yang dipakai di sini:
 
 ## File utama
 
-- `prisma/schema.prisma` dan migrasi `20261105233000_lokasi_slip_property`:
+- `prisma/schema.prisma` dan migrasi `20261105234500_lokasi_slip_property`:
   tabel `slip_locations`, kolom `location_id`, dan pemindahan slip lama.
 - `lib/slip-locations.ts`: pengelompokan baris per lokasi, normalisasi slip,
   dan teks risk location bernomor. Dipakai form, perhitungan, server, dan
@@ -136,12 +136,11 @@ Keputusan dari usulan yang dipakai di sini:
 - **Bergantung pada [#127](https://github.com/agussusanto17/lch-ins/pull/127):**
   branch ini dibuat di atas `fix/premi-bi-tanpa-section-2`, jadi #127 perlu
   di-merge dulu.
-- **[#126](https://github.com/agussusanto17/lch-ins/pull/126):** mengubah
-  rate dokumen menjadi per mil. Tabel premi multi lokasi memakai teks rate
-  dari `calculateParEqvet`, jadi otomatis ikut. Setelah #126 dan #127
-  di-merge, `ratePermil` dan `rateText` di `calculateParEqvet` perlu memakai
-  rate yang sudah dijaga (`rate`), bukan `l.rate`. Tanpa itu rate BI lama
-  dari slip tanpa Section 2 tetap tercetak di baris PREMIUM CALCULATION.
+- **Rate per mil:** sejak
+  [#126](https://github.com/agussusanto17/lch-ins/pull/126) dokumen mencetak
+  rate per mil. Kolom Rate tabel premi multi lokasi memakai `rateText` dari
+  `calculateParEqvet`, jadi ikut per mil, misalnya `0,368000‰`. Baris dengan
+  loss limit ditulis `0,450000‰ × 85%`.
 - **Slip contoh:** slip dari seed data contoh tidak punya baris lokasi.
   `slipLocations` membacanya sebagai satu lokasi dari isian slip, dan lokasi
   itu baru tersimpan saat slip disimpan ulang.
