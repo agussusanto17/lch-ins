@@ -1,6 +1,7 @@
 import "server-only"
 
 import { prisma } from "@/lib/prisma"
+import { wordingText } from "@/lib/data/clauses"
 import { sanitizeHtml } from "@/lib/sanitize"
 
 /** Pilihan jumlah clause per halaman, sama dengan pilihan di TablePagination. */
@@ -131,10 +132,10 @@ function normalize(input: ClauseInput) {
 
   // Wording datang dari rich text editor, jadi HTML-nya disanitasi lagi di
   // server. Sanitasi di klien hanya lapis render, bukan pengaman.
-  const wordingHtml = sanitizeHtml(input.wordingHtml).trim()
-  if (!wordingHtml || wordingHtml === "<p></p>") {
-    throw new Error("Wording clause wajib diisi.")
-  }
+  // Wording boleh kosong: banyak klausul marine dan liability di CI LCH hanya
+  // dicetak judulnya (analisa contoh slip, 6 November 2026).
+  const sanitized = sanitizeHtml(input.wordingHtml).trim()
+  const wordingHtml = wordingText(sanitized) ? sanitized : ""
 
   return {
     title,

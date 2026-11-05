@@ -21,7 +21,9 @@ import {
   type ClassOfBusiness,
   type ClauseOverride,
 } from "@/lib/data"
+import { useFormOptions } from "@/components/shared/form-options-provider"
 import { clauseFitsSlip } from "@/lib/clause-filter"
+import { coversFor } from "@/lib/form-options"
 import { cn } from "@/lib/utils"
 import {
   getClausesForPickerAction,
@@ -108,18 +110,24 @@ export function ClausePicker({
     [pool]
   )
 
+  const options = useFormOptions()
+  const knownCovers = React.useMemo(
+    () => coversFor(options, cob).map((c) => c.name),
+    [options, cob]
+  )
+
   const available = React.useMemo(() => {
     const q = query.trim().toLowerCase()
     const slipCovers = [typeOfCover, typeOfCover2 ?? ""]
     return pool.filter((c) => {
-      if (!clauseFitsSlip(c, cob, slipCovers)) return false
+      if (!clauseFitsSlip(c, cob, slipCovers, knownCovers)) return false
       if (!q) return true
       return (
         c.title.toLowerCase().includes(q) ||
         (plainWording.get(c.id) ?? "").toLowerCase().includes(q)
       )
     })
-  }, [pool, plainWording, cob, typeOfCover, typeOfCover2, query])
+  }, [pool, plainWording, cob, typeOfCover, typeOfCover2, knownCovers, query])
 
   const selectedClauses = React.useMemo(() => {
     const inactive = Object.entries(copies ?? {})

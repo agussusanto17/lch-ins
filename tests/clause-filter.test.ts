@@ -66,3 +66,26 @@ test("Engineering clauses without a type of cover fit every Engineering slip", (
     assert.equal(clauseFitsSlip(engineering, "ENGINEERING", [cover]), true)
   }
 })
+
+const hull = { cobName: "MARINE HULL", coverTypeName: "Marine Hull" }
+const HULL_COVERS = ["Marine Hull", "Marine Hull Single Voyage", "Marine Builder Risk"]
+
+test("klausul satu type of cover tidak bocor ke type of cover yang namanya mirip", () => {
+  assert.equal(clauseFitsSlip(hull, "MARINE HULL", ["Marine Hull"], HULL_COVERS), true)
+  assert.equal(
+    clauseFitsSlip(hull, "MARINE HULL", ["Marine Hull Single Voyage"], HULL_COVERS),
+    false
+  )
+  const singleVoyage = { cobName: "MARINE HULL", coverTypeName: "Marine Hull Single Voyage" }
+  assert.equal(clauseFitsSlip(singleVoyage, "MARINE HULL", ["Marine Hull"], HULL_COVERS), false)
+})
+
+test("slip lama dengan nama type of cover di luar master tetap cocok sebagian", () => {
+  const marineCargo = { cobName: "MARINE CARGO", coverTypeName: "Marine Cargo" }
+  const known = ["Marine Cargo", "Marine Cargo Open Cover", "Cash In Transit"]
+  assert.equal(
+    clauseFitsSlip(marineCargo, "MARINE CARGO", ["Marine Cargo — Institute Cargo Clauses (A)"], known),
+    true
+  )
+  assert.equal(clauseFitsSlip(marineCargo, "MARINE CARGO", ["Marine Cargo Open Cover"], known), false)
+})
