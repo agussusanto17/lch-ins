@@ -22,8 +22,9 @@ inputan, jadi rate juga per mil (5 November 2026).
 - **PREMIUM CALCULATION** mencetak `IDR … x 0,803700‰ =`.
 - Persentase loss limit, skala BI, diskon, dan brokerage tetap persen.
 - Nilai premi tidak berubah. Perhitungan tetap memakai rate per mil ÷ 10.
-- Berlaku di semua dokumen yang memakai blok rate PAR/EQVET (Placing Slip dan
-  Closing Instruction Property).
+- Berlaku di semua dokumen Property yang memakai blok rate PAR/EQVET: Placing
+  Slip, Quotation Slip, Cover Note, dan Closing Instruction. COB lain tetap
+  memakai tabel RATE & PREMIUM dengan satuannya sendiri.
 
 ## File utama
 
@@ -44,10 +45,18 @@ inputan, jadi rate juga per mil (5 November 2026).
 2. Buka dokumen slip Property, misalnya `/underwriting/slip/<id>`. Bagian RATE
    dan PREMIUM CALCULATION menampilkan `‰`, dan premi sama dengan sebelumnya
    (contoh: IDR 365.500.000.000,00 x 0,893000‰ = IDR 326.391.500,00).
+3. Isi Loss Limit 85% pada FLEXAS di form slip Property draft, simpan, lalu
+   buka dokumennya. RATE tampil `0,893000‰ × 85% = 0,759050‰`, BI PAR
+   otomatis `0,836050‰`, dan PREMIUM CALCULATION
+   `IDR 60.500.000.000,00 x 0,893000‰ x 85% = IDR 45.922.525,00`. Hasil sama di
+   Quotation Slip, Cover Note, dan Closing Instruction.
+4. Buka dokumen slip non-Property (misalnya Motor Vehicle). Kolom rate tetap
+   `Rate (%)`.
 
 ## Catatan untuk yang melanjutkan
 
 - Ini menggantikan keputusan "dokumen tetap persen" di
   [rate-bi-otomatis-loss-limit-per-rate-2026-11-05.md](rate-bi-otomatis-loss-limit-per-rate-2026-11-05.md).
-- Baris dengan loss limit belum dicoba di browser karena database lokal tidak
-  punya slip ber-loss limit. Rumusnya sama dengan baris tanpa loss limit.
+- Premi per baris diambil dari kolom `premium` yang disimpan form. Kalau
+  `loss_limit_pct` diubah langsung di database tanpa lewat form, rumus di
+  dokumen ikut berubah, tapi premi tetap nilai lama.
