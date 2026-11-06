@@ -1,12 +1,16 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft, Printer } from "lucide-react"
+import { useSyncExternalStore } from "react"
+import { ArrowLeft, Printer, TriangleAlert } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { LchLogo } from "@/components/documents/letterhead"
 import { PrintedAt } from "@/components/documents/printed-at"
+import { repeatsPrintHeaderFooter } from "@/lib/print-support"
+
+const noSubscribe = () => () => {}
 
 export function DocumentShell({
   backHref,
@@ -18,6 +22,14 @@ export function DocumentShell({
   /** Dokumen tabel lebar (misal rekap sheet Excel) memakai kontainer lebih longgar. */
   wide?: boolean
 }) {
+  // Server dan render pertama menganggap browser mendukung, jadi tidak ada
+  // hydration mismatch; peringatan baru muncul setelah user agent terbaca.
+  const repeatsHeaderFooter = useSyncExternalStore(
+    noSubscribe,
+    () => repeatsPrintHeaderFooter(navigator.userAgent),
+    () => true
+  )
+
   return (
     <div
       className={cn(
@@ -35,10 +47,19 @@ export function DocumentShell({
           <ArrowLeft data-icon="inline-start" />
           Kembali
         </Button>
-        <Button size="sm" onClick={() => window.print()}>
-          <Printer data-icon="inline-start" />
-          Print / Save PDF
-        </Button>
+        <div className="flex items-center gap-3">
+          {repeatsHeaderFooter ? null : (
+            <p className="flex max-w-xs items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+              Safari hanya mencetak kop dan footer sekali. Cetak lewat Chrome
+              atau Edge supaya muncul di setiap halaman.
+            </p>
+          )}
+          <Button size="sm" onClick={() => window.print()}>
+            <Printer data-icon="inline-start" />
+            Print / Save PDF
+          </Button>
+        </div>
       </div>
 
       <article className="print-sheet rounded-2xl border bg-card p-8 text-card-foreground shadow-sm md:p-12 overflow-hidden print:overflow-visible">

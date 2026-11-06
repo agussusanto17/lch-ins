@@ -101,6 +101,15 @@ export function oneLineAddress(text: string) {
     .join(", ")
 }
 
+/** Alamat untuk dokumen: baris isian user dipertahankan, spasi tepi dan baris kosong dibuang. */
+export function addressLines(text: string) {
+  return text
+    .split("\n")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join("\n")
+}
+
 /**
  * Risk location slip: alamat lokasi pertama, atau semua alamat bernomor satu
  * per baris bila lokasinya lebih dari satu. Dipakai polis, daftar slip, dan
