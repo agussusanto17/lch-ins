@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `fix/security-satu-asuransi`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#157](https://github.com/agussusanto17/lch-ins/pull/157)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
