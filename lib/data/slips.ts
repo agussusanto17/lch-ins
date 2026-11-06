@@ -1,6 +1,9 @@
 import { recalcSlip } from "../calc"
 import type { PlacingSlip } from "./types"
 
+// Kalimat pengantar deductible slip Property contoh, sama dengan CI LCH.
+const ANY_ONE_LOSS = "Any one loss or series of losses arising out of any one event:"
+
 const SEED: PlacingSlip[] = [
   {
     id: "s-001",
@@ -199,6 +202,7 @@ const SEED: PlacingSlip[] = [
     ],
     specialConditions:
       "Subject to satisfactory risk survey report and implementation of fire protection recommendations within 90 days from inception.",
+    deductibleIntro: ANY_ONE_LOSS,
     clauseIds: [
       "cl-01",
       "cl-02",
@@ -650,6 +654,7 @@ const SEED: PlacingSlip[] = [
     ],
     specialConditions:
       "Wajib melampirkan sertifikat kalibrasi boiler dan hasil thermography panel listrik tahunan.",
+    deductibleIntro: ANY_ONE_LOSS,
     clauseIds: [
       "cl-02",
       "cl-04",
@@ -764,6 +769,7 @@ const SEED: PlacingSlip[] = [
         amount: 19_000_000_000,
       },
     ],
+    deductibleIntro: ANY_ONE_LOSS,
     clauseIds: [
       "cl-01",
       "cl-04",

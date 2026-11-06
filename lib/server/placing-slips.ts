@@ -101,6 +101,7 @@ export interface PlacingSlipInput {
   interestSection1?: string | null
   interestSection2?: string | null
   specialConditions?: string | null
+  deductibleIntro?: string | null
   exclusions?: string | null
   interestItems?: LineItem[]
   sumInsuredSection1?: LineItem[]
@@ -573,6 +574,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     interestSection1: raw.interestSection1 || undefined,
     interestSection2: raw.interestSection2 || undefined,
     specialConditions: raw.specialConditions || undefined,
+    deductibleIntro: raw.deductibleIntro || undefined,
     exclusions: raw.exclusions || undefined,
     interestItems,
     sumInsuredSection1,
@@ -1049,6 +1051,7 @@ export async function createPlacingSlip(
         interestSection1: input.interestSection1?.trim() || null,
         interestSection2: input.interestSection2?.trim() || null,
         specialConditions: input.specialConditions?.trim() || null,
+        deductibleIntro: input.deductibleIntro?.trim() || null,
         exclusions: input.exclusions?.trim() || null,
         discountPct: new Prisma.Decimal(input.discountPct ?? 0),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
@@ -1426,6 +1429,7 @@ export async function updatePlacingSlip(
         interestSection1: input.interestSection1?.trim() || null,
         interestSection2: input.interestSection2?.trim() || null,
         specialConditions: input.specialConditions?.trim() || null,
+        deductibleIntro: input.deductibleIntro?.trim() || null,
         exclusions: input.exclusions?.trim() || null,
         discountPct: new Prisma.Decimal(input.discountPct ?? 0),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
@@ -1960,6 +1964,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             interestSection1: mock.interestSection1 || null,
             interestSection2: mock.interestSection2 || null,
             specialConditions: mock.specialConditions || null,
+            deductibleIntro: mock.deductibleIntro || null,
             discountPct: new Prisma.Decimal(mock.discountPct || 0),
             adminCost: new Prisma.Decimal(mock.adminCost || 0),
             stampDuty: new Prisma.Decimal(mock.stampDuty || 0),

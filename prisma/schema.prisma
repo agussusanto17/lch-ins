@@ -1119,6 +1119,9 @@ model PlacingSlip {
   interestSection1  String? @map("interest_section1")
   interestSection2  String? @map("interest_section2")
   specialConditions String? @map("special_conditions")
+  /// Kalimat di atas daftar deductible, diketik user, misalnya "Any one loss
+  /// or series of losses arising out of any one event:". Kosong = tidak dicetak.
+  deductibleIntro   String? @map("deductible_intro")
   /// Exclusion slip, satu per baris dengan nomor yang diketik sendiri, dicetak
   /// sebagai blok EXCLUSIONS setelah CLAUSES (CI CGL Orela, PL Infiniti).
   exclusions        String?
