@@ -115,8 +115,8 @@ export function InsuredPicker({
 
       {/*
        * CI LCH sering menulis tertanggung lebih dari satu baris, misalnya
-       * daftar pihak a), b), c) di CGL Orela. Nama tetap dicetak kapital;
-       * uraian ini dicetak di bawahnya dengan huruf apa adanya.
+       * daftar pihak a), b), c) di CGL Orela. Nama dan uraian dicetak persis
+       * seperti diketik; uraian di bawah nama.
        */}
       <Field className="md:col-span-2">
         <FieldLabel htmlFor="insured-desc">Uraian tertanggung di dokumen</FieldLabel>

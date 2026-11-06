@@ -43,10 +43,10 @@ import {
 } from "@/lib/data"
 import { CURRENCY_SYMBOL, money, moneyCents, num } from "@/lib/format"
 import {
+  addressLines,
   isMultiLocation,
   locationGroups,
   locationsShareRates,
-  oneLineAddress,
   type LocationGroup,
 } from "@/lib/slip-locations"
 import { printedDetailRows } from "@/lib/slip-details"
@@ -127,8 +127,8 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
   rows.push(
     [
       "Insured Name",
-      // Uraian tertanggung dicetak di bawah nama dengan huruf apa adanya.
-      [slip.insuredName.toUpperCase() || "—", slip.insuredDescription?.trim()]
+      // Nama dan uraian tertanggung dicetak persis seperti isian user.
+      [slip.insuredName.trim() || "—", slip.insuredDescription?.trim()]
         .filter(Boolean)
         .join("\n"),
     ],
@@ -140,7 +140,8 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
   } else {
     const occupation = slipOccupationText(slip)
     if (occupation) rows.push(["Occupation", occupation])
-    if (slip.riskLocation) rows.push(["Risk Location", slip.riskLocation])
+    const location = addressLines(slip.riskLocation ?? "")
+    if (location) rows.push(["Risk Location", location])
     if (slip.cob === "Property" && slip.constructionClass)
       rows.push([
         "Construction Class",
@@ -172,10 +173,11 @@ function locationRows(slip: PlacingSlip): [string, string[]][] {
     ],
     [
       "Risk(s) Location",
+      // Baris alamat mengikuti isian user; sum insured di baris sendiri.
       groups.map((g) => {
-        const address = oneLineAddress(g.location.riskLocation).replace(/\.$/, "")
+        const address = addressLines(g.location.riskLocation)
         const amount = sumItems(g.section1) + sumItems(g.section2)
-        return `${address || "—"}. Sum Insured: ${money(amount, slip.currency)}`
+        return `${address || "—"}\nSum Insured: ${money(amount, slip.currency)}`
       }),
     ],
   ]
