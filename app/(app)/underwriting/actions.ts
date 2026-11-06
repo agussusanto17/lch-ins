@@ -60,6 +60,25 @@ const lineItemSchema = z.object({
   locationId: z.string().nullish(),
 })
 
+const participantText = z.string().max(200, "Isian peserta maksimal 200 karakter").optional()
+
+/** Peserta PA grup: data per orang, dicetak di lampiran slip. */
+const participantSchema = z.object({
+  id: z.string(),
+  name: z.string().trim().min(1, "Nama peserta wajib diisi").max(200, "Nama peserta maksimal 200 karakter"),
+  idNumber: participantText,
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal lahir peserta tidak valid")
+    .nullish(),
+  gender: participantText,
+  position: participantText,
+  level: participantText,
+  workLocation: participantText,
+  sumInsured: z.coerce.number().min(0, "Sum insured peserta tidak boleh negatif"),
+  beneficiary: participantText,
+})
+
 const rateLineSchema = z
   .object({
     id: z.string(),
@@ -189,6 +208,10 @@ const placingSlipSchema = z.object({
         wording: z.string(),
       })
     )
+    .optional(),
+  participants: z
+    .array(participantSchema)
+    .max(5000, "Peserta maksimal 5.000 orang")
     .optional(),
   clauseGroups: z
     .record(
@@ -491,6 +514,7 @@ export async function duplicatePlacingSlipAction(
       clauseIds: source.clauseIds,
       clauseOverrides: source.clauseOverrides,
       clauseGroups: source.clauseGroups,
+      participants: source.participants,
       clauseIdsSection2: source.clauseIdsSection2,
       clauseOverridesSection2: source.clauseOverridesSection2,
       clauseIdsGeneral: source.clauseIdsGeneral,

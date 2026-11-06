@@ -18,6 +18,7 @@ import {
   type SecurityPanelRow,
   type SlipDetailRow,
   type SlipLocation,
+  type SlipParticipant,
 } from "@/lib/data/types"
 import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
 import { CLIENTS } from "@/lib/data/clients"
@@ -30,6 +31,7 @@ import {
 } from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
 import { cleanDetailRows } from "@/lib/slip-details"
+import { PARTICIPANT_LIMITS } from "@/lib/slip-participants"
 import { cleanClauseGroups, groupedClauseOrder } from "@/lib/clause-groups"
 import { usesItemRates } from "@/lib/slip-items"
 import { slipRiskLocationText } from "@/lib/slip-locations"
@@ -110,6 +112,8 @@ export interface PlacingSlipInput {
   clauseIds?: string[]
   clauseOverrides?: Record<string, ClauseOverride>
   clauseGroups?: Record<string, string>
+  /** Peserta PA grup. Undefined berarti tidak diubah. */
+  participants?: SlipParticipant[]
   clauseIdsSection2?: string[]
   clauseOverridesSection2?: Record<string, ClauseOverride>
   clauseIdsGeneral?: string[]
@@ -369,7 +373,27 @@ type PrismaPlacingSlipWithRelations = Prisma.PlacingSlipGetPayload<{
   }
 }>
 
-function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRecord {
+/** Baris peserta dari database; hanya dimuat oleh detail slip. */
+type ParticipantRow = Prisma.SlipParticipantGetPayload<object>
+
+function toParticipant(p: ParticipantRow): SlipParticipant {
+  return {
+    id: p.id,
+    name: p.name,
+    idNumber: p.idNumber ?? undefined,
+    birthDate: p.birthDate ? p.birthDate.toISOString().slice(0, 10) : null,
+    gender: p.gender ?? undefined,
+    position: p.position ?? undefined,
+    level: p.level ?? undefined,
+    workLocation: p.workLocation ?? undefined,
+    sumInsured: Number(p.sumInsured),
+    beneficiary: p.beneficiary ?? undefined,
+  }
+}
+
+function toPlacingSlipRecord(
+  raw: PrismaPlacingSlipWithRelations & { participants?: ParticipantRow[] }
+): PlacingSlipRecord {
   const normCob = normalizeCob(raw.cob.name as CobType)
 
   // Items grouping
@@ -585,6 +609,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     clauseOverrides: clauses1.overrides,
     clauseCopies: clauses1.copies,
     clauseGroups: clauses1.groups,
+    participants: raw.participants?.map(toParticipant),
     clauseIdsSection2: clauses2.ids,
     clauseOverridesSection2: clauses2.overrides,
     clauseCopiesSection2: clauses2.copies,
@@ -742,6 +767,7 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
       clauses: {
         orderBy: { sortOrder: "asc" },
       },
+      participants: { orderBy: { sortOrder: "asc" } },
       wordingForms: {
         include: { wordingForm: { select: { id: true, name: true } } },
       },
@@ -979,6 +1005,35 @@ async function insertSlipClauses(
       }
     }
   }
+}
+
+/**
+ * Ganti seluruh peserta PA grup slip. Isian teks dirapikan dan dipotong sesuai
+ * batas; urutan disimpan sebagai sort_order.
+ */
+async function replaceParticipants(
+  tx: Prisma.TransactionClient,
+  slipId: string,
+  list: SlipParticipant[]
+) {
+  await tx.slipParticipant.deleteMany({ where: { slipId } })
+  if (!list.length) return
+  const text = (v?: string | null) => v?.trim().slice(0, PARTICIPANT_LIMITS.text) || null
+  await tx.slipParticipant.createMany({
+    data: list.slice(0, PARTICIPANT_LIMITS.rows).map((p, i) => ({
+      slipId,
+      name: p.name.trim().slice(0, PARTICIPANT_LIMITS.text),
+      idNumber: text(p.idNumber),
+      birthDate: p.birthDate ? new Date(`${p.birthDate}T00:00:00Z`) : null,
+      gender: text(p.gender),
+      position: text(p.position),
+      level: text(p.level),
+      workLocation: text(p.workLocation),
+      sumInsured: new Prisma.Decimal(Math.max(0, p.sumInsured || 0)),
+      beneficiary: text(p.beneficiary),
+      sortOrder: i,
+    })),
+  })
 }
 
 export async function createPlacingSlip(
@@ -1300,6 +1355,9 @@ export async function createPlacingSlip(
 
     // Insert clauses
     await insertSlipClauses(tx, slip.id, resolvedCob.name, input)
+    if (input.participants?.length) {
+      await replaceParticipants(tx, slip.id, input.participants)
+    }
 
     // Insert wording forms
     if (input.wordingForms && input.wordingForms.length > 0) {
@@ -1683,6 +1741,10 @@ export async function updatePlacingSlip(
     // Refresh clauses
     await tx.slipClause.deleteMany({ where: { slipId: id } })
     await insertSlipClauses(tx, id, resolvedCob.name, input)
+    // Peserta hanya diganti bila dikirim; slip dari daftar tidak memuatnya.
+    if (input.participants !== undefined) {
+      await replaceParticipants(tx, id, input.participants)
+    }
 
     // Refresh wording forms
     await tx.slipWordingForm.deleteMany({ where: { slipId: id } })

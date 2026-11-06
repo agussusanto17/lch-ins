@@ -29,6 +29,7 @@ import {
 import { addDays, todayIso } from "@/lib/date"
 import { dateEn, normalizeCob } from "@/lib/format"
 import { withDetailLabels } from "@/lib/slip-details"
+import { participantIssues } from "@/lib/slip-participants"
 import {
   isMultiLocation,
   locationGroups,
@@ -790,6 +791,7 @@ export function releaseIssues(slip: PlacingSlip) {
   const rateIssue = missingRateIssue(slip)
   if (rateIssue) issues.push(rateIssue)
   issues.push(...coverNameIssues(slip))
+  issues.push(...participantIssues(slip))
 
   // Primary rate lines receive bounds based on COB. TPL and PA apply only to
   // Motor Vehicle, where bounds are resolved per section rather than raw labels alone.
