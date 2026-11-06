@@ -1474,11 +1474,56 @@ model Policy {
   files         PolicyFile[]
   claims        Claim[]
   debitNotes    DebitNote[]
+  /// Daftar peserta PA grup milik polis ini (polis Baru atau Renewal).
+  participants        PolicyParticipant[] @relation("policyParticipants")
+  /// Peserta yang ditambah atau dikurangi oleh polis endorsement ini.
+  participantsAdded   PolicyParticipant[] @relation("participantsAdded")
+  participantsRemoved PolicyParticipant[] @relation("participantsRemoved")
 
   @@unique([parentPolicyId, endorsementSeq])
   @@index([clientId])
   @@index([expiryDate])
   @@map("policies")
+}
+
+/// Peserta PA grup per polis (jawaban Harry, 6 November 2026): disalin dari
+/// slip saat polis dibuat, lalu bertambah atau berkurang lewat endorsement.
+/// Klaim PA nantinya menunjuk peserta ini.
+model PolicyParticipant {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Polis pemilik daftar: polis Baru atau Renewal, bukan endorsement.
+  policyId          String    @map("policy_id") @db.Uuid
+  name              String
+  /// NIK atau nomor paspor.
+  idNumber          String?   @map("id_number")
+  birthDate         DateTime? @map("birth_date") @db.Date
+  gender            String?
+  position          String?
+  level             String?
+  workLocation      String?   @map("work_location")
+  sumInsured        Decimal   @default(0) @map("sum_insured") @db.Decimal(18, 2)
+  beneficiary       String?
+  sortOrder         Int       @default(0) @map("sort_order")
+  /// Mulai dijamin: tanggal mulai polis, atau tanggal endorsement penambahan.
+  startDate         DateTime  @map("start_date") @db.Date
+  /// Berhenti dijamin karena endorsement pengurangan. Kosong berarti aktif.
+  endDate           DateTime? @map("end_date") @db.Date
+  /// Endorsement yang menambah peserta ini; kosong untuk peserta awal.
+  addedByPolicyId   String?   @map("added_by_policy_id") @db.Uuid
+  /// Endorsement yang mengurangi peserta ini.
+  removedByPolicyId String?   @map("removed_by_policy_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  policy    Policy  @relation("policyParticipants", fields: [policyId], references: [id], onDelete: Cascade)
+  addedBy   Policy? @relation("participantsAdded", fields: [addedByPolicyId], references: [id], onDelete: Cascade)
+  removedBy Policy? @relation("participantsRemoved", fields: [removedByPolicyId], references: [id], onDelete: SetNull)
+
+  @@index([policyId, sortOrder])
+  @@index([addedByPolicyId])
+  @@index([removedByPolicyId])
+  @@map("policy_participants")
 }
 
 /// Disalin dari slip_security_panel saat polis dibuat dari slip. Jadi dasar

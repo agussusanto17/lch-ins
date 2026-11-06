@@ -25,10 +25,18 @@ import {
   storedFileUrl,
 } from "@/lib/server/stored-files"
 import { recordAudit } from "@/server/services/audit"
+import type { ParticipantChanges, PolicyParticipant } from "@/lib/policy-participants"
+import { PARTICIPANT_LIMITS } from "@/lib/slip-participants"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
 
 export type PolicyRecord = Policy
-export type PolicyInput = Omit<Policy, "id" | "files" | "endorsementSeq" | "placingSlipNo">
+export type PolicyInput = Omit<
+  Policy,
+  "id" | "files" | "endorsementSeq" | "placingSlipNo" | "participantCount"
+> & {
+  /** Perubahan peserta PA grup, hanya untuk endorsement baru. */
+  participantChanges?: ParticipantChanges
+}
 
 export interface PolicyFormOptions {
   insurers: string[]
@@ -53,6 +61,7 @@ const policyInclude = {
     orderBy: { sharePct: "desc" },
   },
   files: { orderBy: { version: "asc" } },
+  _count: { select: { participants: { where: { endDate: null } } } },
 } satisfies Prisma.PolicyInclude
 
 type PolicyRow = Prisma.PolicyGetPayload<{ include: typeof policyInclude }>
@@ -101,6 +110,7 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
       uploadedAt: f.uploadedAt.toISOString(),
       url: storedFileUrl(f.filePath),
     })),
+    participantCount: row._count?.participants ?? 0,
   }
 }
 
@@ -448,6 +458,180 @@ export async function getPolicyById(id: string): Promise<PolicyRecord | null> {
   return row ? toPolicyRecord(row) : null
 }
 
+/** Polis pemilik daftar peserta: naik ke polis induk selama polisnya endorsement atau pembatalan. */
+async function rosterPolicyId(tx: Tx, policyId: string) {
+  let id = policyId
+  for (let i = 0; i < 20; i++) {
+    const row = await tx.policy.findUnique({
+      where: { id },
+      select: { parentPolicyId: true, policyType: { select: { name: true } } },
+    })
+    if (!row) throw new Error("Polis induk tidak ditemukan.")
+    const type = row.policyType.name
+    if ((type !== "Endorsement" && type !== "Cancellation") || !row.parentPolicyId) return id
+    id = row.parentPolicyId
+  }
+  return id
+}
+
+const participantText = (v?: string | null) =>
+  v?.trim().slice(0, PARTICIPANT_LIMITS.text) || null
+
+/**
+ * Peserta PA grup polis baru:
+ * - polis Baru atau Renewal dari slip menyalin peserta slip, mulai dijamin
+ *   pada tanggal mulai polis;
+ * - endorsement menambah peserta mulai tanggal endorsement, dan mengurangi
+ *   peserta aktif polis induk pada tanggal yang sama.
+ */
+async function writeParticipants(tx: Tx, policyId: string, input: PolicyInput) {
+  const startDate = new Date(`${input.inceptionDate}T00:00:00Z`)
+  if ((input.type === "Baru" || input.type === "Renewal") && input.placingSlipId) {
+    const slipParticipants = await tx.slipParticipant.findMany({
+      where: { slipId: input.placingSlipId },
+      orderBy: { sortOrder: "asc" },
+    })
+    if (slipParticipants.length) {
+      await tx.policyParticipant.createMany({
+        data: slipParticipants.map((p, i) => ({
+          policyId,
+          name: p.name,
+          idNumber: p.idNumber,
+          birthDate: p.birthDate,
+          gender: p.gender,
+          position: p.position,
+          level: p.level,
+          workLocation: p.workLocation,
+          sumInsured: p.sumInsured,
+          beneficiary: p.beneficiary,
+          sortOrder: i,
+          startDate,
+        })),
+      })
+    }
+  }
+
+  const changes = input.participantChanges
+  if (input.type !== "Endorsement" || !input.parentPolicyId || !changes) return
+  if (!changes.added.length && !changes.removedIds.length) return
+  const ownerId = await rosterPolicyId(tx, input.parentPolicyId)
+  if (changes.removedIds.length) {
+    const removed = await tx.policyParticipant.updateMany({
+      where: {
+        id: { in: changes.removedIds },
+        policyId: ownerId,
+        endDate: null,
+        startDate: { lte: startDate },
+      },
+      data: { endDate: startDate, removedByPolicyId: policyId },
+    })
+    if (removed.count !== new Set(changes.removedIds).size) {
+      throw new Error(
+        "Sebagian peserta yang dikurangi tidak ditemukan, sudah berhenti, atau baru dijamin sesudah tanggal endorsement."
+      )
+    }
+  }
+  if (changes.added.length) {
+    const last = await tx.policyParticipant.aggregate({
+      where: { policyId: ownerId },
+      _max: { sortOrder: true },
+    })
+    const base = (last._max.sortOrder ?? -1) + 1
+    await tx.policyParticipant.createMany({
+      data: changes.added.slice(0, PARTICIPANT_LIMITS.rows).map((p, i) => ({
+        policyId: ownerId,
+        name: p.name.trim().slice(0, PARTICIPANT_LIMITS.text),
+        idNumber: participantText(p.idNumber),
+        birthDate: p.birthDate ? new Date(`${p.birthDate}T00:00:00Z`) : null,
+        gender: participantText(p.gender),
+        position: participantText(p.position),
+        level: participantText(p.level),
+        workLocation: participantText(p.workLocation),
+        sumInsured: new Prisma.Decimal(Math.max(0, p.sumInsured || 0)),
+        beneficiary: participantText(p.beneficiary),
+        sortOrder: base + i,
+        startDate,
+        addedByPolicyId: policyId,
+      })),
+    })
+  }
+}
+
+/**
+ * Endorsement yang sudah mengubah peserta: tanggal peserta ikut tanggal mulai
+ * endorsement yang diedit, sedangkan jenis dan polis induknya dikunci karena
+ * pesertanya sudah tercatat di daftar polis induk itu.
+ */
+async function syncParticipantChanges(
+  tx: Tx,
+  policyId: string,
+  before: PolicyRecord,
+  input: PolicyInput
+) {
+  const changed = await tx.policyParticipant.count({
+    where: { OR: [{ addedByPolicyId: policyId }, { removedByPolicyId: policyId }] },
+  })
+  if (!changed) return
+  if (input.type !== "Endorsement" || input.parentPolicyId !== before.parentPolicyId) {
+    throw new Error(
+      "Endorsement ini sudah menambah atau mengurangi peserta, jadi jenis dan polis induknya tidak bisa diganti. Hapus lalu buat ulang endorsement-nya bila perlu."
+    )
+  }
+  if (input.inceptionDate === before.inceptionDate) return
+  const date = new Date(`${input.inceptionDate}T00:00:00Z`)
+  const conflict = await tx.policyParticipant.count({
+    where: {
+      OR: [
+        { removedByPolicyId: policyId, startDate: { gt: date } },
+        { addedByPolicyId: policyId, endDate: { lt: date } },
+      ],
+    },
+  })
+  if (conflict) {
+    throw new Error(
+      "Tanggal mulai baru tidak cocok dengan peserta yang diubah endorsement ini: ada peserta yang dikurangi sebelum mulai dijamin, atau peserta tambahan yang sudah berhenti sebelum tanggal itu."
+    )
+  }
+  await tx.policyParticipant.updateMany({
+    where: { addedByPolicyId: policyId },
+    data: { startDate: date },
+  })
+  await tx.policyParticipant.updateMany({
+    where: { removedByPolicyId: policyId },
+    data: { endDate: date },
+  })
+}
+
+/** Daftar peserta polis, dari polis pemilik daftarnya bila polis ini endorsement. */
+export async function listPolicyParticipants(policyId: string): Promise<PolicyParticipant[]> {
+  if (!UUID_RE.test(policyId)) return []
+  const ownerId = await rosterPolicyId(prisma, policyId)
+  const rows = await prisma.policyParticipant.findMany({
+    where: { policyId: ownerId },
+    orderBy: { sortOrder: "asc" },
+    include: {
+      addedBy: { select: { policyNo: true } },
+      removedBy: { select: { policyNo: true } },
+    },
+  })
+  return rows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    idNumber: p.idNumber ?? undefined,
+    birthDate: p.birthDate ? isoDate(p.birthDate) : null,
+    gender: p.gender ?? undefined,
+    position: p.position ?? undefined,
+    level: p.level ?? undefined,
+    workLocation: p.workLocation ?? undefined,
+    sumInsured: Number(p.sumInsured),
+    beneficiary: p.beneficiary ?? undefined,
+    startDate: isoDate(p.startDate),
+    endDate: p.endDate ? isoDate(p.endDate) : null,
+    addedByPolicyNo: p.addedBy?.policyNo ?? null,
+    removedByPolicyNo: p.removedBy?.policyNo ?? null,
+  }))
+}
+
 export async function createPolicy(input: PolicyInput, userId: string): Promise<PolicyRecord> {
   return prisma.$transaction(async (tx) => {
     const { id } = await tx.policy.create({
@@ -455,6 +639,7 @@ export async function createPolicy(input: PolicyInput, userId: string): Promise<
       select: { id: true },
     })
     await writeInsurers(tx, id, input)
+    await writeParticipants(tx, id, input)
     const record = await readPolicy(tx, id)
     await recordAudit(tx, {
       userId,
@@ -477,6 +662,7 @@ export async function updatePolicy(
     const before = await readPolicy(tx, id)
     await tx.policy.update({ where: { id }, data: await checkedPolicyData(tx, input, id) })
     await writeInsurers(tx, id, input)
+    await syncParticipantChanges(tx, id, before, input)
     const record = await readPolicy(tx, id)
     await recordAudit(tx, {
       userId,
@@ -496,7 +682,14 @@ export async function deletePolicy(id: string, userId: string): Promise<void> {
       where: { id },
       include: {
         ...policyInclude,
-        _count: { select: { claims: true, debitNotes: true, childPolicies: true } },
+        _count: {
+          select: {
+            claims: true,
+            debitNotes: true,
+            childPolicies: true,
+            participants: { where: { endDate: null } },
+          },
+        },
       },
     })
     if (!existing) throw new Error("Polis tidak ditemukan.")
@@ -507,6 +700,21 @@ export async function deletePolicy(id: string, userId: string): Promise<void> {
       throw new Error("Polis masih menjadi induk renewal, endorsement, atau pembatalan.")
     }
 
+    // Endorsement yang dihapus: peserta yang dikuranginya aktif lagi; peserta
+    // yang ditambahkannya ikut terhapus lewat foreign key, kecuali sudah
+    // dikurangi endorsement lain (catatan pengurangan itu jangan hilang).
+    const removedLater = await tx.policyParticipant.count({
+      where: { addedByPolicyId: id, removedByPolicyId: { not: null } },
+    })
+    if (removedLater > 0) {
+      throw new Error(
+        "Peserta tambahan endorsement ini sudah dikurangi endorsement lain. Hapus endorsement pengurangan itu dulu."
+      )
+    }
+    await tx.policyParticipant.updateMany({
+      where: { removedByPolicyId: id },
+      data: { endDate: null, removedByPolicyId: null },
+    })
     await tx.policy.delete({ where: { id } })
     await deleteStoredFiles(tx, existing.files.map((f) => f.filePath))
     await recordAudit(tx, {
