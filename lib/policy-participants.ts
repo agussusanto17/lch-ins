@@ -16,6 +16,10 @@ export interface PolicyParticipant extends SlipParticipant {
   addedByPolicyNo: string | null
   /** Nomor polis endorsement yang mengurangi peserta ini. */
   removedByPolicyNo: string | null
+  /** Jumlah klaim yang menunjuk peserta ini. */
+  claimCount?: number
+  /** Tanggal kejadian klaim terakhir; peserta tidak bisa berhenti sebelum tanggal ini. */
+  lastLossDate?: string | null
 }
 
 /** Perubahan peserta yang dibawa endorsement baru. */

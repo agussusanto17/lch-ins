@@ -2,9 +2,11 @@ import "server-only"
 
 import { coverCodeFor } from "@/components/underwriting/slip-model"
 import type { Claim, ClaimStage, ClaimStatus } from "@/lib/data/types"
-import { normalizeCob } from "@/lib/format"
+import { dateShort, normalizeCob } from "@/lib/format"
 import { Prisma } from "@/lib/generated/prisma/client"
+import { participantActiveOn } from "@/lib/policy-participants"
 import { prisma } from "@/lib/prisma"
+import { rosterPolicyId } from "@/lib/server/policies"
 import { recordAudit } from "@/server/services/audit"
 import { nextDocumentNumber } from "@/server/services/number-generator"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
@@ -66,6 +68,8 @@ export interface ClaimInput {
   status?: ClaimStatus
   stage?: ClaimStage
   notes?: string | null
+  /** Peserta PA grup; wajib bila polisnya punya daftar peserta. */
+  participantId?: string | null
 }
 
 export interface ClaimFormOptions {
@@ -102,6 +106,7 @@ const claimIncludeRelations = {
   status: { select: { code: true, name: true } },
   stage: { select: { code: true, name: true } },
   adjuster: { select: { id: true, name: true } },
+  participant: { select: { id: true, name: true } },
 } satisfies Prisma.ClaimInclude
 
 type PrismaClaimWithRelations = Prisma.ClaimGetPayload<{
@@ -213,6 +218,8 @@ function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
     status,
     stage: rawStage,
     notes: record.notes || "",
+    participantId: record.participantId,
+    participantName: record.participant?.name ?? "",
   }
 }
 
@@ -315,6 +322,43 @@ async function policyCoverCode(tx: Prisma.TransactionClient, policyId: string) {
   )
 }
 
+const isoDay = (d: Date) => d.toISOString().slice(0, 10)
+
+/**
+ * Peserta klaim PA grup (jawaban Harry, 6 November 2026): wajib bila daftar
+ * peserta polisnya terisi, harus ada di daftar itu, dan dijamin pada tanggal
+ * kejadian. Polis tanpa daftar peserta tidak menyimpan peserta.
+ */
+async function checkedParticipantId(
+  tx: Prisma.TransactionClient,
+  input: Pick<ClaimInput, "policyId" | "participantId" | "lossDate">
+): Promise<string | null> {
+  const ownerId = await rosterPolicyId(tx, input.policyId)
+  const rosterSize = await tx.policyParticipant.count({ where: { policyId: ownerId } })
+  if (!rosterSize) {
+    if (input.participantId) throw new Error("Polis ini tidak punya daftar peserta.")
+    return null
+  }
+  if (!input.participantId) throw new Error("Pilih peserta yang mengalami kejadian.")
+  const participant = await tx.policyParticipant.findUnique({
+    where: { id: input.participantId },
+    select: { id: true, name: true, policyId: true, startDate: true, endDate: true },
+  })
+  if (!participant || participant.policyId !== ownerId) {
+    throw new Error("Peserta tidak ada di daftar peserta polis ini.")
+  }
+  const startDate = isoDay(participant.startDate)
+  const endDate = participant.endDate ? isoDay(participant.endDate) : null
+  if (!participantActiveOn({ startDate, endDate }, input.lossDate)) {
+    throw new Error(
+      `${participant.name} tidak dijamin pada tanggal kejadian: dijamin mulai ${dateShort(startDate)}${
+        endDate ? ` dan berhenti ${dateShort(endDate)}` : ""
+      }.`
+    )
+  }
+  return participant.id
+}
+
 export async function createClaim(
   input: ClaimInput,
   userId: string
@@ -328,6 +372,7 @@ export async function createClaim(
       })
     }
 
+    const participantId = await checkedParticipantId(tx, input)
     const [statusId, stageId, adjusterId] = await Promise.all([
       input.status ? resolveStatusId(input.status) : (input.statusId ? Promise.resolve(input.statusId) : resolveStatusId("Outstanding")),
       input.stage ? resolveStageId(input.stage) : (input.stageId ? Promise.resolve(input.stageId) : resolveStageId("Tunggu Dokumen")),
@@ -353,6 +398,7 @@ export async function createClaim(
         statusId,
         stageId,
         notes: input.notes?.trim() || null,
+        participantId,
       },
       include: claimIncludeRelations,
     })
@@ -368,6 +414,7 @@ export async function createClaim(
         policyId: record.policyId,
         statusId: record.statusId,
         stageId: record.stageId,
+        participantId: record.participantId,
       },
     })
 
@@ -389,6 +436,7 @@ export async function updateClaim(
       throw new Error("Klaim tidak ditemukan.")
     }
 
+    const participantId = await checkedParticipantId(tx, input)
     const [statusId, stageId, adjusterId] = await Promise.all([
       input.status ? resolveStatusId(input.status) : (input.statusId ? Promise.resolve(input.statusId) : Promise.resolve(existing.statusId)),
       input.stage ? resolveStageId(input.stage) : (input.stageId ? Promise.resolve(input.stageId) : Promise.resolve(existing.stageId)),
@@ -415,6 +463,7 @@ export async function updateClaim(
         statusId,
         stageId,
         notes: input.notes !== undefined ? (input.notes?.trim() || null) : existing.notes,
+        participantId,
       },
       include: claimIncludeRelations,
     })
@@ -432,6 +481,7 @@ export async function updateClaim(
         estimatedLoss: Number(existing.estimatedLoss),
         claimedAmount: Number(existing.claimedAmount),
         paidAmount: Number(existing.paidAmount),
+        participantId: existing.participantId,
       },
       after: {
         claimNo: record.claimNo,
@@ -441,6 +491,7 @@ export async function updateClaim(
         estimatedLoss: Number(record.estimatedLoss),
         claimedAmount: Number(record.claimedAmount),
         paidAmount: Number(record.paidAmount),
+        participantId: record.participantId,
       },
     })
 

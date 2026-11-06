@@ -289,6 +289,7 @@ export function SearchSelect({
   placeholder = "Ketik untuk mencari…",
   emptyMessage = "Tidak ada yang cocok",
   disabled,
+  limit,
   ...base
 }: BaseProps & {
   id?: string
@@ -298,6 +299,8 @@ export function SearchSelect({
   placeholder?: string
   emptyMessage?: string
   disabled?: boolean
+  /** Batas pilihan yang dirender sekaligus, untuk daftar ribuan baris. */
+  limit?: number
 }) {
   const ids = useFieldIds(id)
   const selected = items.find((i) => i.value === value) ?? null
@@ -312,6 +315,7 @@ export function SearchSelect({
         itemToStringLabel={(item: Option) => item.label}
         isItemEqualToValue={(a: Option, b: Option) => a.value === b.value}
         disabled={disabled}
+        limit={limit}
       >
         <ComboboxInput
           id={ids.fieldId}

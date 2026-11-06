@@ -15,7 +15,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import type { Policy, SlipParticipant } from "@/lib/data"
-import { money, num } from "@/lib/format"
+import { dateShort, money, num } from "@/lib/format"
 import {
   endorsementSuggestion,
   participantActiveOn,
@@ -60,7 +60,9 @@ export function EndorsementParticipants({
     listPolicyParticipantsAction(parent.id).then((res) => {
       if (!active) return
       if (!res.ok) {
-        toast.error("Gagal memuat peserta polis induk", { description: res.error })
+        toast.error("Gagal memuat peserta polis induk", {
+          description: res.error,
+        })
         setRoster([])
         return
       }
@@ -73,7 +75,9 @@ export function EndorsementParticipants({
 
   // Hanya peserta yang masih dijamin pada tanggal endorsement yang bisa dihentikan.
   const date = effectiveDate || parent.inceptionDate
-  const candidates = (roster ?? []).filter((p) => p.endDate == null && p.startDate <= date)
+  const candidates = (roster ?? []).filter(
+    (p) => p.endDate == null && p.startDate <= date
+  )
   const q = query.trim().toLowerCase()
   const filtered = q
     ? candidates.filter((p) =>
@@ -94,7 +98,12 @@ export function EndorsementParticipants({
     removedTotal: participantsTotal(removed),
   })
   const toggle = (id: string, on: boolean) =>
-    onRemovedChange(on ? [...removedIds, id] : removedIds.filter((x) => x !== id))
+    onRemovedChange(
+      on ? [...removedIds, id] : removedIds.filter((x) => x !== id)
+    )
+  // Peserta tidak bisa berhenti pada atau sebelum tanggal kejadian klaimnya.
+  const blockedByClaim = (p: PolicyParticipant) =>
+    p.lastLossDate != null && p.lastLossDate >= date
 
   return (
     <div className="flex flex-col gap-4">
@@ -159,28 +168,45 @@ export function EndorsementParticipants({
               aria-label="Peserta yang berhenti"
               className="flex flex-col divide-y rounded-lg border"
             >
-              {shown.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-muted/50"
-                >
-                  <Checkbox
-                    checked={removedIds.includes(p.id)}
-                    onCheckedChange={(v) => toggle(p.id, v === true)}
-                  />
-                  <span className="min-w-0 flex-1 truncate">
-                    {p.name}
-                    <span className="text-muted-foreground">
-                      {[p.level, p.workLocation].filter(Boolean).length
-                        ? ` · ${[p.level, p.workLocation].filter(Boolean).join(" · ")}`
-                        : ""}
+              {shown.map((p) => {
+                const checked = removedIds.includes(p.id)
+                const blocked = blockedByClaim(p)
+                return (
+                  <label
+                    key={p.id}
+                    className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-muted/50 has-disabled:cursor-not-allowed"
+                  >
+                    <Checkbox
+                      checked={checked}
+                      disabled={blocked && !checked}
+                      onCheckedChange={(v) => toggle(p.id, v === true)}
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {p.name}
+                      <span className="text-muted-foreground">
+                        {[p.level, p.workLocation].filter(Boolean).length
+                          ? ` · ${[p.level, p.workLocation].filter(Boolean).join(" · ")}`
+                          : ""}
+                      </span>
+                      {blocked ? (
+                        <span
+                          className={
+                            checked
+                              ? "block text-xs text-destructive"
+                              : "block text-xs text-muted-foreground"
+                          }
+                        >
+                          Punya klaim tanggal {dateShort(p.lastLossDate)}, belum
+                          bisa berhenti pada tanggal ini.
+                        </span>
+                      ) : null}
                     </span>
-                  </span>
-                  <span className="tabular text-muted-foreground">
-                    {money(p.sumInsured, currency)}
-                  </span>
-                </label>
-              ))}
+                    <span className="tabular text-muted-foreground">
+                      {money(p.sumInsured, currency)}
+                    </span>
+                  </label>
+                )
+              })}
               {!shown.length ? (
                 <p className="px-3 py-4 text-center text-sm text-muted-foreground">
                   Tidak ada peserta yang cocok.
@@ -204,17 +230,20 @@ export function EndorsementParticipants({
         <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted/60 px-3 py-2.5 text-sm">
           <p className="mr-auto">
             Perubahan UP{" "}
-            <span className="font-medium tabular">
+            <span className="tabular font-medium">
               {money(suggestion.netSumInsured, currency)}
             </span>
             {" · "}usulan premi{" "}
-            <span className="font-medium tabular">
+            <span className="tabular font-medium">
               {money(suggestion.premium, currency)}
             </span>
             <span className="block text-xs text-muted-foreground">
               Rate polis induk {num(suggestion.rate * 100, 2, 6)}% × sisa{" "}
               {suggestion.remainingDays}/{suggestion.periodDays} hari.
-              {participantActiveOn({ startDate: parent.inceptionDate, endDate: parent.expiryDate }, date)
+              {participantActiveOn(
+                { startDate: parent.inceptionDate, endDate: parent.expiryDate },
+                date
+              )
                 ? ""
                 : " Tanggal endorsement di luar periode polis induk."}
             </span>
@@ -224,7 +253,10 @@ export function EndorsementParticipants({
             variant="outline"
             size="sm"
             onClick={() =>
-              onApply({ sumInsured: suggestion.netSumInsured, premium: suggestion.premium })
+              onApply({
+                sumInsured: suggestion.netSumInsured,
+                premium: suggestion.premium,
+              })
             }
           >
             <Calculator data-icon="inline-start" />

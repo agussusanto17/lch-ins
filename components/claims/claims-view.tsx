@@ -165,6 +165,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
       { header: "No. Klaim", value: (c) => c.claimNo },
       { header: "No. Polis", value: (c) => c.policyNo },
       { header: "Tertanggung", value: (c) => c.insuredName, width: 36 },
+      { header: "Peserta", value: (c) => c.participantName ?? "", width: 28 },
       { header: "Asuransi", value: (c) => c.insurer, width: 36 },
       { header: "COB", value: (c) => c.cob },
       { header: "Tgl Kejadian", value: (c) => c.lossDate, type: "date" },
@@ -389,6 +390,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
                       <p className="truncate">{c.insuredName}</p>
                       <p className="tabular truncate text-xs text-muted-foreground">
                         {c.policyNo}
+                        {c.participantName ? ` · ${c.participantName}` : ""}
                       </p>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">

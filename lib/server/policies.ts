@@ -459,7 +459,7 @@ export async function getPolicyById(id: string): Promise<PolicyRecord | null> {
 }
 
 /** Polis pemilik daftar peserta: naik ke polis induk selama polisnya endorsement atau pembatalan. */
-async function rosterPolicyId(tx: Tx, policyId: string) {
+export async function rosterPolicyId(tx: Tx, policyId: string) {
   let id = policyId
   for (let i = 0; i < 20; i++) {
     const row = await tx.policy.findUnique({
@@ -472,6 +472,27 @@ async function rosterPolicyId(tx: Tx, policyId: string) {
     id = row.parentPolicyId
   }
   return id
+}
+
+/**
+ * Peserta yang berhenti dijamin pada `endDate` tidak boleh punya klaim dengan
+ * tanggal kejadian pada atau sesudah tanggal itu.
+ */
+async function assertNoLaterClaims(
+  tx: Tx,
+  participants: Prisma.PolicyParticipantWhereInput,
+  endDate: Date
+) {
+  const claim = await tx.claim.findFirst({
+    where: { participant: participants, lossDate: { gte: endDate } },
+    select: { claimNo: true, participant: { select: { name: true } } },
+    orderBy: { lossDate: "asc" },
+  })
+  if (claim) {
+    throw new Error(
+      `${claim.participant?.name ?? "Peserta"} punya klaim ${claim.claimNo} dengan tanggal kejadian pada atau sesudah tanggal berhenti dijamin.`
+    )
+  }
 }
 
 const participantText = (v?: string | null) =>
@@ -516,6 +537,7 @@ async function writeParticipants(tx: Tx, policyId: string, input: PolicyInput) {
   if (!changes.added.length && !changes.removedIds.length) return
   const ownerId = await rosterPolicyId(tx, input.parentPolicyId)
   if (changes.removedIds.length) {
+    await assertNoLaterClaims(tx, { id: { in: changes.removedIds } }, startDate)
     const removed = await tx.policyParticipant.updateMany({
       where: {
         id: { in: changes.removedIds },
@@ -592,6 +614,16 @@ async function syncParticipantChanges(
       "Tanggal mulai baru tidak cocok dengan peserta yang diubah endorsement ini: ada peserta yang dikurangi sebelum mulai dijamin, atau peserta tambahan yang sudah berhenti sebelum tanggal itu."
     )
   }
+  await assertNoLaterClaims(tx, { removedByPolicyId: policyId }, date)
+  const earlyClaim = await tx.claim.findFirst({
+    where: { participant: { addedByPolicyId: policyId }, lossDate: { lt: date } },
+    select: { claimNo: true, participant: { select: { name: true } } },
+  })
+  if (earlyClaim) {
+    throw new Error(
+      `${earlyClaim.participant?.name ?? "Peserta"} punya klaim ${earlyClaim.claimNo} dengan tanggal kejadian sebelum tanggal mulai baru.`
+    )
+  }
   await tx.policyParticipant.updateMany({
     where: { addedByPolicyId: policyId },
     data: { startDate: date },
@@ -612,6 +644,7 @@ export async function listPolicyParticipants(policyId: string): Promise<PolicyPa
     include: {
       addedBy: { select: { policyNo: true } },
       removedBy: { select: { policyNo: true } },
+      claims: { select: { lossDate: true } },
     },
   })
   return rows.map((p) => ({
@@ -629,6 +662,10 @@ export async function listPolicyParticipants(policyId: string): Promise<PolicyPa
     endDate: p.endDate ? isoDate(p.endDate) : null,
     addedByPolicyNo: p.addedBy?.policyNo ?? null,
     removedByPolicyNo: p.removedBy?.policyNo ?? null,
+    claimCount: p.claims.length,
+    lastLossDate: p.claims.length
+      ? isoDate(new Date(Math.max(...p.claims.map((c) => c.lossDate.getTime()))))
+      : null,
   }))
 }
 
@@ -710,6 +747,10 @@ export async function deletePolicy(id: string, userId: string): Promise<void> {
       throw new Error(
         "Peserta tambahan endorsement ini sudah dikurangi endorsement lain. Hapus endorsement pengurangan itu dulu."
       )
+    }
+    const addedClaims = await tx.claim.count({ where: { participant: { addedByPolicyId: id } } })
+    if (addedClaims > 0) {
+      throw new Error("Peserta tambahan endorsement ini sudah punya klaim, jadi endorsement tidak dapat dihapus.")
     }
     await tx.policyParticipant.updateMany({
       where: { removedByPolicyId: id },

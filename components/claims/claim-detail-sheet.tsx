@@ -436,6 +436,9 @@ export function ClaimDetailSheet({
                         value={<span className="tabular">{claim.policyNo}</span>}
                       />
                       <Row label="Asuransi" value={claim.insurer} />
+                      {claim.participantName ? (
+                        <Row label="Peserta" value={claim.participantName} />
+                      ) : null}
                     </div>
                   </section>
 
