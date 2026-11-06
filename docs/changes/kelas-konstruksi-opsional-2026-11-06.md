@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `fix/kelas-konstruksi-opsional`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#153](https://github.com/agussusanto17/lch-ins/pull/153)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
