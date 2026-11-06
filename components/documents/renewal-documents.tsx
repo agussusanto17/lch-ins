@@ -1,7 +1,6 @@
 import { DocumentShell } from "@/components/documents/document-shell"
 import { DocTitle, InfoTable } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
-import { PrintedAt } from "@/components/documents/printed-at"
 import { premiumIdr, type Client, type Policy } from "@/lib/data"
 import { daysBetween } from "@/lib/date"
 import { dateLong, dateShort, money, rupiah } from "@/lib/format"
@@ -89,7 +88,6 @@ export function RenewalListDocument({
         </tfoot>
       </table>
 
-      <PrintedAt />
     </DocumentShell>
   )
 }
@@ -200,7 +198,6 @@ export function RenewalLetterDocument({
         </div>
       </div>
 
-      <PrintedAt />
     </DocumentShell>
   )
 }

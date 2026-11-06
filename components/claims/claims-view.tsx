@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { CircleCheck, Clock, Eye, Pencil, Plus, Printer, Receipt, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -38,9 +39,11 @@ import {
 import { useCobFilterItems } from "@/components/shared/form-options-provider"
 import { toIdr } from "@/lib/calc"
 import {
+  claimBackHref,
   claimFilterQuery,
   claimPrintHref,
   filterClaims,
+  parseClaimFilters,
   type ClaimFilterParams,
 } from "@/lib/claim-filter"
 import {
@@ -84,10 +87,18 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
   const today = useToday()
   const permission = usePermission()
   const canManage = permission.canManage("/claims")
-  const [search, setSearch] = React.useState("")
-  const [status, setStatus] = React.useState<ClaimFilterParams["status"]>("all")
-  const [stage, setStage] = React.useState<ClaimFilterParams["stage"]>("all")
-  const [cob, setCob] = React.useState<string>("all")
+  // Filters live in the URL too: going back from a print page restores cached
+  // server props, and the URL is the only state that survives it.
+  const searchParams = useSearchParams()
+  const [filters, setFilters] = React.useState(() =>
+    parseClaimFilters(Object.fromEntries(searchParams))
+  )
+  const { search, status, stage, cob } = filters
+  function updateFilters(patch: Partial<ClaimFilterParams>) {
+    const next = { ...filters, ...patch }
+    setFilters(next)
+    window.history.replaceState(null, "", claimBackHref(next))
+  }
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [form, setForm] = React.useState<{
     key: number
@@ -222,13 +233,13 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
           <SearchInput
             placeholder="Cari no. klaim, polis, tertanggung..."
             value={search}
-            onValueChange={setSearch}
+            onValueChange={(v) => updateFilters({ search: v })}
             className="w-full sm:w-64"
           />
           <Select
             items={cobItems}
             value={cob}
-            onValueChange={(v) => setCob(v as string)}
+            onValueChange={(v) => updateFilters({ cob: v as string })}
           >
             <SelectTrigger size="sm" className="w-40">
               <SelectValue />
@@ -246,7 +257,9 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
           <Select
             items={STATUS_ITEMS}
             value={status}
-            onValueChange={(v) => setStatus(v as ClaimFilterParams["status"])}
+            onValueChange={(v) =>
+              updateFilters({ status: v as ClaimFilterParams["status"] })
+            }
           >
             <SelectTrigger size="sm" className="w-42.5">
               <SelectValue />
@@ -264,7 +277,9 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
           <Select
             items={STAGE_ITEMS}
             value={stage}
-            onValueChange={(v) => setStage(v as ClaimFilterParams["stage"])}
+            onValueChange={(v) =>
+              updateFilters({ stage: v as ClaimFilterParams["stage"] })
+            }
           >
             <SelectTrigger size="sm" className="w-49">
               <SelectValue />

@@ -70,20 +70,22 @@ export function DocTitle({
   muted,
 }: {
   title: string
-  number: string
+  number?: string
   muted?: boolean
 }) {
   return (
     <div className="mb-8 text-center">
       <h1 className="text-[17px] font-bold tracking-[0.18em]">{title}</h1>
-      <p
-        className={cn(
-          "mt-1 text-sm font-semibold",
-          muted ? "font-normal text-muted-foreground" : "text-primary"
-        )}
-      >
-        {number}
-      </p>
+      {number ? (
+        <p
+          className={cn(
+            "mt-1 text-sm font-semibold",
+            muted ? "font-normal text-muted-foreground" : "text-primary"
+          )}
+        >
+          {number}
+        </p>
+      ) : null}
     </div>
   )
 }

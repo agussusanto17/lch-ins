@@ -13,7 +13,6 @@ import {
   LchLogo,
   Letterhead,
 } from "@/components/documents/letterhead"
-import { PrintedAt } from "@/components/documents/printed-at"
 import { SPPA_QUESTIONS, type Client, type Sppa } from "@/lib/data"
 import { dateLong, dateShort, money, num } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -434,7 +433,6 @@ function SppaDetail({
         <p className="text-muted-foreground">Tertanggung / The Insured,</p>
         <p className="mt-16">( {sppa.insuredName} )</p>
       </div>
-      <PrintedAt />
     </section>
   )
 }
@@ -616,7 +614,6 @@ export function SppaExcelDocument({
         </table>
       </div>
 
-      <PrintedAt />
     </DocumentShell>
   )
 }

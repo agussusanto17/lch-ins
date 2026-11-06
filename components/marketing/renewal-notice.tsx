@@ -47,6 +47,7 @@ import {
   renewalQuery,
 } from "@/lib/renewal"
 import { useCollection } from "@/lib/store"
+import { replaceQuery } from "@/lib/url-query"
 
 const PERIOD_ITEMS = RENEWAL_PERIODS.map((d) => ({
   label: `${d} hari`,
@@ -114,7 +115,10 @@ export function RenewalNotice({
           <Select
             items={PERIOD_ITEMS}
             value={period}
-            onValueChange={(v) => setPeriod(v as string)}
+            onValueChange={(v) => {
+              setPeriod(v as string)
+              replaceQuery({ days: v as string })
+            }}
           >
             <SelectTrigger size="sm">
               <SelectValue />
@@ -135,7 +139,10 @@ export function RenewalNotice({
           <Select
             items={cobItems}
             value={cob}
-            onValueChange={(v) => setCob(v as string)}
+            onValueChange={(v) => {
+              setCob(v as string)
+              replaceQuery({ cob: v as string })
+            }}
           >
             <SelectTrigger size="sm">
               <SelectValue />
