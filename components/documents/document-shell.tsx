@@ -62,7 +62,7 @@ export function DocumentShell({
         </div>
       </div>
 
-      <article className="print-sheet rounded-2xl border bg-card p-8 text-card-foreground shadow-sm md:p-12 overflow-hidden print:overflow-visible">
+      <article className="print-sheet rounded-2xl border bg-card p-8 text-card-foreground shadow-sm md:p-12 overflow-x-auto print:overflow-visible">
         {/* Header berulang di setiap halaman cetak */}
         <div className="print-header-fixed hidden print:block">
           <LchLogo className="h-14 w-auto" />
@@ -74,7 +74,8 @@ export function DocumentShell({
         </div>
 
         {/* Tabel layout cetak: thead/tfoot spacer otomatis memberi ruang kosong di setiap halaman */}
-        <table className="print-page-table w-full border-collapse">
+        {/* table-fixed keeps wide content from stretching the cell past the card on narrow screens. */}
+        <table className="print-page-table w-full table-fixed border-collapse">
           <thead className="hidden print:table-header-group">
             <tr>
               <td className="print-header-spacer border-0 p-0"></td>
@@ -93,6 +94,9 @@ export function DocumentShell({
             </tr>
           </tbody>
         </table>
+
+        {/* Screen footer sits outside the table so it always spans the full card width. */}
+        <PrintedAt />
       </article>
 
       <p className="no-print pb-6 text-center text-xs text-muted-foreground">
