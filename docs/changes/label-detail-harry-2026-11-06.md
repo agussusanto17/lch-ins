@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `feat/label-detail-harry`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#152](https://github.com/agussusanto17/lch-ins/pull/152)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
