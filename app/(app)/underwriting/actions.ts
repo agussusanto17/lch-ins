@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import type { SlipStatus } from "@/lib/generated/prisma/client"
 import { MAX_DEDUCTIBLES, type PlacingSlip } from "@/lib/data/types"
+import { participantListSchema } from "@/lib/participant-schema"
 import { brokerageLimitIssue, rateUnitFor } from "@/lib/calc"
 import { rateLineName } from "@/components/underwriting/slip-model"
 import {
@@ -58,25 +59,6 @@ const lineItemSchema = z.object({
   color: z.string().nullish(),
   vehicleModel: z.string().nullish(),
   locationId: z.string().nullish(),
-})
-
-const participantText = z.string().max(200, "Isian peserta maksimal 200 karakter").optional()
-
-/** Peserta PA grup: data per orang, dicetak di lampiran slip. */
-const participantSchema = z.object({
-  id: z.string(),
-  name: z.string().trim().min(1, "Nama peserta wajib diisi").max(200, "Nama peserta maksimal 200 karakter"),
-  idNumber: participantText,
-  birthDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal lahir peserta tidak valid")
-    .nullish(),
-  gender: participantText,
-  position: participantText,
-  level: participantText,
-  workLocation: participantText,
-  sumInsured: z.coerce.number().min(0, "Sum insured peserta tidak boleh negatif"),
-  beneficiary: participantText,
 })
 
 const rateLineSchema = z
@@ -209,10 +191,7 @@ const placingSlipSchema = z.object({
       })
     )
     .optional(),
-  participants: z
-    .array(participantSchema)
-    .max(5000, "Peserta maksimal 5.000 orang")
-    .optional(),
+  participants: participantListSchema.optional(),
   clauseGroups: z
     .record(
       z.string(),
