@@ -40,6 +40,7 @@ import {
   type ResolvedClause,
   type SecurityPanelRow,
   wordingText,
+  type SlipParticipant,
 } from "@/lib/data"
 import { CURRENCY_SYMBOL, money, moneyCents, num } from "@/lib/format"
 import {
@@ -51,6 +52,7 @@ import {
 } from "@/lib/slip-locations"
 import { isExistingPolicyLabel, printedDetailRows } from "@/lib/slip-details"
 import { clauseGroupBlocks } from "@/lib/clause-groups"
+import { participantAge, participantsTotal } from "@/lib/slip-participants"
 import {
   isFlatLine,
   isLimitOnlyItem,
@@ -687,6 +689,76 @@ export function ClausesBlock({
         )}
       </ol>
     </>
+  )
+}
+
+/**
+ * Lampiran daftar peserta PA grup, seperti lampiran Placing Slip PA Salam
+ * Pacific (1.627 peserta). Kolom tanpa isi di semua baris tidak dicetak; usia
+ * dihitung pada tanggal mulai polis.
+ */
+export function ParticipantAppendix({ slip }: { slip: PlacingSlip }) {
+  const list = slip.participants ?? []
+  if (!list.length) return null
+  const has = (key: keyof SlipParticipant) => list.some((p) => Boolean(p[key]))
+  const ages = list.map((p) => participantAge(p.birthDate, slip.inceptionDate))
+  const columns: { header: string; cell: (p: SlipParticipant, i: number) => React.ReactNode; right?: boolean }[] = [
+    { header: "Nama", cell: (p) => p.name },
+    ...(has("idNumber") ? [{ header: "No. Identitas", cell: (p: SlipParticipant) => p.idNumber }] : []),
+    ...(has("workLocation") ? [{ header: "Lokasi Kerja", cell: (p: SlipParticipant) => p.workLocation }] : []),
+    ...(has("position") ? [{ header: "Jabatan", cell: (p: SlipParticipant) => p.position }] : []),
+    ...(has("level") ? [{ header: "Level Jabatan", cell: (p: SlipParticipant) => p.level }] : []),
+    ...(has("birthDate")
+      ? [{ header: "Tgl Lahir", cell: (p: SlipParticipant) => (p.birthDate ? p.birthDate.split("-").reverse().join("/") : "") }]
+      : []),
+    ...(has("gender") ? [{ header: "Jenis Kelamin", cell: (p: SlipParticipant) => p.gender }] : []),
+    ...(ages.some((a) => a != null)
+      ? [{ header: "Usia", cell: (_: SlipParticipant, i: number) => ages[i] ?? "", right: true }]
+      : []),
+    ...(has("beneficiary") ? [{ header: "Ahli Waris", cell: (p: SlipParticipant) => p.beneficiary }] : []),
+    {
+      header: `Sum Insured (${slip.currency || "IDR"})`,
+      cell: (p) => num(p.sumInsured, 2),
+      right: true,
+    },
+  ]
+  const cell = "py-1 pr-2 align-top"
+  return (
+    <section className="print-break">
+      <SectionHeading>DAFTAR PESERTA</SectionHeading>
+      <table className="w-full text-[11px]">
+        <thead>
+          <tr className="border-b text-left text-muted-foreground">
+            <th className="w-10 py-1.5 pr-2 font-semibold">No</th>
+            {columns.map((c) => (
+              <th key={c.header} className={cn("py-1.5 pr-2 font-semibold", c.right && "text-right")}>
+                {c.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {list.map((p, i) => (
+            <tr key={p.id} className="avoid-break border-b border-dashed">
+              <td className={cn(cell, "tabular")}>{i + 1}</td>
+              {columns.map((c) => (
+                <td key={c.header} className={cn(cell, c.right && "tabular text-right whitespace-nowrap")}>
+                  {c.cell(p, i)}
+                </td>
+              ))}
+            </tr>
+          ))}
+          <tr className="avoid-break bg-muted/60 font-bold">
+            <td colSpan={columns.length} className="px-2 py-1.5">
+              Total {list.length.toLocaleString("id-ID")} peserta
+            </td>
+            <td className="tabular px-2 py-1.5 text-right whitespace-nowrap">
+              {num(participantsTotal(list), 2)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
   )
 }
 

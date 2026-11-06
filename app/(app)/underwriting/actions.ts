@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import type { SlipStatus } from "@/lib/generated/prisma/client"
 import { MAX_DEDUCTIBLES, type PlacingSlip } from "@/lib/data/types"
+import { participantListSchema } from "@/lib/participant-schema"
 import { brokerageLimitIssue, rateUnitFor } from "@/lib/calc"
 import { rateLineName } from "@/components/underwriting/slip-model"
 import {
@@ -190,6 +191,7 @@ const placingSlipSchema = z.object({
       })
     )
     .optional(),
+  participants: participantListSchema.optional(),
   clauseGroups: z
     .record(
       z.string(),
@@ -491,6 +493,7 @@ export async function duplicatePlacingSlipAction(
       clauseIds: source.clauseIds,
       clauseOverrides: source.clauseOverrides,
       clauseGroups: source.clauseGroups,
+      participants: source.participants,
       clauseIdsSection2: source.clauseIdsSection2,
       clauseOverridesSection2: source.clauseOverridesSection2,
       clauseIdsGeneral: source.clauseIdsGeneral,

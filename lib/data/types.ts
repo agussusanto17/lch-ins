@@ -234,6 +234,26 @@ export interface SecurityPanelRow {
   role: "As Leader" | "As Member"
 }
 
+/**
+ * Satu peserta PA grup: data per orang yang dicetak di lampiran slip dan
+ * nantinya dipakai klaim dan endorsement tambah/kurang peserta.
+ */
+export interface SlipParticipant {
+  id: string
+  name: string
+  /** NIK atau nomor paspor. */
+  idNumber?: string
+  /** Tanggal lahir, YYYY-MM-DD. */
+  birthDate?: string | null
+  gender?: string
+  position?: string
+  /** Level jabatan atau plan, misalnya Middle Manager. */
+  level?: string
+  workLocation?: string
+  sumInsured: number
+  beneficiary?: string
+}
+
 /** Satu baris Detail tambahan slip, dicetak "label : value" di tabel detail. */
 export interface SlipDetailRow {
   label: string
@@ -347,6 +367,11 @@ export interface PlacingSlip {
    * tidak mengubah slip yang sudah ada.
    */
   clauseCopies?: Record<string, ClauseOverride>
+  /**
+   * Daftar peserta PA grup. Hanya dimuat oleh detail slip, bukan daftar
+   * slip; undefined berarti belum dimuat dan tidak diubah saat disimpan.
+   */
+  participants?: SlipParticipant[]
   /**
    * Judul kelompok per klausul di `clauseIds`, untuk slip tanpa section,
    * misalnya "Extensions" dan "General Conditions". Klausul tanpa judul

@@ -42,6 +42,8 @@ import { InsuredPicker } from "@/components/underwriting/insured-picker"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
 import { SlipLocations } from "@/components/underwriting/slip-locations"
 import { SlipItemRates } from "@/components/underwriting/slip-item-rates"
+import { SlipParticipants } from "@/components/underwriting/slip-participants"
+import { participantsInterestItem, usesParticipants } from "@/lib/slip-participants"
 import { SlipDetailRows } from "@/components/underwriting/slip-detail-rows"
 import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
 import { type RateBounds } from "@/components/underwriting/ojk-reference"
@@ -149,6 +151,7 @@ const SECTION_KEYS = [
   "wording",
   "coverage",
   "interest",
+  "participants",
   "sumInsured",
   "deductible",
   "rate",
@@ -236,7 +239,10 @@ export function PlacingSlipForm({
   clients: InsuredOption[]
 }) {
   const stored = useRecord("slips", id ?? null)
-  const source = stored ?? initial
+  // Daftar slip tidak memuat peserta PA grup; ambil dari detail slip.
+  const source = stored
+    ? { ...stored, participants: stored.participants ?? initial?.participants }
+    : initial
 
   if (!source) {
     return (
@@ -1465,6 +1471,14 @@ function SlipEditor({
                       />
                     </div>
                   ))
+                ) : usesParticipants(slip.cob) && slip.participants?.length ? (
+                  <p className="rounded-lg bg-muted/60 px-3 py-2 text-sm">
+                    Interest Insured diisi dari Daftar Peserta:{" "}
+                    <span className="font-medium">
+                      {slip.interestItems[0]?.description}
+                    </span>
+                    . Ubah peserta di bagian Daftar Peserta.
+                  </p>
                 ) : (
                   <LineItemList
                     items={slip.interestItems}
@@ -1492,6 +1506,34 @@ function SlipEditor({
               </div>
             )}
           </SectionCard>
+
+          {/*
+           * Peserta PA grup per orang (Harry, 6 November 2026): lampiran slip,
+           * dan dasar klaim serta endorsement tambah/kurang peserta.
+           */}
+          {usesParticipants(slip.cob) ? (
+            <SectionCard
+              title="Daftar Peserta"
+              {...sectionProps("participants")}
+              summary={
+                slip.participants?.length
+                  ? `${slip.participants.length.toLocaleString("id-ID")} peserta`
+                  : undefined
+              }
+            >
+              <SlipParticipants
+                participants={slip.participants ?? []}
+                currency={slip.currency}
+                locked={locked}
+                onChange={(list) =>
+                  set({
+                    participants: list,
+                    interestItems: list.length ? [participantsInterestItem(list)] : [],
+                  })
+                }
+              />
+            </SectionCard>
+          ) : null}
 
           {isProperty ? (
             <SectionCard

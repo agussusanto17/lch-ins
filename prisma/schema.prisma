@@ -1188,6 +1188,7 @@ model PlacingSlip {
   rateLines     SlipRateLine[]
   securityPanel SlipSecurityPanel[]
   clauses       SlipClause[]
+  participants SlipParticipant[]
   wordingForms  SlipWordingForm[]
   policies      Policy[]
 
@@ -1364,6 +1365,34 @@ model SlipClause {
   @@unique([slipId, section, clauseId])
   @@index([slipId, sortOrder])
   @@map("slip_clauses")
+}
+
+/// Peserta PA grup per orang (jawaban Harry, 6 November 2026): dicetak
+/// sebagai lampiran slip, dan nantinya dipakai klaim serta endorsement
+/// tambah/kurang peserta.
+model SlipParticipant {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slipId       String    @map("slip_id") @db.Uuid
+  name         String
+  /// NIK atau nomor paspor.
+  idNumber     String?   @map("id_number")
+  birthDate    DateTime? @map("birth_date") @db.Date
+  gender       String?
+  position     String?
+  /// Level jabatan atau plan.
+  level        String?
+  workLocation String?   @map("work_location")
+  sumInsured   Decimal   @default(0) @map("sum_insured") @db.Decimal(18, 2)
+  beneficiary  String?
+  sortOrder    Int       @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slip PlacingSlip @relation(fields: [slipId], references: [id], onDelete: Cascade)
+
+  @@index([slipId, sortOrder])
+  @@map("slip_participants")
 }
 
 model SlipWordingForm {

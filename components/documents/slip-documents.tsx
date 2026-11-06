@@ -19,6 +19,7 @@ import {
   ObjectPremiumSchedule,
   ParEqvetCalculationBlock,
   ParEqvetRateBlock,
+  ParticipantAppendix,
   PayableTable,
   PremiumTable,
   SectionHeading,
@@ -47,7 +48,11 @@ import { useRecord } from "@/lib/store"
 type DocProps = { id: string; initial: PlacingSlip | null }
 
 function useSlip({ id, initial }: DocProps) {
-  return useRecord("slips", id) ?? initial
+  const stored = useRecord("slips", id)
+  // Daftar slip tidak memuat peserta PA grup; ambil dari detail slip.
+  return stored
+    ? { ...stored, participants: stored.participants ?? initial?.participants }
+    : initial
 }
 
 function Missing() {
@@ -145,6 +150,8 @@ export function PlacingSlipDocument(props: DocProps) {
         confirmationParty="Nama Perusahaan Asuransi & Authorized Signatory"
       />
 
+      <ParticipantAppendix slip={slip} />
+
       <ClauseWordingAppendix slip={slip} />
 
     </DocumentShell>
@@ -191,6 +198,8 @@ export function QuotationSlipDocument(props: DocProps) {
         confirmationTitle="KONFIRMASI TERTANGGUNG / INSURED CONFIRMATION"
       />
 
+      <ParticipantAppendix slip={slip} />
+
       <ClauseWordingAppendix slip={slip} />
 
     </DocumentShell>
@@ -232,6 +241,7 @@ export function CoverNoteDocument(props: DocProps) {
       <InsurerSignatureGrid slip={slip} />
       <p className="mt-8 text-[13px]">Jakarta, {dateLong(slip.updatedAt)}</p>
 
+      <ParticipantAppendix slip={slip} />
     </DocumentShell>
   )
 }
@@ -305,6 +315,7 @@ export function ClosingInstructionDocument(props: DocProps) {
         caption="Diterima & Ditandatangani / Accepted & Signed by,"
       />
 
+      <ParticipantAppendix slip={slip} />
     </DocumentShell>
   )
 }
