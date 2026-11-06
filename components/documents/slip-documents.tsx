@@ -30,7 +30,6 @@ import {
   VehiclePremiumSchedule,
 } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
-import { PrintedAt } from "@/components/documents/printed-at"
 import { derivedDocNumber } from "@/components/underwriting/slip-model"
 import { Button } from "@/components/ui/button"
 import { rateUnitFor } from "@/lib/calc"
@@ -155,7 +154,6 @@ export function PlacingSlipDocument(props: DocProps) {
 
       <ClauseWordingAppendix slip={slip} />
 
-      <PrintedAt />
     </DocumentShell>
   )
 }
@@ -200,8 +198,6 @@ export function QuotationSlipDocument(props: DocProps) {
       />
 
       <ParticipantAppendix slip={slip} />
-
-      <PrintedAt />
     </DocumentShell>
   )
 }
@@ -209,20 +205,14 @@ export function QuotationSlipDocument(props: DocProps) {
 export function CoverNoteDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
-  // Format nomor cover note masih usulan, menunggu contoh dari LCH.
-  const number = derivedDocNumber(slip.slipNo, "CN")
   return (
-    <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
-      <Letterhead />
-      <DocTitle
-        title="COVER NOTE"
-        number={
-          number
-            ? `No. ${number}`
-            : "No. ................................................"
-        }
-        muted={!number}
-      />
+    // Draft cover note prints without the LCH letterhead and number, following
+    // the marked-up sample of 6 Nov 2026.
+    <DocumentShell
+      backHref={`/underwriting/quotation/edit/${slip.id}`}
+      letterhead={false}
+    >
+      <DocTitle title="COVER NOTE" />
       <DetailTable slip={slip} />
       <InterestBlock slip={slip} />
       <CoverageBlock slip={slip} />
@@ -248,8 +238,6 @@ export function CoverNoteDocument(props: DocProps) {
       <p className="mt-8 text-[13px]">Jakarta, {dateLong(slip.updatedAt)}</p>
 
       <ParticipantAppendix slip={slip} />
-
-      <PrintedAt />
     </DocumentShell>
   )
 }
@@ -324,8 +312,6 @@ export function ClosingInstructionDocument(props: DocProps) {
       />
 
       <ParticipantAppendix slip={slip} />
-
-      <PrintedAt />
     </DocumentShell>
   )
 }
