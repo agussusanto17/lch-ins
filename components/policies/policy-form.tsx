@@ -5,7 +5,11 @@ import { FileUp, Link2 } from "lucide-react"
 import { toast } from "sonner"
 import * as z from "zod"
 
-import { createPolicyAction, updatePolicyAction } from "@/app/(app)/policies/actions"
+import {
+  createPolicyAction,
+  updatePolicyAction,
+  uploadPolicyFileAction,
+} from "@/app/(app)/policies/actions"
 import { FormDrawer } from "@/components/shared/form-drawer"
 import { useFormOptions } from "@/components/shared/form-options-provider"
 import {
@@ -30,16 +34,16 @@ import {
   type ClassOfBusiness,
   type PlacingSlip,
   type Policy,
-  type PolicyFile,
   type PolicyType,
   type SlipPart,
 } from "@/lib/data"
-import { addMonths, todayIso } from "@/lib/date"
+import { addMonths } from "@/lib/date"
 import { cobLabels, coversFor } from "@/lib/form-options"
 import { dateShort, money } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
 import type { PolicyFormOptions, PolicyInput } from "@/lib/server/policies"
 import { newId, store } from "@/lib/store"
+import { UPLOAD_ACCEPT, uploadProblem } from "@/lib/uploads"
 import { requiredText, validate, type FieldErrors } from "@/lib/validation"
 
 type Draft = Omit<Policy, "id" | "files"> & { id: string | null }
@@ -361,21 +365,20 @@ export function PolicyForm({
       return false
     }
 
-    // Softcopies are not uploaded to storage yet; they stay as object URLs in this tab.
-    const sessionFiles = (id ? store.get("policies", id)?.files ?? [] : []).filter(
-      (f) => f.url && !res.data?.files.some((x) => x.id === f.id)
-    )
-    const files: PolicyFile[] = [...res.data.files, ...sessionFiles]
+    let record: Policy = res.data
     if (file) {
-      files.push({
-        id: newId("pf"),
-        version: files.length + 1,
-        fileName: file.name,
-        uploadedAt: todayIso(),
-        url: URL.createObjectURL(file),
-      })
+      const body = new FormData()
+      body.append("file", file)
+      const uploaded = await uploadPolicyFileAction(record.id, body)
+      if (uploaded.ok && uploaded.data) {
+        record = uploaded.data
+      } else {
+        // The policy is already saved, so keep it and let the user retry from Softcopy.
+        toast.error(`Softcopy ${file.name} gagal diunggah`, {
+          description: uploaded.error,
+        })
+      }
     }
-    const record: Policy = { ...res.data, files }
     store.upsert("policies", record)
     toast.success(id ? "Polis diperbarui" : "Polis tersimpan", {
       description: `${record.policyNo} · ${record.insuredName}`,
@@ -682,9 +685,18 @@ export function PolicyForm({
           <label className="flex w-fit cursor-pointer items-center gap-2 rounded-lg has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/30">
             <input
               type="file"
-              accept="application/pdf,image/*"
+              accept={UPLOAD_ACCEPT}
               className="sr-only"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                const picked = e.target.files?.[0] ?? null
+                const problem = picked ? uploadProblem(picked) : null
+                if (problem) {
+                  toast.error(problem, { description: picked?.name })
+                  e.target.value = ""
+                  return
+                }
+                setFile(picked)
+              }}
             />
             <Button
               type="button"

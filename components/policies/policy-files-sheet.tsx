@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { ExternalLink, FileText, FileUp } from "lucide-react"
+import { ExternalLink, FileText, FileUp, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
+import { uploadPolicyFileAction } from "@/app/(app)/policies/actions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { usePermission } from "@/components/auth/permission-provider"
@@ -15,9 +16,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import type { Policy } from "@/lib/data"
-import { todayIso } from "@/lib/date"
 import { dateShort } from "@/lib/format"
-import { newId, store } from "@/lib/store"
+import { UPLOAD_ACCEPT, UPLOAD_HINT, uploadProblem } from "@/lib/uploads"
 
 /**
  * Riwayat softcopy polis (PRD A-17). Setiap upload menambah versi baru,
@@ -33,24 +33,29 @@ export function PolicyFilesSheet({
   const permission = usePermission()
   const canManage = permission.canManage("/policies")
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = React.useState(false)
   const files = [...(policy?.files ?? [])].reverse()
 
-  function upload(file: File) {
+  async function upload(file: File) {
     if (!policy) return
-    const version = policy.files.length + 1
-    store.update("policies", policy.id, {
-      files: [
-        ...policy.files,
-        {
-          id: newId("pf"),
-          version,
-          fileName: file.name,
-          uploadedAt: todayIso(),
-          url: URL.createObjectURL(file),
-        },
-      ],
+    const problem = uploadProblem(file)
+    if (problem) {
+      toast.error(problem, { description: file.name })
+      return
+    }
+    setUploading(true)
+    const body = new FormData()
+    body.append("file", file)
+    const res = await uploadPolicyFileAction(policy.id, body)
+    setUploading(false)
+    if (!res.ok || !res.data) {
+      toast.error(`Gagal mengunggah ${file.name}`, { description: res.error })
+      return
+    }
+    const latest = res.data.files[res.data.files.length - 1]
+    toast.success(`Softcopy v${latest?.version ?? ""} tersimpan`, {
+      description: file.name,
     })
-    toast.success(`Softcopy v${version} tersimpan`, { description: file.name })
   }
 
   return (
@@ -116,7 +121,7 @@ export function PolicyFilesSheet({
             <input
               ref={inputRef}
               type="file"
-              accept="application/pdf,image/*"
+              accept={UPLOAD_ACCEPT}
               className="sr-only"
               tabIndex={-1}
               onChange={(e) => {
@@ -125,10 +130,21 @@ export function PolicyFilesSheet({
                 e.target.value = ""
               }}
             />
-            <Button className="w-full" onClick={() => inputRef.current?.click()}>
-              <FileUp data-icon="inline-start" />
-              Upload versi baru
+            <Button
+              className="w-full"
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 data-icon="inline-start" className="animate-spin" />
+              ) : (
+                <FileUp data-icon="inline-start" />
+              )}
+              {uploading ? "Mengunggah..." : "Upload versi baru"}
             </Button>
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              {UPLOAD_HINT}
+            </p>
           </div>
         )}
       </SheetContent>

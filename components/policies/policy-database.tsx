@@ -59,7 +59,7 @@ import type { ExportSpec } from "@/lib/export"
 import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
 import type { PolicyFormOptions } from "@/lib/server/policies"
-import { store, useCollection } from "@/lib/store"
+import { store } from "@/lib/store"
 
 const STATUS_ITEMS = [
   { label: "Semua status", value: "all" },
@@ -72,17 +72,6 @@ type FormState = {
   key: number
   policy: Policy | null
   preset?: Partial<Policy>
-}
-
-/** Server rows plus softcopies uploaded in this tab, which only live in the session store. */
-function withSessionFiles(server: Policy[], session: Policy[]): Policy[] {
-  const sessionById = new Map(session.map((p) => [p.id, p]))
-  return server.map((p) => {
-    const extra = (sessionById.get(p.id)?.files ?? []).filter(
-      (f) => f.url && !p.files.some((x) => x.id === f.id)
-    )
-    return extra.length ? { ...p, files: [...p.files, ...extra] } : p
-  })
 }
 
 export function PolicyDatabase({
@@ -104,17 +93,13 @@ export function PolicyDatabase({
   const today = useToday()
   const permission = usePermission()
   const canManage = permission.canManage("/policies")
-  const sessionPolicies = useCollection("policies")
   const [, startDelete] = React.useTransition()
 
-  const policies = React.useMemo(
-    () => withSessionFiles(initialPolicies, sessionPolicies),
-    [initialPolicies, sessionPolicies]
-  )
+  const policies = initialPolicies
 
   // Downstream modules (dashboard, renewal notice, claims) still read the store.
   React.useEffect(() => {
-    store.replace("policies", withSessionFiles(initialPolicies, store.all("policies")))
+    store.replace("policies", initialPolicies)
   }, [initialPolicies])
 
   const [query, setQuery] = React.useState("")
