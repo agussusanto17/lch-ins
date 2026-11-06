@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `feat/peserta-polis-endorsement`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#161](https://github.com/agussusanto17/lch-ins/pull/161)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
