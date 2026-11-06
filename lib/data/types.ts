@@ -291,6 +291,12 @@ export interface PlacingSlip {
    */
   periodText?: string
   /**
+   * Teks pengganti tanggal akhir di dokumen, misalnya "until final
+   * destination" untuk single shipment. Tanggal akhir tetap disimpan untuk
+   * polis. Nilai awalnya dari type of cover di Master Data.
+   */
+  periodEndText?: string
+  /**
    * Detail tambahan yang dicetak di tabel detail dokumen setelah baris
    * bawaan, misalnya Retroactive Date atau Voyage. Label bawaannya datang dari
    * type of cover di Master Data.

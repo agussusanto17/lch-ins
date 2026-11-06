@@ -92,6 +92,17 @@ const coverTypeSchema = z.object({
     .trim()
     .max(200, "Label periode maksimal 200 karakter")
     .nullish(),
+  periodDays: z
+    .number()
+    .int("Lama periode harus bilangan bulat")
+    .min(0, "Lama periode tidak boleh negatif")
+    .max(3660, "Lama periode maksimal 3660 hari")
+    .nullish(),
+  periodEndText: z
+    .string()
+    .trim()
+    .max(200, "Teks akhir periode maksimal 200 karakter")
+    .nullish(),
   isActive: z.boolean().optional(),
 })
 

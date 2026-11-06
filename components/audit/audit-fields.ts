@@ -42,6 +42,8 @@ const FIELD_LABELS: Record<string, string> = {
   deductibleIntro: "Kalimat pengantar deductible",
   clauseGroups: "Kelompok klausul",
   periodLabel: "Label periode",
+  periodEndText: "Teks akhir periode",
+  periodDays: "Lama periode (hari)",
   periodText: "Teks periode",
   insuredDescription: "Uraian tertanggung",
   typeOfCoverLabel: "Type of cover di dokumen",

@@ -26,7 +26,7 @@ import {
   findMotorPaBounds,
   matchMotorRegion,
 } from "@/lib/data/ojk-motor"
-import { todayIso } from "@/lib/date"
+import { addDays, todayIso } from "@/lib/date"
 import { dateEn, normalizeCob } from "@/lib/format"
 import { withDetailLabels } from "@/lib/slip-details"
 import {
@@ -293,6 +293,9 @@ export const DEFAULT_PERIOD_LABEL = "Period of Insurance"
  *   "23rd / 24th / 25th October 2026 until final destination" (ETD single
  *   shipment) atau periode proyek T.B.A.
  * - Period TBA tanpa teks: "To Be Advised".
+ * - Teks akhir periode menggantikan tanggal akhir, misalnya "23 October 2026
+ *   until final destination" untuk single shipment. Keterangan periode tidak
+ *   ikut, karena keterangan seperti "both days" mengacu ke dua tanggal.
  * - Tanggal mulai sama dengan tanggal akhir dicetak satu tanggal, misalnya
  *   hari turnamen Hole in One.
  * - Keterangan periode dicetak di baris berikutnya, seperti CI LCH.
@@ -300,13 +303,23 @@ export const DEFAULT_PERIOD_LABEL = "Period of Insurance"
 export function slipPeriodRow(
   slip: Pick<
     PlacingSlip,
-    "periodTba" | "inceptionDate" | "expiryDate" | "periodNote" | "periodLabel" | "periodText"
+    | "periodTba"
+    | "inceptionDate"
+    | "expiryDate"
+    | "periodNote"
+    | "periodLabel"
+    | "periodText"
+    | "periodEndText"
   >
 ): [string, string] {
   const label = slip.periodLabel?.trim() || DEFAULT_PERIOD_LABEL
   const text = slip.periodText?.trim()
   if (text) return [label, text]
   if (slip.periodTba) return [label, "To Be Advised"]
+  const endText = slip.periodEndText?.trim()
+  if (endText && slip.inceptionDate) {
+    return [label, `${dateEn(slip.inceptionDate)} ${endText}`]
+  }
   const dates =
     slip.inceptionDate && slip.inceptionDate === slip.expiryDate
       ? dateEn(slip.inceptionDate)
@@ -315,11 +328,12 @@ export function slipPeriodRow(
 }
 
 /**
- * Label periode setelah type of cover diganti: label bawaan type of cover
- * baru, kecuali label yang diketik sendiri (beda dari bawaan type of cover
- * lama) tetap dipakai.
+ * Isian bawaan type of cover setelah type of cover diganti, misalnya label
+ * periode atau teks akhir periode: nilai bawaan type of cover baru, kecuali
+ * nilai yang diketik sendiri (beda dari bawaan type of cover lama) tetap
+ * dipakai.
  */
-export function nextPeriodLabel(
+export function nextCoverDefault(
   current: string | undefined,
   oldDefault: string | null | undefined,
   newDefault: string | null | undefined
@@ -394,6 +408,7 @@ export function switchCob(
     typeOfCover2Label: undefined,
     usesSections: false,
     periodLabel: undefined,
+    periodEndText: undefined,
     // Label bawaan type of cover lama dibuang; baris yang sudah diisi tetap.
     detailRows: withDetailLabels(slip.detailRows, []),
     coverCode: null,
@@ -598,6 +613,32 @@ export function slipSectionTitles(
     return ["Section 1 — Material Damage", "Section 2 — Third Party Liability"]
   }
   return null
+}
+
+/**
+ * Tanggal akhir otomatis dari lama periode bawaan type of cover (Master
+ * Data): tanggal mulai + sekian hari, misalnya 14 hari setelah ETD untuk
+ * single shipment atau 0 hari untuk Hole in One (jawaban Harry, 6 November
+ * 2026). Tanggal akhir yang kosong atau masih hasil hitung dari tanggal mulai
+ * sebelumnya ikut berubah; yang sudah diubah sendiri dibiarkan.
+ */
+export function autoExpiryDate({
+  inception,
+  previousInception,
+  expiry,
+  days,
+}: {
+  inception: string | null | undefined
+  previousInception: string | null | undefined
+  expiry: string | null | undefined
+  days: number | null | undefined
+}): string | null {
+  const current = expiry || null
+  if (days == null || days < 0 || !inception) return current
+  const automatic =
+    !current ||
+    (previousInception ? current === addDays(previousInception, days) : false)
+  return automatic ? addDays(inception, days) : current
 }
 
 /** COB yang punya isian Additional Fee untuk produksi (4 November 2026). */
@@ -874,7 +915,9 @@ export function slipFromSppa(
   sppa: Sppa,
   client: Client | null,
   covers?: (Pick<CoverOption, "name" | "abbreviation"> &
-    Partial<Pick<CoverOption, "detailLabels" | "usesSections" | "periodLabel">>)[]
+    Partial<
+      Pick<CoverOption, "detailLabels" | "usesSections" | "periodLabel" | "periodEndText">
+    >)[]
 ): PlacingSlip {
   const cob = normalizeCob(sppa.cob)
   const base = switchCob(emptySlip(), cob)
@@ -934,6 +977,9 @@ export function slipFromSppa(
       covers?.find((c) => c.name === sppa.typeOfCover)?.usesSections ?? false,
     periodLabel:
       covers?.find((c) => c.name === sppa.typeOfCover)?.periodLabel?.trim() ||
+      undefined,
+    periodEndText:
+      covers?.find((c) => c.name === sppa.typeOfCover)?.periodEndText?.trim() ||
       undefined,
     coverCode: coverCodeFor(cob, sppa.typeOfCover, covers),
     currency: sppa.currency,

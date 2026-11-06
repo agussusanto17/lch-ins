@@ -60,6 +60,10 @@ export interface CoverTypeInput {
    * berarti Period of Insurance; tidak dikirim berarti tidak diubah.
    */
   periodLabel?: string | null
+  /** Lama periode bawaan (hari); null berarti tidak otomatis. */
+  periodDays?: number | null
+  /** Teks pengganti tanggal akhir di dokumen, misalnya until final destination. */
+  periodEndText?: string | null
   isActive?: boolean
 }
 
@@ -456,6 +460,8 @@ export async function createCoverType(
         detailLabels: cleanDetailLabels(input.detailLabels),
         usesSections: input.usesSections ?? false,
         periodLabel: input.periodLabel?.trim() || null,
+        periodDays: input.periodDays ?? null,
+        periodEndText: input.periodEndText?.trim() || null,
         isActive: input.isActive ?? true,
       },
     })
@@ -492,6 +498,11 @@ export async function updateCoverType(
           input.periodLabel === undefined
             ? undefined
             : input.periodLabel?.trim() || null,
+        periodDays: input.periodDays === undefined ? undefined : input.periodDays,
+        periodEndText:
+          input.periodEndText === undefined
+            ? undefined
+            : input.periodEndText?.trim() || null,
         isActive: input.isActive ?? before.isActive,
       },
     })

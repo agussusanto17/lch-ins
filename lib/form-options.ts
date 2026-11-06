@@ -20,6 +20,10 @@ export interface CoverOption {
   usesSections: boolean
   /** Label periode bawaan di dokumen, misalnya Date of Tournament. */
   periodLabel: string | null
+  /** Lama periode bawaan dalam hari, untuk tanggal akhir otomatis. */
+  periodDays: number | null
+  /** Teks pengganti tanggal akhir di dokumen, misalnya until final destination. */
+  periodEndText: string | null
 }
 
 /** Pilihan deductible dari Master Data > Deductible. */

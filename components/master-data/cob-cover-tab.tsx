@@ -33,6 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -74,6 +75,8 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
   const [coverDetailLabels, setCoverDetailLabels] = React.useState("")
   const [coverUsesSections, setCoverUsesSections] = React.useState(false)
   const [coverPeriodLabel, setCoverPeriodLabel] = React.useState("")
+  const [coverPeriodDays, setCoverPeriodDays] = React.useState<number | null>(null)
+  const [coverPeriodEndText, setCoverPeriodEndText] = React.useState("")
   const [coverIsActive, setCoverIsActive] = React.useState(true)
 
   const [prevInitialCobs, setPrevInitialCobs] = React.useState(initialCobs)
@@ -117,6 +120,8 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverDetailLabels("")
     setCoverUsesSections(false)
     setCoverPeriodLabel("")
+    setCoverPeriodDays(null)
+    setCoverPeriodEndText("")
     setCoverIsActive(true)
     setCoverDialogOpen(true)
   }
@@ -130,6 +135,8 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverDetailLabels((cover.detailLabels ?? []).join("\n"))
     setCoverUsesSections(cover.usesSections ?? false)
     setCoverPeriodLabel(cover.periodLabel ?? "")
+    setCoverPeriodDays(cover.periodDays ?? null)
+    setCoverPeriodEndText(cover.periodEndText ?? "")
     setCoverIsActive(cover.isActive)
     setCoverDialogOpen(true)
   }
@@ -152,6 +159,8 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           detailLabels,
           usesSections: coverUsesSections,
           periodLabel: coverPeriodLabel,
+          periodDays: coverPeriodDays,
+          periodEndText: coverPeriodEndText,
           isActive: coverIsActive,
         })
         if (!res.ok) {
@@ -174,6 +183,8 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                           detailLabels: res.data?.detailLabels ?? [],
                           usesSections: res.data?.usesSections ?? false,
                           periodLabel: res.data?.periodLabel ?? null,
+                          periodDays: res.data?.periodDays ?? null,
+                          periodEndText: res.data?.periodEndText ?? null,
                           isActive: coverIsActive,
                         }
                       : ct
@@ -191,6 +202,8 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           detailLabels,
           usesSections: coverUsesSections,
           periodLabel: coverPeriodLabel,
+          periodDays: coverPeriodDays,
+          periodEndText: coverPeriodEndText,
           isActive: coverIsActive,
         })
         if (!res.ok || !res.data) {
@@ -580,6 +593,38 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                 Pengganti label Period of Insurance di dokumen slip, misalnya
                 Estimated Time of Departure (ETD) atau Date of Tournament.
                 Kosongkan untuk Period of Insurance.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="cover-period-days">Lama Periode (hari)</Label>
+                <NumberInput
+                  id="cover-period-days"
+                  placeholder="Tidak otomatis"
+                  value={coverPeriodDays}
+                  onValueChange={(v) =>
+                    setCoverPeriodDays(v == null ? null : Math.max(0, Math.round(v)))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <Label htmlFor="cover-period-end-text">
+                  Teks Akhir Periode di Dokumen
+                </Label>
+                <Input
+                  id="cover-period-end-text"
+                  placeholder="Kosongkan untuk mencetak tanggal akhir"
+                  maxLength={200}
+                  value={coverPeriodEndText}
+                  onChange={(e) => setCoverPeriodEndText(e.target.value)}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground sm:col-span-3">
+                Lama periode mengisi expiry date slip otomatis dari inception
+                date, misalnya 14 hari untuk single shipment atau 0 untuk acara
+                satu hari. Teks akhir periode menggantikan tanggal akhir di
+                dokumen, misalnya &ldquo;until final destination&rdquo;.
               </p>
             </div>
 

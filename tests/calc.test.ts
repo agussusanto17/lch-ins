@@ -22,7 +22,8 @@ import {
   slipOccupationText,
   slipSectionTitles,
   slipPeriodRow,
-  nextPeriodLabel,
+  nextCoverDefault,
+  autoExpiryDate,
   releaseIssues,
   exclusionItems,
 } from "../components/underwriting/slip-model"
@@ -627,13 +628,13 @@ test("baris periode: label, satu tanggal, TBA, dan teks pengganti tanggal", () =
 })
 
 test("label periode ikut type of cover baru, kecuali yang diketik sendiri", () => {
-  assert.equal(nextPeriodLabel(undefined, null, "Date of Tournament"), "Date of Tournament")
-  assert.equal(nextPeriodLabel("Date of Tournament", "Date of Tournament", null), undefined)
+  assert.equal(nextCoverDefault(undefined, null, "Date of Tournament"), "Date of Tournament")
+  assert.equal(nextCoverDefault("Date of Tournament", "Date of Tournament", null), undefined)
   assert.equal(
-    nextPeriodLabel("Date of Tournament", "Date of Tournament", "Estimated Time of Departure (ETD)"),
+    nextCoverDefault("Date of Tournament", "Date of Tournament", "Estimated Time of Departure (ETD)"),
     "Estimated Time of Departure (ETD)"
   )
-  assert.equal(nextPeriodLabel("Date of Event", "Date of Tournament", null), "Date of Event")
+  assert.equal(nextCoverDefault("Date of Event", "Date of Tournament", null), "Date of Event")
 })
 
 test("release menerima periode satu hari, menolak expiry sebelum inception", () => {
@@ -658,4 +659,43 @@ test("exclusions: nomor diketik sendiri dipisah dari teks, kalimat penutup apa a
   ])
   assert.deepEqual(exclusionItems(undefined), [])
   assert.deepEqual(exclusionItems("No. 5 of the policy"), [{ marker: null, text: "No. 5 of the policy" }])
+})
+
+test("single shipment: tanggal mulai lalu teks akhir periode, tanpa tanggal akhir dan keterangan", () => {
+  const slip = {
+    periodTba: false,
+    inceptionDate: "2026-10-23",
+    expiryDate: "2026-11-06",
+    periodNote: "Both days at 12 o'clock noon local time.",
+    periodLabel: "Estimated Time of Departure (ETD)",
+    periodEndText: " until final destination ",
+  }
+  assert.deepEqual(slipPeriodRow(slip), [
+    "Estimated Time of Departure (ETD)",
+    "23 October 2026 until final destination",
+  ])
+  // Teks periode tetap menang, misalnya beberapa tanggal ETD.
+  assert.equal(
+    slipPeriodRow({ ...slip, periodText: "23rd / 24th / 25th October 2026 until final destination." })[1],
+    "23rd / 24th / 25th October 2026 until final destination."
+  )
+})
+
+test("tanggal akhir otomatis dari lama periode bawaan, kecuali yang diubah sendiri", () => {
+  // Single shipment: 14 hari setelah ETD.
+  assert.equal(autoExpiryDate({ inception: "2026-10-23", previousInception: null, expiry: null, days: 14 }), "2026-11-06")
+  // Tanggal mulai digeser: tanggal akhir otomatis ikut.
+  assert.equal(
+    autoExpiryDate({ inception: "2026-10-25", previousInception: "2026-10-23", expiry: "2026-11-06", days: 14 }),
+    "2026-11-08"
+  )
+  // Tanggal akhir yang diubah sendiri dibiarkan.
+  assert.equal(
+    autoExpiryDate({ inception: "2026-10-25", previousInception: "2026-10-23", expiry: "2026-11-30", days: 14 }),
+    "2026-11-30"
+  )
+  // Hole in One: hari yang sama.
+  assert.equal(autoExpiryDate({ inception: "2026-07-29", previousInception: null, expiry: "", days: 0 }), "2026-07-29")
+  // Type of cover tanpa lama periode: tidak berubah.
+  assert.equal(autoExpiryDate({ inception: "2026-07-29", previousInception: null, expiry: null, days: null }), null)
 })

@@ -85,6 +85,7 @@ export interface PlacingSlipInput {
   expiryDate?: string | null
   periodNote?: string | null
   periodLabel?: string | null
+  periodEndText?: string | null
   periodText?: string | null
   usesSections?: boolean
   insuredDescription?: string | null
@@ -558,6 +559,7 @@ function toPlacingSlipRecord(raw: PrismaPlacingSlipWithRelations): PlacingSlipRe
     expiryDate,
     periodNote: raw.periodNote || undefined,
     periodLabel: raw.periodLabel || undefined,
+    periodEndText: raw.periodEndText || undefined,
     periodText: raw.periodText || undefined,
     usesSections: raw.usesSections || undefined,
     insuredDescription: raw.insuredDescription || undefined,
@@ -1037,6 +1039,7 @@ export async function createPlacingSlip(
         expiryDate,
         periodNote: input.periodNote?.trim() || null,
         periodLabel: input.periodLabel?.trim() || null,
+        periodEndText: input.periodEndText?.trim() || null,
         periodText: input.periodText?.trim() || null,
         usesSections: input.usesSections === true,
         insuredDescription: input.insuredDescription?.trim() || null,
@@ -1415,6 +1418,7 @@ export async function updatePlacingSlip(
         expiryDate,
         periodNote: input.periodNote?.trim() || null,
         periodLabel: input.periodLabel?.trim() || null,
+        periodEndText: input.periodEndText?.trim() || null,
         periodText: input.periodText?.trim() || null,
         usesSections: input.usesSections === true,
         insuredDescription: input.insuredDescription?.trim() || null,
