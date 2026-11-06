@@ -359,6 +359,7 @@ export function emptySlip(): PlacingSlip {
     sumInsuredSection1: [{ id: uid("m"), description: "", amount: 0 }],
     sumInsuredSection2: [{ id: uid("b"), description: "", amount: 0 }],
     specialConditions: "",
+    deductibleIntro: "",
     clauseIds: [],
     rateLines: makeRateLines("Property"),
     tplLines: [],

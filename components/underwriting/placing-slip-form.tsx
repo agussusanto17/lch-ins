@@ -1485,6 +1485,24 @@ function SlipEditor({
                * bisa menambah baris Personal Accident dan Third Party Liability
                * (keduanya 4 November 2026).
                */}
+              <Field>
+                <FieldLabel htmlFor="deductible-intro">
+                  Kalimat pengantar deductible
+                </FieldLabel>
+                <Textarea
+                  id="deductible-intro"
+                  rows={2}
+                  maxLength={500}
+                  placeholder="Misalnya: Any one loss or series of losses arising out of any one event:"
+                  value={slip.deductibleIntro ?? ""}
+                  onChange={(e) => set({ deductibleIntro: e.target.value })}
+                />
+                <FieldDescription>
+                  Dicetak di atas daftar deductible. Kosongkan kalau tidak
+                  perlu.
+                </FieldDescription>
+              </Field>
+
               <div className="flex flex-col gap-2">
                 <div>
                   <p className="text-sm font-medium">Deductible per cover</p>

@@ -232,10 +232,46 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
   const isProperty = slip.cob === "Property"
   // Slip multi lokasi menyebut lokasi tiap item sum insured.
   const multi = isMultiLocation(slip)
-  const sectionItems = (section: "section1" | "section2") =>
-    locationGroups(slip).flatMap((g) =>
-      g[section].map((item) => ({ item, no: g.no }))
+  const sumInsuredRow = (i: LineItem, dash: boolean) => (
+    <li
+      key={i.id}
+      className="flex justify-between gap-6 border-b border-dashed py-1"
+    >
+      <span className="flex gap-1.5">
+        {dash ? <span aria-hidden>—</span> : null}
+        <span>{i.description}</span>
+      </span>
+      <span className="tabular whitespace-nowrap">
+        {money(i.amount, slip.currency)}
+      </span>
+    </li>
+  )
+  // Slip multi lokasi: item tiap section dikelompokkan di bawah judul
+  // "Lokasi n" (permintaan LCH, 6 November 2026).
+  const sectionList = (section: "section1" | "section2") => {
+    const groups = locationGroups(slip)
+    if (!multi) {
+      return (
+        <ul className="mt-2 flex flex-col gap-1">
+          {groups.flatMap((g) => g[section]).map((i) => sumInsuredRow(i, false))}
+        </ul>
+      )
+    }
+    return (
+      <div className="mt-2 flex flex-col gap-3">
+        {groups
+          .filter((g) => g[section].length > 0)
+          .map((g) => (
+            <div key={g.no} className="avoid-break">
+              <p className="font-medium">Lokasi {g.no}</p>
+              <ul className="mt-1 flex flex-col gap-1">
+                {g[section].map((i) => sumInsuredRow(i, true))}
+              </ul>
+            </div>
+          ))}
+      </div>
     )
+  }
   // Slip ber-section (CAR, EAR) mengelompokkan objek per section.
   const objectSections = isProperty ? null : slipSectionTitles(slip)
 
@@ -295,22 +331,7 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
               <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
                 {slip.interestSection1}
               </p>
-              <ul className="mt-2 flex flex-col gap-1">
-                {sectionItems("section1").map(({ item: i, no }) => (
-                  <li
-                    key={i.id}
-                    className="flex justify-between gap-6 border-b border-dashed py-1"
-                  >
-                    <span>
-                      {multi ? `Lokasi ${no} — ` : ""}
-                      {i.description}
-                    </span>
-                    <span className="tabular whitespace-nowrap">
-                      {money(i.amount, slip.currency)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {sectionList("section1")}
               <p className="mt-1 flex justify-between text-xs font-medium">
                 <span>Subtotal Section 1</span>
                 <span className="tabular">
@@ -326,22 +347,7 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
               <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
                 {slip.interestSection2}
               </p>
-              <ul className="mt-2 flex flex-col gap-1">
-                {sectionItems("section2").map(({ item: i, no }) => (
-                  <li
-                    key={i.id}
-                    className="flex justify-between gap-6 border-b border-dashed py-1"
-                  >
-                    <span>
-                      {multi ? `Lokasi ${no} — ` : ""}
-                      {i.description}
-                    </span>
-                    <span className="tabular whitespace-nowrap">
-                      {money(i.amount, slip.currency)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {sectionList("section2")}
               <p className="mt-1 flex justify-between text-xs font-medium">
                 <span>Subtotal Section 2</span>
                 <span className="tabular">
@@ -461,8 +467,8 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
         .filter(Boolean)
     ),
   ]
-  // Slip Property mengikuti CI LCH (contoh SISKA RAHARJA): kalimat pengantar,
-  // lalu deductible per section; cover BI masuk Section 2.
+  // Slip Property mengikuti CI LCH (contoh SISKA RAHARJA): deductible per
+  // section; cover BI masuk Section 2.
   const property = slip.cob === "Property"
   // Slip ber-section (CAR, EAR): satu baris deductible per section, judulnya
   // judul section.
@@ -483,15 +489,16 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
         ]
       : [{ heading: null, texts: texts(() => true) }]
   ).filter((g) => g.texts.length > 0)
-  if (!groups.length && !slip.specialConditions) return null
+  // Kalimat pengantar diketik user, tidak lagi otomatis (permintaan LCH,
+  // 6 November 2026).
+  const intro = slip.deductibleIntro?.trim()
+  if (!groups.length && !intro && !slip.specialConditions) return null
 
   return (
     <>
       <SectionHeading>DEDUCTIBLE &amp; CONDITIONS</SectionHeading>
       <div className="flex flex-col gap-3 text-[13px]">
-        {groups.length && property ? (
-          <p>Any one loss or series of losses arising out of any one event:</p>
-        ) : null}
+        {intro ? <p className="whitespace-pre-line">{intro}</p> : null}
         {groups.map((g) => (
           <div key={g.heading ?? "deductible"}>
             {g.heading ? (

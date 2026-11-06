@@ -322,6 +322,8 @@ export interface PlacingSlip {
   sumInsuredSection1: LineItem[]
   sumInsuredSection2: LineItem[]
   specialConditions?: string
+  /** Kalimat di atas daftar deductible, dicetak apa adanya kalau diisi. */
+  deductibleIntro?: string
   /**
    * Exclusion slip, satu per baris dengan nomor a) atau 1) yang diketik
    * sendiri. Dicetak sebagai blok EXCLUSIONS setelah CLAUSES.
