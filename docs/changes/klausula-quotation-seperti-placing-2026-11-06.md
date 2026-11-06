@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `fix/klausula-quotation-seperti-placing`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #163
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
