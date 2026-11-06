@@ -59,7 +59,8 @@ Ini PR pertama dari tiga:
   participants as attached", dengan nilai total UP. Rate diisi seperti biasa,
   jadi premi = total UP × rate, sama dengan contoh LCH.
 - **Release:** peserta tanpa nama atau tanpa sum insured ditolak dengan nomor
-  pesertanya. Pengecekan yang sama dijalankan di server.
+  pesertanya. Pengecekan yang sama dijalankan di server. Draft tetap bisa
+  disimpan walaupun ada baris yang belum lengkap.
 - **Dokumen** (Placing Slip, Quotation, Cover Note, Closing Instruction):
   lampiran **DAFTAR PESERTA** di halaman baru setelah tanda tangan.
   - Kolom yang kosong di semua baris tidak dicetak.
@@ -79,6 +80,8 @@ Ini PR pertama dari tiga:
   Interest Insured otomatis.
 - `components/documents/doc-blocks.tsx` (`ParticipantAppendix`),
   `components/documents/slip-documents.tsx`: lampiran cetak.
+- `lib/participant-schema.ts` (baru): validasi peserta, dipakai juga untuk
+  endorsement.
 - `lib/server/placing-slips.ts`, `app/(app)/underwriting/actions.ts`,
   `lib/server/tariffs.ts`: simpan, baca, validasi (maksimal 5.000 peserta),
   duplikat, dan cek release.
