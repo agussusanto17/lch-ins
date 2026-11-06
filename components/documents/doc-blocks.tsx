@@ -762,7 +762,7 @@ export function ParticipantAppendix({ slip }: { slip: PlacingSlip }) {
   )
 }
 
-/** Wording lengkap di akhir dokumen — dipakai Placing Slip. */
+/** Wording lengkap di akhir dokumen — dipakai Placing Slip dan Quotation Slip. */
 export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
   const groups = clauseGroups(slip)
   if (!groups.length) return null
