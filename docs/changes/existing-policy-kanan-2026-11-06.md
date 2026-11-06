@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `feat/existing-policy-kanan`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#158](https://github.com/agussusanto17/lch-ins/pull/158)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
