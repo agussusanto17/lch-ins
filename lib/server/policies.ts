@@ -18,6 +18,12 @@ import { prisma } from "@/lib/prisma"
 import { MAX_RENEWAL_DAYS } from "@/lib/renewal"
 import { seedInitialClientsIfEmpty } from "@/lib/server/clients"
 import { getPlacingSlipById } from "@/lib/server/placing-slips"
+import {
+  assertClaimableFile,
+  deleteStoredFiles,
+  storedFilePath,
+  storedFileUrl,
+} from "@/lib/server/stored-files"
 import { recordAudit } from "@/server/services/audit"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
 
@@ -93,6 +99,7 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
       version: f.version,
       fileName: f.fileName,
       uploadedAt: f.uploadedAt.toISOString(),
+      url: storedFileUrl(f.filePath),
     })),
   }
 }
@@ -501,6 +508,7 @@ export async function deletePolicy(id: string, userId: string): Promise<void> {
     }
 
     await tx.policy.delete({ where: { id } })
+    await deleteStoredFiles(tx, existing.files.map((f) => f.filePath))
     await recordAudit(tx, {
       userId,
       entity: "policies",
@@ -509,6 +517,49 @@ export async function deletePolicy(id: string, userId: string): Promise<void> {
       before: auditSnapshot(toPolicyRecord(existing)),
       after: null,
     })
+  })
+}
+
+/** Softcopy baru selalu jadi versi berikutnya; versi lama tidak diganti. */
+export async function addPolicyFile(
+  policyId: string,
+  fileId: string,
+  userId: string
+): Promise<PolicyRecord> {
+  return prisma.$transaction(async (tx) => {
+    await assertClaimableFile(tx, fileId, "policy_file", userId)
+    const locked = await tx.$queryRaw<{ policy_no: string }[]>`
+      SELECT policy_no FROM policies WHERE id = ${policyId}::uuid FOR UPDATE`
+    if (locked.length === 0) throw new Error("Polis tidak ditemukan.")
+
+    const last = await tx.policyFile.aggregate({
+      where: { policyId },
+      _max: { version: true },
+    })
+    const previous = last._max.version
+    const stored = await tx.storedFile.findUniqueOrThrow({
+      where: { id: fileId },
+      select: { fileName: true },
+    })
+    const created = await tx.policyFile.create({
+      data: {
+        policyId,
+        version: (previous ?? 0) + 1,
+        fileName: stored.fileName,
+        filePath: storedFilePath(fileId),
+        uploadedBy: userId,
+      },
+    })
+    await recordAudit(tx, {
+      userId,
+      entity: "policies",
+      entityId: policyId,
+      action: "Update",
+      before: { softcopyVersion: previous },
+      after: { softcopyVersion: created.version, softcopyFile: created.fileName },
+      context: { policyNo: locked[0].policy_no },
+    })
+    return readPolicy(tx, policyId)
   })
 }
 

@@ -7,11 +7,12 @@ import { MAX_UPLOAD_BYTES } from "@/lib/uploads"
 type Tx = Prisma.TransactionClient
 
 /** Pemakaian berkas. Menentukan menu yang hak aksesnya dipakai saat dibuka. */
-export type FilePurpose = "client_document" | "claim_document"
+export type FilePurpose = "client_document" | "claim_document" | "policy_file"
 
 const PURPOSE_MENU: Record<FilePurpose, string> = {
   client_document: "/marketing",
   claim_document: "/claims",
+  policy_file: "/policies",
 }
 
 const PATH_PREFIX = "stored_files/"

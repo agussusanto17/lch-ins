@@ -141,6 +141,8 @@ const FIELD_LABELS: Record<string, string> = {
   documentReceivedDate: "Tanggal dokumen diterima",
   documentNotes: "Catatan dokumen",
   documentFile: "Berkas dokumen",
+  softcopyVersion: "Versi softcopy",
+  softcopyFile: "Softcopy polis",
   followupDate: "Tanggal follow-up",
   followupNote: "Catatan follow-up",
   lossDate: "Tanggal kejadian",

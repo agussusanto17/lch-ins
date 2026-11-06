@@ -392,7 +392,7 @@ export interface PolicyFile {
   version: number
   fileName: string
   uploadedAt: string
-  /** Object URL selama sesi prototipe. */
+  /** Kosong untuk file data contoh yang isinya tidak tersimpan. */
   url?: string
 }
 

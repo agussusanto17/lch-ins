@@ -7,6 +7,7 @@ import { z } from "zod"
 import { POLICY_TYPES } from "@/lib/data/reference"
 import { Prisma } from "@/lib/generated/prisma/client"
 import {
+  addPolicyFile,
   createPolicy,
   deletePolicy,
   updatePolicy,
@@ -14,6 +15,7 @@ import {
   type PolicyRecord,
 } from "@/lib/server/policies"
 import { requireManage } from "@/lib/server/session"
+import { saveUploadedFile } from "@/lib/server/stored-files"
 
 export interface ActionResponse<T = unknown> {
   ok: boolean
@@ -134,5 +136,24 @@ export async function deletePolicyAction(id: string): Promise<ActionResponse<voi
     return { ok: true }
   } catch (err) {
     return fail(err, "Gagal menghapus polis")
+  }
+}
+
+export async function uploadPolicyFileAction(
+  id: string,
+  formData: FormData
+): Promise<ActionResponse<PolicyRecord>> {
+  try {
+    const user = await requireManage("/policies")
+    const policyId = policyIdSchema.safeParse(id)
+    if (!policyId.success) return { ok: false, error: "ID polis tidak valid" }
+    const file = formData.get("file")
+    if (!(file instanceof File)) return { ok: false, error: "File tidak ditemukan." }
+    const stored = await saveUploadedFile(file, "policy_file", user.id)
+    const data = await addPolicyFile(policyId.data, stored.id, user.id)
+    revalidatePath("/policies")
+    return { ok: true, data }
+  } catch (err) {
+    return fail(err, "Gagal mengunggah softcopy polis")
   }
 }

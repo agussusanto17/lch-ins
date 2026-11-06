@@ -974,7 +974,7 @@ model StoredFile {
   contentType String   @map("content_type")
   sizeBytes   Int      @map("size_bytes")
   data        Bytes
-  /// Pemakaian berkas, menentukan hak akses saat dibuka: client_document, claim_document.
+  /// Pemakaian berkas, menentukan hak akses saat dibuka: client_document, claim_document, policy_file.
   purpose     String
   uploadedBy  String   @map("uploaded_by") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
