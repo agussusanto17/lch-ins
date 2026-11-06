@@ -21,6 +21,7 @@ import {
 } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
+import { EndorsementParticipants } from "@/components/policies/endorsement-participants"
 import {
   brokerageCapFor,
   slipPolicyParts,
@@ -36,10 +37,12 @@ import {
   type Policy,
   type PolicyType,
   type SlipPart,
+  type SlipParticipant,
 } from "@/lib/data"
 import { addMonths } from "@/lib/date"
 import { cobLabels, coversFor } from "@/lib/form-options"
 import { dateShort, money } from "@/lib/format"
+import { rosterPolicy } from "@/lib/policy-participants"
 import type { ClientOption } from "@/lib/server/clients"
 import type { PolicyFormOptions, PolicyInput } from "@/lib/server/policies"
 import { newId, store } from "@/lib/store"
@@ -101,7 +104,8 @@ const schema = z
     expiryDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal berakhir wajib diisi"),
-    sumInsured: z.number().nonnegative("Sum insured tidak boleh negatif"),
+    // Endorsement mencatat selisih: pengurangan UP negatif, seperti premi dan fee.
+    sumInsured: z.number(),
     premium: z.number(),
     brokeragePct: z
       .number()
@@ -130,6 +134,13 @@ const schema = z
         code: "custom",
         path: ["premium"],
         message: "Premi polis baru dan renewal harus lebih dari 0",
+      })
+    }
+    if ((d.type === "Baru" || d.type === "Renewal") && d.sumInsured < 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sumInsured"],
+        message: "Sum insured polis baru dan renewal tidak boleh negatif",
       })
     }
     if (
@@ -183,6 +194,9 @@ export function PolicyForm({
   )
   const [errors, setErrors] = React.useState<FieldErrors>({})
   const [file, setFile] = React.useState<File | null>(null)
+  // Perubahan peserta PA grup, hanya untuk endorsement baru.
+  const [addedParticipants, setAddedParticipants] = React.useState<SlipParticipant[]>([])
+  const [removedParticipantIds, setRemovedParticipantIds] = React.useState<string[]>([])
 
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -215,6 +229,13 @@ export function PolicyForm({
       value: s.id,
     }))
   const needsParent = POLICY_TYPES_WITH_PARENT.includes(draft.type)
+  const parentPolicy = draft.parentPolicyId
+    ? (policies.find((p) => p.id === draft.parentPolicyId) ?? null)
+    : null
+  // Daftar peserta dan rate milik polis asal, walau induknya endorsement lain.
+  const rosterOwner = parentPolicy ? rosterPolicy(parentPolicy, policies) : null
+  const participantChangesOn =
+    !policy && draft.type === "Endorsement" && rosterOwner?.cob === "General Accident"
   // Polis dari placing slip: data penempatan mengikuti slip dan dikunci.
   // Polis baru bisa dilepas dari slip untuk diisi manual; perubahan sesudah
   // polis terbit lewat endorsement. Periode slip yang TBA tetap diisi di sini.
@@ -339,6 +360,15 @@ export function PolicyForm({
     if (duplicate) errs.policyNo = "No. polis sudah terdaftar"
     setErrors(errs)
     if (!result.ok || duplicate) return false
+    const incomplete = participantChangesOn
+      ? addedParticipants.findIndex((p) => !p.name.trim() || !(p.sumInsured > 0))
+      : -1
+    if (incomplete >= 0) {
+      toast.error("Peserta tambahan belum lengkap", {
+        description: `Isi nama dan sum insured peserta tambahan nomor ${incomplete + 1}.`,
+      })
+      return false
+    }
 
     const insurers =
       draft.insurers.length &&
@@ -358,6 +388,9 @@ export function PolicyForm({
       policyNo: draft.policyNo.trim(),
       insuredName: draft.insuredName.trim(),
       insurers,
+      participantChanges: participantChangesOn
+        ? { added: addedParticipants, removedIds: removedParticipantIds }
+        : undefined,
     }
     const res = id ? await updatePolicyAction(id, input) : await createPolicyAction(input)
     if (!res.ok || !res.data) {
@@ -589,6 +622,11 @@ export function PolicyForm({
               value={draft.sumInsured}
               onValueChange={(v) => set({ sumInsured: v ?? 0 })}
               error={errors.sumInsured}
+              description={
+                draft.type === "Endorsement" || draft.type === "Cancellation"
+                  ? "Tambahan UP positif, pengurangan UP negatif."
+                  : undefined
+              }
             />
             <NumberField
               label="Premium"
@@ -638,6 +676,22 @@ export function PolicyForm({
             />
           </fieldset>
         </div>
+
+        {participantChangesOn && rosterOwner ? (
+          <>
+            <FieldSeparator />
+            <EndorsementParticipants
+              parent={rosterOwner}
+              effectiveDate={draft.inceptionDate}
+              currency={draft.currency}
+              added={addedParticipants}
+              removedIds={removedParticipantIds}
+              onAddedChange={setAddedParticipants}
+              onRemovedChange={setRemovedParticipantIds}
+              onApply={(v) => set(v)}
+            />
+          </>
+        ) : null}
 
         <FieldSeparator />
 

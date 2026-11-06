@@ -6,15 +6,18 @@ import { z } from "zod"
 
 import { POLICY_TYPES } from "@/lib/data/reference"
 import { Prisma } from "@/lib/generated/prisma/client"
+import { participantListSchema } from "@/lib/participant-schema"
+import type { PolicyParticipant } from "@/lib/policy-participants"
 import {
   addPolicyFile,
   createPolicy,
   deletePolicy,
+  listPolicyParticipants,
   updatePolicy,
   type PolicyInput,
   type PolicyRecord,
 } from "@/lib/server/policies"
-import { requireManage } from "@/lib/server/session"
+import { requireAccess, requireManage } from "@/lib/server/session"
 import { saveUploadedFile } from "@/lib/server/stored-files"
 
 export interface ActionResponse<T = unknown> {
@@ -47,7 +50,8 @@ const policyInputSchema = z
     inceptionDate: isoDate,
     expiryDate: isoDate,
     currency: z.string().trim().length(3, "Kode mata uang harus 3 huruf"),
-    sumInsured: z.number().nonnegative("Sum insured tidak boleh negatif"),
+    // Endorsement dan pembatalan mencatat selisih, jadi pengurangan UP negatif.
+    sumInsured: z.number(),
     premium: z.number(),
     brokeragePct: z.number().min(0).max(100),
     additionalFee: z.number().optional(),
@@ -57,6 +61,12 @@ const policyInputSchema = z
     cobOjkClassId: z.uuid("Klasifikasi OJK tidak valid").nullable().optional(),
     placementLocationId: z.uuid("Lokasi penempatan tidak valid").nullable().optional(),
     groupingInsured: z.string().trim().max(200, "Grouping insured maksimal 200 karakter").optional(),
+    participantChanges: z
+      .object({
+        added: participantListSchema,
+        removedIds: z.array(z.uuid("Peserta tidak valid")).max(5000),
+      })
+      .optional(),
   })
   // Tanggal sama boleh: polis acara satu hari, misalnya Hole in One.
   .refine((d) => d.expiryDate >= d.inceptionDate, {
@@ -66,6 +76,10 @@ const policyInputSchema = z
   .refine((d) => new Set(d.insurers.map((i) => i.insurer.toLowerCase())).size === d.insurers.length, {
     path: ["insurers"],
     message: "Asuransi yang sama tidak boleh muncul dua kali",
+  })
+  .refine((d) => (d.type !== "Baru" && d.type !== "Renewal") || d.sumInsured >= 0, {
+    path: ["sumInsured"],
+    message: "Sum insured polis baru dan renewal tidak boleh negatif",
   })
 
 function fail(err: unknown, fallback: string): ActionResponse<never> {
@@ -155,5 +169,19 @@ export async function uploadPolicyFileAction(
     return { ok: true, data }
   } catch (err) {
     return fail(err, "Gagal mengunggah softcopy polis")
+  }
+}
+
+/** Daftar peserta PA grup polis, termasuk yang ditambah atau dikurangi endorsement. */
+export async function listPolicyParticipantsAction(
+  id: string
+): Promise<ActionResponse<PolicyParticipant[]>> {
+  try {
+    await requireAccess("/policies")
+    const policyId = policyIdSchema.safeParse(id)
+    if (!policyId.success) return { ok: false, error: "ID polis tidak valid" }
+    return { ok: true, data: await listPolicyParticipants(policyId.data) }
+  } catch (err) {
+    return fail(err, "Gagal memuat peserta polis")
   }
 }

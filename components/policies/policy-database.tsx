@@ -8,6 +8,7 @@ import {
   Plus,
   RefreshCcw,
   Trash2,
+  Users,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -15,6 +16,7 @@ import { deletePolicyAction } from "@/app/(app)/policies/actions"
 import { useToday } from "@/components/layout/today-provider"
 import { PageHeader } from "@/components/layout/page-header"
 import { PolicyFilesSheet } from "@/components/policies/policy-files-sheet"
+import { PolicyParticipantsSheet } from "@/components/policies/policy-participants-sheet"
 import { PolicyForm } from "@/components/policies/policy-form"
 import {
   ACTION_COL_CLASS,
@@ -108,6 +110,7 @@ export function PolicyDatabase({
   const [tab, setTab] = React.useState<"all" | PolicyType>("all")
   const [form, setForm] = React.useState<FormState | null>(null)
   const [filesFor, setFilesFor] = React.useState<string | null>(null)
+  const [participantsFor, setParticipantsFor] = React.useState<string | null>(null)
 
   const openForm = (policy: Policy | null, preset?: Partial<Policy>) =>
     // Key baru setiap kali form dibuka supaya isiannya selalu mulai dari data terbaru.
@@ -140,6 +143,19 @@ export function PolicyDatabase({
   } = usePagination(rows, 10)
 
   function actionsFor(p: Policy): RowAction[] {
+    // Peserta PA grup: polis General Accident, termasuk endorsement-nya.
+    const participantsAction: RowAction[] =
+      p.cob === "General Accident"
+        ? [
+            {
+              label: p.participantCount
+                ? `Peserta (${p.participantCount.toLocaleString("id-ID")})`
+                : "Peserta",
+              icon: Users,
+              onSelect: () => setParticipantsFor(p.id),
+            },
+          ]
+        : []
     if (!canManage) {
       return [
         {
@@ -147,6 +163,7 @@ export function PolicyDatabase({
           icon: FileText,
           onSelect: () => setFilesFor(p.id),
         },
+        ...participantsAction,
       ]
     }
 
@@ -161,6 +178,7 @@ export function PolicyDatabase({
         icon: FileText,
         onSelect: () => setFilesFor(p.id),
       },
+      ...participantsAction,
     ]
     if (renewable) {
       actions.push(
@@ -510,6 +528,12 @@ export function PolicyDatabase({
         policy={filesPolicy}
         onOpenChange={(open) => {
           if (!open) setFilesFor(null)
+        }}
+      />
+      <PolicyParticipantsSheet
+        policy={participantsFor ? (policies.find((p) => p.id === participantsFor) ?? null) : null}
+        onOpenChange={(open) => {
+          if (!open) setParticipantsFor(null)
         }}
       />
     </div>

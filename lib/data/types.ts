@@ -466,6 +466,8 @@ export interface Policy {
   placementLocationId?: string | null
   groupingInsured?: string
   files: PolicyFile[]
+  /** Peserta PA grup yang masih aktif di daftar polis ini. */
+  participantCount?: number
 }
 
 export interface Claim {
