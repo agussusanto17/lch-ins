@@ -178,7 +178,8 @@ export function QuotationSlipDocument(props: DocProps) {
         </>
       ) : null}
 
-      <ClausesBlock slip={slip} inline />
+      {/* Same layout as Placing Slip: titles here, full wording in the appendix. */}
+      <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
@@ -189,6 +190,8 @@ export function QuotationSlipDocument(props: DocProps) {
         place={`Jakarta, ${dateLong(slip.updatedAt)}`}
         confirmationTitle="KONFIRMASI TERTANGGUNG / INSURED CONFIRMATION"
       />
+
+      <ClauseWordingAppendix slip={slip} />
 
     </DocumentShell>
   )
