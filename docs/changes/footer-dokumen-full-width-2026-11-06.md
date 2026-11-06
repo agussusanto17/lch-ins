@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `fix/footer-dokumen-full-width`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #155
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
