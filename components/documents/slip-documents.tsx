@@ -29,7 +29,6 @@ import {
   VehiclePremiumSchedule,
 } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
-import { PrintedAt } from "@/components/documents/printed-at"
 import { derivedDocNumber } from "@/components/underwriting/slip-model"
 import { Button } from "@/components/ui/button"
 import { rateUnitFor } from "@/lib/calc"
@@ -148,7 +147,6 @@ export function PlacingSlipDocument(props: DocProps) {
 
       <ClauseWordingAppendix slip={slip} />
 
-      <PrintedAt />
     </DocumentShell>
   )
 }
@@ -192,7 +190,6 @@ export function QuotationSlipDocument(props: DocProps) {
         confirmationTitle="KONFIRMASI TERTANGGUNG / INSURED CONFIRMATION"
       />
 
-      <PrintedAt />
     </DocumentShell>
   )
 }
@@ -238,7 +235,6 @@ export function CoverNoteDocument(props: DocProps) {
       <InsurerSignatureGrid slip={slip} />
       <p className="mt-8 text-[13px]">Jakarta, {dateLong(slip.updatedAt)}</p>
 
-      <PrintedAt />
     </DocumentShell>
   )
 }
@@ -312,7 +308,6 @@ export function ClosingInstructionDocument(props: DocProps) {
         caption="Diterima & Ditandatangani / Accepted & Signed by,"
       />
 
-      <PrintedAt />
     </DocumentShell>
   )
 }
