@@ -16,11 +16,14 @@ export function DocumentShell({
   backHref,
   children,
   wide = false,
+  letterhead = true,
 }: {
   backHref: string
   children: React.ReactNode
   /** Dokumen tabel lebar (misal rekap sheet Excel) memakai kontainer lebih longgar. */
   wide?: boolean
+  /** False drops the repeating LCH logo; the top spacer stays as the page margin. */
+  letterhead?: boolean
 }) {
   // Server dan render pertama menganggap browser mendukung, jadi tidak ada
   // hydration mismatch; peringatan baru muncul setelah user agent terbaca.
@@ -64,9 +67,11 @@ export function DocumentShell({
 
       <article className="print-sheet rounded-2xl border bg-card p-8 text-card-foreground shadow-sm md:p-12 overflow-hidden print:overflow-visible">
         {/* Header berulang di setiap halaman cetak */}
-        <div className="print-header-fixed hidden print:block">
-          <LchLogo className="h-14 w-auto" />
-        </div>
+        {letterhead ? (
+          <div className="print-header-fixed hidden print:block">
+            <LchLogo className="h-14 w-auto" />
+          </div>
+        ) : null}
 
         {/* Footer navy berulang di setiap halaman cetak */}
         <div className="print-footer-fixed hidden print:block">
