@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `fix/kembali-dokumen-tanpa-reload`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #156
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
