@@ -41,6 +41,15 @@ export function missingDetailLabels(
 }
 
 /** Baris yang dicetak di dokumen: isi kosong dilewati. */
+/**
+ * Baris Existing Policy No. (nomor polis tahun lalu untuk renewal). Dokumen
+ * mencetaknya di sisi kanan atas, bukan di tabel detail (Harry, 6 November
+ * 2026).
+ */
+export function isExistingPolicyLabel(label: string) {
+  return /^existing\s+policy(\s+no\.?|\s+number)?$/i.test(label.trim())
+}
+
 export function printedDetailRows(rows: readonly SlipDetailRow[] | undefined) {
   return (rows ?? [])
     .map((r) => ({ label: r.label.trim(), value: r.value.trim() }))

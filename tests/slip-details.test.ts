@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  isExistingPolicyLabel,
   cleanDetailLabels,
   cleanDetailRows,
   missingDetailLabels,
@@ -72,4 +73,13 @@ test("data JSON yang rusak tidak membuat slip gagal dibuka", () => {
       { label: "Vessels", value: "" },
     ]
   )
+})
+
+test("label Existing Policy No. dikenali dengan beberapa penulisan", () => {
+  for (const label of ["Existing Policy No.", "EXISTING POLICY NO", " existing policy number ", "Existing Policy"]) {
+    assert.equal(isExistingPolicyLabel(label), true, label)
+  }
+  for (const label of ["Policy No.", "Existing Policy Holder", "Retroactive Date"]) {
+    assert.equal(isExistingPolicyLabel(label), false, label)
+  }
 })
