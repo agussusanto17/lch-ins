@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useSyncExternalStore } from "react"
 import { ArrowLeft, Printer, TriangleAlert } from "lucide-react"
 
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { LchLogo } from "@/components/documents/letterhead"
 import { PrintedAt } from "@/components/documents/printed-at"
+import { hasAppShellHistory } from "@/lib/app-shell-history"
 import { repeatsPrintHeaderFooter } from "@/lib/print-support"
 
 const noSubscribe = () => () => {}
@@ -24,6 +26,7 @@ export function DocumentShell({
 }) {
   // Server dan render pertama menganggap browser mendukung, jadi tidak ada
   // hydration mismatch; peringatan baru muncul setelah user agent terbaca.
+  const router = useRouter()
   const repeatsHeaderFooter = useSyncExternalStore(
     noSubscribe,
     () => repeatsPrintHeaderFooter(navigator.userAgent),
@@ -43,6 +46,13 @@ export function DocumentShell({
           size="sm"
           render={<Link href={backHref} />}
           nativeButton={false}
+          onClick={(event) => {
+            // Browser back restores the app page from the router cache, with no
+            // refetch or loading skeleton; a fresh Link navigation does both.
+            if (!hasAppShellHistory()) return
+            event.preventDefault()
+            router.back()
+          }}
         >
           <ArrowLeft data-icon="inline-start" />
           Kembali

@@ -2,6 +2,7 @@ import { headers } from "next/headers"
 import { connection } from "next/server"
 
 import { AppSidebar } from "@/components/layout/app-sidebar"
+import { AppShellMarker } from "@/components/layout/app-shell-marker"
 import { AppTopbar } from "@/components/layout/app-topbar"
 import { PermissionProvider } from "@/components/auth/permission-provider"
 import { TodayProvider } from "@/components/layout/today-provider"
@@ -58,6 +59,7 @@ export default async function AppLayout({
             />
           ) : null}
           <Toaster position="top-center" />
+          <AppShellMarker />
         </SidebarProvider>
       </PermissionProvider>
     </TodayProvider>

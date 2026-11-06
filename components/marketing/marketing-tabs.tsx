@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import { Plus } from "lucide-react"
 
 import { usePermission } from "@/components/auth/permission-provider"
@@ -12,19 +13,19 @@ import { SppaTable } from "@/components/marketing/sppa-table"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Client, Policy, VehicleBrandOption } from "@/lib/data"
+import { parseRenewalCob, parseRenewalPeriod } from "@/lib/renewal"
 import type { ClientRecord } from "@/lib/server/clients"
 import type { SppaRecord } from "@/lib/server/sppa"
 import { store, useCollection } from "@/lib/store"
+import { replaceQuery } from "@/lib/url-query"
+
+const TABS = ["clients", "sppa", "renewal"] as const
 
 interface MarketingTabsProps {
   initialClients?: ClientRecord[]
   initialSppa?: SppaRecord[]
   initialPolicies?: Policy[]
   vehicleOptions?: VehicleBrandOption[]
-  /** Tab awal dari `?tab=`, supaya tombol Kembali di halaman cetak mendarat di tab asal. */
-  initialTab?: string
-  renewalPeriod?: string
-  renewalCob?: string
 }
 
 export function MarketingTabs({
@@ -32,10 +33,14 @@ export function MarketingTabs({
   initialSppa,
   initialPolicies,
   vehicleOptions,
-  initialTab = "clients",
-  renewalPeriod,
-  renewalCob,
 }: MarketingTabsProps) {
+  // Read from the URL, not server props: going back from a print page restores
+  // cached props from the first load, but keeps the URL the user left.
+  const searchParams = useSearchParams()
+  const [tab, setTab] = React.useState<string>(
+    () => TABS.find((t) => t === searchParams.get("tab")) ?? "clients"
+  )
+
   React.useEffect(() => {
     if (initialSppa) store.hydrate("sppa", initialSppa)
   }, [initialSppa])
@@ -69,7 +74,14 @@ export function MarketingTabs({
         }
       />
 
-      <Tabs defaultValue={initialTab} className="flex flex-col gap-4">
+      <Tabs
+        value={tab}
+        onValueChange={(value) => {
+          setTab(String(value))
+          replaceQuery({ tab: value === "clients" ? null : String(value) })
+        }}
+        className="flex flex-col gap-4"
+      >
         <TabsList className="no-print">
           <TabsTrigger value="clients">Database Klien</TabsTrigger>
           <TabsTrigger value="sppa">SPPA ({sppaCount})</TabsTrigger>
@@ -93,8 +105,10 @@ export function MarketingTabs({
         <TabsContent value="renewal">
           <RenewalNotice
             initialPolicies={initialPolicies}
-            initialPeriod={renewalPeriod}
-            initialCob={renewalCob}
+            initialPeriod={parseRenewalPeriod(
+              searchParams.get("days") ?? undefined
+            )}
+            initialCob={parseRenewalCob(searchParams.get("cob") ?? undefined)}
           />
         </TabsContent>
       </Tabs>
