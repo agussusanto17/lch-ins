@@ -49,7 +49,7 @@ import {
   locationsShareRates,
   type LocationGroup,
 } from "@/lib/slip-locations"
-import { printedDetailRows } from "@/lib/slip-details"
+import { isExistingPolicyLabel, printedDetailRows } from "@/lib/slip-details"
 import { clauseGroupBlocks } from "@/lib/clause-groups"
 import {
   isFlatLine,
@@ -152,10 +152,25 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
     rows.push(["Indemnity Period", slip.indemnityPeriod])
   // Detail tambahan, misalnya Retroactive Date, Voyage, atau Vessels (analisa
   // 26 contoh slip LCH, 6 November 2026). Baris tanpa isi tidak dicetak.
-  for (const r of printedDetailRows(slip.detailRows))
-    rows.push([r.label || "—", r.value])
+  // Existing Policy No. dicetak di sisi kanan atas tabel detail, bukan
+  // sebagai baris tabel (Harry, 6 November 2026).
+  const details = printedDetailRows(slip.detailRows)
+  const existing = details.find((r) => isExistingPolicyLabel(r.label))
+  for (const r of details)
+    if (r !== existing) rows.push([r.label || "—", r.value])
 
-  return <InfoTable rows={rows} />
+  return (
+    <>
+      {existing ? (
+        <p className="-mt-2 mb-3 text-right text-[13px] whitespace-pre-line">
+          <span className="text-muted-foreground">{existing.label}</span>
+          {" : "}
+          <span className="font-medium">{existing.value}</span>
+        </p>
+      ) : null}
+      <InfoTable rows={rows} />
+    </>
+  )
 }
 
 /**
