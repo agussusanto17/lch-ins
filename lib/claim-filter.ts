@@ -15,6 +15,7 @@ export interface FilterableClaim {
   stage?: string | null
   location?: string | null
   lossDescription?: string | null
+  participantName?: string | null
 }
 
 export interface ClaimFilterParams {
@@ -114,7 +115,8 @@ export function filterClaims<T extends FilterableClaim>(
       (c.policyNo || "").toLowerCase().includes(q) ||
       c.cob.toLowerCase().includes(q) ||
       (c.location || "").toLowerCase().includes(q) ||
-      (c.lossDescription || "").toLowerCase().includes(q)
+      (c.lossDescription || "").toLowerCase().includes(q) ||
+      (c.participantName || "").toLowerCase().includes(q)
     )
   })
 }

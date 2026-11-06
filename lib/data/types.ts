@@ -493,6 +493,9 @@ export interface Claim {
   status: ClaimStatus
   stage: ClaimStage
   notes?: string
+  /** Peserta PA grup yang mengalami kejadian. */
+  participantId?: string | null
+  participantName?: string
 }
 
 export interface Clause {

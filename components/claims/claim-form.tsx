@@ -6,6 +6,7 @@ import * as z from "zod"
 
 import {
   createClaimAction,
+  listClaimParticipantsAction,
   updateClaimAction,
 } from "@/app/(app)/claims/actions"
 import { FormDrawer } from "@/components/shared/form-drawer"
@@ -23,7 +24,16 @@ import {
   type ClaimStage,
   type ClaimStatus,
 } from "@/lib/data"
-import type { ClaimFormOptions, ClaimInput, ClaimRecord } from "@/lib/server/claims"
+import { dateShort, money } from "@/lib/format"
+import {
+  participantActiveOn,
+  type PolicyParticipant,
+} from "@/lib/policy-participants"
+import type {
+  ClaimFormOptions,
+  ClaimInput,
+  ClaimRecord,
+} from "@/lib/server/claims"
 import { store } from "@/lib/store"
 import { requiredText, validate, type FieldErrors } from "@/lib/validation"
 
@@ -55,6 +65,14 @@ const EMPTY: Draft = {
   status: "Outstanding",
   stage: "Tunggu Dokumen",
   notes: "",
+  participantId: null,
+  participantName: "",
+}
+
+/** Label pilihan peserta: nama, lalu identitas, level, dan lokasi kerja. */
+function participantLabel(p: PolicyParticipant) {
+  const details = [p.idNumber, p.level, p.workLocation].filter(Boolean)
+  return details.length ? `${p.name} — ${details.join(" · ")}` : p.name
 }
 
 const dateOrEmpty = z.string().nullable()
@@ -131,6 +149,58 @@ export function ClaimForm({
     value: p.id,
   }))
 
+  // Peserta PA grup: dimuat per polis karena satu polis bisa ribuan peserta.
+  const usesRoster = policy?.cob === "General Accident"
+  const [roster, setRoster] = React.useState<{
+    policyId: string
+    list: PolicyParticipant[]
+  } | null>(null)
+  const isNew = !draft.id
+  React.useEffect(() => {
+    const policyId = draft.policyId
+    if (!policyId || !usesRoster) return
+    let active = true
+    listClaimParticipantsAction(policyId).then((res) => {
+      if (!active) return
+      const list = res.ok ? (res.data ?? []) : []
+      if (!res.ok)
+        toast.error("Gagal memuat peserta polis", { description: res.error })
+      setRoster({ policyId, list })
+      // PA perorangan: satu-satunya peserta langsung terpilih.
+      if (isNew && list.length === 1) {
+        setDraft((d) =>
+          d.policyId === policyId && !d.participantId
+            ? { ...d, participantId: list[0].id, participantName: list[0].name }
+            : d
+        )
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [draft.policyId, usesRoster, isNew])
+
+  const rosterList =
+    usesRoster && roster?.policyId === draft.policyId ? roster.list : null
+  const rosterLoading = usesRoster && rosterList === null
+  const needsParticipant = (rosterList?.length ?? 0) > 0
+  const selectedParticipant =
+    rosterList?.find((p) => p.id === draft.participantId) ?? null
+  const participantCandidates = (rosterList ?? []).filter((p) =>
+    draft.lossDate ? participantActiveOn(p, draft.lossDate) : p.endDate == null
+  )
+  const participantItems = [
+    ...participantCandidates,
+    ...(selectedParticipant &&
+    !participantCandidates.includes(selectedParticipant)
+      ? [selectedParticipant]
+      : []),
+  ].map((p) => ({ label: participantLabel(p), value: p.id }))
+  const participantInactive =
+    selectedParticipant != null &&
+    /^\d{4}-\d{2}-\d{2}$/.test(draft.lossDate) &&
+    !participantActiveOn(selectedParticipant, draft.lossDate)
+
   const adjusterOptions = formOptions.adjusters.map((a) => a.name)
   const adjusterItems =
     draft.adjuster && !adjusterOptions.includes(draft.adjuster)
@@ -149,15 +219,30 @@ export function ClaimForm({
             cob: p.cob,
             currency: p.currency,
             location: draft.location || "",
+            participantId: null,
+            participantName: "",
           }
-        : { policyId: null, policyNo: "", insuredName: "", insurer: "" }
+        : {
+            policyId: null,
+            policyNo: "",
+            insuredName: "",
+            insurer: "",
+            participantId: null,
+            participantName: "",
+          }
     )
   }
 
   async function submit() {
     const result = validate(schema, draft)
-    setErrors(result.errors)
-    if (!result.ok) return false
+    const errs = { ...result.errors }
+    if (needsParticipant && !draft.participantId) {
+      errs.participantId = "Pilih peserta yang mengalami kejadian"
+    } else if (participantInactive) {
+      errs.participantId = "Peserta ini tidak dijamin pada tanggal kejadian"
+    }
+    setErrors(errs)
+    if (!result.ok || errs.participantId) return false
 
     const matchedAdjuster = formOptions.adjusters.find(
       (a) => a.name.toLowerCase() === draft.adjuster?.toLowerCase()
@@ -182,6 +267,9 @@ export function ClaimForm({
       status: draft.status,
       stage: draft.stage,
       notes: draft.notes || "",
+      // Daftar yang sudah termuat dan kosong berarti polis tanpa peserta.
+      participantId:
+        rosterList && !rosterList.length ? null : (draft.participantId ?? null),
     }
 
     if (draft.id) {
@@ -260,6 +348,50 @@ export function ClaimForm({
                 <p className="font-medium text-foreground">{policy.currency}</p>
               </div>
             </div>
+          ) : null}
+          {rosterLoading || needsParticipant ? (
+            <SearchSelect
+              label="Peserta"
+              required
+              value={draft.participantId ?? null}
+              onValueChange={(v) =>
+                set({
+                  participantId: v,
+                  participantName:
+                    rosterList?.find((p) => p.id === v)?.name ?? "",
+                })
+              }
+              items={participantItems}
+              limit={50}
+              disabled={rosterLoading}
+              placeholder={
+                rosterLoading
+                  ? "Memuat peserta…"
+                  : "Cari nama, identitas, level, atau lokasi…"
+              }
+              emptyMessage={
+                draft.lossDate
+                  ? "Tidak ada peserta cocok yang dijamin pada tanggal kejadian"
+                  : "Tidak ada peserta yang cocok"
+              }
+              error={
+                errors.participantId ??
+                (participantInactive
+                  ? "Peserta ini tidak dijamin pada tanggal kejadian"
+                  : undefined)
+              }
+              description={
+                selectedParticipant
+                  ? `UP ${money(selectedParticipant.sumInsured, draft.currency)} · dijamin sejak ${dateShort(selectedParticipant.startDate)}${
+                      selectedParticipant.endDate
+                        ? `, berhenti ${dateShort(selectedParticipant.endDate)}`
+                        : ""
+                    }`
+                  : draft.lossDate
+                    ? `${participantCandidates.length.toLocaleString("id-ID")} peserta dijamin pada tanggal kejadian.`
+                    : "Isi tanggal kejadian untuk menyaring peserta yang dijamin pada tanggal itu."
+              }
+            />
           ) : null}
         </FieldGroup>
 

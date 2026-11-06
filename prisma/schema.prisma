@@ -1519,6 +1519,7 @@ model PolicyParticipant {
   policy    Policy  @relation("policyParticipants", fields: [policyId], references: [id], onDelete: Cascade)
   addedBy   Policy? @relation("participantsAdded", fields: [addedByPolicyId], references: [id], onDelete: Cascade)
   removedBy Policy? @relation("participantsRemoved", fields: [removedByPolicyId], references: [id], onDelete: SetNull)
+  claims    Claim[]
 
   @@index([policyId, sortOrder])
   @@index([addedByPolicyId])
@@ -1591,6 +1592,8 @@ model Claim {
   /// lookup claim_stage: tahapan dokumen, berjalan sendiri di samping status
   stageId              String?   @map("stage_id") @db.Uuid
   notes                String?
+  /// Peserta PA grup yang mengalami kejadian (jawaban Harry, 6 November 2026).
+  participantId        String?   @map("participant_id") @db.Uuid
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1601,12 +1604,15 @@ model Claim {
   status   LookupValue  @relation("claim_status", fields: [statusId], references: [id])
   stage    LookupValue? @relation("claim_stage", fields: [stageId], references: [id])
 
+  participant PolicyParticipant? @relation(fields: [participantId], references: [id], onDelete: Restrict)
+
   payments  Payment[]
   documents ClaimDocument[]
   followups ClaimFollowup[]
 
   @@index([policyId])
   @@index([statusId])
+  @@index([participantId])
   @@map("claims")
 }
 

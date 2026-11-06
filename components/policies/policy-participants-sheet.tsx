@@ -31,7 +31,10 @@ import {
 } from "@/components/ui/table"
 import type { Policy } from "@/lib/data"
 import { dateShort, money } from "@/lib/format"
-import { participantActiveOn, type PolicyParticipant } from "@/lib/policy-participants"
+import {
+  participantActiveOn,
+  type PolicyParticipant,
+} from "@/lib/policy-participants"
 import { participantsTotal } from "@/lib/slip-participants"
 
 const PAGE_SIZE = 25
@@ -111,6 +114,7 @@ export function PolicyParticipantsSheet({
       { header: "Berhenti", key: "endDate", width: 14 },
       { header: "Ditambah oleh", key: "addedByPolicyNo", width: 22 },
       { header: "Dikurangi oleh", key: "removedByPolicyNo", width: 22 },
+      { header: "Jumlah Klaim", key: "claimCount", width: 12 },
     ]
     ws.getRow(1).font = { bold: true }
     for (const p of list) ws.addRow(p)
@@ -137,7 +141,8 @@ export function PolicyParticipantsSheet({
           <SheetTitle className="text-base">Peserta Polis</SheetTitle>
           <SheetDescription>
             {policy?.policyNo} · {policy?.insuredName}
-            {policy?.type === "Endorsement" || policy?.type === "Cancellation" ? (
+            {policy?.type === "Endorsement" ||
+            policy?.type === "Cancellation" ? (
               <span className="block">
                 Daftar peserta polis induk. Perubahan dari endorsement ditandai
                 nomor endorsement-nya.
@@ -167,13 +172,22 @@ export function PolicyParticipantsSheet({
                   </span>
                   <span className="text-muted-foreground">
                     {" "}
-                    · UP {money(participantsTotal(active), policy?.currency ?? "IDR")}
+                    · UP{" "}
+                    {money(
+                      participantsTotal(active),
+                      policy?.currency ?? "IDR"
+                    )}
                     {list.length > active.length
                       ? ` · ${(list.length - active.length).toLocaleString("id-ID")} berhenti`
                       : ""}
                   </span>
                 </p>
-                <Button type="button" variant="outline" size="sm" onClick={() => void exportExcel()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void exportExcel()}
+                >
                   <Download data-icon="inline-start" />
                   Unduh Excel
                 </Button>
@@ -206,7 +220,7 @@ export function PolicyParticipantsSheet({
                   <TableBody>
                     {shown.map((p) => (
                       <TableRow key={p.id}>
-                        <TableCell className="text-xs text-muted-foreground tabular">
+                        <TableCell className="tabular text-xs text-muted-foreground">
                           {list.indexOf(p) + 1}
                         </TableCell>
                         <TableCell className="text-sm">
@@ -218,7 +232,9 @@ export function PolicyParticipantsSheet({
                           ) : null}
                         </TableCell>
                         <TableCell className="text-sm">{p.level}</TableCell>
-                        <TableCell className="text-sm">{p.workLocation}</TableCell>
+                        <TableCell className="text-sm">
+                          {p.workLocation}
+                        </TableCell>
                         <TableCell className="tabular text-right text-sm">
                           {money(p.sumInsured, policy?.currency ?? "IDR")}
                         </TableCell>
@@ -226,21 +242,35 @@ export function PolicyParticipantsSheet({
                           {p.endDate ? (
                             <Badge variant="outline">
                               Berhenti {dateShort(p.endDate)}
-                              {p.removedByPolicyNo ? ` · ${p.removedByPolicyNo}` : ""}
+                              {p.removedByPolicyNo
+                                ? ` · ${p.removedByPolicyNo}`
+                                : ""}
                             </Badge>
                           ) : (
                             <span className="text-muted-foreground">
-                              {participantActiveOn(p, today) ? "Aktif" : "Mulai"} sejak{" "}
-                              {dateShort(p.startDate)}
-                              {p.addedByPolicyNo ? ` · ${p.addedByPolicyNo}` : ""}
+                              {participantActiveOn(p, today)
+                                ? "Aktif"
+                                : "Mulai"}{" "}
+                              sejak {dateShort(p.startDate)}
+                              {p.addedByPolicyNo
+                                ? ` · ${p.addedByPolicyNo}`
+                                : ""}
                             </span>
                           )}
+                          {p.claimCount ? (
+                            <span className="mt-1 block text-muted-foreground">
+                              {p.claimCount.toLocaleString("id-ID")} klaim
+                            </span>
+                          ) : null}
                         </TableCell>
                       </TableRow>
                     ))}
                     {!shown.length ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="py-6 text-center text-sm text-muted-foreground">
+                        <TableCell
+                          colSpan={6}
+                          className="py-6 text-center text-sm text-muted-foreground"
+                        >
                           Tidak ada peserta yang cocok.
                         </TableCell>
                       </TableRow>

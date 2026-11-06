@@ -144,3 +144,20 @@ test("filterClaims pencarian mencari di no klaim, polis, tertanggung, cob, lokas
     1
   )
 })
+
+test("filterClaims pencarian juga mencari nama peserta PA grup", () => {
+  const items: FilterableClaim[] = [
+    ...SAMPLE_CLAIMS,
+    {
+      id: "pa",
+      claimNo: "CLM-LCH001/XI/2026",
+      policyNo: "PA/2026/001",
+      insuredName: "PT Salam Pacific",
+      cob: "General Accident",
+      status: "Outstanding",
+      participantName: "Budi Santoso",
+    },
+  ]
+  const found = filterClaims(items, { status: "all", stage: "all", cob: "all", search: "budi" })
+  assert.deepEqual(found.map((c) => c.id), ["pa"])
+})
