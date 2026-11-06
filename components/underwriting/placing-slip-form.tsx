@@ -50,7 +50,8 @@ import {
   DEFAULT_PERIOD_LABEL,
   DEFAULT_PERIOD_NOTE,
   joinCoverCodes,
-  nextPeriodLabel,
+  autoExpiryDate,
+  nextCoverDefault,
   occupationParts,
   isOutOfBounds,
   rateLinesWithBounds,
@@ -447,6 +448,7 @@ function SlipEditor({
     slip.currency
   ).map(toItem)
   const covers = coversFor(options, slip.cob)
+  const currentCover = covers.find((c) => c.name === slip.typeOfCover)
   const deductibleChoices = deductibleChoicesFor(options, slip.cob, [
     slip.typeOfCover,
     slip.typeOfCover2 ?? "",
@@ -919,11 +921,24 @@ function SlipEditor({
                       ),
                       usesSections:
                         covers.find((c) => c.name === v)?.usesSections ?? false,
-                      periodLabel: nextPeriodLabel(
+                      periodLabel: nextCoverDefault(
                         slip.periodLabel,
                         covers.find((c) => c.name === slip.typeOfCover)?.periodLabel,
                         covers.find((c) => c.name === v)?.periodLabel
                       ),
+                      periodEndText: nextCoverDefault(
+                        slip.periodEndText,
+                        covers.find((c) => c.name === slip.typeOfCover)?.periodEndText,
+                        covers.find((c) => c.name === v)?.periodEndText
+                      ),
+                      // Lama periode bawaan mengisi tanggal akhir yang masih
+                      // kosong, misalnya 14 hari setelah ETD.
+                      expiryDate: autoExpiryDate({
+                        inception: slip.inceptionDate,
+                        previousInception: null,
+                        expiry: slip.expiryDate,
+                        days: covers.find((c) => c.name === v)?.periodDays,
+                      }),
                     })
                   }
                 >
@@ -1060,9 +1075,27 @@ function SlipEditor({
                       type="date"
                       value={slip.inceptionDate ?? ""}
                       onChange={(e) =>
-                        set({ inceptionDate: e.target.value || null })
+                        set({
+                          inceptionDate: e.target.value || null,
+                          // Tanggal akhir ikut tanggal mulai bila type of
+                          // cover punya lama periode bawaan dan tanggal
+                          // akhirnya belum diubah sendiri.
+                          expiryDate: autoExpiryDate({
+                            inception: e.target.value || null,
+                            previousInception: slip.inceptionDate,
+                            expiry: slip.expiryDate,
+                            days: currentCover?.periodDays,
+                          }),
+                        })
                       }
                     />
+                    {currentCover?.periodDays != null ? (
+                      <FieldDescription>
+                        {currentCover.periodDays === 0
+                          ? "Expiry date otomatis sama dengan inception date (satu hari). Bisa diubah."
+                          : `Expiry date otomatis ${currentCover.periodDays} hari setelah inception date. Bisa diubah.`}
+                      </FieldDescription>
+                    ) : null}
                   </Field>
                   <Field
                     data-invalid={
@@ -1097,6 +1130,24 @@ function SlipEditor({
                     <FieldDescription>
                       Dicetak di bawah periode asuransi, seperti CI LCH.
                       Kosongkan bila tidak perlu.
+                    </FieldDescription>
+                  </Field>
+                  <Field className="md:col-span-2">
+                    <FieldLabel htmlFor="period-end-text">
+                      Teks akhir periode di dokumen
+                    </FieldLabel>
+                    <Input
+                      id="period-end-text"
+                      maxLength={200}
+                      value={slip.periodEndText ?? ""}
+                      placeholder="Kosongkan untuk mencetak tanggal akhir"
+                      onChange={(e) => set({ periodEndText: e.target.value })}
+                    />
+                    <FieldDescription>
+                      Pengganti tanggal akhir di dokumen, misalnya &ldquo;until
+                      final destination&rdquo; untuk single shipment: tercetak
+                      tanggal mulai lalu teks ini, tanpa keterangan periode.
+                      Expiry date tetap disimpan untuk polis.
                     </FieldDescription>
                   </Field>
                 </>

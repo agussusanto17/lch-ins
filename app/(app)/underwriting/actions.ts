@@ -139,6 +139,10 @@ const placingSlipSchema = z.object({
     .string()
     .max(200, "Label periode maksimal 200 karakter")
     .nullish(),
+  periodEndText: z
+    .string()
+    .max(200, "Teks akhir periode maksimal 200 karakter")
+    .nullish(),
   periodText: z
     .string()
     .max(1000, "Teks periode maksimal 1000 karakter")
@@ -464,6 +468,7 @@ export async function duplicatePlacingSlipAction(
       expiryDate: source.expiryDate,
       periodNote: source.periodNote,
       periodLabel: source.periodLabel,
+      periodEndText: source.periodEndText,
       periodText: source.periodText,
       insuredDescription: source.insuredDescription,
       usesSections: source.usesSections,
