@@ -43,6 +43,23 @@ export function locationOwner(slip: LocationSource) {
     locationId && known.has(locationId) ? locationId : locations[0].id
 }
 
+/** Rate Property yang batas tarif OJK-nya bergantung kelas konstruksi. */
+const CLASS_RATED_LABELS = ["FLEXAS", "EQVET"]
+
+/**
+ * Kelas konstruksi wajib bila lokasi punya rate FLEXAS atau EQVET, karena
+ * batas tarif OJK keduanya bergantung kelas konstruksi. Slip tanpa rate itu,
+ * misalnya Terrorism & Sabotage yang rate-nya di Other Losses, boleh tanpa
+ * kelas (jawaban Harry, 6 November 2026).
+ */
+export function needsConstructionClass(
+  lines: Pick<RateLine, "label" | "rate">[]
+) {
+  return lines.some(
+    (l) => CLASS_RATED_LABELS.includes(l.label) && (l.rate ?? 0) > 0
+  )
+}
+
 export interface LocationGroup {
   location: SlipLocation
   /** Nomor lokasi di form dan dokumen, mulai 1. */

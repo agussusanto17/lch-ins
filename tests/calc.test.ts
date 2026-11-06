@@ -25,6 +25,7 @@ import {
   nextPeriodLabel,
   releaseIssues,
   exclusionItems,
+  locationIssues,
 } from "../components/underwriting/slip-model"
 import type { PlacingSlip, RateLine } from "../lib/data/types"
 import {
@@ -658,4 +659,24 @@ test("exclusions: nomor diketik sendiri dipisah dari teks, kalimat penutup apa a
   ])
   assert.deepEqual(exclusionItems(undefined), [])
   assert.deepEqual(exclusionItems("No. 5 of the policy"), [{ marker: null, text: "No. 5 of the policy" }])
+})
+
+test("kelas konstruksi wajib hanya bila ada rate FLEXAS atau EQVET (Terrorism & Sabotage boleh kosong)", () => {
+  // Slip Property dengan rate di Other Losses saja, seperti CI Terrorism & Sabotage Habco.
+  const base = propertySlip(0)
+  const ts = recalcSlip({
+    ...base,
+    occupation: "2975 - Apartments",
+    constructionClass: undefined,
+    riskLocation: "Wisma Habco",
+    locations: undefined,
+    rateLines: base.rateLines.map((l) => ({ ...l, rate: l.label === "Other Losses" ? 0.05 : null })),
+  })
+  assert.ok(!locationIssues(ts).some((i) => i.startsWith("Pilih kelas konstruksi")))
+  // Rate FLEXAS diisi: kelas konstruksi wajib lagi.
+  const par = recalcSlip({
+    ...ts,
+    rateLines: ts.rateLines.map((l) => (l.label === "FLEXAS" ? { ...l, rate: 0.5 } : l)),
+  })
+  assert.ok(locationIssues(par).includes("Pilih kelas konstruksi."))
 })

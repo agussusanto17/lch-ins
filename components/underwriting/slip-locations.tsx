@@ -41,6 +41,7 @@ import {
 import { money, num } from "@/lib/format"
 import {
   locationGroups,
+  needsConstructionClass,
   oneLineAddress,
   type LocationGroup,
 } from "@/lib/slip-locations"
@@ -326,12 +327,12 @@ export function SlipLocations({
               <SelectInput
                 id={`${key}-class`}
                 label="Construction Class"
-                required
+                required={needsConstructionClass(g.rateLines)}
                 items={CONSTRUCTION_ITEMS}
                 value={location.constructionClass ?? ""}
                 onValueChange={(v) => update({ constructionClass: v })}
                 placeholder="Pilih kelas konstruksi"
-                description="Dipakai menentukan batas tarif FLEXAS okupasi."
+                description="Dipakai menentukan batas tarif FLEXAS dan EQVET. Wajib bila rate FLEXAS atau EQVET diisi; boleh kosong untuk slip tanpa keduanya, misalnya Terrorism & Sabotage."
               />
             </div>
 
