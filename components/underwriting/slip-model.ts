@@ -33,6 +33,7 @@ import {
   isMultiLocation,
   locationGroups,
   locationOwner,
+  needsConstructionClass,
   slipLocations,
 } from "@/lib/slip-locations"
 import {
@@ -825,19 +826,20 @@ export function locationIssues(slip: PlacingSlip): string[] {
   if (slip.cob !== "Property") return []
   const groups = locationGroups(slip)
   if (groups.length === 1) {
-    const { location } = groups[0]
+    const { location, rateLines } = groups[0]
     const issues: string[] = []
     if (!location.occupation) issues.push("Pilih okupasi OJK.")
-    if (!location.constructionClass) issues.push("Pilih kelas konstruksi.")
+    if (!location.constructionClass && needsConstructionClass(rateLines))
+      issues.push("Pilih kelas konstruksi.")
     if (!location.riskLocation.trim()) issues.push("Isi risk location.")
     return issues
   }
-  return groups.flatMap(({ location, no, section1, section2 }) => {
+  return groups.flatMap(({ location, no, section1, section2, rateLines }) => {
     const issues: string[] = []
     if (!location.riskLocation.trim()) issues.push(`Isi alamat lokasi ${no}.`)
     if (!location.occupation)
       issues.push(`Pilih okupasi OJK untuk lokasi ${no}.`)
-    if (!location.constructionClass)
+    if (!location.constructionClass && needsConstructionClass(rateLines))
       issues.push(`Pilih kelas konstruksi untuk lokasi ${no}.`)
     if (sumItems(section1) + sumItems(section2) <= 0)
       issues.push(`Isi sum insured lokasi ${no}.`)
