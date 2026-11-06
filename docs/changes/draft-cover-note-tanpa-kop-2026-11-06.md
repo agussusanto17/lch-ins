@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `fix/draft-cover-note-tanpa-kop`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #159
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
