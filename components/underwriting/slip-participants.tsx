@@ -300,7 +300,7 @@ export function SlipParticipants({
                 const text = (key: keyof SlipParticipant, list?: string) => (
                   <Input
                     className="h-8 text-xs"
-                    aria-label={`${key} ${label}`}
+                    aria-label={`${PARTICIPANT_COLUMNS.find((c) => c.key === key)?.header ?? key} ${label}`}
                     list={list}
                     maxLength={PARTICIPANT_LIMITS.text}
                     readOnly={locked}

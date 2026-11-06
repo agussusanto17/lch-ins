@@ -53,6 +53,8 @@ Ini PR pertama dari tiga:
   - **Tabel:**
     - Isian per baris, 25/50/100 baris per halaman, dan pencarian nama,
       identitas, jabatan, atau lokasi.
+    - Label aksesibel setiap isian memakai judul kolom, misalnya "Lokasi Kerja
+      peserta 3".
     - Tombol tambah peserta, hapus per baris, dan hapus semua.
   - **Tidak ada batas usia.**
 - **Interest Insured:** terisi otomatis satu baris, misalnya "1.627
