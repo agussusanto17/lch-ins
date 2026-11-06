@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-06
 - **Branch:** `fix/format-interest-deductible`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #150
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
