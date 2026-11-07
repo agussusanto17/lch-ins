@@ -17,13 +17,43 @@ jobs:
     # Repo agussusanto17 dan fork vourdev memakai VPS yang sama; hanya fork yang deploy.
     if: github.repository == 'vourdev/lch-ins'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Build di VPS (2 vCPU) sekitar 10-15 menit.
+    timeout-minutes: 30
+
+    env:
+      SSH_HOST: 103.150.116.66
+      SSH_USER: devops
+      # Host key server lch-server. Kalau server dibangun ulang, perbarui baris ini.
+      SSH_KNOWN_HOST: "103.150.116.66 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA7ORdY+UbPwOErxKDqj2ySVYmCXzHIhq9vXqwKO2mP8"
 
     steps:
-      - name: Trigger Remote Deployment via SSH
+      - name: Siapkan kunci SSH
         env:
-          SSH_USER: ${{ secrets.VPS_SSH_USER || 'ibssh_3izzdoi3nhelj7fvixatkwf6we' }}
-          SSH_HOST: ${{ secrets.VPS_SSH_HOST || 'ssh.instabox.sh' }}
-          SSH_PORT: ${{ secrets.VPS_SSH_PORT || '2222' }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
-          ssh -o StrictHostKeyChecking=no -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "/data/workspace/app/deploy.sh"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOST" > ~/.ssh/known_hosts
+
+      # Kunci deploy di server dibatasi ke /data/workspace/app/deploy.sh
+      # (forced command), jadi perintah apa pun yang dikirim tetap menjalankan
+      # deploy.sh. Script itu yang pull, migrate, build, restart, dan cek /login.
+      - name: Jalankan deploy.sh di VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=10 \
+            "${SSH_USER}@${SSH_HOST}" deploy
+
+      - name: Cek situs publik
+        run: |
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://lch-ins.adhinugroho.tech/login || true)
+            [ "$code" = "200" ] && echo "https://lch-ins.adhinugroho.tech/login -> 200" && exit 0
+            sleep 5
+          done
+          echo "Situs publik tidak merespons 200 (terakhir: $code)"
+          exit 1
