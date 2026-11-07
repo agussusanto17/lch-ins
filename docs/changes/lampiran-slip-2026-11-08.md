@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `feat/lampiran-slip`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#167](https://github.com/agussusanto17/lch-ins/pull/167)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
