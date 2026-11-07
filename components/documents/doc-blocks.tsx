@@ -704,6 +704,26 @@ export function ClausesBlock({
 }
 
 /**
+ * Daftar lampiran slip, misalnya vessel schedule atau daftar unit (analisa
+ * contoh slip LCH, Tahap 3 nomor 19). Isinya dikirim terpisah bersama PDF
+ * slip; keterangan dicetak, atau nama file bila keterangan kosong.
+ */
+export function AttachmentList({ slip }: { slip: PlacingSlip }) {
+  const list = slip.attachments ?? []
+  if (!list.length) return null
+  return (
+    <section className="avoid-break">
+      <SectionHeading>ATTACHMENTS</SectionHeading>
+      <ol className="list-decimal pl-5 text-[13px] leading-relaxed">
+        {list.map((a) => (
+          <li key={a.id}>{a.description || a.fileName}</li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+/**
  * Lampiran daftar peserta PA grup, seperti lampiran Placing Slip PA Salam
  * Pacific (1.627 peserta). Kolom tanpa isi di semua baris tidak dicetak; usia
  * dihitung pada tanggal mulai polis.

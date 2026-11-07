@@ -32,6 +32,8 @@ import {
 import { normalizeCob } from "@/lib/format"
 import { cleanDetailRows } from "@/lib/slip-details"
 import { cleanPaBenefitLimits } from "@/lib/pa-benefits"
+import { slipFilesOrder, toSlipAttachment } from "@/lib/server/slip-files"
+import { deleteStoredFiles } from "@/lib/server/stored-files"
 import { PARTICIPANT_LIMITS } from "@/lib/slip-participants"
 import { cleanClauseGroups, groupedClauseOrder } from "@/lib/clause-groups"
 import { usesItemRates } from "@/lib/slip-items"
@@ -395,7 +397,10 @@ function toParticipant(p: ParticipantRow): SlipParticipant {
 }
 
 function toPlacingSlipRecord(
-  raw: PrismaPlacingSlipWithRelations & { participants?: ParticipantRow[] }
+  raw: PrismaPlacingSlipWithRelations & {
+    participants?: ParticipantRow[]
+    files?: Prisma.SlipFileGetPayload<object>[]
+  }
 ): PlacingSlipRecord {
   const normCob = normalizeCob(raw.cob.name as CobType)
 
@@ -593,6 +598,7 @@ function toPlacingSlipRecord(
     detailRows: cleanDetailRows(raw.detailRows),
     paBenefitLimits:
       raw.paBenefitLimits == null ? null : cleanPaBenefitLimits(raw.paBenefitLimits),
+    attachments: raw.files?.map(toSlipAttachment),
     occupation: raw.occupation
       ? `${raw.occupation.code} - ${raw.occupation.name}`
       : undefined,
@@ -773,6 +779,7 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
         orderBy: { sortOrder: "asc" },
       },
       participants: { orderBy: { sortOrder: "asc" } },
+      files: { orderBy: slipFilesOrder },
       wordingForms: {
         include: { wordingForm: { select: { id: true, name: true } } },
       },
@@ -1955,6 +1962,9 @@ export async function deletePlacingSlip(id: string, userId: string): Promise<voi
   }
 
   await prisma.$transaction(async (tx) => {
+    // Baris lampiran ikut terhapus lewat foreign key; isi berkasnya dihapus di sini.
+    const files = await tx.slipFile.findMany({ where: { slipId: id }, select: { filePath: true } })
+    await deleteStoredFiles(tx, files.map((f) => f.filePath))
     await tx.slipItem.deleteMany({ where: { slipId: id } })
     await tx.slipRateLine.deleteMany({ where: { slipId: id } })
     await tx.slipSecurityPanel.deleteMany({ where: { slipId: id } })

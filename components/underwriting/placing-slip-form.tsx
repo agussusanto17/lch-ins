@@ -42,6 +42,7 @@ import { InsuredPicker } from "@/components/underwriting/insured-picker"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
 import { SlipLocations } from "@/components/underwriting/slip-locations"
 import { SlipItemRates } from "@/components/underwriting/slip-item-rates"
+import { SlipAttachments } from "@/components/underwriting/slip-attachments"
 import { SlipParticipants } from "@/components/underwriting/slip-participants"
 import { effectivePaBenefitLimits } from "@/lib/pa-benefits"
 import { participantsInterestItem, usesParticipants } from "@/lib/slip-participants"
@@ -156,6 +157,7 @@ const SECTION_KEYS = [
   "participants",
   "sumInsured",
   "deductible",
+  "attachments",
   "rate",
   "brokerage",
   "subjectivity",
@@ -166,6 +168,7 @@ const SECTION_KEYS = [
 type SectionKey = (typeof SECTION_KEYS)[number]
 
 const toItem = (v: string) => ({ label: v, value: v })
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const INDEMNITY_ITEMS = BI_SCALE_OJK.map((s) => ({
   label: `${s.months} bulan · ${s.pct}% tarif dasar`,
   value: `${s.months} months`,
@@ -241,9 +244,14 @@ export function PlacingSlipForm({
   clients: InsuredOption[]
 }) {
   const stored = useRecord("slips", id ?? null)
-  // Daftar slip tidak memuat peserta PA grup; ambil dari detail slip.
+  // Daftar slip tidak memuat peserta PA grup dan lampiran; ambil dari detail
+  // slip. Lampiran selalu dari server karena berubah lewat aksinya sendiri.
   const source = stored
-    ? { ...stored, participants: stored.participants ?? initial?.participants }
+    ? {
+        ...stored,
+        participants: stored.participants ?? initial?.participants,
+        attachments: initial?.attachments ?? stored.attachments,
+      }
     : initial
 
   if (!source) {
@@ -291,6 +299,8 @@ function SlipEditor({
   const today = useToday()
   const [isPending, startTransition] = React.useTransition()
   const [slip, setSlip] = React.useState<PlacingSlip>(() => recalc(initial))
+  // Lampiran tersimpan langsung lewat aksinya, terpisah dari Simpan Draft.
+  const [attachments, setAttachments] = React.useState(initial.attachments ?? [])
   const [savedJson, setSavedJson] = React.useState(() =>
     JSON.stringify(recalc(initial))
   )
@@ -1801,6 +1811,23 @@ function SlipEditor({
                 </FieldDescription>
               </Field>
             </div>
+          </SectionCard>
+
+          {/*
+           * Lampiran slip (vessel schedule, daftar unit, klausul hasil scan),
+           * analisa contoh slip LCH Tahap 3 nomor 19.
+           */}
+          <SectionCard
+            title="Lampiran"
+            {...sectionProps("attachments")}
+            summary={attachments.length ? `${attachments.length} file` : undefined}
+          >
+            <SlipAttachments
+              slipId={mode !== "new" && UUID_RE.test(slip.id) ? slip.id : null}
+              attachments={attachments}
+              locked={locked}
+              onChange={setAttachments}
+            />
           </SectionCard>
 
           <SectionCard

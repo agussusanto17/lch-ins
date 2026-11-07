@@ -9,6 +9,30 @@ export const UPLOAD_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp"
 
 export const UPLOAD_HINT = "PDF, JPG, PNG, atau WebP, maksimal 4 MB."
 
+/** Workbook Excel, hanya untuk lampiran slip. */
+export const XLSX_MIME =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+/** Lampiran slip: jenis umum ditambah Excel (.xlsx). */
+export const ATTACHMENT_ACCEPT = `${UPLOAD_ACCEPT},${XLSX_MIME},.xlsx`
+
+export const ATTACHMENT_HINT =
+  "PDF, JPG, PNG, WebP, atau Excel (.xlsx), maksimal 4 MB."
+
+/** Pemeriksaan lampiran slip di browser; server memeriksa ulang dari isinya. */
+export function attachmentUploadProblem(file: {
+  name: string
+  size: number
+  type: string
+}) {
+  const excel = file.type === XLSX_MIME || /\.xlsx$/i.test(file.name)
+  if (!excel && !UPLOAD_ACCEPT.split(",").includes(file.type)) {
+    return "Hanya PDF, JPG, PNG, WebP, atau Excel (.xlsx) yang bisa diunggah."
+  }
+  if (file.size > MAX_UPLOAD_BYTES) return "Ukuran file maksimal 4 MB."
+  return null
+}
+
 /**
  * Pemeriksaan di browser sebelum berkas dikirim, supaya pengguna langsung
  * tahu. Server memeriksa ulang jenisnya dari isi file.

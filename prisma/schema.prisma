@@ -137,6 +137,7 @@ model User {
   slipsCreated      PlacingSlip[]    @relation("slipCreatedBy")
   slipsReleased     PlacingSlip[]    @relation("slipReleasedBy")
   policyFiles       PolicyFile[]
+  slipFiles         SlipFile[]
   debitNotesIssued  DebitNote[]
   creditNotesIssued CreditNote[]
   payments          Payment[]
@@ -1193,6 +1194,7 @@ model PlacingSlip {
   securityPanel SlipSecurityPanel[]
   clauses       SlipClause[]
   participants SlipParticipant[]
+  files         SlipFile[]
   wordingForms  SlipWordingForm[]
   policies      Policy[]
 
@@ -1531,6 +1533,31 @@ model PolicyParticipant {
   @@index([addedByPolicyId])
   @@index([removedByPolicyId])
   @@map("policy_participants")
+}
+
+/// Lampiran placing slip, misalnya vessel schedule, daftar unit, atau klausul
+/// hasil scan (analisa contoh slip LCH, Tahap 3 nomor 19). Isinya di
+/// stored_files dengan purpose slip_attachment.
+model SlipFile {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slipId      String   @map("slip_id") @db.Uuid
+  /// Keterangan yang dicetak, misalnya "Vessel Schedule". Kosong memakai nama file.
+  description String?
+  fileName    String   @map("file_name")
+  filePath    String   @map("file_path")
+  sizeBytes   Int      @default(0) @map("size_bytes")
+  sortOrder   Int      @default(0) @map("sort_order")
+  uploadedBy  String   @map("uploaded_by") @db.Uuid
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slip     PlacingSlip @relation(fields: [slipId], references: [id], onDelete: Cascade)
+  uploader User        @relation(fields: [uploadedBy], references: [id])
+
+  @@index([slipId, sortOrder])
+  @@map("slip_files")
 }
 
 /// Disalin dari slip_security_panel saat polis dibuat dari slip. Jadi dasar

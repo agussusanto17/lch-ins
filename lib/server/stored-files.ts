@@ -1,5 +1,6 @@
 import "server-only"
 
+import { INLINE_TYPES, XLSX_TYPE, detectContentType } from "@/lib/file-types"
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { MAX_UPLOAD_BYTES } from "@/lib/uploads"
@@ -7,12 +8,33 @@ import { MAX_UPLOAD_BYTES } from "@/lib/uploads"
 type Tx = Prisma.TransactionClient
 
 /** Pemakaian berkas. Menentukan menu yang hak aksesnya dipakai saat dibuka. */
-export type FilePurpose = "client_document" | "claim_document" | "policy_file"
+export type FilePurpose =
+  | "client_document"
+  | "claim_document"
+  | "policy_file"
+  | "slip_attachment"
 
 const PURPOSE_MENU: Record<FilePurpose, string> = {
   client_document: "/marketing",
   claim_document: "/claims",
   policy_file: "/policies",
+  slip_attachment: "/underwriting",
+}
+
+/**
+ * Jenis berkas yang diterima per pemakaian. Lampiran slip boleh Excel, karena
+ * vessel schedule dan daftar unit LCH biasanya berupa workbook.
+ */
+const ALLOWED_TYPES: Record<FilePurpose, string[]> = {
+  client_document: INLINE_TYPES,
+  claim_document: INLINE_TYPES,
+  policy_file: INLINE_TYPES,
+  slip_attachment: [...INLINE_TYPES, XLSX_TYPE],
+}
+
+/** Berkas yang aman dibuka di tab browser; jenis lain diunduh. */
+export function opensInline(contentType: string) {
+  return INLINE_TYPES.includes(contentType)
 }
 
 const PATH_PREFIX = "stored_files/"
@@ -40,26 +62,6 @@ export function purposeMenu(purpose: string) {
   return purpose in PURPOSE_MENU ? PURPOSE_MENU[purpose as FilePurpose] : null
 }
 
-/**
- * Jenis file dibaca dari byte awalnya, bukan dari keterangan browser yang bisa
- * dipalsukan. Berkas dibuka inline dari domain aplikasi, jadi hanya jenis yang
- * tidak bisa menjalankan skrip yang diterima.
- */
-function detectContentType(bytes: Uint8Array) {
-  const startsWith = (signature: number[], offset = 0) =>
-    signature.every((b, i) => bytes[offset + i] === b)
-
-  if (startsWith([0x25, 0x50, 0x44, 0x46, 0x2d])) return "application/pdf"
-  if (startsWith([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
-    return "image/png"
-  }
-  if (startsWith([0xff, 0xd8, 0xff])) return "image/jpeg"
-  if (startsWith([0x52, 0x49, 0x46, 0x46]) && startsWith([0x57, 0x45, 0x42, 0x50], 8)) {
-    return "image/webp"
-  }
-  return null
-}
-
 /** Nama file tanpa folder dan karakter kontrol. */
 function cleanFileName(name: string) {
   const base = name.split(/[\\/]/).pop() ?? ""
@@ -78,9 +80,15 @@ export async function saveUploadedFile(
   }
 
   const data = new Uint8Array(await file.arrayBuffer())
+  // Jenis dibaca dari isi file. Hanya jenis yang tidak bisa menjalankan skrip
+  // yang diterima, karena berkas dibuka dari domain aplikasi.
   const contentType = detectContentType(data)
-  if (!contentType) {
-    throw new Error("Hanya PDF, JPG, PNG, atau WebP yang bisa diunggah.")
+  if (!contentType || !ALLOWED_TYPES[purpose].includes(contentType)) {
+    throw new Error(
+      purpose === "slip_attachment"
+        ? "Hanya PDF, JPG, PNG, WebP, atau Excel (.xlsx) yang bisa diunggah."
+        : "Hanya PDF, JPG, PNG, atau WebP yang bisa diunggah."
+    )
   }
 
   return prisma.storedFile.create({

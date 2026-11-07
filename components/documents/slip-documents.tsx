@@ -19,6 +19,7 @@ import {
   ObjectPremiumSchedule,
   ParEqvetCalculationBlock,
   ParEqvetRateBlock,
+  AttachmentList,
   ParticipantAppendix,
   PayableTable,
   PremiumTable,
@@ -49,9 +50,14 @@ type DocProps = { id: string; initial: PlacingSlip | null }
 
 function useSlip({ id, initial }: DocProps) {
   const stored = useRecord("slips", id)
-  // Daftar slip tidak memuat peserta PA grup; ambil dari detail slip.
+  // Daftar slip tidak memuat peserta PA grup dan lampiran; ambil dari detail
+  // slip. Lampiran selalu dari server karena berubah lewat aksinya sendiri.
   return stored
-    ? { ...stored, participants: stored.participants ?? initial?.participants }
+    ? {
+        ...stored,
+        participants: stored.participants ?? initial?.participants,
+        attachments: initial?.attachments ?? stored.attachments,
+      }
     : initial
 }
 
@@ -150,6 +156,8 @@ export function PlacingSlipDocument(props: DocProps) {
         confirmationParty="Nama Perusahaan Asuransi & Authorized Signatory"
       />
 
+      <AttachmentList slip={slip} />
+
       <ParticipantAppendix slip={slip} />
 
       <ClauseWordingAppendix slip={slip} />
@@ -198,6 +206,8 @@ export function QuotationSlipDocument(props: DocProps) {
         confirmationTitle="KONFIRMASI TERTANGGUNG / INSURED CONFIRMATION"
       />
 
+      <AttachmentList slip={slip} />
+
       <ParticipantAppendix slip={slip} />
 
       <ClauseWordingAppendix slip={slip} />
@@ -240,6 +250,8 @@ export function CoverNoteDocument(props: DocProps) {
       <SectionHeading>SIGNED</SectionHeading>
       <InsurerSignatureGrid slip={slip} />
       <p className="mt-8 text-[13px]">Jakarta, {dateLong(slip.updatedAt)}</p>
+
+      <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
     </DocumentShell>
@@ -314,6 +326,8 @@ export function ClosingInstructionDocument(props: DocProps) {
         slip={slip}
         caption="Diterima & Ditandatangani / Accepted & Signed by,"
       />
+
+      <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
     </DocumentShell>
