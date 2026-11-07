@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-07
 - **Branch:** `chore/deploy-lch-server`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #164
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
