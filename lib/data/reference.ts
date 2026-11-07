@@ -288,6 +288,24 @@ export const PROPERTY_RATE_LINES = [
   "BI EQVET",
 ]
 
+/** Baris rate polis Terrorism & Sabotage (PSATSI). */
+export const TERRORISM_RATE_LINE = "Terrorism & Sabotage"
+
+/**
+ * Baris rate Property per kode type of cover. Type of cover lain memakai baris
+ * PAR + EQVET di atas. PSATSI (0116) adalah polis tersendiri dengan satu rate
+ * atas sum insured Material Damage, seperti CI Terrorism & Sabotage Wisma
+ * Habco (analisa contoh slip LCH no. 09, 6 November 2026).
+ */
+export const PROPERTY_COVER_RATE_LINES: Record<string, string[]> = {
+  "0116": [TERRORISM_RATE_LINE],
+}
+
+/** Label baris rate slip Property untuk kode type of cover-nya. */
+export function propertyRateLabels(coverCode?: string | null): string[] {
+  return PROPERTY_COVER_RATE_LINES[coverCode ?? ""] ?? PROPERTY_RATE_LINES
+}
+
 /** Full peril names displayed in the Property RATE document block. */
 export const PAR_EQVET_FULL_NAMES: Record<string, string> = {
   FLEXAS:

@@ -9,6 +9,7 @@ import {
   correspondenceAddress,
   MOTOR_RATE_LINES,
   PROPERTY_RATE_LINES,
+  propertyRateLabels,
   TYPE_OF_COVER,
   type ClassOfBusiness,
   type Client,
@@ -422,6 +423,41 @@ export function switchCob(
 }
 
 // Lokasi slip Property. Fungsi di bawah mengembalikan patch untuk `set` form.
+
+/**
+ * Baris rate slip Property mengikuti type of cover yang dipilih, misalnya
+ * PSATSI (Terrorism & Sabotage) satu baris rate dan type of cover lain baris
+ * PAR + EQVET. Patch kosong bila labelnya sudah sesuai. Baris dengan label
+ * yang tetap ada membawa rate, loss limit, dan deductible-nya; baris lain
+ * dibuat kosong untuk setiap lokasi.
+ */
+export function propertyRateLinesPatch(
+  slip: PlacingSlip,
+  coverCode: string | null | undefined
+): Partial<PlacingSlip> {
+  if (slip.cob !== "Property") return {}
+  const labels = propertyRateLabels(coverCode)
+  const groups = locationGroups(slip)
+  const current = groups[0].rateLines.map((l) => l.label)
+  if (current.length === labels.length && current.every((l, i) => l === labels[i])) {
+    return {}
+  }
+  const multi = groups.length > 1
+  return {
+    rateLines: groups.flatMap((g) =>
+      labels.map((label) => {
+        const kept = g.rateLines.find((l) => l.label === label)
+        return kept ?? {
+          id: uid("r"),
+          label,
+          rate: null,
+          premium: 0,
+          ...(multi ? { locationId: g.location.id } : {}),
+        }
+      })
+    ),
+  }
+}
 
 /**
  * Lokasi baru di akhir daftar: isian kosong, satu baris sum insured per
@@ -920,11 +956,15 @@ export function slipFromSppa(
   client: Client | null,
   covers?: (Pick<CoverOption, "name" | "abbreviation"> &
     Partial<
-      Pick<CoverOption, "detailLabels" | "usesSections" | "periodLabel" | "periodEndText">
+      Pick<
+        CoverOption,
+        "code" | "detailLabels" | "usesSections" | "periodLabel" | "periodEndText"
+      >
     >)[]
 ): PlacingSlip {
   const cob = normalizeCob(sppa.cob)
   const base = switchCob(emptySlip(), cob)
+  const cover = covers?.find((c) => c.name === sppa.typeOfCover)
   const property = cob === "Property"
   const motor = cob === "Motor Vehicle"
 
@@ -973,18 +1013,12 @@ export function slipFromSppa(
       ? (correspondenceAddress(client)?.value ?? "")
       : "",
     typeOfCover: sppa.typeOfCover,
-    detailRows: withDetailLabels(
-      base.detailRows,
-      covers?.find((c) => c.name === sppa.typeOfCover)?.detailLabels ?? []
-    ),
-    usesSections:
-      covers?.find((c) => c.name === sppa.typeOfCover)?.usesSections ?? false,
-    periodLabel:
-      covers?.find((c) => c.name === sppa.typeOfCover)?.periodLabel?.trim() ||
-      undefined,
-    periodEndText:
-      covers?.find((c) => c.name === sppa.typeOfCover)?.periodEndText?.trim() ||
-      undefined,
+    // Baris rate Property sesuai type of cover SPPA, misalnya PSATSI.
+    ...propertyRateLinesPatch(base, cover?.code),
+    detailRows: withDetailLabels(base.detailRows, cover?.detailLabels ?? []),
+    usesSections: cover?.usesSections ?? false,
+    periodLabel: cover?.periodLabel?.trim() || undefined,
+    periodEndText: cover?.periodEndText?.trim() || undefined,
     coverCode: coverCodeFor(cob, sppa.typeOfCover, covers),
     currency: sppa.currency,
     inceptionDate: sppa.periodStart,

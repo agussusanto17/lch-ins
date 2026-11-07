@@ -15,6 +15,7 @@ import {
   brokerageAmount,
   calculateParEqvet,
   discountAmount,
+  isParEqvetSlip,
   ratePermilText,
   roundCents,
   sumItems,
@@ -1195,6 +1196,7 @@ function scheduleRows(lines: ParEqvetLine[], groups: LocationGroup[]) {
  */
 export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
   const calc = calculateParEqvet(slip)
+  const parEqvet = isParEqvetSlip(slip)
   const groups = locationGroups(slip)
   // Rate yang sama di semua lokasi dicetak sekali di bagian RATE, seperti CI
   // SISKA RAHARJA; tabel di bawahnya tetap per lokasi.
@@ -1274,7 +1276,8 @@ export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
               ))}
               <tr className="avoid-break border-b font-semibold">
                 <td colSpan={5} className="py-1.5 pr-2">
-                  Premium {group.name}
+                  {/* Slip tanpa baris PAR/EQVET, misalnya Terrorism & Sabotage, satu kelompok saja. */}
+                  {parEqvet ? `Premium ${group.name}` : "Premium"}
                 </td>
                 <td className="tabular py-1.5 text-right whitespace-nowrap">
                   {amount(group.subtotal)}
