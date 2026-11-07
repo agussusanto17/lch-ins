@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `feat/pa-peserta-tunggal-limit-manfaat`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#165](https://github.com/agussusanto17/lch-ins/pull/165)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
