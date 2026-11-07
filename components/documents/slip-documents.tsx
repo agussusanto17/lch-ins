@@ -20,6 +20,7 @@ import {
   ParEqvetCalculationBlock,
   ParEqvetRateBlock,
   AttachmentList,
+  OpenCoverRateBlock,
   ParticipantAppendix,
   PayableTable,
   PremiumTable,
@@ -38,6 +39,7 @@ import type { PlacingSlip } from "@/lib/data"
 import { dateLong } from "@/lib/format"
 import { isMultiLocation } from "@/lib/slip-locations"
 import { isMultiItem } from "@/lib/slip-items"
+import { usesOpenCover } from "@/lib/open-cover"
 import { isMultiVehicle } from "@/lib/slip-vehicles"
 import { useRecord } from "@/lib/store"
 
@@ -81,6 +83,8 @@ function Missing() {
  * 2026); Placing Slip dan Closing Instruction mencetaknya di BrokerageBlock.
  */
 function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
+  // Open cover: rate per kategori, premi per deklarasi.
+  if (usesOpenCover(slip)) return <OpenCoverRateBlock slip={slip} />
   // Slip multi lokasi mencetak jadwal premi per lokasi saja (Opsi B); slip
   // satu lokasi tetap mencetak bagian RATE.
   if (isMultiLocation(slip)) return <LocationPremiumSchedule slip={slip} />

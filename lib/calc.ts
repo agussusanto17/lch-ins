@@ -5,6 +5,7 @@ import {
 import { BI_SCALE_OJK } from "./data/ojk-tariff"
 import type { PlacingSlip, RateLine, SlipPart } from "./data/types"
 import { num } from "./format"
+import { usesOpenCover } from "./open-cover"
 import { locationGroups, locationOwner, withLocations } from "./slip-locations"
 import {
   isFlatLine,
@@ -392,7 +393,10 @@ export function recalcSlip(input: PlacingSlip): PlacingSlip {
     slip.interestItems.filter((v) => isLimitOnlyItem(slip.cob, v)).map((v) => v.id)
   )
 
+  // Open cover tidak punya premi di slip; premi dicatat per deklarasi di polis.
+  const openCover = usesOpenCover(slip)
   const rateLines = (property ? withBiRates(slip) : slip.rateLines).map((l) => {
+    if (openCover) return { ...l, flatPremium: undefined, premium: 0 }
     if (!property) {
       // Objek "limit saja" tidak dikenai premi.
       if (limitItems.has(itemOf(l.vehicleId) ?? "")) {

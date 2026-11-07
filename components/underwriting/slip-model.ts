@@ -48,6 +48,7 @@ import {
   missingRateIssue,
   usesItemRates,
 } from "@/lib/slip-items"
+import { openCoverIssues, usesOpenCover } from "@/lib/open-cover"
 import {
   isCascoLine,
   isMultiVehicle,
@@ -823,9 +824,14 @@ export function releaseIssues(slip: PlacingSlip) {
     const clauseIssues = validateClauseUniquenessAcrossSections(slip)
     if (clauseIssues.length) issues.push(...clauseIssues)
   }
-  if (totalSumInsured(slip) <= 0) issues.push("Isi sum insured.")
-  const rateIssue = missingRateIssue(slip)
-  if (rateIssue) issues.push(rateIssue)
+  // Open cover tanpa TSI dan premi; cukup rate per kategori.
+  if (usesOpenCover(slip)) {
+    issues.push(...openCoverIssues(slip))
+  } else {
+    if (totalSumInsured(slip) <= 0) issues.push("Isi sum insured.")
+    const rateIssue = missingRateIssue(slip)
+    if (rateIssue) issues.push(rateIssue)
+  }
   issues.push(...coverNameIssues(slip))
   issues.push(...participantIssues(slip))
 

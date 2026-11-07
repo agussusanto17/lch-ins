@@ -398,6 +398,9 @@ model CoverType {
   /// Slip type of cover ini memakai Section 1 (Material Damage) dan Section 2
   /// (Third Party Liability), misalnya CAR dan EAR. Diatur LCH di Master Data.
   usesSections Boolean  @default(false) @map("uses_sections")
+  /// Slip type of cover ini open cover: rate tanpa premi pasti, premi per
+  /// deklarasi di polis, misalnya 0311 MOP. Diatur LCH di Master Data.
+  openCover    Boolean  @default(false) @map("open_cover")
   /// Label periode bawaan di dokumen slip, misalnya "Date of Tournament"
   /// (Hole in One). Kosong berarti "Period of Insurance".
   periodLabel  String?  @map("period_label")
@@ -1120,6 +1123,11 @@ model PlacingSlip {
   /// Slip COB selain Property dan Motor Vehicle yang dibagi Section 1
   /// (Material Damage) dan Section 2 (Third Party Liability), seperti CAR/EAR.
   usesSections  Boolean   @default(false) @map("uses_sections")
+  /// Open cover: rate per kategori tanpa TSI dan premi; premi dicatat per
+  /// deklarasi sebagai polis (MOP dan container open cover LCH).
+  openCover      Boolean  @default(false) @map("open_cover")
+  /// Rate open cover: [{id, label, basis: percent|per_unit, rate, unit}].
+  openCoverRates Json     @default("[]") @map("open_cover_rates") @db.JsonB
 
   occupationId        String? @map("occupation_id") @db.Uuid
   /// Nama okupasi yang dicetak di dokumen slip, tanpa kode. Kosong berarti

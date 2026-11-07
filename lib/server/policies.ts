@@ -25,6 +25,7 @@ import {
   storedFileUrl,
 } from "@/lib/server/stored-files"
 import { recordAudit } from "@/server/services/audit"
+import { usesOpenCover } from "@/lib/open-cover"
 import { effectivePaBenefitLimits, type PaBenefitLimits } from "@/lib/pa-benefits"
 import type { ParticipantChanges, PolicyParticipant } from "@/lib/policy-participants"
 import { PARTICIPANT_LIMITS, usesParticipants } from "@/lib/slip-participants"
@@ -309,7 +310,8 @@ async function checkedPolicyData(tx: Tx, input: PolicyInput, selfId?: string) {
 }
 
 /**
- * Satu placing slip menjadi satu polis; slip PAR + EQVET satu polis per bagian.
+ * Satu placing slip menjadi satu polis; slip PAR + EQVET satu polis per bagian,
+ * dan slip open cover satu polis per deklarasi tanpa batas jumlah.
  * Mencegah produksi dari slip yang sama terhitung dua kali. Tautan yang tidak
  * berubah saat polis diedit tidak diperiksa ulang, jadi polis lama tetap bisa
  * disimpan.
@@ -334,6 +336,8 @@ async function checkedSlipPart(
   }
   const slip = await getPlacingSlipById(slipId)
   if (!slip) throw new Error("Placing slip tidak ditemukan.")
+  // Slip open cover menerbitkan satu polis per deklarasi (Harry, 6 November 2026).
+  if (usesOpenCover(slip)) return null
   const parts = slipPolicyParts(slip)
   const slipPart = parts.length ? (part ?? null) : null
   if (parts.length && !(slipPart && parts.includes(slipPart))) {

@@ -60,6 +60,7 @@ import {
   participantsTotal,
   usesParticipants,
 } from "@/lib/slip-participants"
+import { openCoverRateText, usesOpenCover } from "@/lib/open-cover"
 import {
   isFlatLine,
   isLimitOnlyItem,
@@ -454,15 +455,47 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
         </ul>
       )}
 
-      <p className="mt-3 flex justify-between rounded bg-primary/8 px-3 py-2 text-[13px] font-semibold text-primary">
-        {/* Nilai objek Liability adalah limit, seperti contoh slip LCH. */}
-        <span>
-          {slip.cob === "Liability" ? "Total Limit of Liability" : "Total Sum Insured"}
-        </span>
-        <span className="tabular">
-          {money(totalSumInsured(slip), slip.currency)}
-        </span>
-      </p>
+      {/* Open cover tidak punya TSI; nilai per deklarasi dicatat di polis. */}
+      {usesOpenCover(slip) ? null : (
+        <p className="mt-3 flex justify-between rounded bg-primary/8 px-3 py-2 text-[13px] font-semibold text-primary">
+          {/* Nilai objek Liability adalah limit, seperti contoh slip LCH. */}
+          <span>
+            {slip.cob === "Liability" ? "Total Limit of Liability" : "Total Sum Insured"}
+          </span>
+          <span className="tabular">
+            {money(totalSumInsured(slip), slip.currency)}
+          </span>
+        </p>
+      )}
+    </>
+  )
+}
+
+/**
+ * Rate slip open cover per kategori, tanpa tabel premi dan Total Payable,
+ * seperti CI MOP Rukma Padaya Trans dan container open cover Salam Pacific.
+ */
+export function OpenCoverRateBlock({ slip }: { slip: PlacingSlip }) {
+  const rates = (slip.openCoverRates ?? []).filter((r) => r.label.trim() || r.rate != null)
+  return (
+    <>
+      <SectionHeading>RATE</SectionHeading>
+      <table className="w-full text-[12.5px]">
+        <tbody>
+          {rates.map((r) => (
+            <tr key={r.id} className="align-top">
+              <td className="py-0.5 pr-2">- {r.label || "—"}</td>
+              <td className="w-3 py-0.5">:</td>
+              <td className="tabular py-0.5 font-medium whitespace-nowrap">
+                {openCoverRateText(r, slip.currency)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="mt-6">
+        <InfoTable rows={[["Premium", "As per declaration"]]} />
+      </div>
     </>
   )
 }
@@ -1711,7 +1744,8 @@ export function BrokerageBlock({ slip }: { slip: PlacingSlip }) {
               {slip.includeVat ? "INCL. VAT" : "EXCL. VAT"})
             </td>
             <td className="tabular py-2 text-right whitespace-nowrap">
-              {moneyCents(brokerageAmount(slip), slip.currency)}
+              {/* Open cover: nominal brokerage baru ada per deklarasi. */}
+              {usesOpenCover(slip) ? "" : moneyCents(brokerageAmount(slip), slip.currency)}
             </td>
           </tr>
         </tbody>

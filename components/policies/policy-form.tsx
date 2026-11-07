@@ -42,6 +42,7 @@ import {
 import { addMonths } from "@/lib/date"
 import { cobLabels, coversFor } from "@/lib/form-options"
 import { dateShort, money } from "@/lib/format"
+import { openCoverRateText, usesOpenCover } from "@/lib/open-cover"
 import { rosterPolicy } from "@/lib/policy-participants"
 import type { ClientOption } from "@/lib/server/clients"
 import type { PolicyFormOptions, PolicyInput } from "@/lib/server/policies"
@@ -210,6 +211,8 @@ export function PolicyForm({
   // sampai kedua bagiannya punya polis. Polis lama tanpa bagian memakai seluruh
   // slip. Hasil kosong berarti slip habis; [null] berarti slip utuh tersedia.
   function freeSlipParts(slip: PlacingSlip): (SlipPart | null)[] {
+    // Slip open cover menerbitkan satu polis per deklarasi (Harry, 6 November 2026).
+    if (usesOpenCover(slip)) return [null]
     const used = policies.filter(
       (p) => p.placingSlipId === slip.id && p.id !== draft.id
     )
@@ -243,9 +246,11 @@ export function PolicyForm({
     ? (slips.find((s) => s.id === draft.placingSlipId) ?? null)
     : null
   const slipLocked = Boolean(draft.placingSlipId)
-  const periodLocked = Boolean(
-    linkedSlip?.inceptionDate && linkedSlip.expiryDate
-  )
+  // Polis dari slip open cover adalah satu deklarasi: nilai, premi, dan
+  // periodenya diisi per deklarasi; data lain tetap dari slip.
+  const openCoverSlip = linkedSlip ? usesOpenCover(linkedSlip) : false
+  const periodLocked =
+    Boolean(linkedSlip?.inceptionDate && linkedSlip.expiryDate) && !openCoverSlip
   // COB dan type of cover dari master data. Nilai polis lama yang sudah tidak
   // ada di master tetap tampil supaya tidak hilang saat diedit.
   const masterOptions = useFormOptions()
@@ -294,9 +299,10 @@ export function PolicyForm({
       currency: slip.currency,
       inceptionDate: slip.inceptionDate ?? "",
       expiryDate: slip.expiryDate ?? "",
-      sumInsured: totalSumInsured(slip),
+      // Open cover: nilai dan premi diisi per deklarasi.
+      sumInsured: usesOpenCover(slip) ? 0 : totalSumInsured(slip),
       // Slip PAR + EQVET: premi per bagian, additional fee ikut polis PAR.
-      premium: slipPolicyPremium(slip, part),
+      premium: usesOpenCover(slip) ? 0 : slipPolicyPremium(slip, part),
       brokeragePct: slip.brokeragePct,
       additionalFee: part === "EQVET" ? 0 : (slip.additionalFee ?? 0),
       riskLocation: slip.riskLocation ?? "",
@@ -617,6 +623,8 @@ export function PolicyForm({
               value={draft.currency}
               onValueChange={(v) => set({ currency: v })}
             />
+          </fieldset>
+          <fieldset disabled={slipLocked && !openCoverSlip} className="contents">
             <NumberField
               label="Total Sum Insured"
               value={draft.sumInsured}
@@ -625,7 +633,9 @@ export function PolicyForm({
               description={
                 draft.type === "Endorsement" || draft.type === "Cancellation"
                   ? "Tambahan UP positif, pengurangan UP negatif."
-                  : undefined
+                  : openCoverSlip
+                    ? "Nilai deklarasi ini."
+                    : undefined
               }
             />
             <NumberField
@@ -637,9 +647,16 @@ export function PolicyForm({
               description={
                 draft.type === "Endorsement" || draft.type === "Cancellation"
                   ? "Tambahan premi positif, pengembalian premi negatif."
-                  : money(draft.premium, draft.currency)
+                  : openCoverSlip && linkedSlip
+                    ? `Rate open cover: ${(linkedSlip.openCoverRates ?? [])
+                        .filter((r) => r.rate != null)
+                        .map((r) => `${r.label} ${openCoverRateText(r, draft.currency)}`)
+                        .join(" · ")}.`
+                    : money(draft.premium, draft.currency)
               }
             />
+          </fieldset>
+          <fieldset disabled={slipLocked} className="contents">
             <NumberField
               label="Brokerage (%)"
               preset="percent"

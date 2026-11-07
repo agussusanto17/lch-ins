@@ -74,6 +74,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
   // Satu label per baris; disimpan sebagai daftar label bawaan Detail tambahan.
   const [coverDetailLabels, setCoverDetailLabels] = React.useState("")
   const [coverUsesSections, setCoverUsesSections] = React.useState(false)
+  const [coverOpenCover, setCoverOpenCover] = React.useState(false)
   const [coverPeriodLabel, setCoverPeriodLabel] = React.useState("")
   const [coverPeriodDays, setCoverPeriodDays] = React.useState<number | null>(null)
   const [coverPeriodEndText, setCoverPeriodEndText] = React.useState("")
@@ -119,6 +120,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverAbbreviation("")
     setCoverDetailLabels("")
     setCoverUsesSections(false)
+    setCoverOpenCover(false)
     setCoverPeriodLabel("")
     setCoverPeriodDays(null)
     setCoverPeriodEndText("")
@@ -134,6 +136,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverAbbreviation(cover.abbreviation ?? "")
     setCoverDetailLabels((cover.detailLabels ?? []).join("\n"))
     setCoverUsesSections(cover.usesSections ?? false)
+    setCoverOpenCover(cover.openCover ?? false)
     setCoverPeriodLabel(cover.periodLabel ?? "")
     setCoverPeriodDays(cover.periodDays ?? null)
     setCoverPeriodEndText(cover.periodEndText ?? "")
@@ -158,6 +161,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           abbreviation: coverAbbreviation,
           detailLabels,
           usesSections: coverUsesSections,
+          openCover: coverOpenCover,
           periodLabel: coverPeriodLabel,
           periodDays: coverPeriodDays,
           periodEndText: coverPeriodEndText,
@@ -182,6 +186,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                           abbreviation: res.data?.abbreviation ?? null,
                           detailLabels: res.data?.detailLabels ?? [],
                           usesSections: res.data?.usesSections ?? false,
+                          openCover: res.data?.openCover ?? false,
                           periodLabel: res.data?.periodLabel ?? null,
                           periodDays: res.data?.periodDays ?? null,
                           periodEndText: res.data?.periodEndText ?? null,
@@ -201,6 +206,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           abbreviation: coverAbbreviation,
           detailLabels,
           usesSections: coverUsesSections,
+          openCover: coverOpenCover,
           periodLabel: coverPeriodLabel,
           periodDays: coverPeriodDays,
           periodEndText: coverPeriodEndText,
@@ -640,6 +646,17 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                 checked={coverUsesSections}
                 onCheckedChange={setCoverUsesSections}
               />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">Open cover</span>
+                <span className="text-[11px] text-muted-foreground">
+                  Slip berisi rate per kategori tanpa premi pasti; premi
+                  dicatat per deklarasi di polis, misalnya MOP.
+                </span>
+              </div>
+              <Switch checked={coverOpenCover} onCheckedChange={setCoverOpenCover} />
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">

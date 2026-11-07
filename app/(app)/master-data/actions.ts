@@ -87,6 +87,7 @@ const coverTypeSchema = z.object({
     .max(30, "Label detail tambahan maksimal 30")
     .optional(),
   usesSections: z.boolean().optional(),
+  openCover: z.boolean().optional(),
   periodLabel: z
     .string()
     .trim()
