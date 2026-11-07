@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `feat/open-cover`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#168](https://github.com/agussusanto17/lch-ins/pull/168)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
