@@ -80,5 +80,6 @@ test("Interest Insured dari daftar peserta: satu baris, total UP", () => {
     description: "2 participants as attached",
     amount: 175_000_000,
   })
-  assert.equal(participantsInterestItem([{ sumInsured: 150_000 }]).description, "1 participant as attached")
+  // Peserta tunggal tercetak di baris PID, tanpa lampiran (Harry, 7 November 2026).
+  assert.equal(participantsInterestItem([{ sumInsured: 150_000 }]).description, "Sum Insured (per PID)")
 })

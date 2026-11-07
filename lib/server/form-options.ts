@@ -18,7 +18,7 @@ import { prisma } from "@/lib/prisma"
  * ditambah harus langsung muncul di form berikutnya.
  */
 export const getFormOptions = cache(async (): Promise<FormOptions> => {
-  const [cobs, insurers, currencies, wordingForms, lookupRows] =
+  const [cobs, insurers, currencies, wordingForms, lookupRows, paBenefits] =
     await Promise.all([
       prisma.classOfBusiness.findMany({
         where: { isActive: true },
@@ -69,6 +69,11 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         select: { lookupType: true, name: true },
       }),
+      prisma.lookupValue.findMany({
+        where: { lookupType: "pa_benefit", isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { id: true, code: true, name: true },
+      }),
     ])
 
   const lookups = Object.fromEntries(
@@ -90,5 +95,6 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
     currencies,
     wordingForms,
     lookups,
+    paBenefits,
   }
 })

@@ -31,6 +31,7 @@ import {
 } from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
 import { cleanDetailRows } from "@/lib/slip-details"
+import { cleanPaBenefitLimits } from "@/lib/pa-benefits"
 import { PARTICIPANT_LIMITS } from "@/lib/slip-participants"
 import { cleanClauseGroups, groupedClauseOrder } from "@/lib/clause-groups"
 import { usesItemRates } from "@/lib/slip-items"
@@ -114,6 +115,8 @@ export interface PlacingSlipInput {
   clauseGroups?: Record<string, string>
   /** Peserta PA grup. Undefined berarti tidak diubah. */
   participants?: SlipParticipant[]
+  /** Limit manfaat PA (persen UP per kode manfaat). Undefined berarti tidak diubah. */
+  paBenefitLimits?: Record<string, number> | null
   clauseIdsSection2?: string[]
   clauseOverridesSection2?: Record<string, ClauseOverride>
   clauseIdsGeneral?: string[]
@@ -588,6 +591,8 @@ function toPlacingSlipRecord(
     usesSections: raw.usesSections || undefined,
     insuredDescription: raw.insuredDescription || undefined,
     detailRows: cleanDetailRows(raw.detailRows),
+    paBenefitLimits:
+      raw.paBenefitLimits == null ? null : cleanPaBenefitLimits(raw.paBenefitLimits),
     occupation: raw.occupation
       ? `${raw.occupation.code} - ${raw.occupation.name}`
       : undefined,
@@ -788,6 +793,13 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
 function detailRowsData(rows: SlipDetailRow[] | null | undefined) {
   if (rows === undefined) return undefined
   return cleanDetailRows(rows).map((r) => ({ label: r.label, value: r.value }))
+}
+
+/** Limit manfaat PA yang valid; kosong disimpan sebagai NULL (memakai bawaan). */
+function paBenefitLimitsData(limits: Record<string, number> | null | undefined) {
+  if (limits === undefined) return undefined
+  const clean = cleanPaBenefitLimits(limits)
+  return Object.keys(clean).length ? clean : Prisma.DbNull
 }
 
 /** Filled-in deductibles only, trimmed and capped at MAX_DEDUCTIBLES. */
@@ -1099,6 +1111,7 @@ export async function createPlacingSlip(
         usesSections: input.usesSections === true,
         insuredDescription: input.insuredDescription?.trim() || null,
         detailRows: detailRowsData(input.detailRows),
+        paBenefitLimits: paBenefitLimitsData(input.paBenefitLimits),
         occupationId,
         occupationLabel: input.occupationLabel?.trim() || null,
         riskLocation: input.riskLocation?.trim() || null,
@@ -1481,6 +1494,7 @@ export async function updatePlacingSlip(
         usesSections: input.usesSections === true,
         insuredDescription: input.insuredDescription?.trim() || null,
         detailRows: detailRowsData(input.detailRows),
+        paBenefitLimits: paBenefitLimitsData(input.paBenefitLimits),
         occupationId,
         occupationLabel: input.occupationLabel?.trim() || null,
         riskLocation: input.riskLocation?.trim() || null,

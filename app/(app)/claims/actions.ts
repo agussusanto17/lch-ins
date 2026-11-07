@@ -25,8 +25,7 @@ import {
   type ClaimDocumentRecord,
   type ClaimFollowupRecord,
 } from "@/lib/server/claims"
-import { listPolicyParticipants } from "@/lib/server/policies"
-import type { PolicyParticipant } from "@/lib/policy-participants"
+import { getPolicyRoster, type PolicyRoster } from "@/lib/server/policies"
 import { requireAccess, requireManage } from "@/lib/server/session"
 import { saveUploadedFile } from "@/lib/server/stored-files"
 
@@ -63,15 +62,16 @@ const claimInputSchema = z.object({
   stage: z.enum(CLAIM_STAGES as [ClaimStage, ...ClaimStage[]]).optional(),
   notes: z.string().optional().default(""),
   participantId: z.uuid("Peserta tidak valid").nullable().optional(),
+  paBenefitId: z.uuid("Jenis manfaat tidak valid").nullable().optional(),
 })
 
-/** Daftar peserta polis untuk memilih peserta klaim PA grup. */
-export async function listClaimParticipantsAction(
+/** Peserta dan limit manfaat polis untuk klaim PA grup. */
+export async function getClaimRosterAction(
   policyId: string
-): Promise<ActionResponse<PolicyParticipant[]>> {
+): Promise<ActionResponse<PolicyRoster>> {
   try {
     await requireAccess("/claims")
-    return { ok: true, data: await listPolicyParticipants(policyId) }
+    return { ok: true, data: await getPolicyRoster(policyId) }
   } catch (err) {
     unstable_rethrow(err)
     return { ok: false, error: err instanceof Error ? err.message : "Gagal memuat peserta polis" }

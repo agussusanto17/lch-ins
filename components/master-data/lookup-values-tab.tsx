@@ -64,6 +64,7 @@ const TYPE_LABELS: Record<string, string> = {
   policy_type: "Tipe Polis",
   claim_status: "Status Klaim",
   claim_stage: "Tahapan Klaim",
+  pa_benefit: "Jenis Manfaat PA",
   payment_type: "Jenis Pembayaran",
   bank: "Daftar Bank",
   construction_class: "Kelas Konstruksi Bangunan",

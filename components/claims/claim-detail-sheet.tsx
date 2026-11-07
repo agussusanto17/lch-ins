@@ -18,6 +18,7 @@ import {
   Printer,
   Send,
   Trash2,
+  TriangleAlert,
   User,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -49,6 +50,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import type { Claim } from "@/lib/data"
 import { dateShort, money } from "@/lib/format"
+import { paClaimWarnings } from "@/lib/pa-benefits"
 import type { ClaimDocumentRecord, ClaimFollowupRecord } from "@/lib/server/claims"
 import { UPLOAD_ACCEPT, UPLOAD_HINT, uploadProblem } from "@/lib/uploads"
 
@@ -367,6 +369,10 @@ export function ClaimDetailSheet({
                         value={money(claim.paidAmount, claim.currency)}
                       />
                     </div>
+                    {/* Peringatan klaim PA di atas UP atau limit manfaat (Harry, 7 November 2026). */}
+                    {claim.participantSumInsured ? (
+                      <PaClaimWarnings claim={claim} />
+                    ) : null}
                   </section>
 
                   <section>
@@ -438,6 +444,9 @@ export function ClaimDetailSheet({
                       <Row label="Asuransi" value={claim.insurer} />
                       {claim.participantName ? (
                         <Row label="Peserta" value={claim.participantName} />
+                      ) : null}
+                      {claim.paBenefitName ? (
+                        <Row label="Jenis manfaat" value={claim.paBenefitName} />
                       ) : null}
                     </div>
                   </section>
@@ -778,5 +787,27 @@ export function ClaimDetailSheet({
         ) : null}
       </SheetContent>
     </Sheet>
+  )
+}
+
+function PaClaimWarnings({ claim }: { claim: Claim }) {
+  const warnings = paClaimWarnings(claim, {
+    sumInsured: claim.participantSumInsured ?? 0,
+    limitPct: claim.benefitLimitPct ?? null,
+    benefitName: claim.paBenefitName || null,
+  })
+  if (!warnings.length) return null
+  return (
+    <div
+      role="status"
+      className="mt-2 flex items-start gap-2 rounded-xl bg-warning/10 px-3 py-2.5 text-sm text-warning"
+    >
+      <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <ul className="flex flex-col gap-1">
+        {warnings.map((w) => (
+          <li key={w}>{w}</li>
+        ))}
+      </ul>
+    </div>
   )
 }

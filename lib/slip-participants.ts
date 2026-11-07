@@ -208,16 +208,42 @@ function matches(header: string, key: (typeof PARTICIPANT_COLUMNS)[number]["key"
   })
 }
 
-/** Baris Interest Insured dari daftar peserta: satu baris, nilai total UP. */
+/**
+ * Baris Interest Insured dari daftar peserta: satu baris, nilai total UP.
+ * Peserta tunggal tidak punya lampiran, jadi barisnya "Sum Insured (per
+ * PID)" seperti CI PA ekspatriat LCH (Harry, 7 November 2026).
+ */
 export function participantsInterestItem(
   list: readonly Pick<SlipParticipant, "sumInsured">[]
 ): LineItem {
   const n = list.length
   return {
     id: PARTICIPANTS_ITEM_ID,
-    description: `${n.toLocaleString("id-ID")} ${n === 1 ? "participant" : "participants"} as attached`,
+    description:
+      n === 1 ? "Sum Insured (per PID)" : `${n.toLocaleString("id-ID")} participants as attached`,
     amount: participantsTotal(list),
   }
+}
+
+/** Tanggal ISO menjadi DD/MM/YYYY, sama dengan lampiran peserta. */
+export const participantDateText = (iso: string | null | undefined) =>
+  iso ? iso.split("-").reverse().join("/") : ""
+
+/**
+ * Isi baris "PID / Insured Name" untuk slip dengan satu peserta, mengikuti CI
+ * PA ekspatriat LCH: nama, nomor identitas atau paspor, tanggal lahir, dan
+ * jabatan. Isian kosong tidak dicetak; beneficiary tetap di Detail tambahan.
+ */
+export function participantPidText(p: SlipParticipant) {
+  return [
+    ["Name", p.name.trim()],
+    ["ID / Passport No.", p.idNumber?.trim()],
+    ["Date of Birth", participantDateText(p.birthDate)],
+    ["Occupation", p.position?.trim()],
+  ]
+    .filter(([, value]) => value)
+    .map(([label, value]) => `${label} : ${value}`)
+    .join("\n")
 }
 
 /**
