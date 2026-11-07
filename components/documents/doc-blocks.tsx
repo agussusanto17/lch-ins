@@ -52,7 +52,13 @@ import {
 } from "@/lib/slip-locations"
 import { isExistingPolicyLabel, printedDetailRows } from "@/lib/slip-details"
 import { clauseGroupBlocks } from "@/lib/clause-groups"
-import { participantAge, participantsTotal } from "@/lib/slip-participants"
+import {
+  participantAge,
+  participantDateText,
+  participantPidText,
+  participantsTotal,
+  usesParticipants,
+} from "@/lib/slip-participants"
 import {
   isFlatLine,
   isLimitOnlyItem,
@@ -139,6 +145,10 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
     ["Correspondence Address", slip.correspondenceAddress || "—"],
     period
   )
+  // PA dengan satu peserta dicetak di sini, bukan sebagai lampiran tabel,
+  // seperti CI PA ekspatriat LCH (Harry, 7 November 2026).
+  if (usesParticipants(slip.cob) && slip.participants?.length === 1)
+    rows.push(["PID / Insured Name", participantPidText(slip.participants[0])])
   if (isMultiLocation(slip)) {
     rows.push(...locationRows(slip))
   } else {
@@ -699,7 +709,8 @@ export function ClausesBlock({
  */
 export function ParticipantAppendix({ slip }: { slip: PlacingSlip }) {
   const list = slip.participants ?? []
-  if (!list.length) return null
+  // Satu peserta sudah tercetak di baris PID / Insured Name.
+  if (list.length < 2) return null
   const has = (key: keyof SlipParticipant) => list.some((p) => Boolean(p[key]))
   const ages = list.map((p) => participantAge(p.birthDate, slip.inceptionDate))
   const columns: { header: string; cell: (p: SlipParticipant, i: number) => React.ReactNode; right?: boolean }[] = [
@@ -709,7 +720,7 @@ export function ParticipantAppendix({ slip }: { slip: PlacingSlip }) {
     ...(has("position") ? [{ header: "Jabatan", cell: (p: SlipParticipant) => p.position }] : []),
     ...(has("level") ? [{ header: "Level Jabatan", cell: (p: SlipParticipant) => p.level }] : []),
     ...(has("birthDate")
-      ? [{ header: "Tgl Lahir", cell: (p: SlipParticipant) => (p.birthDate ? p.birthDate.split("-").reverse().join("/") : "") }]
+      ? [{ header: "Tgl Lahir", cell: (p: SlipParticipant) => participantDateText(p.birthDate) }]
       : []),
     ...(has("gender") ? [{ header: "Jenis Kelamin", cell: (p: SlipParticipant) => p.gender }] : []),
     ...(ages.some((a) => a != null)

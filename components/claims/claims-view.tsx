@@ -166,6 +166,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
       { header: "No. Polis", value: (c) => c.policyNo },
       { header: "Tertanggung", value: (c) => c.insuredName, width: 36 },
       { header: "Peserta", value: (c) => c.participantName ?? "", width: 28 },
+      { header: "Jenis Manfaat", value: (c) => c.paBenefitName ?? "", width: 18 },
       { header: "Asuransi", value: (c) => c.insurer, width: 36 },
       { header: "COB", value: (c) => c.cob },
       { header: "Tgl Kejadian", value: (c) => c.lossDate, type: "date" },

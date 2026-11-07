@@ -4,6 +4,7 @@ import { coverCodeFor } from "@/components/underwriting/slip-model"
 import type { Claim, ClaimStage, ClaimStatus } from "@/lib/data/types"
 import { dateShort, normalizeCob } from "@/lib/format"
 import { Prisma } from "@/lib/generated/prisma/client"
+import { effectivePaBenefitLimits, type PaBenefitOption } from "@/lib/pa-benefits"
 import { participantActiveOn } from "@/lib/policy-participants"
 import { prisma } from "@/lib/prisma"
 import { rosterPolicyId } from "@/lib/server/policies"
@@ -70,6 +71,8 @@ export interface ClaimInput {
   notes?: string | null
   /** Peserta PA grup; wajib bila polisnya punya daftar peserta. */
   participantId?: string | null
+  /** Jenis manfaat klaim PA; wajib bersama peserta. */
+  paBenefitId?: string | null
 }
 
 export interface ClaimFormOptions {
@@ -85,6 +88,8 @@ export interface ClaimFormOptions {
     id: string
     name: string
   }>
+  /** Jenis manfaat PA aktif dari Master Data. */
+  paBenefits: PaBenefitOption[]
 }
 
 const claimIncludeRelations = {
@@ -106,7 +111,15 @@ const claimIncludeRelations = {
   status: { select: { code: true, name: true } },
   stage: { select: { code: true, name: true } },
   adjuster: { select: { id: true, name: true } },
-  participant: { select: { id: true, name: true } },
+  participant: {
+    select: {
+      id: true,
+      name: true,
+      sumInsured: true,
+      policy: { select: { paBenefitLimits: true } },
+    },
+  },
+  paBenefit: { select: { id: true, code: true, name: true } },
 } satisfies Prisma.ClaimInclude
 
 type PrismaClaimWithRelations = Prisma.ClaimGetPayload<{
@@ -220,6 +233,16 @@ function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
     notes: record.notes || "",
     participantId: record.participantId,
     participantName: record.participant?.name ?? "",
+    paBenefitId: record.paBenefitId,
+    paBenefitName: record.paBenefit?.name ?? "",
+    participantSumInsured: record.participant ? Number(record.participant.sumInsured) : null,
+    // Limit dari polis pemilik daftar peserta, sama dengan form klaim.
+    benefitLimitPct:
+      record.participant && record.paBenefit
+        ? (effectivePaBenefitLimits(record.participant.policy.paBenefitLimits)[
+            record.paBenefit.code
+          ] ?? null)
+        : null,
   }
 }
 
@@ -264,7 +287,7 @@ export async function getClaimByNo(claimNo: string): Promise<ClaimRecord | null>
 }
 
 export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
-  const [policies, adjusters] = await Promise.all([
+  const [policies, adjusters, paBenefits] = await Promise.all([
     prisma.policy.findMany({
       include: {
         cob: { select: { name: true } },
@@ -283,6 +306,11 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    prisma.lookupValue.findMany({
+      where: { lookupType: "pa_benefit", isActive: true },
+      select: { id: true, code: true, name: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
   ])
 
   return {
@@ -299,6 +327,7 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
       }
     }),
     adjusters,
+    paBenefits,
   }
 }
 
@@ -329,17 +358,24 @@ const isoDay = (d: Date) => d.toISOString().slice(0, 10)
  * peserta polisnya terisi, harus ada di daftar itu, dan dijamin pada tanggal
  * kejadian. Polis tanpa daftar peserta tidak menyimpan peserta.
  */
-async function checkedParticipantId(
+async function checkedPaClaim(
   tx: Prisma.TransactionClient,
-  input: Pick<ClaimInput, "policyId" | "participantId" | "lossDate">
-): Promise<string | null> {
+  input: Pick<ClaimInput, "policyId" | "participantId" | "lossDate" | "paBenefitId">
+): Promise<{ participantId: string | null; paBenefitId: string | null }> {
   const ownerId = await rosterPolicyId(tx, input.policyId)
   const rosterSize = await tx.policyParticipant.count({ where: { policyId: ownerId } })
   if (!rosterSize) {
     if (input.participantId) throw new Error("Polis ini tidak punya daftar peserta.")
-    return null
+    return { participantId: null, paBenefitId: null }
   }
   if (!input.participantId) throw new Error("Pilih peserta yang mengalami kejadian.")
+  // Jenis manfaat menentukan limit untuk peringatan nilai klaim (Harry, 7 November 2026).
+  if (!input.paBenefitId) throw new Error("Pilih jenis manfaat klaim.")
+  const benefit = await tx.lookupValue.findFirst({
+    where: { id: input.paBenefitId, lookupType: "pa_benefit" },
+    select: { id: true },
+  })
+  if (!benefit) throw new Error("Jenis manfaat klaim tidak valid.")
   const participant = await tx.policyParticipant.findUnique({
     where: { id: input.participantId },
     select: { id: true, name: true, policyId: true, startDate: true, endDate: true },
@@ -356,7 +392,7 @@ async function checkedParticipantId(
       }.`
     )
   }
-  return participant.id
+  return { participantId: participant.id, paBenefitId: benefit.id }
 }
 
 export async function createClaim(
@@ -372,7 +408,7 @@ export async function createClaim(
       })
     }
 
-    const participantId = await checkedParticipantId(tx, input)
+    const { participantId, paBenefitId } = await checkedPaClaim(tx, input)
     const [statusId, stageId, adjusterId] = await Promise.all([
       input.status ? resolveStatusId(input.status) : (input.statusId ? Promise.resolve(input.statusId) : resolveStatusId("Outstanding")),
       input.stage ? resolveStageId(input.stage) : (input.stageId ? Promise.resolve(input.stageId) : resolveStageId("Tunggu Dokumen")),
@@ -399,6 +435,7 @@ export async function createClaim(
         stageId,
         notes: input.notes?.trim() || null,
         participantId,
+        paBenefitId,
       },
       include: claimIncludeRelations,
     })
@@ -415,6 +452,7 @@ export async function createClaim(
         statusId: record.statusId,
         stageId: record.stageId,
         participantId: record.participantId,
+        paBenefitId: record.paBenefitId,
       },
     })
 
@@ -436,7 +474,7 @@ export async function updateClaim(
       throw new Error("Klaim tidak ditemukan.")
     }
 
-    const participantId = await checkedParticipantId(tx, input)
+    const { participantId, paBenefitId } = await checkedPaClaim(tx, input)
     const [statusId, stageId, adjusterId] = await Promise.all([
       input.status ? resolveStatusId(input.status) : (input.statusId ? Promise.resolve(input.statusId) : Promise.resolve(existing.statusId)),
       input.stage ? resolveStageId(input.stage) : (input.stageId ? Promise.resolve(input.stageId) : Promise.resolve(existing.stageId)),
@@ -464,6 +502,7 @@ export async function updateClaim(
         stageId,
         notes: input.notes !== undefined ? (input.notes?.trim() || null) : existing.notes,
         participantId,
+        paBenefitId,
       },
       include: claimIncludeRelations,
     })
@@ -482,6 +521,7 @@ export async function updateClaim(
         claimedAmount: Number(existing.claimedAmount),
         paidAmount: Number(existing.paidAmount),
         participantId: existing.participantId,
+        paBenefitId: existing.paBenefitId,
       },
       after: {
         claimNo: record.claimNo,
@@ -492,6 +532,7 @@ export async function updateClaim(
         claimedAmount: Number(record.claimedAmount),
         paidAmount: Number(record.paidAmount),
         participantId: record.participantId,
+        paBenefitId: record.paBenefitId,
       },
     })
 

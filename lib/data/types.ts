@@ -372,6 +372,8 @@ export interface PlacingSlip {
    * slip; undefined berarti belum dimuat dan tidak diubah saat disimpan.
    */
   participants?: SlipParticipant[]
+  /** Limit manfaat PA dalam persen UP per kode lookup pa_benefit; null memakai bawaan. */
+  paBenefitLimits?: Record<string, number> | null
   /**
    * Judul kelompok per klausul di `clauseIds`, untuk slip tanpa section,
    * misalnya "Extensions" dan "General Conditions". Klausul tanpa judul
@@ -496,6 +498,12 @@ export interface Claim {
   /** Peserta PA grup yang mengalami kejadian. */
   participantId?: string | null
   participantName?: string
+  /** Jenis manfaat klaim PA (lookup pa_benefit). */
+  paBenefitId?: string | null
+  paBenefitName?: string
+  /** UP peserta dan limit manfaatnya (persen UP), untuk peringatan nilai klaim. */
+  participantSumInsured?: number | null
+  benefitLimitPct?: number | null
 }
 
 export interface Clause {

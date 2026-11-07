@@ -192,6 +192,10 @@ const placingSlipSchema = z.object({
     )
     .optional(),
   participants: participantListSchema.optional(),
+  paBenefitLimits: z
+    .record(z.string().max(50), z.number().min(0, "Limit manfaat tidak boleh negatif").max(1000))
+    .nullable()
+    .optional(),
   clauseGroups: z
     .record(
       z.string(),
@@ -494,6 +498,7 @@ export async function duplicatePlacingSlipAction(
       clauseOverrides: source.clauseOverrides,
       clauseGroups: source.clauseGroups,
       participants: source.participants,
+      paBenefitLimits: source.paBenefitLimits,
       clauseIdsSection2: source.clauseIdsSection2,
       clauseOverridesSection2: source.clauseOverridesSection2,
       clauseIdsGeneral: source.clauseIdsGeneral,

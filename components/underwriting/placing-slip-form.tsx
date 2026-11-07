@@ -23,7 +23,7 @@ import { toast } from "sonner"
 
 import { PageShell } from "@/components/layout/page-header"
 import { useToday } from "@/components/layout/today-provider"
-import { SelectInput } from "@/components/shared/form-fields"
+import { NumberField, SelectInput } from "@/components/shared/form-fields"
 import { useFormOptions } from "@/components/shared/form-options-provider"
 import { SectionCard } from "@/components/shared/section-card"
 import {
@@ -43,6 +43,7 @@ import { OccupationCombobox } from "@/components/underwriting/occupation-combobo
 import { SlipLocations } from "@/components/underwriting/slip-locations"
 import { SlipItemRates } from "@/components/underwriting/slip-item-rates"
 import { SlipParticipants } from "@/components/underwriting/slip-participants"
+import { effectivePaBenefitLimits } from "@/lib/pa-benefits"
 import { participantsInterestItem, usesParticipants } from "@/lib/slip-participants"
 import { SlipDetailRows } from "@/components/underwriting/slip-detail-rows"
 import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
@@ -1521,17 +1522,53 @@ function SlipEditor({
                   : undefined
               }
             >
-              <SlipParticipants
-                participants={slip.participants ?? []}
-                currency={slip.currency}
-                locked={locked}
-                onChange={(list) =>
-                  set({
-                    participants: list,
-                    interestItems: list.length ? [participantsInterestItem(list)] : [],
-                  })
-                }
-              />
+              <div className="flex flex-col gap-5">
+                {/*
+                 * Limit manfaat untuk peringatan klaim (Harry, 7 November
+                 * 2026). Bawaan dari contoh slip PA LCH.
+                 */}
+                {options.paBenefits.length ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      {options.paBenefits.map((b) => {
+                        const limits = effectivePaBenefitLimits(slip.paBenefitLimits)
+                        return (
+                          <NumberField
+                            key={b.code}
+                            label={`Limit ${b.name} (% UP)`}
+                            preset="percent"
+                            min={0}
+                            max={1000}
+                            readOnly={locked}
+                            value={limits[b.code] ?? null}
+                            onValueChange={(v) => {
+                              const next = { ...limits }
+                              if (v == null) delete next[b.code]
+                              else next[b.code] = v
+                              set({ paBenefitLimits: next })
+                            }}
+                          />
+                        )
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Dipakai untuk peringatan klaim. Manfaat yang dicetak di slip
+                      tetap ditulis di Special Conditions.
+                    </p>
+                  </div>
+                ) : null}
+                <SlipParticipants
+                  participants={slip.participants ?? []}
+                  currency={slip.currency}
+                  locked={locked}
+                  onChange={(list) =>
+                    set({
+                      participants: list,
+                      interestItems: list.length ? [participantsInterestItem(list)] : [],
+                    })
+                  }
+                />
+              </div>
             </SectionCard>
           ) : null}
 

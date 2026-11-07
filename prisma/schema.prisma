@@ -334,6 +334,7 @@ model LookupValue {
   policyTypes           Policy[]            @relation("policy_type")
   claimStatuses         Claim[]             @relation("claim_status")
   claimStages           Claim[]             @relation("claim_stage")
+  claimPaBenefits       Claim[]             @relation("claim_pa_benefit")
   paymentModels         DebitNote[]         @relation("payment_model")
   paymentTypes          Payment[]           @relation("payment_type")
   banks                 BankAccount[]       @relation("bank")
@@ -1112,6 +1113,9 @@ model PlacingSlip {
   /// Detail tambahan: baris {label, value} yang dicetak di tabel detail
   /// dokumen setelah baris bawaan, misalnya Retroactive Date, Voyage, Vessels.
   detailRows    Json      @default("[]") @map("detail_rows") @db.JsonB
+  /// Limit manfaat PA dalam persen UP per kode lookup pa_benefit, misalnya
+  /// {"death":100,"disability":100,"medical":10}. Dipakai peringatan klaim.
+  paBenefitLimits Json?   @map("pa_benefit_limits") @db.JsonB
   /// Slip COB selain Property dan Motor Vehicle yang dibagi Section 1
   /// (Material Damage) dan Section 2 (Third Party Liability), seperti CAR/EAR.
   usesSections  Boolean   @default(false) @map("uses_sections")
@@ -1455,6 +1459,8 @@ model Policy {
   placementLocationId String?  @map("placement_location_id") @db.Uuid
   /// Pengelompokan klien untuk laporan produksi.
   groupingInsured     String?  @map("grouping_insured")
+  /// Limit manfaat PA, disalin dari slip saat polis dibuat.
+  paBenefitLimits     Json?    @map("pa_benefit_limits") @db.JsonB
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1594,6 +1600,8 @@ model Claim {
   notes                String?
   /// Peserta PA grup yang mengalami kejadian (jawaban Harry, 6 November 2026).
   participantId        String?   @map("participant_id") @db.Uuid
+  /// lookup pa_benefit: jenis manfaat klaim PA (meninggal, cacat, biaya medis).
+  paBenefitId          String?   @map("pa_benefit_id") @db.Uuid
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1605,6 +1613,7 @@ model Claim {
   stage    LookupValue? @relation("claim_stage", fields: [stageId], references: [id])
 
   participant PolicyParticipant? @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  paBenefit   LookupValue?       @relation("claim_pa_benefit", fields: [paBenefitId], references: [id], onDelete: Restrict)
 
   payments  Payment[]
   documents ClaimDocument[]
@@ -1613,6 +1622,7 @@ model Claim {
   @@index([policyId])
   @@index([statusId])
   @@index([participantId])
+  @@index([paBenefitId])
   @@map("claims")
 }
 

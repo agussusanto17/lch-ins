@@ -1,12 +1,13 @@
 "use client"
 
 import * as React from "react"
+import { TriangleAlert } from "lucide-react"
 import { toast } from "sonner"
 import * as z from "zod"
 
 import {
   createClaimAction,
-  listClaimParticipantsAction,
+  getClaimRosterAction,
   updateClaimAction,
 } from "@/app/(app)/claims/actions"
 import { FormDrawer } from "@/components/shared/form-drawer"
@@ -25,6 +26,11 @@ import {
   type ClaimStatus,
 } from "@/lib/data"
 import { dateShort, money } from "@/lib/format"
+import {
+  paBenefitLimitText,
+  paClaimWarnings,
+  type PaBenefitLimits,
+} from "@/lib/pa-benefits"
 import {
   participantActiveOn,
   type PolicyParticipant,
@@ -67,6 +73,8 @@ const EMPTY: Draft = {
   notes: "",
   participantId: null,
   participantName: "",
+  paBenefitId: null,
+  paBenefitName: "",
 }
 
 /** Label pilihan peserta: nama, lalu identitas, level, dan lokasi kerja. */
@@ -154,18 +162,19 @@ export function ClaimForm({
   const [roster, setRoster] = React.useState<{
     policyId: string
     list: PolicyParticipant[]
+    limits: PaBenefitLimits
   } | null>(null)
   const isNew = !draft.id
   React.useEffect(() => {
     const policyId = draft.policyId
     if (!policyId || !usesRoster) return
     let active = true
-    listClaimParticipantsAction(policyId).then((res) => {
+    getClaimRosterAction(policyId).then((res) => {
       if (!active) return
-      const list = res.ok ? (res.data ?? []) : []
+      const list = res.ok ? (res.data?.participants ?? []) : []
       if (!res.ok)
         toast.error("Gagal memuat peserta polis", { description: res.error })
-      setRoster({ policyId, list })
+      setRoster({ policyId, list, limits: res.data?.benefitLimits ?? {} })
       // PA perorangan: satu-satunya peserta langsung terpilih.
       if (isNew && list.length === 1) {
         setDraft((d) =>
@@ -201,6 +210,28 @@ export function ClaimForm({
     /^\d{4}-\d{2}-\d{2}$/.test(draft.lossDate) &&
     !participantActiveOn(selectedParticipant, draft.lossDate)
 
+  // Jenis manfaat dan limitnya untuk peringatan nilai klaim (Harry, 7 November 2026).
+  const benefits = formOptions.paBenefits
+  const selectedBenefit = benefits.find((b) => b.id === draft.paBenefitId) ?? null
+  const benefitItems = [
+    ...benefits.map((b) => ({ label: b.name, value: b.id })),
+    // Jenis manfaat yang sudah dinonaktifkan tetap tampil di klaim lamanya.
+    ...(draft.paBenefitId && !selectedBenefit
+      ? [{ label: draft.paBenefitName || "Jenis manfaat lama", value: draft.paBenefitId }]
+      : []),
+  ]
+  const limitPct =
+    selectedBenefit && roster?.policyId === draft.policyId
+      ? (roster.limits[selectedBenefit.code] ?? null)
+      : null
+  const claimWarnings = selectedParticipant
+    ? paClaimWarnings(draft, {
+        sumInsured: selectedParticipant.sumInsured,
+        limitPct,
+        benefitName: selectedBenefit?.name ?? null,
+      })
+    : []
+
   const adjusterOptions = formOptions.adjusters.map((a) => a.name)
   const adjusterItems =
     draft.adjuster && !adjusterOptions.includes(draft.adjuster)
@@ -221,6 +252,8 @@ export function ClaimForm({
             location: draft.location || "",
             participantId: null,
             participantName: "",
+            paBenefitId: null,
+            paBenefitName: "",
           }
         : {
             policyId: null,
@@ -229,6 +262,8 @@ export function ClaimForm({
             insurer: "",
             participantId: null,
             participantName: "",
+            paBenefitId: null,
+            paBenefitName: "",
           }
     )
   }
@@ -241,8 +276,11 @@ export function ClaimForm({
     } else if (participantInactive) {
       errs.participantId = "Peserta ini tidak dijamin pada tanggal kejadian"
     }
+    if (needsParticipant && !draft.paBenefitId) {
+      errs.paBenefitId = "Pilih jenis manfaat klaim"
+    }
     setErrors(errs)
-    if (!result.ok || errs.participantId) return false
+    if (!result.ok || errs.participantId || errs.paBenefitId) return false
 
     const matchedAdjuster = formOptions.adjusters.find(
       (a) => a.name.toLowerCase() === draft.adjuster?.toLowerCase()
@@ -270,6 +308,8 @@ export function ClaimForm({
       // Daftar yang sudah termuat dan kosong berarti polis tanpa peserta.
       participantId:
         rosterList && !rosterList.length ? null : (draft.participantId ?? null),
+      paBenefitId:
+        rosterList && !rosterList.length ? null : (draft.paBenefitId ?? null),
     }
 
     if (draft.id) {
@@ -393,6 +433,29 @@ export function ClaimForm({
               }
             />
           ) : null}
+          {needsParticipant ? (
+            <SelectInput
+              label="Jenis Manfaat"
+              required
+              value={draft.paBenefitId ?? ""}
+              onValueChange={(v) =>
+                set({
+                  paBenefitId: v || null,
+                  paBenefitName: benefitItems.find((b) => b.value === v)?.label ?? "",
+                })
+              }
+              items={benefitItems}
+              placeholder={benefits.length ? "Pilih jenis manfaat…" : "Belum ada data"}
+              error={errors.paBenefitId}
+              description={
+                selectedParticipant && limitPct != null
+                  ? `Limit ${paBenefitLimitText(selectedParticipant.sumInsured, limitPct, draft.currency)}.`
+                  : benefits.length
+                    ? "Limit manfaat dipakai untuk peringatan nilai klaim."
+                    : "Isi daftarnya di Master Data, Jenis Manfaat PA."
+              }
+            />
+          ) : null}
         </FieldGroup>
 
         <FieldSeparator />
@@ -472,6 +535,19 @@ export function ClaimForm({
               error={errors.paidAmount}
             />
           </div>
+          {claimWarnings.length ? (
+            <div
+              role="status"
+              className="flex items-start gap-2 rounded-xl bg-warning/10 px-3 py-2.5 text-sm text-warning"
+            >
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <ul className="flex flex-col gap-1">
+                {claimWarnings.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </FieldGroup>
 
         <FieldSeparator />

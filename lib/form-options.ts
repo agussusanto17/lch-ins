@@ -70,6 +70,8 @@ export interface FormOptions {
   wordingForms: NamedOption[]
   /** Nama nilai lookup per jenis, sudah urut sesuai sort order di master. */
   lookups: Record<FormLookupType, string[]>
+  /** Jenis manfaat PA (lookup pa_benefit) untuk limit manfaat di slip. */
+  paBenefits: { id: string; code: string; name: string }[]
 }
 
 export const EMPTY_FORM_OPTIONS: FormOptions = {
@@ -84,6 +86,7 @@ export const EMPTY_FORM_OPTIONS: FormOptions = {
     address_type: [],
     client_document_type: [],
   },
+  paBenefits: [],
 }
 
 /**

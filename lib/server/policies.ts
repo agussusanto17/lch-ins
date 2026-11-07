@@ -25,8 +25,9 @@ import {
   storedFileUrl,
 } from "@/lib/server/stored-files"
 import { recordAudit } from "@/server/services/audit"
+import { effectivePaBenefitLimits, type PaBenefitLimits } from "@/lib/pa-benefits"
 import type { ParticipantChanges, PolicyParticipant } from "@/lib/policy-participants"
-import { PARTICIPANT_LIMITS } from "@/lib/slip-participants"
+import { PARTICIPANT_LIMITS, usesParticipants } from "@/lib/slip-participants"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
 
 export type PolicyRecord = Policy
@@ -508,6 +509,17 @@ const participantText = (v?: string | null) =>
 async function writeParticipants(tx: Tx, policyId: string, input: PolicyInput) {
   const startDate = new Date(`${input.inceptionDate}T00:00:00Z`)
   if ((input.type === "Baru" || input.type === "Renewal") && input.placingSlipId) {
+    // Limit manfaat PA ikut ke polis sebagai dasar peringatan klaim.
+    const slip = await tx.placingSlip.findUnique({
+      where: { id: input.placingSlipId },
+      select: { paBenefitLimits: true, cob: { select: { name: true } } },
+    })
+    if (slip && usesParticipants(normalizeCob(slip.cob.name))) {
+      await tx.policy.update({
+        where: { id: policyId },
+        data: { paBenefitLimits: effectivePaBenefitLimits(slip.paBenefitLimits) },
+      })
+    }
     const slipParticipants = await tx.slipParticipant.findMany({
       where: { slipId: input.placingSlipId },
       orderBy: { sortOrder: "asc" },
@@ -632,6 +644,25 @@ async function syncParticipantChanges(
     where: { removedByPolicyId: policyId },
     data: { endDate: date },
   })
+}
+
+/** Daftar peserta dan limit manfaat polis pemilik daftar, untuk form klaim PA. */
+export interface PolicyRoster {
+  participants: PolicyParticipant[]
+  benefitLimits: PaBenefitLimits
+}
+
+export async function getPolicyRoster(policyId: string): Promise<PolicyRoster> {
+  if (!UUID_RE.test(policyId)) return { participants: [], benefitLimits: {} }
+  const ownerId = await rosterPolicyId(prisma, policyId)
+  const owner = await prisma.policy.findUnique({
+    where: { id: ownerId },
+    select: { paBenefitLimits: true },
+  })
+  return {
+    participants: await listPolicyParticipants(ownerId),
+    benefitLimits: effectivePaBenefitLimits(owner?.paBenefitLimits),
+  }
 }
 
 /** Daftar peserta polis, dari polis pemilik daftarnya bila polis ini endorsement. */
