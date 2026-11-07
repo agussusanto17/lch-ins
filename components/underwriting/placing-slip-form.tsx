@@ -57,6 +57,7 @@ import {
   nextCoverDefault,
   occupationParts,
   isOutOfBounds,
+  propertyRateLinesPatch,
   rateLinesWithBounds,
   recalc,
   releaseIssues,
@@ -916,6 +917,12 @@ function SlipEditor({
                   value={slip.typeOfCover || null}
                   onValueChange={(v) =>
                     set({
+                      // Baris rate Property ikut type of cover, misalnya PSATSI
+                      // memakai satu baris Terrorism & Sabotage.
+                      ...propertyRateLinesPatch(
+                        slip,
+                        covers.find((c) => c.name === v)?.code
+                      ),
                       typeOfCover: (v as string) ?? "",
                       typeOfCoverLabel: undefined,
                       coverCode: slipCoverCode(
