@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `feat/rate-terrorism-sabotage`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#166](https://github.com/agussusanto17/lch-ins/pull/166)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
