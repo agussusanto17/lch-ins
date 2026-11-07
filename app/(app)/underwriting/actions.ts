@@ -1,10 +1,11 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { unstable_rethrow } from "next/navigation"
 import { z } from "zod"
 
 import type { SlipStatus } from "@/lib/generated/prisma/client"
-import { MAX_DEDUCTIBLES, type PlacingSlip } from "@/lib/data/types"
+import { MAX_DEDUCTIBLES, type PlacingSlip, type SlipAttachment } from "@/lib/data/types"
 import { participantListSchema } from "@/lib/participant-schema"
 import { brokerageLimitIssue, rateUnitFor } from "@/lib/calc"
 import { rateLineName } from "@/components/underwriting/slip-model"
@@ -21,6 +22,11 @@ import {
 import { validatePlacingSlipForRelease } from "@/lib/server/tariffs"
 import { prisma } from "@/lib/prisma"
 import { requireManage } from "@/lib/server/session"
+import {
+  ATTACHMENT_LIMITS,
+  deleteSlipAttachment,
+  uploadSlipAttachment,
+} from "@/lib/server/slip-files"
 import { previewDocumentNumber } from "@/server/services/number-generator"
 
 export interface ActionResponse<T = void> {
@@ -249,6 +255,50 @@ const placingSlipSchema = z.object({
   closingInstruction: z.string().nullish(),
   coverNoteRemarks: z.string().nullish(),
 })
+
+const attachmentIdSchema = z.uuid()
+
+/** Unggah lampiran slip, misalnya vessel schedule, daftar unit, atau klausul hasil scan. */
+export async function uploadSlipAttachmentAction(
+  slipId: string,
+  formData: FormData
+): Promise<ActionResponse<SlipAttachment[]>> {
+  try {
+    const user = await requireManage("/underwriting")
+    if (!attachmentIdSchema.safeParse(slipId).success) {
+      return { ok: false, error: "Simpan draft slip dulu sebelum menambah lampiran." }
+    }
+    const file = formData.get("file")
+    if (!(file instanceof File)) return { ok: false, error: "File tidak ditemukan." }
+    const description = String(formData.get("description") ?? "").slice(
+      0,
+      ATTACHMENT_LIMITS.description
+    )
+    const data = await uploadSlipAttachment(slipId, file, description, user.id)
+    revalidateUnderwritingPaths(slipId)
+    return { ok: true, data }
+  } catch (err: unknown) {
+    unstable_rethrow(err)
+    return { ok: false, error: err instanceof Error ? err.message : "Gagal mengunggah lampiran." }
+  }
+}
+
+export async function deleteSlipAttachmentAction(
+  attachmentId: string
+): Promise<ActionResponse<SlipAttachment[]>> {
+  try {
+    const user = await requireManage("/underwriting")
+    if (!attachmentIdSchema.safeParse(attachmentId).success) {
+      return { ok: false, error: "Lampiran tidak valid." }
+    }
+    const { slipId, attachments } = await deleteSlipAttachment(attachmentId, user.id)
+    revalidateUnderwritingPaths(slipId)
+    return { ok: true, data: attachments }
+  } catch (err: unknown) {
+    unstable_rethrow(err)
+    return { ok: false, error: err instanceof Error ? err.message : "Gagal menghapus lampiran." }
+  }
+}
 
 function revalidateUnderwritingPaths(id?: string) {
   revalidatePath("/underwriting")

@@ -238,6 +238,18 @@ export interface SecurityPanelRow {
  * Satu peserta PA grup: data per orang yang dicetak di lampiran slip dan
  * nantinya dipakai klaim dan endorsement tambah/kurang peserta.
  */
+/** Lampiran placing slip, misalnya vessel schedule atau daftar unit. */
+export interface SlipAttachment {
+  id: string
+  fileName: string
+  /** Keterangan yang dicetak; kosong memakai nama file. */
+  description?: string
+  /** Alamat untuk membuka atau mengunduh isinya. */
+  url?: string
+  sizeBytes: number
+  uploadedAt: string
+}
+
 export interface SlipParticipant {
   id: string
   name: string
@@ -374,6 +386,8 @@ export interface PlacingSlip {
   participants?: SlipParticipant[]
   /** Limit manfaat PA dalam persen UP per kode lookup pa_benefit; null memakai bawaan. */
   paBenefitLimits?: Record<string, number> | null
+  /** Lampiran slip. Daftar slip tidak memuatnya; detail slip memuat. */
+  attachments?: SlipAttachment[]
   /**
    * Judul kelompok per klausul di `clauseIds`, untuk slip tanpa section,
    * misalnya "Extensions" dan "General Conditions". Klausul tanpa judul

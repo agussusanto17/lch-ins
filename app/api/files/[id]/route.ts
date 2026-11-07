@@ -1,6 +1,6 @@
 import { canAccess } from "@/lib/access"
 import { currentUser } from "@/lib/server/session"
-import { purposeMenu, readStoredFile } from "@/lib/server/stored-files"
+import { opensInline, purposeMenu, readStoredFile } from "@/lib/server/stored-files"
 
 /**
  * Membuka isi berkas unggahan, misalnya copy KTP klien.
@@ -35,7 +35,11 @@ export async function GET(
     headers: {
       "Content-Type": file.contentType,
       "Content-Length": String(file.sizeBytes),
-      "Content-Disposition": contentDisposition(file.fileName),
+      // Excel dan jenis lain yang tidak aman dibuka di tab selalu diunduh.
+      "Content-Disposition": contentDisposition(
+        file.fileName,
+        opensInline(file.contentType) ? "inline" : "attachment"
+      ),
       // Berkas KYC berisi data pribadi, jadi tidak disimpan di cache.
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
@@ -44,7 +48,7 @@ export async function GET(
 }
 
 /** Nama ASCII untuk browser lama, nama asli lewat filename* (RFC 6266). */
-function contentDisposition(fileName: string) {
+function contentDisposition(fileName: string, type: "inline" | "attachment") {
   const ascii = fileName.replace(/[^\x20-\x7e]|["\\]/g, "_")
-  return `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
+  return `${type}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
 }
