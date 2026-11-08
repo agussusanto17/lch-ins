@@ -356,12 +356,16 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
         </div>
       ) : isProperty ? (
         <div className="flex flex-col gap-4 text-[13px]">
-          {slip.interestSection1 ? (
+          {/* Objek tetap dicetak walau teks Interest section kosong; release
+              tidak mewajibkan teks itu (temuan SIT 8 November 2026). */}
+          {slip.interestSection1 || slip.sumInsuredSection1.length ? (
             <div>
               <p className="font-semibold">Section 1 — Material Damage</p>
-              <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
-                {slip.interestSection1}
-              </p>
+              {slip.interestSection1 ? (
+                <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
+                  {slip.interestSection1}
+                </p>
+              ) : null}
               {sectionList("section1")}
               <p className="mt-1 flex justify-between text-xs font-medium">
                 <span>Subtotal Section 1</span>
@@ -372,12 +376,14 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
             </div>
           ) : null}
 
-          {slip.interestSection2 ? (
+          {slip.interestSection2 || slip.sumInsuredSection2.length ? (
             <div>
               <p className="font-semibold">Section 2 — Business Interruption</p>
-              <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
-                {slip.interestSection2}
-              </p>
+              {slip.interestSection2 ? (
+                <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
+                  {slip.interestSection2}
+                </p>
+              ) : null}
               {sectionList("section2")}
               <p className="mt-1 flex justify-between text-xs font-medium">
                 <span>Subtotal Section 2</span>
