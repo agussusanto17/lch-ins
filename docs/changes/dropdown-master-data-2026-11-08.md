@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `feat/dropdown-master-data`
-- **PR:** belum dibuka
+- **PR:** [#169](https://github.com/agussusanto17/lch-ins/pull/169)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
