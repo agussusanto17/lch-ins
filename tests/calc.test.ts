@@ -611,6 +611,16 @@ test("baris periode: label, satu tanggal, TBA, dan teks pengganti tanggal", () =
     slipPeriodRow({ ...base, expiryDate: "2026-07-29", periodNote: "", periodLabel: "Date of Tournament" }),
     ["Date of Tournament", "29 July 2026"]
   )
+  // Satu hari: keterangan bawaan "Both days…" mengacu ke dua tanggal, jadi tidak dicetak.
+  assert.deepEqual(
+    slipPeriodRow({ ...base, expiryDate: "2026-07-29", periodLabel: "Date of Tournament" }),
+    ["Date of Tournament", "29 July 2026"]
+  )
+  // Keterangan lain tetap dicetak walau periodenya satu hari.
+  assert.deepEqual(
+    slipPeriodRow({ ...base, expiryDate: "2026-07-29", periodNote: "Tee off 07.00 local time." }),
+    ["Period of Insurance", "29 July 2026\nTee off 07.00 local time."]
+  )
   assert.deepEqual(slipPeriodRow({ ...base, periodTba: true }), ["Period of Insurance", "To Be Advised"])
   // Single shipment: teks ETD menggantikan tanggal dan keterangannya.
   assert.deepEqual(

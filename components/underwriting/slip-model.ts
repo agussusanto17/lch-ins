@@ -301,7 +301,8 @@ export const DEFAULT_PERIOD_LABEL = "Period of Insurance"
  *   until final destination" untuk single shipment. Keterangan periode tidak
  *   ikut, karena keterangan seperti "both days" mengacu ke dua tanggal.
  * - Tanggal mulai sama dengan tanggal akhir dicetak satu tanggal, misalnya
- *   hari turnamen Hole in One.
+ *   hari turnamen Hole in One. Keterangan yang menyebut "both days" tidak ikut,
+ *   karena mengacu ke dua tanggal (temuan SIT 8 November 2026).
  * - Keterangan periode dicetak di baris berikutnya, seperti CI LCH.
  */
 export function slipPeriodRow(
@@ -324,11 +325,25 @@ export function slipPeriodRow(
   if (endText && slip.inceptionDate) {
     return [label, `${dateEn(slip.inceptionDate)} ${endText}`]
   }
-  const dates =
-    slip.inceptionDate && slip.inceptionDate === slip.expiryDate
-      ? dateEn(slip.inceptionDate)
-      : `${dateEn(slip.inceptionDate)} to ${dateEn(slip.expiryDate)}`
-  return [label, [dates, slip.periodNote?.trim()].filter(Boolean).join("\n")]
+  const singleDay = isSingleDayPeriod(slip)
+  const dates = singleDay
+    ? dateEn(slip.inceptionDate)
+    : `${dateEn(slip.inceptionDate)} to ${dateEn(slip.expiryDate)}`
+  const note = slip.periodNote?.trim()
+  const printedNote = singleDay && periodNoteNeedsTwoDates(note) ? "" : note
+  return [label, [dates, printedNote].filter(Boolean).join("\n")]
+}
+
+/** Periode satu hari: tanggal mulai sama dengan tanggal akhir. */
+export function isSingleDayPeriod(
+  slip: Pick<PlacingSlip, "inceptionDate" | "expiryDate">
+) {
+  return Boolean(slip.inceptionDate) && slip.inceptionDate === slip.expiryDate
+}
+
+/** Keterangan periode yang menyebut "both days" mengacu ke dua tanggal. */
+export function periodNoteNeedsTwoDates(note: string | null | undefined) {
+  return /\bboth days\b/i.test(note ?? "")
 }
 
 /**

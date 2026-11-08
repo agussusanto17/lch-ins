@@ -60,6 +60,8 @@ import {
   nextCoverDefault,
   occupationParts,
   isOutOfBounds,
+  isSingleDayPeriod,
+  periodNoteNeedsTwoDates,
   propertyRateLinesPatch,
   rateLinesWithBounds,
   recalc,
@@ -1164,8 +1166,10 @@ function SlipEditor({
                       onChange={(e) => set({ periodNote: e.target.value })}
                     />
                     <FieldDescription>
-                      Dicetak di bawah periode asuransi, seperti CI LCH.
-                      Kosongkan bila tidak perlu.
+                      {isSingleDayPeriod(slip) &&
+                      periodNoteNeedsTwoDates(slip.periodNote)
+                        ? "Tanggal mulai dan akhir sama, jadi keterangan yang menyebut “both days” tidak dicetak."
+                        : "Dicetak di bawah periode asuransi, seperti CI LCH. Kosongkan bila tidak perlu."}
                     </FieldDescription>
                   </Field>
                   <Field className="md:col-span-2">
