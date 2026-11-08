@@ -238,6 +238,21 @@ export interface SecurityPanelRow {
  * Satu peserta PA grup: data per orang yang dicetak di lampiran slip dan
  * nantinya dipakai klaim dan endorsement tambah/kurang peserta.
  */
+/**
+ * Rate open cover per kategori: persen dari nilai deklarasi (MOP dry 0,075%)
+ * atau tarif per unit (container 20 ft IDR 150.000 per container).
+ */
+export interface OpenCoverRate {
+  id: string
+  /** Kategori yang dicetak, misalnya "DRY SHIPMENT" atau "40 FT - Iron/Scrap". */
+  label: string
+  basis: "percent" | "per_unit"
+  /** Persen untuk basis percent, nominal mata uang slip untuk per_unit. */
+  rate: number | null
+  /** Satuan untuk per_unit, misalnya "container". */
+  unit?: string
+}
+
 /** Lampiran placing slip, misalnya vessel schedule atau daftar unit. */
 export interface SlipAttachment {
   id: string
@@ -388,6 +403,9 @@ export interface PlacingSlip {
   paBenefitLimits?: Record<string, number> | null
   /** Lampiran slip. Daftar slip tidak memuatnya; detail slip memuat. */
   attachments?: SlipAttachment[]
+  /** Open cover: rate tanpa TSI dan premi; premi dicatat per deklarasi di polis. */
+  openCover?: boolean
+  openCoverRates?: OpenCoverRate[]
   /**
    * Judul kelompok per klausul di `clauseIds`, untuk slip tanpa section,
    * misalnya "Extensions" dan "General Conditions". Klausul tanpa judul

@@ -18,6 +18,8 @@ export interface CoverOption {
   detailLabels: string[]
   /** Slip type of cover ini dibagi Section 1 dan 2, misalnya CAR dan EAR. */
   usesSections: boolean
+  /** Slip type of cover ini open cover (rate tanpa premi pasti), misalnya MOP. */
+  openCover: boolean
   /** Label periode bawaan di dokumen, misalnya Date of Tournament. */
   periodLabel: string | null
   /** Lama periode bawaan dalam hari, untuk tanggal akhir otomatis. */

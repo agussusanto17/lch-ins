@@ -159,6 +159,19 @@ const placingSlipSchema = z.object({
     .max(2000, "Uraian tertanggung maksimal 2000 karakter")
     .nullish(),
   usesSections: z.boolean().optional(),
+  openCover: z.boolean().optional(),
+  openCoverRates: z
+    .array(
+      z.object({
+        id: z.string().max(80),
+        label: z.string().max(200, "Kategori rate open cover maksimal 200 karakter"),
+        basis: z.enum(["percent", "per_unit"]),
+        rate: z.number().min(0, "Rate open cover tidak boleh negatif").nullable(),
+        unit: z.string().max(50).optional(),
+      })
+    )
+    .max(30, "Rate open cover maksimal 30 baris")
+    .optional(),
   detailRows: z
     .array(
       z.object({
@@ -528,6 +541,8 @@ export async function duplicatePlacingSlipAction(
       periodText: source.periodText,
       insuredDescription: source.insuredDescription,
       usesSections: source.usesSections,
+      openCover: source.openCover,
+      openCoverRates: source.openCoverRates,
       detailRows: source.detailRows,
       occupation: source.occupation,
       occupationLabel: source.occupationLabel,

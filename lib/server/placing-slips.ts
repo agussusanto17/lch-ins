@@ -18,6 +18,7 @@ import {
   type SecurityPanelRow,
   type SlipDetailRow,
   type SlipLocation,
+  type OpenCoverRate,
   type SlipParticipant,
 } from "@/lib/data/types"
 import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
@@ -31,6 +32,7 @@ import {
 } from "@/components/underwriting/slip-model"
 import { normalizeCob } from "@/lib/format"
 import { cleanDetailRows } from "@/lib/slip-details"
+import { cleanOpenCoverRates } from "@/lib/open-cover"
 import { cleanPaBenefitLimits } from "@/lib/pa-benefits"
 import { slipFilesOrder, toSlipAttachment } from "@/lib/server/slip-files"
 import { deleteStoredFiles } from "@/lib/server/stored-files"
@@ -93,6 +95,9 @@ export interface PlacingSlipInput {
   periodEndText?: string | null
   periodText?: string | null
   usesSections?: boolean
+  /** Open cover dan rate-nya. Undefined berarti tidak diubah. */
+  openCover?: boolean
+  openCoverRates?: OpenCoverRate[]
   insuredDescription?: string | null
   detailRows?: SlipDetailRow[] | null
   occupation?: string | null
@@ -594,6 +599,8 @@ function toPlacingSlipRecord(
     periodEndText: raw.periodEndText || undefined,
     periodText: raw.periodText || undefined,
     usesSections: raw.usesSections || undefined,
+    openCover: raw.openCover || undefined,
+    openCoverRates: cleanOpenCoverRates(raw.openCoverRates),
     insuredDescription: raw.insuredDescription || undefined,
     detailRows: cleanDetailRows(raw.detailRows),
     paBenefitLimits:
@@ -800,6 +807,18 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
 function detailRowsData(rows: SlipDetailRow[] | null | undefined) {
   if (rows === undefined) return undefined
   return cleanDetailRows(rows).map((r) => ({ label: r.label, value: r.value }))
+}
+
+/** Rate open cover yang valid untuk kolom JSON. Undefined berarti tidak diubah. */
+function openCoverRatesData(rates: OpenCoverRate[] | undefined) {
+  if (rates === undefined) return undefined
+  return cleanOpenCoverRates(rates).map((r) => ({
+    id: r.id,
+    label: r.label,
+    basis: r.basis,
+    rate: r.rate,
+    ...(r.unit ? { unit: r.unit } : {}),
+  }))
 }
 
 /** Limit manfaat PA yang valid; kosong disimpan sebagai NULL (memakai bawaan). */
@@ -1116,6 +1135,8 @@ export async function createPlacingSlip(
         periodEndText: input.periodEndText?.trim() || null,
         periodText: input.periodText?.trim() || null,
         usesSections: input.usesSections === true,
+        openCover: input.openCover === undefined ? undefined : input.openCover === true,
+        openCoverRates: openCoverRatesData(input.openCoverRates),
         insuredDescription: input.insuredDescription?.trim() || null,
         detailRows: detailRowsData(input.detailRows),
         paBenefitLimits: paBenefitLimitsData(input.paBenefitLimits),
@@ -1499,6 +1520,8 @@ export async function updatePlacingSlip(
         periodEndText: input.periodEndText?.trim() || null,
         periodText: input.periodText?.trim() || null,
         usesSections: input.usesSections === true,
+        openCover: input.openCover === undefined ? undefined : input.openCover === true,
+        openCoverRates: openCoverRatesData(input.openCoverRates),
         insuredDescription: input.insuredDescription?.trim() || null,
         detailRows: detailRowsData(input.detailRows),
         paBenefitLimits: paBenefitLimitsData(input.paBenefitLimits),

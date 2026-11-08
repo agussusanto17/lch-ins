@@ -7,6 +7,7 @@ import {
   vehicleIssues,
 } from "@/components/underwriting/slip-model"
 import { locationOwner, slipLocations } from "@/lib/slip-locations"
+import { openCoverIssues, usesOpenCover } from "@/lib/open-cover"
 import { coverNameIssues, itemOwner, missingRateIssue } from "@/lib/slip-items"
 import { participantIssues } from "@/lib/slip-participants"
 import { isCascoLine, vehicleTariff } from "@/lib/slip-vehicles"
@@ -256,11 +257,16 @@ export async function validatePlacingSlipForRelease(
     const clauseIssues = validateClauseUniquenessAcrossSections(slip)
     if (clauseIssues.length) releaseIssues.push(...clauseIssues)
   }
-  if (totalSumInsured(slip) <= 0) {
-    releaseIssues.push("Isi sum insured.")
+  // Open cover tanpa TSI dan premi; cukup rate per kategori.
+  if (usesOpenCover(slip)) {
+    releaseIssues.push(...openCoverIssues(slip))
+  } else {
+    if (totalSumInsured(slip) <= 0) {
+      releaseIssues.push("Isi sum insured.")
+    }
+    const rateIssue = missingRateIssue(slip)
+    if (rateIssue) releaseIssues.push(rateIssue)
   }
-  const rateIssue = missingRateIssue(slip)
-  if (rateIssue) releaseIssues.push(rateIssue)
   releaseIssues.push(...coverNameIssues(slip))
   releaseIssues.push(...participantIssues(slip))
 

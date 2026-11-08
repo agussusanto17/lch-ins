@@ -42,8 +42,10 @@ import { InsuredPicker } from "@/components/underwriting/insured-picker"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
 import { SlipLocations } from "@/components/underwriting/slip-locations"
 import { SlipItemRates } from "@/components/underwriting/slip-item-rates"
+import { OpenCoverRates } from "@/components/underwriting/open-cover-rates"
 import { SlipAttachments } from "@/components/underwriting/slip-attachments"
 import { SlipParticipants } from "@/components/underwriting/slip-participants"
+import { usesOpenCover } from "@/lib/open-cover"
 import { effectivePaBenefitLimits } from "@/lib/pa-benefits"
 import { participantsInterestItem, usesParticipants } from "@/lib/slip-participants"
 import { SlipDetailRows } from "@/components/underwriting/slip-detail-rows"
@@ -828,10 +830,17 @@ function SlipEditor({
         }}
         meta={
           <>
-            Total Sum Insured{" "}
-            <span className="tabular font-semibold text-foreground">
-              {money(tsi, slip.currency)}
-            </span>
+            {/* Open cover tidak punya TSI; nilai dicatat per deklarasi. */}
+            {usesOpenCover(slip) ? (
+              <span className="font-semibold text-foreground">Open cover</span>
+            ) : (
+              <>
+                Total Sum Insured{" "}
+                <span className="tabular font-semibold text-foreground">
+                  {money(tsi, slip.currency)}
+                </span>
+              </>
+            )}
             {dirty ? (
               <span className="ml-3 text-warning">· belum disimpan</span>
             ) : null}
@@ -945,6 +954,9 @@ function SlipEditor({
                       ),
                       usesSections:
                         covers.find((c) => c.name === v)?.usesSections ?? false,
+                      // Open cover bawaan type of cover, misalnya 0311 MOP.
+                      openCover:
+                        covers.find((c) => c.name === v)?.openCover ?? false,
                       periodLabel: nextCoverDefault(
                         slip.periodLabel,
                         covers.find((c) => c.name === slip.typeOfCover)?.periodLabel,
@@ -1833,7 +1845,7 @@ function SlipEditor({
           <SectionCard
             title="Rate & Premium"
             {...sectionProps("rate")}
-            summary={money(payable, slip.currency)}
+            summary={usesOpenCover(slip) ? "Open cover" : money(payable, slip.currency)}
             action={
               unresolved ? (
                 <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
@@ -1863,10 +1875,39 @@ function SlipEditor({
                 />
               ) : null}
 
+              {/*
+               * Open cover (MOP, container): rate per kategori tanpa TSI dan
+               * premi; premi dicatat per deklarasi di polis.
+               */}
               {!isProperty && !isMotor ? (
+                <Field orientation="horizontal">
+                  <Switch
+                    id="open-cover"
+                    checked={slip.openCover ?? false}
+                    disabled={locked}
+                    onCheckedChange={(v) => set({ openCover: v })}
+                  />
+                  <FieldLabel htmlFor="open-cover">
+                    Open cover: rate per kategori tanpa premi pasti, premi
+                    dicatat per deklarasi di polis
+                  </FieldLabel>
+                </Field>
+              ) : null}
+
+              {usesOpenCover(slip) ? (
+                <OpenCoverRates
+                  rates={slip.openCoverRates ?? []}
+                  currency={slip.currency}
+                  locked={locked}
+                  onChange={(rows) => set({ openCoverRates: rows })}
+                />
+              ) : null}
+
+              {!isProperty && !isMotor && !usesOpenCover(slip) ? (
                 <SlipItemRates slip={slip} locked={locked} onChange={set} />
               ) : null}
 
+              {usesOpenCover(slip) ? null : (
               <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
                 <div className="flex items-center justify-between text-sm font-semibold">
                   <span>Total Premium</span>
@@ -1935,6 +1976,7 @@ function SlipEditor({
                   </span>
                 </div>
               </div>
+              )}
             </div>
           </SectionCard>
 
@@ -2013,7 +2055,9 @@ function SlipEditor({
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Nilai Brokerage</span>
                   <span className="tabular font-semibold">
-                    {money(brokerageAmount(slip), slip.currency)}
+                    {usesOpenCover(slip)
+                      ? "Per deklarasi"
+                      : money(brokerageAmount(slip), slip.currency)}
                   </span>
                 </div>
                 {slip.includeVat ? (
