@@ -858,10 +858,6 @@ export async function seedInitialPoliciesIfEmpty(): Promise<number> {
   if (!shouldSeedMockData()) return 0
   if ((await prisma.policy.count()) > 0) return 0
   await seedInitialClientsIfEmpty()
-  const uploader = await prisma.user.findFirst({
-    orderBy: { createdAt: "asc" },
-    select: { id: true },
-  })
 
   // Parents first so endorsements can resolve parentPolicyId.
   const ordered = [...MOCK_POLICIES].sort(
@@ -880,21 +876,8 @@ export async function seedInitialPoliciesIfEmpty(): Promise<number> {
           select: { id: true },
         })
         await writeInsurers(tx, id, mock)
-        if (uploader) {
-          for (const file of mock.files) {
-            await tx.policyFile.create({
-              data: {
-                policyId: id,
-                version: file.version,
-                fileName: file.fileName,
-                // Seed rows have no stored object; the path mirrors the file name.
-                filePath: file.fileName,
-                uploadedBy: uploader.id,
-                uploadedAt: new Date(file.uploadedAt),
-              },
-            })
-          }
-        }
+        // Softcopy contoh tidak dibuat: tanpa isi berkas, barisnya hanya
+        // menampilkan versi yang tidak bisa dibuka. Softcopy diunggah user.
       })
       created++
     } catch (err) {
