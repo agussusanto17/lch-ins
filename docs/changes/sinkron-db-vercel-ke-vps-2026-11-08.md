@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `chore/sinkron-db-vercel-ke-vps`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #174
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
