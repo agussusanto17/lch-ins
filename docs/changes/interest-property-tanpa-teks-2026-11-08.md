@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `fix/interest-property-tanpa-teks`
-- **PR:** belum dibuka
+- **PR:** [#170](https://github.com/agussusanto17/lch-ins/pull/170)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
