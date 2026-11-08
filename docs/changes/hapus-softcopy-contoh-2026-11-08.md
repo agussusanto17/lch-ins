@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `fix/hapus-softcopy-contoh-tanpa-isi`
-- **PR:** belum dibuka
+- **PR:** [#175](https://github.com/agussusanto17/lch-ins/pull/175)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
