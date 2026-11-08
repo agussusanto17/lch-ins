@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `fix/open-cover-limit-saja`
-- **PR:** belum dibuka
+- **PR:** [#171](https://github.com/agussusanto17/lch-ins/pull/171)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
