@@ -40,7 +40,12 @@ import {
   type SlipParticipant,
 } from "@/lib/data"
 import { addMonths } from "@/lib/date"
-import { cobLabels, coversFor } from "@/lib/form-options"
+import {
+  POLICY_TYPE_CODES,
+  cobLabels,
+  coversFor,
+  fixedLookupItems,
+} from "@/lib/form-options"
 import { dateShort, money } from "@/lib/format"
 import { openCoverRateText, usesOpenCover } from "@/lib/open-cover"
 import { rosterPolicy } from "@/lib/policy-participants"
@@ -485,7 +490,11 @@ export function PolicyForm({
           <SelectInput
             label="Tipe Polis"
             required
-            items={POLICY_TYPES}
+            items={fixedLookupItems(
+              masterOptions.systemLookups.policy_type,
+              POLICY_TYPE_CODES,
+              draft.type
+            )}
             value={draft.type}
             onValueChange={(v) => set({ type: v as PolicyType })}
             error={errors.type}

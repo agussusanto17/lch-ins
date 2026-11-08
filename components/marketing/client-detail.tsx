@@ -20,6 +20,7 @@ import { SectionCard } from "@/components/shared/section-card"
 import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import { usePermission } from "@/components/auth/permission-provider"
+import { useFormOptions } from "@/components/shared/form-options-provider"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -39,6 +40,7 @@ import {
   type VehicleBrandOption,
 } from "@/lib/data"
 import { dateShort, money } from "@/lib/format"
+import { CLAIM_STATUS_CODES, fixedLookupLabel } from "@/lib/form-options"
 import type { SppaRecord } from "@/lib/server/sppa"
 import { store } from "@/lib/store"
 
@@ -71,6 +73,7 @@ export function ClientDetail({
 }: ClientDetailProps) {
   const today = useToday()
   const permission = usePermission()
+  const masterOptions = useFormOptions()
   const canManageMarketing = permission.canManage("/marketing")
   const canManageUnderwriting = permission.canManage("/underwriting")
 
@@ -449,7 +452,14 @@ export function ClientDetail({
                     {money(c.claimedAmount || c.estimatedLoss, c.currency)}
                   </TableCell>
                   <TableCell className="pr-5">
-                    <StatusBadge status={c.status} />
+                    <StatusBadge
+                      status={c.status}
+                      label={fixedLookupLabel(
+                        masterOptions.systemLookups.claim_status,
+                        CLAIM_STATUS_CODES,
+                        c.status
+                      )}
+                    />
                   </TableCell>
                 </TableRow>
               ))

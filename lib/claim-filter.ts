@@ -1,4 +1,4 @@
-import { CLAIM_STAGES, CLAIM_STATUSES } from "@/lib/data/reference"
+import { CLAIM_STATUSES } from "@/lib/data/reference"
 import type { ClaimStage, ClaimStatus } from "@/lib/data/types"
 
 /**
@@ -54,10 +54,9 @@ export function parseClaimFilters(input: RawFilterInput): ClaimFilterParams {
       ? (rawStatus as ClaimStatus)
       : "all"
 
+  // Tahapan diatur di Master Data, jadi nilai apa pun diterima sebagai saringan.
   const stage: ClaimFilterParams["stage"] =
-    rawStage && (CLAIM_STAGES as readonly string[]).includes(rawStage)
-      ? (rawStage as ClaimStage)
-      : "all"
+    rawStage && rawStage !== "all" ? (rawStage.slice(0, 100) as ClaimStage) : "all"
 
   const cob = rawCob && rawCob !== "all" ? rawCob.slice(0, 80) : "all"
 

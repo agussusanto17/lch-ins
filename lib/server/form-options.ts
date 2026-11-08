@@ -4,8 +4,10 @@ import { cache } from "react"
 
 import {
   FORM_LOOKUP_TYPES,
+  SYSTEM_LOOKUP_TYPES,
   type FormLookupType,
   type FormOptions,
+  type SystemLookupType,
 } from "@/lib/form-options"
 import { normalizeCob } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
@@ -18,7 +20,7 @@ import { prisma } from "@/lib/prisma"
  * ditambah harus langsung muncul di form berikutnya.
  */
 export const getFormOptions = cache(async (): Promise<FormOptions> => {
-  const [cobs, insurers, currencies, wordingForms, lookupRows, paBenefits] =
+  const [cobs, insurers, currencies, wordingForms, lookupRows, paBenefits, systemRows] =
     await Promise.all([
       prisma.classOfBusiness.findMany({
         where: { isActive: true },
@@ -75,6 +77,11 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         select: { id: true, code: true, name: true },
       }),
+      prisma.lookupValue.findMany({
+        where: { lookupType: { in: [...SYSTEM_LOOKUP_TYPES] }, isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { lookupType: true, code: true, name: true },
+      }),
     ])
 
   const lookups = Object.fromEntries(
@@ -97,5 +104,13 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
     wordingForms,
     lookups,
     paBenefits,
+    systemLookups: Object.fromEntries(
+      SYSTEM_LOOKUP_TYPES.map((type) => [
+        type,
+        systemRows
+          .filter((r) => r.lookupType === type)
+          .map((r) => ({ code: r.code, name: r.name })),
+      ])
+    ) as Record<SystemLookupType, { code: string; name: string }[]>,
   }
 })

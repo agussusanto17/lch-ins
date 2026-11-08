@@ -50,6 +50,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { isFixedLookupType } from "@/lib/form-options"
 import type { LookupValue } from "@/lib/generated/prisma/client"
 
 export interface LookupValuesTabProps {
@@ -106,6 +107,9 @@ export function LookupValuesTab({
   const [name, setName] = React.useState("")
   const [sortOrder, setSortOrder] = React.useState(0)
   const [isActive, setIsActive] = React.useState(true)
+  const editingFixed = editingLookup
+    ? isFixedLookupType(editingLookup.lookupType)
+    : false
 
   const [prevLookups, setPrevLookups] = React.useState(initialLookups)
   if (prevLookups !== initialLookups) {
@@ -162,9 +166,12 @@ export function LookupValuesTab({
 
     startTransition(async () => {
       if (editingLookup) {
+        // Daftar tetap: kode dan status aktif dikunci, server juga menolaknya.
+        const fixed = isFixedLookupType(editingLookup.lookupType)
+        const keepCode = editingLookup.isSystem || fixed
         const res = await updateLookupValueAction(editingLookup.id, {
           lookupType: selectedType,
-          code: editingLookup.isSystem ? editingLookup.code : code,
+          code: keepCode ? editingLookup.code : code,
           name,
           sortOrder,
           isActive,
@@ -181,8 +188,8 @@ export function LookupValuesTab({
                   ...l,
                   name,
                   sortOrder,
-                  isActive,
-                  code: editingLookup.isSystem ? editingLookup.code : code,
+                  isActive: fixed ? l.isActive : isActive,
+                  code: keepCode ? editingLookup.code : code,
                 }
               : l
           )
@@ -238,12 +245,17 @@ export function LookupValuesTab({
   }
 
   function actionsFor(lookup: LookupValue): RowAction[] {
+    const fixed = isFixedLookupType(lookup.lookupType)
     return [
       { label: "Edit label", icon: Pencil, onSelect: () => openEditDialog(lookup) },
       {
-        label: lookup.isActive ? "Nonaktifkan" : "Aktifkan",
+        label: fixed
+          ? "Nonaktifkan (lewat developer)"
+          : lookup.isActive
+            ? "Nonaktifkan"
+            : "Aktifkan",
         icon: Power,
-        disabled: isPending,
+        disabled: isPending || fixed,
         onSelect: () => handleToggleStatus(lookup.id, lookup.isActive),
       },
       {
@@ -291,13 +303,22 @@ export function LookupValuesTab({
           />
         </div>
 
-        {canManage && (
+        {canManage && !isFixedLookupType(selectedType) && (
           <Button onClick={openAddDialog}>
             <Plus data-icon="inline-start" />
             Tambah Pilihan Baru
           </Button>
         )}
       </div>
+      {isFixedLookupType(selectedType) ? (
+        <p className="flex items-start gap-2 rounded-xl bg-muted/60 px-3 py-2.5 text-sm text-muted-foreground">
+          <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
+          Nilai di daftar ini dipakai logika sistem, misalnya klaim Outstanding
+          dihitung sebagai klaim terbuka. Nama dan urutannya bisa diubah dan
+          langsung dipakai di form. Nilai baru atau penonaktifan dikerjakan
+          developer, sama seperti COB.
+        </p>
+      ) : null}
 
       <Card className="gap-0 overflow-hidden py-0">
         <Table className="min-w-200">
@@ -391,10 +412,10 @@ export function LookupValuesTab({
                 placeholder="Contoh: Active, Korporasi, IDR"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                disabled={Boolean(editingLookup?.isSystem)}
+                disabled={Boolean(editingLookup?.isSystem) || editingFixed}
                 className="font-mono"
               />
-              {editingLookup?.isSystem && (
+              {(editingLookup?.isSystem || editingFixed) && (
                 <p className="text-[11px] text-muted-foreground italic">
                   Kode entri sistem dilindungi karena digunakan langsung oleh logika program.
                 </p>
@@ -432,9 +453,23 @@ export function LookupValuesTab({
               />
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border p-2.5">
-              <span className="text-sm font-medium">Status Aktif di Dropdown</span>
-              <Switch checked={isActive} onCheckedChange={setIsActive} />
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+              <div className="flex flex-col gap-0.5">
+                <span id="lookup-active-label" className="text-sm font-medium">
+                  Status Aktif di Dropdown
+                </span>
+                {editingFixed ? (
+                  <span className="text-xs text-muted-foreground">
+                    Penonaktifan daftar ini lewat developer.
+                  </span>
+                ) : null}
+              </div>
+              <Switch
+                aria-labelledby="lookup-active-label"
+                checked={isActive}
+                disabled={editingFixed}
+                onCheckedChange={setIsActive}
+              />
             </div>
           </div>
 

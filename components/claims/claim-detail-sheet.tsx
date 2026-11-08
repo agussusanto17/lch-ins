@@ -35,6 +35,7 @@ import {
 } from "@/app/(app)/claims/actions"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import { usePermission } from "@/components/auth/permission-provider"
+import { useFormOptions } from "@/components/shared/form-options-provider"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -50,6 +51,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import type { Claim } from "@/lib/data"
 import { dateShort, money } from "@/lib/format"
+import { CLAIM_STATUS_CODES, fixedLookupLabel } from "@/lib/form-options"
 import { paClaimWarnings } from "@/lib/pa-benefits"
 import type { ClaimDocumentRecord, ClaimFollowupRecord } from "@/lib/server/claims"
 import { UPLOAD_ACCEPT, UPLOAD_HINT, uploadProblem } from "@/lib/uploads"
@@ -83,6 +85,7 @@ export function ClaimDetailSheet({
 }) {
   const permission = usePermission()
   const canManage = permission.canManage("/claims")
+  const masterOptions = useFormOptions()
   const [activeTab, setActiveTab] = React.useState("overview")
   const [documents, setDocuments] = React.useState<ClaimDocumentRecord[]>([])
   // Loading diturunkan dari id klaim yang datanya sudah dimuat, tanpa setState sinkron di effect.
@@ -333,7 +336,14 @@ export function ClaimDetailSheet({
                 {/* Ringkasan */}
                 <TabsContent value="overview" className="flex flex-col gap-6 pt-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <StatusBadge status={claim.status} />
+                    <StatusBadge
+                      status={claim.status}
+                      label={fixedLookupLabel(
+                        masterOptions.systemLookups.claim_status,
+                        CLAIM_STATUS_CODES,
+                        claim.status
+                      )}
+                    />
                     <StatusBadge status={claim.stage} />
                     <span className="text-xs text-muted-foreground">
                       Adjuster: {claim.adjuster || "belum ditunjuk"}

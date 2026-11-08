@@ -29,14 +29,13 @@ export type SlipPart = "PAR" | "EQVET"
  */
 export type ClaimStatus = "Outstanding" | "Settled" | "Closed" | "Rejected"
 
-/** Tahapan dokumen dan proses klaim, berjalan sendiri di samping status. */
-export type ClaimStage =
-  | "Tunggu Dokumen"
-  | "Dokumen Belum Lengkap"
-  | "Dokumen Lengkap"
-  | "Proses Adjuster"
-  | "SPK / SPGR terbit"
-export type ClientStatus = "Active" | "Prospect" | "Inactive"
+/**
+ * Tahapan dokumen dan proses klaim, berjalan sendiri di samping status. Nama
+ * dari Master Data (lookup claim_stage), jadi LCH bisa menambah tahapan.
+ */
+export type ClaimStage = string
+/** Status klien dari Master Data (lookup client_status), misalnya Active. */
+export type ClientStatus = string
 export type ClientType = "Korporasi" | "Perorangan"
 
 /** Satu klien bisa punya beberapa alamat, misalnya alamat perusahaan dan korespondensi. */

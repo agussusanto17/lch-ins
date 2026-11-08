@@ -24,7 +24,6 @@ import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   CLIENT_STATUSES,
-  CLIENT_TYPES,
   type ClassOfBusiness,
   type Client,
   type ClientAddress,
@@ -34,7 +33,10 @@ import {
 } from "@/lib/data"
 import { todayIso } from "@/lib/date"
 import {
+  CLIENT_TYPE_CODES,
   cobLabels,
+  dynamicLookupItems,
+  fixedLookupItems,
   withCurrent,
   type FormOptions,
 } from "@/lib/form-options"
@@ -343,9 +345,14 @@ export function ClientForm({
             }}
             aria-label="Tipe klien"
           >
-            {CLIENT_TYPES.map((t) => (
-              <ToggleGroupItem key={t} value={t}>
-                {t}
+            {/* Tipe klien menentukan isian KYC; namanya dari Master Data. */}
+            {fixedLookupItems(
+              options.systemLookups.client_type,
+              CLIENT_TYPE_CODES,
+              draft.clientType
+            ).map((t) => (
+              <ToggleGroupItem key={t.value} value={t.value}>
+                {t.label}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
@@ -374,7 +381,11 @@ export function ClientForm({
           <SelectInput
             label="Status"
             required
-            items={CLIENT_STATUSES}
+            items={dynamicLookupItems(
+              options.systemLookups.client_status,
+              CLIENT_STATUSES,
+              draft.status
+            )}
             value={draft.status}
             onValueChange={(v) => set({ status: v as ClientStatus })}
           />

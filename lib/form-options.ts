@@ -6,6 +6,7 @@
  * dinonaktifkan di Master Data langsung berlaku tanpa ubah kode. File ini
  * hanya berisi tipe dan helper, jadi aman dipakai di client maupun server.
  */
+import type { ClaimStatus, ClientType, PolicyType } from "./data/types"
 
 export interface CoverOption {
   id: string
@@ -65,6 +66,121 @@ export const FORM_LOOKUP_TYPES = [
 
 export type FormLookupType = (typeof FORM_LOOKUP_TYPES)[number]
 
+/** Lookup status dan tipe yang dipakai form klaim, polis, dan klien. */
+export const SYSTEM_LOOKUP_TYPES = [
+  "claim_status",
+  "claim_stage",
+  "policy_type",
+  "client_status",
+  "client_type",
+] as const
+
+export type SystemLookupType = (typeof SYSTEM_LOOKUP_TYPES)[number]
+
+export interface LookupOption {
+  code: string
+  name: string
+}
+
+/**
+ * Lookup yang nilainya dipakai logika sistem (klaim terbuka, polis induk, form
+ * KYC per tipe klien). Nama dan urutannya diatur di Master Data, tetapi nilai
+ * baru ditambah lewat developer, sama seperti COB.
+ */
+export const FIXED_LOOKUP_TYPES: readonly string[] = [
+  "claim_status",
+  "policy_type",
+  "client_type",
+]
+
+export function isFixedLookupType(type: string) {
+  return FIXED_LOOKUP_TYPES.includes(type)
+}
+
+/** Kode master untuk setiap nilai yang dipakai sistem. */
+export const CLAIM_STATUS_CODES: Record<ClaimStatus, string> = {
+  Outstanding: "outstanding",
+  Settled: "settled",
+  Closed: "closed",
+  Rejected: "rejected",
+}
+export const POLICY_TYPE_CODES: Record<PolicyType, string> = {
+  Baru: "new",
+  Renewal: "renewal",
+  Endorsement: "endorsement",
+  Cancellation: "cancellation",
+}
+export const CLIENT_TYPE_CODES: Record<ClientType, string> = {
+  Perorangan: "individual",
+  Korporasi: "corporate",
+}
+
+/**
+ * Pilihan daftar tetap: nilai sistem yang baris master-nya aktif, berlabel
+ * nama dari Master Data dan berurutan seperti di sana. Nilai tersimpan yang
+ * sudah nonaktif tetap ikut supaya tidak hilang saat diedit. Tanpa data
+ * master (misalnya di test), semua nilai sistem dengan namanya sendiri.
+ */
+export function fixedLookupItems<T extends string>(
+  rows: readonly LookupOption[],
+  codes: Record<T, string>,
+  current?: T | null
+): { label: string; value: T }[] {
+  const values = Object.keys(codes) as T[]
+  if (!rows.length) return values.map((v) => ({ label: v, value: v }))
+  const items = rows.flatMap((r) => {
+    const value = values.find((v) => codes[v] === r.code)
+    return value ? [{ label: r.name, value }] : []
+  })
+  if (current && !items.some((i) => i.value === current)) {
+    items.push({ label: current, value: current })
+  }
+  return items
+}
+
+/**
+ * Nilai sistem dari baris master yang tersimpan: dicocokkan lewat kode supaya
+ * nama yang diganti di Master Data tidak mengubah logika, lalu lewat nama
+ * untuk data lama tanpa kode yang dikenal.
+ */
+export function systemValueFromRow<T extends string>(
+  codes: Record<T, string>,
+  row: { code?: string | null; name?: string | null } | null | undefined,
+  fallback: NoInfer<T>
+): T {
+  const values = Object.keys(codes) as T[]
+  const code = row?.code?.trim().toLowerCase()
+  const name = row?.name?.trim().toLowerCase()
+  return (
+    values.find((v) => codes[v] === code) ??
+    values.find((v) => v.toLowerCase() === name) ??
+    fallback
+  )
+}
+
+/** Label nama master untuk satu nilai sistem, atau nilainya sendiri. */
+export function fixedLookupLabel<T extends string>(
+  rows: readonly LookupOption[],
+  codes: Record<T, string>,
+  value: T
+) {
+  return rows.find((r) => r.code === codes[value])?.name ?? value
+}
+
+/**
+ * Pilihan daftar bebas (tahapan klaim, status klien): nama master yang aktif,
+ * ditambah nilai tersimpan yang sudah nonaktif. Tanpa data master memakai
+ * daftar bawaan.
+ */
+export function dynamicLookupItems(
+  rows: readonly LookupOption[],
+  fallback: readonly string[],
+  current?: string | null
+): string[] {
+  const names = rows.length ? rows.map((r) => r.name) : [...fallback]
+  return current && !names.includes(current) ? [...names, current] : names
+}
+
 export interface FormOptions {
   cobs: CobOption[]
   insurers: NamedOption[]
@@ -74,6 +190,8 @@ export interface FormOptions {
   lookups: Record<FormLookupType, string[]>
   /** Jenis manfaat PA (lookup pa_benefit) untuk limit manfaat di slip. */
   paBenefits: { id: string; code: string; name: string }[]
+  /** Status dan tipe klaim, polis, dan klien yang aktif, urut seperti di master. */
+  systemLookups: Record<SystemLookupType, LookupOption[]>
 }
 
 export const EMPTY_FORM_OPTIONS: FormOptions = {
@@ -89,6 +207,13 @@ export const EMPTY_FORM_OPTIONS: FormOptions = {
     client_document_type: [],
   },
   paBenefits: [],
+  systemLookups: {
+    claim_status: [],
+    claim_stage: [],
+    policy_type: [],
+    client_status: [],
+    client_type: [],
+  },
 }
 
 /**

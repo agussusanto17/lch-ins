@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache"
 import { unstable_rethrow } from "next/navigation"
 import { z } from "zod"
 
-import { CLAIM_STAGES, CLAIM_STATUSES } from "@/lib/data/reference"
-import type { ClaimStage, ClaimStatus } from "@/lib/data/types"
+import { CLAIM_STATUSES } from "@/lib/data/reference"
+import type { ClaimStatus } from "@/lib/data/types"
 import {
   createClaim,
   deleteClaim,
@@ -59,7 +59,8 @@ const claimInputSchema = z.object({
   claimedAmount: z.coerce.number().nonnegative("Nilai klaim tidak boleh negatif"),
   paidAmount: z.coerce.number().nonnegative("Nilai dibayar tidak boleh negatif"),
   status: z.enum(CLAIM_STATUSES as [ClaimStatus, ...ClaimStatus[]]).optional(),
-  stage: z.enum(CLAIM_STAGES as [ClaimStage, ...ClaimStage[]]).optional(),
+  // Tahapan dari Master Data; server mencocokkan nama atau kodenya.
+  stage: z.string().trim().min(1).max(100).optional(),
   notes: z.string().optional().default(""),
   participantId: z.uuid("Peserta tidak valid").nullable().optional(),
   paBenefitId: z.uuid("Jenis manfaat tidak valid").nullable().optional(),

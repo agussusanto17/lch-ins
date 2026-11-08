@@ -11,6 +11,7 @@ import type {
   ClientType,
 } from "@/lib/data/types"
 import { CLIENTS } from "@/lib/data/clients"
+import { CLIENT_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
 import { maskMiddle, normalizeCob } from "@/lib/format"
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
@@ -132,6 +133,11 @@ const getLookupsCache = cache(async () => {
 
 type ClientLookups = Awaited<ReturnType<typeof getLookupsCache>>
 
+/** Kode master tipe klien; nama tipe bisa diganti di Master Data. */
+function clientTypeCode(type: string | null | undefined) {
+  return CLIENT_TYPE_CODES[type as ClientType] ?? type
+}
+
 function resolveLookupId(
   cache: ClientLookups,
   type: string,
@@ -228,9 +234,8 @@ function mapPrismaClientToRecord(
   return {
     id: c.id,
     dbId: c.id,
-    clientType: (c.clientType?.name === "Perorangan"
-      ? "Perorangan"
-      : "Korporasi") as ClientType,
+    // Dicocokkan lewat kode, jadi nama yang diganti di Master Data aman.
+    clientType: systemValueFromRow(CLIENT_TYPE_CODES, c.clientType, "Korporasi"),
     name: c.name,
     npwp: c.npwp || "",
     idType: c.idType?.name || undefined,
@@ -276,7 +281,7 @@ export async function seedInitialClientsIfEmpty(): Promise<number> {
 
   for (const item of CLIENTS) {
     const clientTypeId =
-      resolveLookupId(cache, "client_type", item.clientType) ||
+      resolveLookupId(cache, "client_type", clientTypeCode(item.clientType)) ||
       resolveLookupId(cache, "client_type", "corporate")!
 
     const statusId =
@@ -400,7 +405,7 @@ export async function listInsuredOptions(): Promise<InsuredOption[]> {
       name: true,
       npwp: true,
       contactPerson: true,
-      clientType: { select: { name: true } },
+      clientType: { select: { code: true, name: true } },
       status: { select: { name: true } },
       addresses: {
         select: {
@@ -419,9 +424,8 @@ export async function listInsuredOptions(): Promise<InsuredOption[]> {
     name: c.name,
     npwpMasked: c.npwp ? maskMiddle(c.npwp, 2, 3) : null,
     contactPerson: c.contactPerson || "",
-    clientType: (c.clientType?.name === "Perorangan"
-      ? "Perorangan"
-      : "Korporasi") as ClientType,
+    // Dicocokkan lewat kode, jadi nama yang diganti di Master Data aman.
+    clientType: systemValueFromRow(CLIENT_TYPE_CODES, c.clientType, "Korporasi"),
     status: (c.status?.name || "Active") as ClientStatus,
     addresses: c.addresses.map((a) => ({
       id: a.id,
@@ -655,7 +659,7 @@ export async function createClient(
   }
 
   const clientTypeId =
-    resolveLookupId(cache, "client_type", input.clientType) ||
+    resolveLookupId(cache, "client_type", clientTypeCode(input.clientType)) ||
     resolveLookupId(cache, "client_type", "corporate")!
 
   const statusId =
@@ -795,7 +799,7 @@ export async function updateClient(
   }
 
   const clientTypeId =
-    resolveLookupId(cache, "client_type", input.clientType) ||
+    resolveLookupId(cache, "client_type", clientTypeCode(input.clientType)) ||
     resolveLookupId(cache, "client_type", "corporate")!
 
   const statusId =

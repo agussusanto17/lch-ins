@@ -36,7 +36,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useCobFilterItems } from "@/components/shared/form-options-provider"
+import {
+  useCobFilterItems,
+  useFormOptions,
+} from "@/components/shared/form-options-provider"
 import { toIdr } from "@/lib/calc"
 import {
   claimBackHref,
@@ -48,23 +51,18 @@ import {
 } from "@/lib/claim-filter"
 import {
   CLAIM_STAGES,
-  CLAIM_STATUSES,
   isOpenClaim,
 } from "@/lib/data"
+import {
+  CLAIM_STATUS_CODES,
+  dynamicLookupItems,
+  fixedLookupItems,
+  fixedLookupLabel,
+} from "@/lib/form-options"
 import type { ExportSpec } from "@/lib/export"
 import { compactMoney, dateShort, money } from "@/lib/format"
 import type { ClaimFormOptions, ClaimRecord } from "@/lib/server/claims"
 import { store } from "@/lib/store"
-
-const STATUS_ITEMS = [
-  { label: "Semua status", value: "all" },
-  ...CLAIM_STATUSES.map((s) => ({ label: s, value: s })),
-]
-
-const STAGE_ITEMS = [
-  { label: "Semua tahapan", value: "all" },
-  ...CLAIM_STAGES.map((s) => ({ label: s, value: s })),
-]
 
 export interface ClaimsViewProps {
   initialClaims: ClaimRecord[]
@@ -73,6 +71,19 @@ export interface ClaimsViewProps {
 
 export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
   const cobItems = useCobFilterItems()
+  // Pilihan saringan status dan tahapan dari Master Data.
+  const masterOptions = useFormOptions()
+  const statusItems = [
+    { label: "Semua status", value: "all" },
+    ...fixedLookupItems(masterOptions.systemLookups.claim_status, CLAIM_STATUS_CODES),
+  ]
+  const stageItems = [
+    { label: "Semua tahapan", value: "all" },
+    ...dynamicLookupItems(masterOptions.systemLookups.claim_stage, CLAIM_STAGES).map((s) => ({
+      label: s,
+      value: s,
+    })),
+  ]
   const [items, setItems] = React.useState<ClaimRecord[]>(initialClaims)
   const [prevInitial, setPrevInitial] = React.useState(initialClaims)
   if (prevInitial !== initialClaims) {
@@ -257,7 +268,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
             </SelectContent>
           </Select>
           <Select
-            items={STATUS_ITEMS}
+            items={statusItems}
             value={status}
             onValueChange={(v) =>
               updateFilters({ status: v as ClaimFilterParams["status"] })
@@ -268,7 +279,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                {STATUS_ITEMS.map((i) => (
+                {statusItems.map((i) => (
                   <SelectItem key={i.value} value={i.value}>
                     {i.label}
                   </SelectItem>
@@ -277,7 +288,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
             </SelectContent>
           </Select>
           <Select
-            items={STAGE_ITEMS}
+            items={stageItems}
             value={stage}
             onValueChange={(v) =>
               updateFilters({ stage: v as ClaimFilterParams["stage"] })
@@ -288,7 +299,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                {STAGE_ITEMS.map((i) => (
+                {stageItems.map((i) => (
                   <SelectItem key={i.value} value={i.value}>
                     {i.label}
                   </SelectItem>
@@ -404,7 +415,14 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
                       {money(c.claimedAmount || c.estimatedLoss, c.currency)}
                     </TableCell>
                     <TableCell className="pr-4">
-                      <StatusBadge status={c.status} />
+                      <StatusBadge
+                        status={c.status}
+                        label={fixedLookupLabel(
+                          masterOptions.systemLookups.claim_status,
+                          CLAIM_STATUS_CODES,
+                          c.status
+                        )}
+                      />
                       <p className="mt-1 text-xs text-muted-foreground">
                         {c.stage}
                       </p>

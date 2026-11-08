@@ -3,11 +3,12 @@ import "server-only"
 import { Prisma } from "@/lib/generated/prisma/client"
 import { CLIENTS } from "@/lib/data/clients"
 import { POLICIES as MOCK_POLICIES } from "@/lib/data/policies"
-import { POLICY_TYPES } from "@/lib/data/reference"
+import { POLICY_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
 import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
 import type {
   ClassOfBusiness,
   Policy,
+  PolicyType,
   SecurityPanelRow,
   SlipPart,
 } from "@/lib/data/types"
@@ -53,7 +54,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const policyInclude = {
   cob: { select: { name: true } },
-  policyType: { select: { name: true } },
+  policyType: { select: { code: true, name: true } },
   placingSlip: { select: { slipNo: true } },
   insurers: {
     include: {
@@ -99,7 +100,8 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
     premium: Number(row.premium),
     brokeragePct: Number(row.brokeragePct),
     additionalFee: Number(row.additionalFee),
-    type: POLICY_TYPES.find((t) => t === row.policyType.name) ?? "Baru",
+    // Dicocokkan lewat kode, jadi nama yang diganti di Master Data aman.
+    type: systemValueFromRow(POLICY_TYPE_CODES, row.policyType, "Baru"),
     riskLocation: row.riskLocation ?? "",
     endorsementSeq: row.endorsementSeq,
     cobOjkClassId: row.cobOjkClassId,
@@ -151,8 +153,13 @@ async function resolveCobId(tx: Tx, cob: ClassOfBusiness): Promise<string> {
 }
 
 async function resolvePolicyTypeId(tx: Tx, type: string): Promise<string> {
+  // Kode tetap walau nama tipe polis diganti di Master Data.
+  const code = POLICY_TYPE_CODES[type as PolicyType]
   const row = await tx.lookupValue.findFirst({
-    where: { lookupType: "policy_type", name: type },
+    where: {
+      lookupType: "policy_type",
+      OR: [...(code ? [{ code }] : []), { name: type }],
+    },
     select: { id: true },
   })
   if (!row) throw new Error(`Tipe polis "${type}" belum ada di master data.`)
@@ -469,10 +476,10 @@ export async function rosterPolicyId(tx: Tx, policyId: string) {
   for (let i = 0; i < 20; i++) {
     const row = await tx.policy.findUnique({
       where: { id },
-      select: { parentPolicyId: true, policyType: { select: { name: true } } },
+      select: { parentPolicyId: true, policyType: { select: { code: true, name: true } } },
     })
     if (!row) throw new Error("Polis induk tidak ditemukan.")
-    const type = row.policyType.name
+    const type = systemValueFromRow(POLICY_TYPE_CODES, row.policyType, "Baru")
     if ((type !== "Endorsement" && type !== "Cancellation") || !row.parentPolicyId) return id
     id = row.parentPolicyId
   }

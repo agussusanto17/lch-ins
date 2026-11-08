@@ -47,7 +47,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useCobFilterItems } from "@/components/shared/form-options-provider"
+import {
+  useCobFilterItems,
+  useFormOptions,
+} from "@/components/shared/form-options-provider"
+import {
+  POLICY_TYPE_CODES,
+  fixedLookupItems,
+  fixedLookupLabel,
+} from "@/lib/form-options"
 import {
   POLICY_TYPES,
   policyStatus,
@@ -92,6 +100,8 @@ export function PolicyDatabase({
   claimCounts: Record<string, number>
 }) {
   const cobItems = useCobFilterItems()
+  // Nama tipe polis dari Master Data.
+  const masterOptions = useFormOptions()
   const today = useToday()
   const permission = usePermission()
   const canManage = permission.canManage("/policies")
@@ -371,11 +381,23 @@ export function PolicyDatabase({
         >
           <TabsList className="no-print max-w-full overflow-x-auto">
             <TabsTrigger value="all">Semua ({base.length})</TabsTrigger>
-            {POLICY_TYPES.map((t) => (
-              <TabsTrigger key={t} value={t}>
-                {t} ({base.filter((p) => p.type === t).length})
-              </TabsTrigger>
-            ))}
+            {fixedLookupItems(masterOptions.systemLookups.policy_type, POLICY_TYPE_CODES)
+              // Tipe yang dinonaktifkan tetap tampil selama masih ada polisnya.
+              .concat(
+                POLICY_TYPES.filter(
+                  (t) =>
+                    base.some((p) => p.type === t) &&
+                    !masterOptions.systemLookups.policy_type.some(
+                      (r) => r.code === POLICY_TYPE_CODES[t]
+                    ) &&
+                    masterOptions.systemLookups.policy_type.length > 0
+                ).map((t) => ({ label: t, value: t }))
+              )
+              .map((t) => (
+                <TabsTrigger key={t.value} value={t.value}>
+                  {t.label} ({base.filter((p) => p.type === t.value).length})
+                </TabsTrigger>
+              ))}
           </TabsList>
 
           <TabsContent value={tab}>
@@ -444,7 +466,14 @@ export function PolicyDatabase({
                             {money(p.premium, p.currency)}
                           </TableCell>
                           <TableCell>
-                            <StatusBadge status={p.type} />
+                            <StatusBadge
+                              status={p.type}
+                              label={fixedLookupLabel(
+                                masterOptions.systemLookups.policy_type,
+                                POLICY_TYPE_CODES,
+                                p.type
+                              )}
+                            />
                             {p.endorsementSeq ? (
                               <span className="tabular ml-1.5 text-xs text-muted-foreground">
                                 ke-{p.endorsementSeq}

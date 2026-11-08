@@ -19,6 +19,7 @@ import type {
   WordingForm,
 } from "@/lib/generated/prisma/client"
 
+import { isFixedLookupType } from "@/lib/form-options"
 import { prisma } from "@/lib/prisma"
 import { cleanDetailLabels } from "@/lib/slip-details"
 import { recordAudit } from "@/server/services/audit"
@@ -930,10 +931,18 @@ export async function toggleWordingFormStatus(
 
 // Mutation functions (lookup values)
 
+/** Pesan untuk lookup yang nilainya dipakai logika sistem. */
+function fixedLookupMessage(type: string) {
+  return `Nilai ${type} dipakai logika sistem. Nama bisa diubah, tetapi nilai baru dan penonaktifan lewat developer.`
+}
+
 export async function createLookupValue(
   input: LookupValueInput,
   userId: string
 ): Promise<LookupValue> {
+  if (isFixedLookupType(input.lookupType.trim())) {
+    throw new Error(fixedLookupMessage(input.lookupType.trim()))
+  }
   return prisma.$transaction(async (tx) => {
     const created = await tx.lookupValue.create({
       data: {
@@ -963,14 +972,16 @@ export async function updateLookupValue(
 ): Promise<LookupValue> {
   return prisma.$transaction(async (tx) => {
     const before = await tx.lookupValue.findUniqueOrThrow({ where: { id } })
+    // Daftar tetap hanya bisa diganti nama dan urutannya: logika membaca kodenya.
+    const fixed = isFixedLookupType(before.lookupType)
     const updated = await tx.lookupValue.update({
       where: { id },
       data: {
         // Jika isSystem: code tidak boleh berubah
-        code: before.isSystem ? before.code : input.code.trim(),
+        code: before.isSystem || fixed ? before.code : input.code.trim(),
         name: input.name.trim(),
         sortOrder: input.sortOrder ?? before.sortOrder,
-        isActive: input.isActive ?? before.isActive,
+        isActive: fixed ? before.isActive : (input.isActive ?? before.isActive),
       },
     })
     await recordAudit(tx, {
@@ -992,6 +1003,9 @@ export async function toggleLookupValueStatus(
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const before = await tx.lookupValue.findUniqueOrThrow({ where: { id } })
+    if (isFixedLookupType(before.lookupType)) {
+      throw new Error(fixedLookupMessage(before.lookupType))
+    }
     const updated = await tx.lookupValue.update({
       where: { id },
       data: { isActive },
