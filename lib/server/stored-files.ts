@@ -1,8 +1,18 @@
 import "server-only"
 
+import { randomUUID } from "node:crypto"
+
+import { after } from "next/server"
+
 import { INLINE_TYPES, XLSX_TYPE, detectContentType } from "@/lib/file-types"
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import {
+  deleteObjects,
+  getObject,
+  objectStorageEnabled,
+  putObject,
+} from "@/lib/server/object-storage"
 import { MAX_UPLOAD_BYTES } from "@/lib/uploads"
 
 type Tx = Prisma.TransactionClient
@@ -91,31 +101,69 @@ export async function saveUploadedFile(
     )
   }
 
-  return prisma.storedFile.create({
-    data: {
-      fileName: cleanFileName(file.name),
-      contentType,
-      sizeBytes: data.byteLength,
-      data,
-      purpose,
-      uploadedBy: userId,
-    },
-    select: { id: true, fileName: true },
-  })
+  const meta = {
+    fileName: cleanFileName(file.name),
+    contentType,
+    sizeBytes: data.byteLength,
+    purpose,
+    uploadedBy: userId,
+  }
+  const select = { id: true, fileName: true } as const
+
+  // Tanpa object storage (demo Vercel), isi tetap di database.
+  if (!objectStorageEnabled()) {
+    return prisma.storedFile.create({ data: { ...meta, data }, select })
+  }
+
+  // Objek ditulis dulu, baru barisnya. Kalau baris gagal dibuat, objeknya
+  // dihapus lagi supaya bucket tidak berisi berkas tanpa pemilik.
+  const id = randomUUID()
+  const storageKey = objectKey(purpose, id)
+  await putObject(storageKey, data, contentType)
+  try {
+    return await prisma.storedFile.create({
+      data: { ...meta, id, storageKey },
+      select,
+    })
+  } catch (error) {
+    await deleteObjects([storageKey]).catch(() => undefined)
+    throw error
+  }
+}
+
+/** Key objek di bucket. Folder per pemakaian supaya mudah ditelusuri di console. */
+export function objectKey(purpose: string, id: string) {
+  return `${purpose}/${id}`
 }
 
 export async function readStoredFile(id: string) {
   if (!UUID_RE.test(id)) return null
-  return prisma.storedFile.findUnique({
+  const file = await prisma.storedFile.findUnique({
     where: { id },
     select: {
       fileName: true,
       contentType: true,
       sizeBytes: true,
       data: true,
+      storageKey: true,
       purpose: true,
     },
   })
+  if (!file) return null
+
+  const { data, storageKey, ...meta } = file
+  if (!storageKey) return data ? { ...meta, data } : null
+  try {
+    return { ...meta, data: await getObject(storageKey) }
+  } catch (error) {
+    // Baris ada tapi objeknya hilang: perlakukan seperti berkas tidak ada,
+    // tapi catat supaya terlihat di log server.
+    if (error instanceof Error && error.name === "NoSuchKey") {
+      console.error(`Objek berkas ${storageKey} tidak ada di bucket.`)
+      return null
+    }
+    throw error
+  }
 }
 
 /**
@@ -139,7 +187,13 @@ export async function assertClaimableFile(
   }
 }
 
-/** Hapus isi berkas yang tidak dipakai lagi. Path data contoh dilewati. */
+/**
+ * Hapus berkas yang tidak dipakai lagi. Path data contoh dilewati.
+ *
+ * Baris dihapus di dalam transaksi pemanggil. Objeknya baru dihapus setelah
+ * response terkirim, saat transaksi sudah selesai, dan hanya bila barisnya
+ * memang sudah tidak ada. Jadi kalau transaksi batal, berkas tidak ikut hilang.
+ */
 export async function deleteStoredFiles(
   tx: Tx,
   filePaths: (string | null | undefined)[]
@@ -147,7 +201,49 @@ export async function deleteStoredFiles(
   const ids = filePaths
     .map(storedFileId)
     .filter((id): id is string => id != null)
-  if (ids.length) {
-    await tx.storedFile.deleteMany({ where: { id: { in: ids } } })
+  if (!ids.length) return
+
+  const rows = await tx.storedFile.findMany({
+    where: { id: { in: ids }, storageKey: { not: null } },
+    select: { storageKey: true },
+  })
+  await tx.storedFile.deleteMany({ where: { id: { in: ids } } })
+  scheduleObjectCleanup(rows.map((r) => r.storageKey!))
+}
+
+/** Hapus satu berkas yang belum sempat ditautkan ke data mana pun. */
+export async function discardStoredFile(id: string) {
+  const row = await prisma.storedFile
+    .delete({ where: { id }, select: { storageKey: true } })
+    .catch(() => null)
+  if (row?.storageKey) {
+    await deleteObjects([row.storageKey]).catch((error) =>
+      console.error(`Gagal menghapus objek ${row.storageKey}:`, error)
+    )
   }
+}
+
+function scheduleObjectCleanup(keys: string[]) {
+  if (!keys.length) return
+  const run = () =>
+    removeOrphanObjects(keys).catch((error) =>
+      console.error("Gagal menghapus objek berkas:", keys, error)
+    )
+  try {
+    after(run)
+  } catch {
+    // Di luar request (skrip), tidak ada titik "setelah transaksi selesai".
+    // Objeknya dibiarkan dan dibersihkan scripts/sweep-orphan-objects.ts.
+    console.warn("Objek berkas belum dihapus dari bucket:", keys)
+  }
+}
+
+/** Hapus objek yang barisnya sudah tidak ada di stored_files. */
+async function removeOrphanObjects(keys: string[]) {
+  const stillUsed = await prisma.storedFile.findMany({
+    where: { storageKey: { in: keys } },
+    select: { storageKey: true },
+  })
+  const used = new Set(stillUsed.map((r) => r.storageKey))
+  await deleteObjects(keys.filter((key) => !used.has(key)))
 }

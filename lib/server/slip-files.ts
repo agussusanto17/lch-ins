@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import {
   assertClaimableFile,
   deleteStoredFiles,
+  discardStoredFile,
   saveUploadedFile,
   storedFilePath,
   storedFileUrl,
@@ -126,7 +127,7 @@ export async function uploadSlipAttachment(
   try {
     return await addSlipAttachment(slipId, stored.id, description, userId)
   } catch (err) {
-    await prisma.storedFile.delete({ where: { id: stored.id } }).catch(() => undefined)
+    await discardStoredFile(stored.id)
     throw err
   }
 }
