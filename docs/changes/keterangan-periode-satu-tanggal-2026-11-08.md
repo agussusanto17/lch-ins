@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `fix/keterangan-periode-satu-tanggal`
-- **PR:** belum dibuka
+- **PR:** [#172](https://github.com/agussusanto17/lch-ins/pull/172)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
