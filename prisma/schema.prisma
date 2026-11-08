@@ -976,16 +976,22 @@ model ClientDocument {
   @@map("client_documents")
 }
 
-/// Isi berkas yang diunggah pengguna. Disimpan di database supaya ikut backup
-/// harian dan tetap ada di hosting yang disknya tidak permanen (Vercel).
-/// Baris pemakainya menunjuk ke sini lewat file_path `stored_files/<id>`.
+/// Metadata berkas yang diunggah pengguna. Baris pemakainya menunjuk ke sini
+/// lewat file_path `stored_files/<id>`.
+///
+/// Isi berkas disimpan di object storage (RustFS) bila env S3_* terisi, dan
+/// barisnya hanya membawa storage_key. Tanpa object storage (demo Vercel), isi
+/// berkas tetap disimpan di kolom data. Tepat satu dari keduanya terisi.
 model StoredFile {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fileName    String   @map("file_name")
   /// Dibaca dari isi file saat diunggah, bukan dari keterangan browser.
   contentType String   @map("content_type")
   sizeBytes   Int      @map("size_bytes")
-  data        Bytes
+  /// Isi berkas, hanya bila tidak memakai object storage.
+  data        Bytes?
+  /// Key objek di bucket S3_BUCKET, misalnya `client_document/<id>`.
+  storageKey  String?  @unique @map("storage_key")
   /// Pemakaian berkas, menentukan hak akses saat dibuka: client_document, claim_document, policy_file.
   purpose     String
   uploadedBy  String   @map("uploaded_by") @db.Uuid
