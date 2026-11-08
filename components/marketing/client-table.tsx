@@ -36,20 +36,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useCobFilterItems } from "@/components/shared/form-options-provider"
+import {
+  useCobFilterItems,
+  useFormOptions,
+} from "@/components/shared/form-options-provider"
 import {
   CLIENT_STATUSES,
   kycMissing,
   type Client,
 } from "@/lib/data"
+import { dynamicLookupItems } from "@/lib/form-options"
 import type { ExportSpec } from "@/lib/export"
 import { maskEmail, maskMiddle } from "@/lib/format"
 import { store, useCollection } from "@/lib/store"
-
-const STATUS_ITEMS = [
-  { label: "Semua status", value: "all" },
-  ...CLIENT_STATUSES.map((s) => ({ label: s, value: s })),
-]
 
 interface ClientWithUsage extends Client {
   isUsedInDocuments?: boolean
@@ -62,6 +61,15 @@ interface ClientTableProps {
 
 export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
   const cobItems = useCobFilterItems()
+  // Status klien dari Master Data.
+  const masterOptions = useFormOptions()
+  const statusItems = [
+    { label: "Semua status", value: "all" },
+    ...dynamicLookupItems(masterOptions.systemLookups.client_status, CLIENT_STATUSES).map((s) => ({
+      label: s,
+      value: s,
+    })),
+  ]
   React.useEffect(() => {
     store.hydrate("clients", initialClients ?? [])
   }, [initialClients])
@@ -212,7 +220,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
           </SelectContent>
         </Select>
         <Select
-          items={STATUS_ITEMS}
+          items={statusItems}
           value={status}
           onValueChange={(v) => setStatus(v as string)}
         >
@@ -221,7 +229,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              {STATUS_ITEMS.map((i) => (
+              {statusItems.map((i) => (
                 <SelectItem key={i.value} value={i.value}>
                   {i.label}
                 </SelectItem>

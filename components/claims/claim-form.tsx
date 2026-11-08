@@ -20,7 +20,6 @@ import {
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
 import {
   CLAIM_STAGES,
-  CLAIM_STATUSES,
   type Claim,
   type ClaimStage,
   type ClaimStatus,
@@ -40,6 +39,12 @@ import type {
   ClaimInput,
   ClaimRecord,
 } from "@/lib/server/claims"
+import { useFormOptions } from "@/components/shared/form-options-provider"
+import {
+  CLAIM_STATUS_CODES,
+  dynamicLookupItems,
+  fixedLookupItems,
+} from "@/lib/form-options"
 import { store } from "@/lib/store"
 import { requiredText, validate, type FieldErrors } from "@/lib/validation"
 
@@ -150,6 +155,8 @@ export function ClaimForm({
   const [errors, setErrors] = React.useState<FieldErrors>({})
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
 
+  // Status dan tahapan klaim dari Master Data.
+  const masterOptions = useFormOptions()
   const policies = formOptions.policies
   const policy = policies.find((p) => p.id === draft.policyId) ?? null
   const policyItems = policies.map((p) => ({
@@ -558,7 +565,11 @@ export function ClaimForm({
               label="Status Klaim"
               value={draft.status}
               onValueChange={(v) => set({ status: v as ClaimStatus })}
-              items={CLAIM_STATUSES}
+              items={fixedLookupItems(
+                masterOptions.systemLookups.claim_status,
+                CLAIM_STATUS_CODES,
+                draft.status
+              )}
               placeholder="Pilih status klaim..."
               error={errors.status}
             />
@@ -566,7 +577,11 @@ export function ClaimForm({
               label="Tahapan Dokumen"
               value={draft.stage}
               onValueChange={(v) => set({ stage: v as ClaimStage })}
-              items={CLAIM_STAGES}
+              items={dynamicLookupItems(
+                masterOptions.systemLookups.claim_stage,
+                CLAIM_STAGES,
+                draft.stage
+              )}
               placeholder="Pilih tahapan dokumen..."
               error={errors.stage}
             />

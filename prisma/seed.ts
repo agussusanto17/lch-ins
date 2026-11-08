@@ -342,11 +342,14 @@ async function seedLookups() {
     // yang menunjuk ke sana tetap bisa ditelusuri, tapi dinonaktifkan supaya
     // berhenti muncul di dropdown. Tanpa ini, memecah claim_status menjadi
     // claim_status dan claim_stage menyisakan sepuluh pilihan lama di database.
+    // Hanya baris sistem: nilai yang ditambah LCH di Master Data (misalnya
+    // tahapan klaim baru) tetap aktif walaupun tidak ada di daftar ini.
     if (group.system) {
       const { count } = await prisma.lookupValue.updateMany({
         where: {
           lookupType: group.type,
           isActive: true,
+          isSystem: true,
           code: { notIn: group.values.map(([code]) => code) },
         },
         data: { isActive: false },

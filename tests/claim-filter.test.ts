@@ -69,13 +69,15 @@ test("parseClaimFilters menerima status dan stage valid", () => {
   })
 })
 
-test("parseClaimFilters me-reset status/stage tidak dikenal menjadi 'all'", () => {
+test("parseClaimFilters me-reset status tidak dikenal; tahapan dari Master Data diterima", () => {
   const parsed = parseClaimFilters({
     status: "BogusStatus",
-    stage: "BogusStage",
+    stage: "Survey Lapangan",
   })
   assert.equal(parsed.status, "all")
-  assert.equal(parsed.stage, "all")
+  // Tahapan klaim diatur di Master Data, jadi tahapan baru tetap bisa disaring.
+  assert.equal(parsed.stage, "Survey Lapangan")
+  assert.equal(parseClaimFilters({ stage: "all" }).stage, "all")
 })
 
 test("claimFilterQuery hanya menyertakan parameter yang aktif", () => {

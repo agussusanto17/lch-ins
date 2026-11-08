@@ -2,6 +2,7 @@ import "server-only"
 
 import { coverCodeFor } from "@/components/underwriting/slip-model"
 import type { Claim, ClaimStage, ClaimStatus } from "@/lib/data/types"
+import { CLAIM_STATUS_CODES, systemValueFromRow } from "@/lib/form-options"
 import { dateShort, normalizeCob } from "@/lib/format"
 import { Prisma } from "@/lib/generated/prisma/client"
 import { effectivePaBenefitLimits, type PaBenefitOption } from "@/lib/pa-benefits"
@@ -199,11 +200,8 @@ function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
   const firstInsurer = record.policy?.insurers?.[0]?.insurer?.name || ""
   const primaryInsurer = leaderInsurer || firstInsurer
 
-  const rawStatus = record.status?.name || record.status?.code || "Outstanding"
-  const status: ClaimStatus =
-    rawStatus.toLowerCase() === "close" || rawStatus.toLowerCase() === "closed"
-      ? "Closed"
-      : (rawStatus as ClaimStatus)
+  // Status dicocokkan lewat kode, jadi nama yang diganti di Master Data aman.
+  const status = systemValueFromRow(CLAIM_STATUS_CODES, record.status, "Outstanding")
 
   const rawStage = (record.stage?.name || record.stage?.code || "Tunggu Dokumen") as ClaimStage
 

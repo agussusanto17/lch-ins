@@ -71,16 +71,19 @@ const BASE =
 
 export function StatusBadge({
   status,
+  label,
   className,
 }: {
   status: string
+  /** Label dari Master Data; warna tetap mengikuti status sistem. */
+  label?: string
   className?: string
 }) {
   const tone = STATUS_TONE[status] ?? "neutral"
   return (
     <span className={cn(BASE, TONE_CLASS[tone], className)}>
       <span className={cn("size-1.5 shrink-0 rounded-full", DOT_CLASS[tone])} />
-      {STATUS_LABEL[status] ?? status}
+      {label ?? STATUS_LABEL[status] ?? status}
     </span>
   )
 }
