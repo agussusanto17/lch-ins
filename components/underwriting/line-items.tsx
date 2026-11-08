@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react"
 
 import { SearchSelect } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { NumberInput } from "@/components/ui/number-input"
 import { Textarea } from "@/components/ui/textarea"
@@ -26,6 +27,7 @@ export function LineItemList({
   multiline = false,
   addLabel = "Tambah baris",
   vehicleOptions,
+  limitToggle = false,
 }: {
   items: LineItem[]
   onChange: (items: LineItem[]) => void
@@ -34,6 +36,11 @@ export function LineItemList({
   multiline?: boolean
   addLabel?: string
   vehicleOptions?: VehicleBrandOption[]
+  /**
+   * Centang "Limit saja" per baris. Dipakai slip open cover, yang tidak
+   * menampilkan tabel rate per objek tempat pilihan Dasar biasanya diatur.
+   */
+  limitToggle?: boolean
 }) {
   const hasVehicleMaster = Boolean(vehicleOptions && vehicleOptions.length > 0)
 
@@ -274,7 +281,7 @@ export function LineItemList({
                 onChange={(e) => update(item.id, { description: e.target.value })}
               />
             )}
-            <div className="w-44 shrink-0">
+            <div className="flex w-44 shrink-0 flex-col gap-1.5">
               <NumberInput
                 preset="money"
                 aria-label={`${amountPlaceholder} ${item.description || "baris"}`}
@@ -282,6 +289,18 @@ export function LineItemList({
                 placeholder={amountPlaceholder}
                 onValueChange={(v) => update(item.id, { amount: v ?? 0 })}
               />
+              {limitToggle ? (
+                <label className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+                  <Checkbox
+                    checked={item.limitOnly === true}
+                    onCheckedChange={(checked) =>
+                      update(item.id, { limitOnly: checked === true || undefined })
+                    }
+                    aria-label={`Limit saja ${item.description || "baris"}`}
+                  />
+                  Limit saja
+                </label>
+              ) : null}
             </div>
             <Button
               type="button"

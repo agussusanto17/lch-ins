@@ -1522,9 +1522,13 @@ function SlipEditor({
                     multiline
                     addLabel={isMotor ? "Tambah kendaraan" : "Tambah interest"}
                     vehicleOptions={isMotor ? vehicleOptions : undefined}
+                    limitToggle={usesOpenCover(slip)}
                   />
                 )}
-                {/* Objek "limit saja" (diatur di Rate & Premium) tidak ikut total. */}
+                {/*
+                 * Objek "limit saja" tidak ikut total. Diatur lewat Dasar di
+                 * Rate & Premium, atau centang di atas untuk slip open cover.
+                 */}
                 <TotalBar
                   label={
                     slip.interestItems.some((i) => isLimitOnlyItem(slip.cob, i))
