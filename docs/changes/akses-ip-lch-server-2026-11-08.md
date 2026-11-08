@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-08
 - **Branch:** `chore/akses-ip-lch-server`
-- **PR:** -
+- **PR:** #173
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
