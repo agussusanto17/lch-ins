@@ -192,9 +192,10 @@ export function OpenCoverRates({
         </Button>
       ) : null}
       <p className="text-xs text-muted-foreground">
-        Slip open cover tidak punya TSI dan premi. Limit dicatat sebagai objek
-        &quot;Limit saja&quot; di Interest Insured. Premi dihitung per deklarasi
-        saat polis dibuat: nilai deklarasi × persen, atau jumlah unit × tarif.
+        Slip open cover tidak punya TSI dan premi. Limit dicatat di Interest
+        Insured dengan centang &quot;Limit saja&quot;. Premi dihitung per
+        deklarasi saat polis dibuat: nilai deklarasi × persen, atau jumlah unit
+        × tarif.
       </p>
     </div>
   )
