@@ -137,6 +137,7 @@ model User {
   slipsCreated      PlacingSlip[]    @relation("slipCreatedBy")
   slipsReleased     PlacingSlip[]    @relation("slipReleasedBy")
   policyFiles       PolicyFile[]
+  uploadParts       UploadPart[]
   slipFiles         SlipFile[]
   debitNotesIssued  DebitNote[]
   creditNotesIssued CreditNote[]
@@ -1607,10 +1608,19 @@ model PolicyInsurer {
   @@map("policy_insurers")
 }
 
-/// Softcopy polis. Version naik setiap upload, file lama tetap tersimpan.
+/// Jenis berkas polis (Agus, 9 November 2026): softcopy polis, Premium Note,
+/// dan Commission Note dari asuransi.
+enum PolicyFileKind {
+  Policy
+  PremiumNote
+  CommissionNote
+}
+
+/// Berkas polis. Version naik setiap upload per jenis, file lama tetap tersimpan.
 model PolicyFile {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   policyId   String   @map("policy_id") @db.Uuid
+  kind       PolicyFileKind @default(Policy)
   version    Int      @default(1)
   fileName   String   @map("file_name")
   filePath   String   @map("file_path")
@@ -1623,8 +1633,26 @@ model PolicyFile {
   policy   Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
   uploader User   @relation(fields: [uploadedBy], references: [id])
 
-  @@unique([policyId, version])
+  @@unique([policyId, kind, version])
   @@map("policy_files")
+}
+
+/// Potongan berkas yang sedang diunggah. Vercel menolak body request di atas
+/// 4,5 MB, jadi berkas besar dikirim per potongan lalu digabung di server
+/// menjadi stored_files. Baris dihapus setelah digabung; sisa unggahan yang
+/// tidak selesai dibersihkan setelah sehari.
+model UploadPart {
+  uploadId   String   @map("upload_id") @db.Uuid
+  partNo     Int      @map("part_no")
+  data       Bytes
+  uploadedBy String   @map("uploaded_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  uploader User @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@id([uploadId, partNo])
+  @@index([createdAt])
+  @@map("upload_parts")
 }
 
 /// Asuransi dan COB klaim diambil dari polis, tidak dipilih ulang di form.

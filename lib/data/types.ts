@@ -461,9 +461,13 @@ export interface PlacingSlip {
   coverNoteRemarks?: string
 }
 
-/** Softcopy polis. Versi naik setiap upload, file lama tetap tersimpan. */
+/** Jenis berkas polis: softcopy polis, Premium Note, atau Commission Note. */
+export type PolicyFileKind = "Policy" | "PremiumNote" | "CommissionNote"
+
+/** Berkas polis. Versi naik setiap upload per jenis, file lama tetap tersimpan. */
 export interface PolicyFile {
   id: string
+  kind: PolicyFileKind
   version: number
   fileName: string
   uploadedAt: string

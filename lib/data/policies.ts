@@ -272,6 +272,7 @@ function toPolicy(seed: PolicySeed): Policy {
     ? [
         {
           id: `${seed.id}-f1`,
+          kind: "Policy",
           version: 1,
           fileName: softcopy,
           uploadedAt: seed.inceptionDate,

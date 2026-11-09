@@ -68,6 +68,7 @@ import { addMonths } from "@/lib/date"
 import type { ExportSpec } from "@/lib/export"
 import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
+import { POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
 import { parentPolicyNote } from "@/lib/policy-parent"
 import type { PolicyFormOptions } from "@/lib/server/policies"
 import { store } from "@/lib/store"
@@ -177,7 +178,7 @@ export function PolicyDatabase({
     if (!canManage) {
       return [
         {
-          label: `Softcopy (${p.files.length} versi)`,
+          label: "Berkas polis",
           icon: FileText,
           onSelect: () => setFilesFor(p.id),
         },
@@ -192,7 +193,7 @@ export function PolicyDatabase({
     const actions: RowAction[] = [
       { label: "Edit polis", icon: Pencil, onSelect: () => openForm(p) },
       {
-        label: `Softcopy (${p.files.length} versi)`,
+        label: "Berkas polis",
         icon: FileText,
         onSelect: () => setFilesFor(p.id),
       },
@@ -423,7 +424,7 @@ export function PolicyDatabase({
                     <TableHead className="text-right">Premium</TableHead>
                     <TableHead>Tipe</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="pr-4">Softcopy</TableHead>
+                    <TableHead className="pr-4">Berkas</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -434,7 +435,11 @@ export function PolicyDatabase({
                     />
                   ) : (
                     paginatedRows.map((p) => {
-                      const latest = p.files[p.files.length - 1]
+                      const kinds = POLICY_FILE_KINDS.map((k) => ({
+                        ...k,
+                        latest: latestPolicyFile(p.files, k.kind),
+                      }))
+                      const uploaded = kinds.filter((k) => k.latest)
                       return (
                         <TableRow key={p.id}>
                           <TableCell className={ACTION_COL_CLASS}>
@@ -493,15 +498,22 @@ export function PolicyDatabase({
                             />
                           </TableCell>
                           <TableCell className="pr-4">
-                            {latest ? (
+                            {uploaded.length ? (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="-mx-2 h-7 text-primary"
                                 onClick={() => setFilesFor(p.id)}
+                                title={kinds
+                                  .map((k) =>
+                                    k.latest
+                                      ? `${k.label} v${k.latest.version}`
+                                      : `${k.label} belum ada`
+                                  )
+                                  .join(" · ")}
                               >
-                                <FileText data-icon="inline-start" />v
-                                {latest.version}
+                                <FileText data-icon="inline-start" />
+                                {uploaded.length}/{kinds.length}
                               </Button>
                             ) : (
                               <Button

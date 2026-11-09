@@ -8,10 +8,12 @@ import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
 import type {
   ClassOfBusiness,
   Policy,
+  PolicyFileKind,
   PolicyType,
   SecurityPanelRow,
   SlipPart,
 } from "@/lib/data/types"
+import { policyFileKindLabel } from "@/lib/policy-files"
 import { slipPolicyParts } from "@/lib/calc"
 import { addDays } from "@/lib/date"
 import { normalizeCob } from "@/lib/format"
@@ -64,7 +66,7 @@ const policyInclude = {
     },
     orderBy: { sharePct: "desc" },
   },
-  files: { orderBy: { version: "asc" } },
+  files: { orderBy: [{ kind: "asc" }, { version: "asc" }] },
   _count: { select: { participants: { where: { endDate: null } } } },
 } satisfies Prisma.PolicyInclude
 
@@ -111,6 +113,7 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
     groupingInsured: row.groupingInsured ?? "",
     files: row.files.map((f) => ({
       id: f.id,
+      kind: f.kind,
       version: f.version,
       fileName: f.fileName,
       uploadedAt: f.uploadedAt.toISOString(),
@@ -815,11 +818,15 @@ export async function deletePolicy(id: string, userId: string): Promise<void> {
   })
 }
 
-/** Softcopy baru selalu jadi versi berikutnya; versi lama tidak diganti. */
+/**
+ * Berkas baru selalu jadi versi berikutnya dari jenisnya (Polis, Premium
+ * Note, atau Commission Note); versi lama tidak diganti.
+ */
 export async function addPolicyFile(
   policyId: string,
   fileId: string,
-  userId: string
+  userId: string,
+  kind: PolicyFileKind = "Policy"
 ): Promise<PolicyRecord> {
   return prisma.$transaction(async (tx) => {
     await assertClaimableFile(tx, fileId, "policy_file", userId)
@@ -828,7 +835,7 @@ export async function addPolicyFile(
     if (locked.length === 0) throw new Error("Polis tidak ditemukan.")
 
     const last = await tx.policyFile.aggregate({
-      where: { policyId },
+      where: { policyId, kind },
       _max: { version: true },
     })
     const previous = last._max.version
@@ -839,12 +846,15 @@ export async function addPolicyFile(
     const created = await tx.policyFile.create({
       data: {
         policyId,
+        kind,
         version: (previous ?? 0) + 1,
         fileName: stored.fileName,
         filePath: storedFilePath(fileId),
         uploadedBy: userId,
       },
     })
+    // Jenis berkas tidak berubah, jadi dicatat lewat context; recordAudit
+    // hanya menyimpan field before/after yang nilainya berubah.
     await recordAudit(tx, {
       userId,
       entity: "policies",
@@ -852,7 +862,7 @@ export async function addPolicyFile(
       action: "Update",
       before: { softcopyVersion: previous },
       after: { softcopyVersion: created.version, softcopyFile: created.fileName },
-      context: { policyNo: locked[0].policy_no },
+      context: { policyNo: locked[0].policy_no, policyFileKind: policyFileKindLabel(kind) },
     })
     return readPolicy(tx, policyId)
   })
