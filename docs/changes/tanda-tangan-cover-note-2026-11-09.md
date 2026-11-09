@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `feat/tanda-tangan-cover-note`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#192](https://github.com/agussusanto17/lch-ins/pull/192)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
