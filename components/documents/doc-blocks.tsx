@@ -677,14 +677,12 @@ export function ExclusionsBlock({ slip }: { slip: PlacingSlip }) {
   )
 }
 
-/** inline = wording penuh langsung di daftar (Quotation/Cover Note/CI). */
-export function ClausesBlock({
-  slip,
-  inline,
-}: {
-  slip: PlacingSlip
-  inline?: boolean
-}) {
+/**
+ * Daftar judul klausula sebelum tanda tangan. Wording lengkap dicetak di
+ * lampiran CLAUSE WORDING setelah tanda tangan, di keempat dokumen slip
+ * (Harry, 9 November 2026).
+ */
+export function ClausesBlock({ slip }: { slip: PlacingSlip }) {
   const groups = clauseGroups(slip)
   if (!groups.length) return null
 
@@ -700,15 +698,9 @@ export function ClausesBlock({
                   {g.heading}
                 </ClauseGroupHeading>
               ) : null}
-              <p className={inline ? "font-semibold" : undefined}>
-                {i + 1}. {inline ? c.title : clauseTitleCase(c.title)}
+              <p>
+                {i + 1}. {clauseTitleCase(c.title)}
               </p>
-              {inline && wordingText(c.wording) ? (
-                <div
-                  className="rte-prose mt-0.5 ml-4 text-[12px] text-muted-foreground text-justify"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
-                />
-              ) : null}
             </li>
           ))
         )}
@@ -815,7 +807,7 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
 
   return (
     <section className="print-break">
-      <SectionHeading>CLAUSE WORDING</SectionHeading>
+      <SectionHeading>CLAUSE WORDINGS</SectionHeading>
       <div className="flex flex-col gap-3 text-[12px]">
         {groups.map((g, gi) =>
           g.clauses.map((c, i) => (
