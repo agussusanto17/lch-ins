@@ -9,7 +9,8 @@ import type { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import {
   deleteObjects,
-  getObject,
+  getObjectStream,
+  isObjectStorageRequired,
   objectStorageEnabled,
   putObject,
 } from "@/lib/server/object-storage"
@@ -112,6 +113,11 @@ export async function saveUploadedFile(
 
   // Tanpa object storage (demo Vercel), isi tetap di database.
   if (!objectStorageEnabled()) {
+    if (isObjectStorageRequired()) {
+      throw new Error(
+        "Penyimpanan berkas (object storage) wajib aktif di lingkungan ini, namun belum terkonfigurasi atau tidak dapat diakses."
+      )
+    }
     return prisma.storedFile.create({ data: { ...meta, data }, select })
   }
 
@@ -152,13 +158,18 @@ export async function readStoredFile(id: string) {
   if (!file) return null
 
   const { data, storageKey, ...meta } = file
-  if (!storageKey) return data ? { ...meta, data } : null
+  if (!storageKey) return data ? { ...meta, data: new Uint8Array(data) } : null
   try {
-    return { ...meta, data: await getObject(storageKey) }
+    return { ...meta, data: await getObjectStream(storageKey) }
   } catch (error) {
     // Baris ada tapi objeknya hilang: perlakukan seperti berkas tidak ada,
     // tapi catat supaya terlihat di log server.
-    if (error instanceof Error && error.name === "NoSuchKey") {
+    if (
+      (error instanceof Error && error.name === "NoSuchKey") ||
+      (typeof error === "object" &&
+        error !== null &&
+        (error as { name?: string }).name === "NoSuchKey")
+    ) {
       console.error(`Objek berkas ${storageKey} tidak ada di bucket.`)
       return null
     }

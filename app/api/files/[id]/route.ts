@@ -1,4 +1,5 @@
 import { canAccess } from "@/lib/access"
+import { isStorageUnavailableError } from "@/lib/server/object-storage"
 import { currentUser } from "@/lib/server/session"
 import { opensInline, purposeMenu, readStoredFile } from "@/lib/server/stored-files"
 
@@ -22,7 +23,27 @@ export async function GET(
   }
 
   const { id } = await params
-  const file = await readStoredFile(id)
+  let file
+  try {
+    file = await readStoredFile(id)
+  } catch (error) {
+    if (isStorageUnavailableError(error)) {
+      return new Response(
+        "Penyimpanan berkas sedang tidak dapat diakses. Silakan coba beberapa saat lagi.",
+        {
+          status: 503,
+          headers: {
+            "Retry-After": "5",
+          },
+        }
+      )
+    }
+    console.error("Gagal membaca berkas unggahan:", id, error)
+    return new Response("Terjadi kesalahan saat memproses berkas.", {
+      status: 500,
+    })
+  }
+
   const menu = file ? purposeMenu(file.purpose) : null
   if (!file || !menu) {
     return new Response("Berkas tidak ditemukan.", { status: 404 })
