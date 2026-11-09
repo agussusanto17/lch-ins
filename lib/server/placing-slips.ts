@@ -70,7 +70,6 @@ export interface PlacingSlipRecord extends PlacingSlip {
   clientName?: string
   cobName?: string
   coverTypeName?: string | null
-  createdByName?: string
   policyCount?: number
 }
 
