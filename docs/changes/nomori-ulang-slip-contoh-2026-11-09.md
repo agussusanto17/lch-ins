@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `fix/nomori-ulang-slip-contoh`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#188](https://github.com/agussusanto17/lch-ins/pull/188)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
