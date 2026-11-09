@@ -6,9 +6,9 @@ import { toast } from "sonner"
 import * as z from "zod"
 
 import {
+  attachPolicyFileAction,
   createPolicyAction,
   updatePolicyAction,
-  uploadPolicyFileAction,
 } from "@/app/(app)/policies/actions"
 import { FormDrawer } from "@/components/shared/form-drawer"
 import { useFormOptions } from "@/components/shared/form-options-provider"
@@ -35,6 +35,7 @@ import {
   type ClassOfBusiness,
   type PlacingSlip,
   type Policy,
+  type PolicyFileKind,
   type PolicyType,
   type SlipPart,
   type SlipParticipant,
@@ -49,11 +50,18 @@ import {
 import { dateShort, money } from "@/lib/format"
 import { openCoverRateText, usesOpenCover } from "@/lib/open-cover"
 import { parentPolicyIssue, parentPolicyLabel } from "@/lib/policy-parent"
+import { POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
 import { rosterPolicy } from "@/lib/policy-participants"
 import type { ClientOption } from "@/lib/server/clients"
 import type { PolicyFormOptions, PolicyInput } from "@/lib/server/policies"
 import { newId, store } from "@/lib/store"
-import { UPLOAD_ACCEPT, uploadProblem } from "@/lib/uploads"
+import { uploadInParts } from "@/lib/upload-client"
+import {
+  MAX_POLICY_FILE_BYTES,
+  POLICY_FILE_HINT,
+  UPLOAD_ACCEPT,
+  uploadProblem,
+} from "@/lib/uploads"
 import { requiredText, validate, type FieldErrors } from "@/lib/validation"
 
 type Draft = Omit<Policy, "id" | "files"> & { id: string | null }
@@ -200,7 +208,10 @@ export function PolicyForm({
     policy ? { ...policy } : { ...emptyDraft(), ...preset }
   )
   const [errors, setErrors] = React.useState<FieldErrors>({})
-  const [file, setFile] = React.useState<File | null>(null)
+  // Berkas yang dipilih per jenis: Polis, Premium Note, Commission Note.
+  const [pickedFiles, setPickedFiles] = React.useState<
+    Partial<Record<PolicyFileKind, File>>
+  >({})
   // Perubahan peserta PA grup, hanya untuk endorsement baru.
   const [addedParticipants, setAddedParticipants] = React.useState<SlipParticipant[]>([])
   const [removedParticipantIds, setRemovedParticipantIds] = React.useState<string[]>([])
@@ -429,16 +440,30 @@ export function PolicyForm({
     }
 
     let record: Policy = res.data
-    if (file) {
-      const body = new FormData()
-      body.append("file", file)
-      const uploaded = await uploadPolicyFileAction(record.id, body)
-      if (uploaded.ok && uploaded.data) {
-        record = uploaded.data
+    for (const { kind, label } of POLICY_FILE_KINDS) {
+      const picked = pickedFiles[kind]
+      if (!picked) continue
+      // Polis sudah tersimpan; berkas yang gagal bisa diunggah ulang dari
+      // menu Berkas polis.
+      const progress = toast.loading(`Mengunggah ${label}…`, { description: picked.name })
+      const staged = await uploadInParts(picked, "policy_file", (sent, total) => {
+        if (total > 1) {
+          toast.loading(`Mengunggah ${label} ${Math.round((sent / total) * 100)}%…`, {
+            id: progress,
+            description: picked.name,
+          })
+        }
+      })
+      const attached =
+        staged.ok && staged.data
+          ? await attachPolicyFileAction(record.id, staged.data.id, kind)
+          : { ok: false as const, error: staged.error, data: undefined }
+      toast.dismiss(progress)
+      if (attached.ok && attached.data) {
+        record = attached.data
       } else {
-        // The policy is already saved, so keep it and let the user retry from Softcopy.
-        toast.error(`Softcopy ${file.name} gagal diunggah`, {
-          description: uploaded.error,
+        toast.error(`${label} ${picked.name} gagal diunggah`, {
+          description: attached.error,
         })
       }
     }
@@ -782,46 +807,66 @@ export function PolicyForm({
 
         <FieldSeparator />
 
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">Softcopy Polis</p>
-          {policy?.files.length ? (
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="text-sm font-medium">Berkas Polis</p>
             <p className="text-xs text-muted-foreground">
-              Versi terakhir v{policy.files[policy.files.length - 1].version} ·{" "}
-              {policy.files[policy.files.length - 1].fileName} ·{" "}
-              {dateShort(policy.files[policy.files.length - 1].uploadedAt)}.
-              File baru disimpan sebagai versi berikutnya.
+              {POLICY_FILE_HINT} File baru disimpan sebagai versi berikutnya.
             </p>
-          ) : null}
-          <label className="flex w-fit cursor-pointer items-center gap-2 rounded-lg has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/30">
-            <input
-              type="file"
-              accept={UPLOAD_ACCEPT}
-              className="sr-only"
-              onChange={(e) => {
-                const picked = e.target.files?.[0] ?? null
-                const problem = picked ? uploadProblem(picked) : null
-                if (problem) {
-                  toast.error(problem, { description: picked?.name })
-                  e.target.value = ""
-                  return
-                }
-                setFile(picked)
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              render={<span />}
-              nativeButton={false}
-            >
-              <FileUp data-icon="inline-start" />
-              {file ? "Ganti file" : "Pilih file PDF"}
-            </Button>
-            <span className="max-w-72 truncate text-xs text-muted-foreground">
-              {file ? file.name : "Belum ada file dipilih"}
-            </span>
-          </label>
+          </div>
+          {POLICY_FILE_KINDS.map(({ kind, label }) => {
+            const picked = pickedFiles[kind]
+            const latest = policy ? latestPolicyFile(policy.files, kind) : undefined
+            return (
+              <div
+                key={kind}
+                className="grid grid-cols-1 gap-1 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-3"
+              >
+                <p className="text-sm sm:pt-1.5">{label}</p>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <label className="flex w-fit max-w-full cursor-pointer items-center gap-2 rounded-lg has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/30">
+                    <input
+                      type="file"
+                      accept={UPLOAD_ACCEPT}
+                      className="sr-only"
+                      aria-label={`Pilih file ${label}`}
+                      onChange={(e) => {
+                        const next = e.target.files?.[0] ?? null
+                        const problem = next
+                          ? uploadProblem(next, MAX_POLICY_FILE_BYTES)
+                          : null
+                        if (problem) {
+                          toast.error(problem, { description: next?.name })
+                          e.target.value = ""
+                          return
+                        }
+                        setPickedFiles((f) => ({ ...f, [kind]: next ?? undefined }))
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      render={<span />}
+                      nativeButton={false}
+                    >
+                      <FileUp data-icon="inline-start" />
+                      {picked ? "Ganti file" : "Pilih file"}
+                    </Button>
+                    <span className="min-w-0 truncate text-xs text-muted-foreground">
+                      {picked ? picked.name : "Belum ada file dipilih"}
+                    </span>
+                  </label>
+                  {latest ? (
+                    <p className="truncate text-xs text-muted-foreground">
+                      Tersimpan v{latest.version} · {latest.fileName} ·{" "}
+                      {dateShort(latest.uploadedAt)}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </FieldGroup>
     </FormDrawer>

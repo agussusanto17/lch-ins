@@ -18,7 +18,7 @@ import {
   type PolicyRecord,
 } from "@/lib/server/policies"
 import { requireAccess, requireManage } from "@/lib/server/session"
-import { saveUploadedFile } from "@/lib/server/stored-files"
+import type { PolicyFileKind } from "@/lib/data/types"
 import { parentPolicyIssue } from "@/lib/policy-parent"
 
 export interface ActionResponse<T = unknown> {
@@ -161,22 +161,30 @@ export async function deletePolicyAction(id: string): Promise<ActionResponse<voi
   }
 }
 
-export async function uploadPolicyFileAction(
+const policyFileKindSchema = z.enum(["Policy", "PremiumNote", "CommissionNote"])
+
+/**
+ * Tautkan berkas polis yang sudah diunggah per potongan (lib/upload-client.ts)
+ * sebagai versi berikutnya dari jenisnya: Polis, Premium Note, atau
+ * Commission Note. Berkas sampai 25 MB tidak muat dalam satu request Vercel,
+ * jadi isinya tidak dikirim lewat action ini.
+ */
+export async function attachPolicyFileAction(
   id: string,
-  formData: FormData
+  fileId: string,
+  kind: PolicyFileKind
 ): Promise<ActionResponse<PolicyRecord>> {
   try {
     const user = await requireManage("/policies")
     const policyId = policyIdSchema.safeParse(id)
     if (!policyId.success) return { ok: false, error: "ID polis tidak valid" }
-    const file = formData.get("file")
-    if (!(file instanceof File)) return { ok: false, error: "File tidak ditemukan." }
-    const stored = await saveUploadedFile(file, "policy_file", user.id)
-    const data = await addPolicyFile(policyId.data, stored.id, user.id)
+    const fileKind = policyFileKindSchema.safeParse(kind)
+    if (!fileKind.success) return { ok: false, error: "Jenis berkas polis tidak dikenal" }
+    const data = await addPolicyFile(policyId.data, fileId, user.id, fileKind.data)
     revalidatePath("/policies")
     return { ok: true, data }
   } catch (err) {
-    return fail(err, "Gagal mengunggah softcopy polis")
+    return fail(err, "Gagal menyimpan berkas polis")
   }
 }
 

@@ -52,7 +52,10 @@ export async function GET(
     return new Response("Akses ditolak.", { status: 403 })
   }
 
-  return new Response(file.data, {
+  // Isi dari database dikirim sebagai stream: Vercel menolak response biasa
+  // di atas 4,5 MB, sedangkan berkas polis boleh sampai 25 MB.
+  const body = file.data instanceof Uint8Array ? streamBytes(file.data) : file.data
+  return new Response(body, {
     headers: {
       "Content-Type": file.contentType,
       "Content-Length": String(file.sizeBytes),
@@ -64,6 +67,22 @@ export async function GET(
       // Berkas KYC berisi data pribadi, jadi tidak disimpan di cache.
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
+    },
+  })
+}
+
+/** Kirim isi berkas per 1 MB. */
+function streamBytes(bytes: Uint8Array) {
+  const CHUNK = 1024 * 1024
+  let offset = 0
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (offset >= bytes.byteLength) {
+        controller.close()
+        return
+      }
+      controller.enqueue(bytes.subarray(offset, offset + CHUNK))
+      offset += CHUNK
     },
   })
 }

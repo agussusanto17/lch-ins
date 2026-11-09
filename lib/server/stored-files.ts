@@ -14,16 +14,11 @@ import {
   objectStorageEnabled,
   putObject,
 } from "@/lib/server/object-storage"
-import { MAX_UPLOAD_BYTES } from "@/lib/uploads"
+import { maxUploadBytes, sizeLimitMessage, type FilePurpose } from "@/lib/uploads"
+
+export type { FilePurpose }
 
 type Tx = Prisma.TransactionClient
-
-/** Pemakaian berkas. Menentukan menu yang hak aksesnya dipakai saat dibuka. */
-export type FilePurpose =
-  | "client_document"
-  | "claim_document"
-  | "policy_file"
-  | "slip_attachment"
 
 const PURPOSE_MENU: Record<FilePurpose, string> = {
   client_document: "/marketing",
@@ -86,11 +81,37 @@ export async function saveUploadedFile(
   userId: string
 ) {
   if (file.size === 0) throw new Error("File kosong.")
-  if (file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("Ukuran file maksimal 4 MB.")
+  if (file.size > maxUploadBytes(purpose)) {
+    throw new Error(sizeLimitMessage(maxUploadBytes(purpose)))
+  }
+  return saveUploadedBytes({
+    data: new Uint8Array(await file.arrayBuffer()),
+    fileName: file.name,
+    purpose,
+    userId,
+  })
+}
+
+/**
+ * Simpan isi berkas yang sudah ada di memori, misalnya hasil gabungan potongan
+ * unggahan besar. Pemeriksaannya sama dengan saveUploadedFile.
+ */
+export async function saveUploadedBytes({
+  data,
+  fileName,
+  purpose,
+  userId,
+}: {
+  data: Uint8Array<ArrayBuffer>
+  fileName: string
+  purpose: FilePurpose
+  userId: string
+}) {
+  if (data.byteLength === 0) throw new Error("File kosong.")
+  if (data.byteLength > maxUploadBytes(purpose)) {
+    throw new Error(sizeLimitMessage(maxUploadBytes(purpose)))
   }
 
-  const data = new Uint8Array(await file.arrayBuffer())
   // Jenis dibaca dari isi file. Hanya jenis yang tidak bisa menjalankan skrip
   // yang diterima, karena berkas dibuka dari domain aplikasi.
   const contentType = detectContentType(data)
@@ -103,7 +124,7 @@ export async function saveUploadedFile(
   }
 
   const meta = {
-    fileName: cleanFileName(file.name),
+    fileName: cleanFileName(fileName),
     contentType,
     sizeBytes: data.byteLength,
     purpose,
