@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `feat/toc-hull-war-risks`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#184](https://github.com/agussusanto17/lch-ins/pull/184)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
