@@ -1803,68 +1803,73 @@ export function SignatureGrid({
 }
 
 /**
- * Satu blok tanda tangan per asuransi di security panel, berselang kiri-kanan
- * mengikuti urutan panel — leader di kiri atas. Instruksi LCH 29 Oktober 2026:
- * "di ttd nya ada kiri kanan kiri kanan ttd sesuai yang diinput."
+ * Tanda tangan Draft Cover Note mengikuti contoh CN LCH (Agus, 9 November
+ * 2026; CN 728 co-insurance dan CN 743 satu asuransi): judul SIGNED, tempat
+ * dan tanggal tepat di bawahnya, lalu satu blok per asuransi berisi nama,
+ * ruang tanda tangan, dan "( …… )". Co-insurance dicetak kiri-kanan sesuai
+ * urutan panel dengan "(25% share as Leader)" di bawah nama; satu asuransi
+ * cukup namanya, karena share 100% sudah tertulis di SECURITY.
  *
- * Panel yang masih kosong tetap mendapat satu blok tanpa nama, supaya dokumen
- * draft tetap punya tempat tanda tangan.
+ * Cover Note ditandatangani bersama semua asuransi. Closing Instruction tidak:
+ * dokumen itu dikirim ke masing-masing asuransi, jadi cukup satu kolom
+ * penerimaan di sebelah blok LCH.
  */
-export function InsurerSignatureGrid({
+export function CoverNoteSignature({
   slip,
-  caption,
+  place,
 }: {
   slip: PlacingSlip
-  caption?: string
+  place: string
 }) {
-  const panel = slip.securityPanel ?? []
+  const panel = (slip.securityPanel ?? []).filter((p) => p.insurer)
+  const shared = panel.length > 1
   return (
-    <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 text-[13px] sm:grid-cols-2">
-      {panel.length === 0 ? (
-        <InsurerSignature caption={caption} />
-      ) : (
-        panel.map((p) => (
-          <InsurerSignature
-            key={p.id}
-            caption={caption}
-            party={p}
-            shared={panel.length > 1}
-          />
-        ))
-      )}
+    <div className="mt-8 text-[13px]">
+      {/* Judul dan tanggal tidak terpisah halaman dari baris pertama blok. */}
+      <div className="break-after-avoid">
+        <SectionHeading>SIGNED</SectionHeading>
+        <p>{place}</p>
+      </div>
+      <div className="mt-5 grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2">
+        {panel.length ? (
+          panel.map((p) => (
+            <CoverNoteSignatory key={p.id} party={p} shared={shared} />
+          ))
+        ) : (
+          <CoverNoteSignatory />
+        )}
+      </div>
     </div>
   )
 }
 
-function InsurerSignature({
-  caption,
+/** Nama asuransi di blok tanda tangan: huruf besar seperti contoh CN, kecuali "Tbk". */
+function signatoryName(insurer: string) {
+  return insurer.toUpperCase().replace(/\bTBK\b/g, "Tbk")
+}
+
+function CoverNoteSignatory({
   party,
   shared,
 }: {
-  caption?: string
   party?: SecurityPanelRow
-  /** Lebih dari satu asuransi; hanya saat itu peran dan share dicetak. */
+  /** Co-insurance: share dan peran dicetak di bawah nama. */
   shared?: boolean
 }) {
   return (
     <div className="avoid-break">
-      {caption ? (
-        <p className="mb-14 text-muted-foreground">{caption}</p>
+      {party ? (
+        <p className="font-bold">{signatoryName(party.insurer)}</p>
       ) : (
-        <div className="h-16" />
+        <p className="font-bold text-muted-foreground">Nama Perusahaan Asuransi</p>
       )}
-      <p className="border-t pt-1 font-bold">
-        {party?.insurer ?? "Nama Perusahaan Asuransi"}
-      </p>
-      <p className="text-xs text-muted-foreground">Authorized Signatory</p>
       {party && shared ? (
-        <p className="text-xs text-muted-foreground">
-          {party.role} · {num(party.share, 2)}%
+        <p className="text-xs italic">
+          ({num(party.share, 0, 2)}% share {party.role.replace(/^As /, "as ")})
         </p>
       ) : null}
-      <p className="mt-2 text-xs text-muted-foreground">
-        Tanggal: ...................
-      </p>
+      <div className="h-16" />
+      <p>( …………………………………… )</p>
     </div>
   )
 }

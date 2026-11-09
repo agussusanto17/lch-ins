@@ -10,11 +10,11 @@ import {
   ClauseWordingAppendix,
   ClausesBlock,
   CoverageBlock,
+  CoverNoteSignature,
   DeductibleBlock,
   DetailTable,
   DocTitle,
   ExclusionsBlock,
-  InsurerSignatureGrid,
   InterestBlock,
   LocationPremiumAttached,
   LocationScheduleAppendix,
@@ -70,6 +70,12 @@ function useSlip({ id, initial }: DocProps) {
         attachments: initial?.attachments ?? stored.attachments,
       }
     : initial
+}
+
+/** Asuransi penerima Closing Instruction: namanya hanya bila panel berisi satu asuransi. */
+function acceptingInsurer(slip: PlacingSlip) {
+  const insurers = (slip.securityPanel ?? []).filter((p) => p.insurer)
+  return insurers.length === 1 ? insurers[0].insurer : null
 }
 
 function Missing() {
@@ -268,9 +274,7 @@ export function CoverNoteDocument(props: DocProps) {
         </>
       ) : null}
 
-      <SectionHeading>SIGNED</SectionHeading>
-      <InsurerSignatureGrid slip={slip} />
-      <p className="mt-8 text-[13px]">Jakarta, {dateEn(slip.updatedAt)}</p>
+      <CoverNoteSignature slip={slip} place={`Jakarta, ${dateEn(slip.updatedAt)}`} />
 
       <AttachmentList slip={slip} />
 
@@ -332,10 +336,19 @@ export function ClosingInstructionDocument(props: DocProps) {
         </>
       ) : null}
 
-      <p className="mt-8 mb-1 text-[13px]">
+      <p className="mt-8 mb-1 break-after-avoid text-[13px]">
         Jakarta, {dateEn(slip.updatedAt)}
       </p>
-      <div className="avoid-break mt-4 grid grid-cols-1 gap-x-8 text-[13px] sm:grid-cols-2">
+      {/*
+       * Closing Instruction dikirim ke masing-masing asuransi, jadi tanda
+       * tangan asuransi cukup satu kolom di kanan blok LCH, seperti CI LCH
+       * yang sudah ditandatangani (SISKA RAHARJA, TRUCKINDO). Tidak ada blok
+       * per asuransi seperti Cover Note (Agus, 9 November 2026). Nama asuransi
+       * dicetak bila hanya satu; co-insurance dibiarkan kosong untuk cap
+       * asuransi penerima. Tanggal diisi asuransi saat menerima, seperti
+       * "Date" di CI SISKA RAHARJA.
+       */}
+      <div className="avoid-break mt-4 grid grid-cols-1 gap-x-8 gap-y-10 text-[13px] sm:grid-cols-2">
         <div>
           <p className="mb-14 text-muted-foreground">
             Disiapkan oleh / Prepared by,
@@ -343,18 +356,17 @@ export function ClosingInstructionDocument(props: DocProps) {
           <p className="border-t pt-1 font-bold">PT. LCH Insurance Brokers</p>
           <p className="text-xs text-muted-foreground">Authorized Signatory</p>
         </div>
+        <div>
+          <p className="mb-14 text-muted-foreground">
+            Diterima &amp; Ditandatangani / Accepted &amp; Signed by,
+          </p>
+          <p className="border-t pt-1 font-bold">{acceptingInsurer(slip) ?? " "}</p>
+          <p className="text-xs text-muted-foreground">Authorized Signatory</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Tanggal: ...................
+          </p>
+        </div>
       </div>
-
-      {/*
-       * Penerimaan per asuransi menggantikan satu blok "Nama Perusahaan
-       * Asuransi" yang kosong; kalau dua-duanya dipasang, tanda tangan
-       * asuransi muncul dua kali.
-       */}
-      <SectionHeading>SIGNED</SectionHeading>
-      <InsurerSignatureGrid
-        slip={slip}
-        caption="Diterima & Ditandatangani / Accepted & Signed by,"
-      />
 
       <AttachmentList slip={slip} />
 
