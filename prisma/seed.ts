@@ -997,6 +997,33 @@ async function seedClauses() {
 }
 
 /**
+ * Judul klausul dari contoh slip LCH yang belum ada di pustaka, tanpa wording
+ * (jawaban Harry, 9 November 2026: wording dilengkapi LCH di Master Clauses).
+ * Daftarnya sama dengan migrasi 20261109180000_impor_judul_klausul_contoh_slip,
+ * supaya database baru juga memilikinya.
+ */
+async function seedSampleClauseTitles() {
+  const rows = readCsv("judul-klausul-contoh-slip.csv")
+  const [cobs, covers] = await Promise.all([
+    prisma.classOfBusiness.findMany({ select: { id: true, code: true } }),
+    prisma.coverType.findMany({ select: { id: true, code: true } }),
+  ])
+  const cobId = new Map(cobs.map((c) => [c.code, c.id]))
+  const coverTypeId = new Map(covers.map((c) => [c.code, c.id]))
+  const data = rows
+    .filter((r) => r.judul_klausul?.trim() && cobId.has(r.kode_cob))
+    .map((r) => ({
+      title: r.judul_klausul.trim(),
+      sourceGroup: r.kelompok.trim(),
+      wordingHtml: "",
+      cobId: cobId.get(r.kode_cob) ?? null,
+      coverTypeId: r.kode_toc ? (coverTypeId.get(r.kode_toc) ?? null) : null,
+    }))
+  const { count } = await prisma.clause.createMany({ data, skipDuplicates: true })
+  return { n: data.length, created: count }
+}
+
+/**
  * Akun awal, satu per role, supaya sistem bisa dicoba sebelum LCH mengirim
  * daftar pengguna sungguhan. Ini data contoh dan harus diganti.
  *
@@ -1610,6 +1637,10 @@ async function main() {
   if (clauses) {
     console.log(
       `  clauses              ${clauses.n} (${clauses.created} baru, sisanya sudah ada)`
+    )
+    const titles = await seedSampleClauseTitles()
+    console.log(
+      `  clause_titles        ${titles.n} (${titles.created} baru, judul contoh slip tanpa wording)`
     )
   }
 

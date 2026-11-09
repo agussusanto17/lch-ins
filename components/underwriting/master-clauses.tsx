@@ -49,7 +49,13 @@ export interface MasterClausesProps {
   }
   groups: string[]
   cobs: { id: string; name: string; code: string }[]
-  filter: { query: string; sourceGroup: string; cobId: string; page: number }
+  filter: {
+    query: string
+    sourceGroup: string
+    cobId: string
+    emptyWording: boolean
+    page: number
+  }
   canManage?: boolean
 }
 
@@ -97,6 +103,11 @@ export function MasterClauses({
   const cobItems = [
     { label: "Semua class", value: ALL },
     ...cobs.map((c) => ({ label: c.name, value: c.id })),
+  ]
+  // Judul klausul tanpa wording, misalnya hasil impor contoh slip, dilengkapi LCH.
+  const wordingItems = [
+    { label: "Semua wording", value: ALL },
+    { label: "Wording belum diisi", value: "kosong" },
   ]
 
   function actionsFor(c: ClauseListItem): RowAction[] {
@@ -160,6 +171,25 @@ export function MasterClauses({
               </SelectGroup>
             </SelectContent>
           </Select>
+
+          <Select
+            items={wordingItems}
+            value={filter.emptyWording ? "kosong" : ALL}
+            onValueChange={(v) => push({ wording: v === ALL ? "" : (v as string) })}
+          >
+            <SelectTrigger size="sm" className="w-[190px]" aria-label="Filter wording">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {wordingItems.map((i) => (
+                  <SelectItem key={i.value} value={i.value}>
+                    {i.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
 
         {canManageEffective ? (
@@ -205,9 +235,15 @@ export function MasterClauses({
                         </Badge>
                       ) : null}
                     </p>
-                    <p className="line-clamp-2 text-xs text-muted-foreground">
-                      {wordingText(c.wordingHtml)}
-                    </p>
+                    {wordingText(c.wordingHtml) ? (
+                      <p className="line-clamp-2 text-xs text-muted-foreground">
+                        {wordingText(c.wordingHtml)}
+                      </p>
+                    ) : (
+                      <p className="text-xs italic text-muted-foreground">
+                        Wording belum diisi, hanya judul yang tercetak.
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell>
                     {c.sourceGroup ? (
