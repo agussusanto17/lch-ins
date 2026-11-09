@@ -1513,18 +1513,24 @@ export function VehiclePremiumAttached({ slip }: { slip: PlacingSlip }) {
  * dengan tabel CI LCH Truckindo (Agus, 9 November 2026). Kolom yang
  * berkaitan ditumpuk supaya muat di A4 portrait: Chrome tetap memakai lebar
  * portrait untuk isi halaman landscape, jadi tabel lebar akan terpotong.
+ *
+ * Lebar kolom mengikuti isi, dan satu angka tidak pernah dipecah ke dua baris;
+ * kolom teks yang menyesuaikan. Dengan lebar persen tetap, Sum Insured
+ * 250.000.000 sempat tercetak "250.000.00" dengan "0" di baris berikutnya
+ * (temuan SIT-089, 9 November 2026).
  */
 export function VehicleScheduleAppendix({ slip }: { slip: PlacingSlip }) {
   if (!isMultiVehicle(slip)) return null
   const { extensionLabels, rows } = vehicleSchedule(slip)
   const currency = slip.currency || "IDR"
+  const nowrap = (text: string) => <span className="whitespace-nowrap">{text}</span>
   // Angka bulat tanpa ",00" seperti tabel CI Truckindo, supaya muat di A4 portrait.
-  const amount = (value: number) => num(value, 0, 2)
+  const amount = (value: number) => nowrap(num(value, 0, 2))
   const rate = (value: number | null | undefined) =>
-    value == null ? "—" : `${rateText(value)}%`
+    value == null ? "—" : nowrap(`${rateText(value)}%`)
   const heavy = /heavy/i.test(slip.typeOfCover || "")
   const th = "border px-1 py-1.5 text-left align-bottom font-semibold"
-  const td = "border px-1 py-1 align-top break-words"
+  const td = "border px-1 py-1 align-top"
   const right = "text-right tabular"
   const hasExt = extensionLabels.length > 0
   const hasTpl = rows.some((r) => r.tplLimit || r.tplPremium)
@@ -1534,21 +1540,10 @@ export function VehicleScheduleAppendix({ slip }: { slip: PlacingSlip }) {
   return (
     <section className="print-break mt-10">
       <AppendixTitle slip={slip} title={heavy ? "DAFTAR UNIT ALAT BERAT" : "DAFTAR UNIT KENDARAAN"} />
-      <table className="w-full table-fixed border-collapse text-[9px] leading-snug">
-        <colgroup>
-          <col className="w-[3%]" />
-          <col className="w-[16%]" />
-          <col className="w-[16%]" />
-          <col className="w-[10%]" />
-          <col className="w-[12%]" />
-          {hasExt ? <col className="w-[15%]" /> : null}
-          {hasTpl ? <col className="w-[8%]" /> : null}
-          {hasPa ? <col className="w-[10%]" /> : null}
-          <col className="w-[10%]" />
-        </colgroup>
+      <table className="w-full border-collapse text-[9px] leading-snug">
         <thead className="bg-muted/60">
           <tr>
-            <th className={th}>No</th>
+            <th className={cn(th, "w-6")}>No</th>
             <th className={th}>Merk / Type / Model<span className={muted}>Tahun · Warna · No. Polisi</span></th>
             <th className={th}>No. Rangka<span className={muted}>No. Mesin</span></th>
             <th className={cn(th, "text-right")}>Sum Insured ({currency})</th>
