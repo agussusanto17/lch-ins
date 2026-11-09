@@ -48,6 +48,7 @@ import {
 } from "@/lib/form-options"
 import { dateShort, money } from "@/lib/format"
 import { openCoverRateText, usesOpenCover } from "@/lib/open-cover"
+import { parentPolicyIssue, parentPolicyLabel } from "@/lib/policy-parent"
 import { rosterPolicy } from "@/lib/policy-participants"
 import type { ClientOption } from "@/lib/server/clients"
 import type { PolicyFormOptions, PolicyInput } from "@/lib/server/policies"
@@ -64,6 +65,7 @@ function emptyDraft(): Draft {
     clientId: null,
     placingSlipId: null,
     parentPolicyId: null,
+    previousPolicyNo: null,
     insuredName: "",
     insurer: "",
     insurers: [],
@@ -97,6 +99,7 @@ const schema = z
     policyNo: requiredText("No. polis"),
     type: z.enum(POLICY_TYPES as [PolicyType, ...PolicyType[]]),
     parentPolicyId: z.string().nullable(),
+    previousPolicyNo: z.string().nullable().optional(),
     clientId: z
       .string({ error: "Klien wajib dipilih" })
       .min(1, "Klien wajib dipilih"),
@@ -128,12 +131,10 @@ const schema = z
         message: "Tanggal berakhir tidak boleh sebelum tanggal mulai",
       })
     }
-    if (POLICY_TYPES_WITH_PARENT.includes(d.type) && !d.parentPolicyId) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["parentPolicyId"],
-        message: `Polis induk wajib dipilih untuk ${d.type}`,
-      })
+    // Renewal boleh tanpa polis di sistem asal nomornya diisi.
+    const parentIssue = parentPolicyIssue(d)
+    if (parentIssue) {
+      ctx.addIssue({ code: "custom", path: ["parentPolicyId"], message: parentIssue })
     }
     if ((d.type === "Baru" || d.type === "Renewal") && d.premium <= 0) {
       ctx.addIssue({
@@ -205,6 +206,17 @@ export function PolicyForm({
   const [removedParticipantIds, setRemovedParticipantIds] = React.useState<string[]>([])
 
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
+  // Pesan polis rujukan dari simpan sebelumnya tidak berlaku lagi setelah
+  // tipe, polis rujukan, atau no. polis sebelumnya diubah.
+  const setParent = (patch: Partial<Draft>) => {
+    set(patch)
+    setErrors((e) => {
+      if (!e.parentPolicyId) return e
+      const rest = { ...e }
+      delete rest.parentPolicyId
+      return rest
+    })
+  }
 
   const clientItems = clientOptions.map((c) => ({ label: c.name, value: c.id }))
   const clientOptionFor = (id: string | null) =>
@@ -328,9 +340,11 @@ export function PolicyForm({
   function fromParent(parentId: string | null) {
     const parent = parentId ? policies.find((p) => p.id === parentId) : null
     if (!parent) {
-      set({ parentPolicyId: null })
+      setParent({ parentPolicyId: null })
       return
     }
+    // Polis sebelumnya dari sistem menggantikan nomor yang diketik.
+    setParent({ previousPolicyNo: null })
     // Polis dari slip hanya menautkan polis induk; datanya tetap dari slip.
     if (draft.placingSlipId) {
       set({ parentPolicyId: parent.id })
@@ -496,21 +510,22 @@ export function PolicyForm({
               draft.type
             )}
             value={draft.type}
-            onValueChange={(v) => set({ type: v as PolicyType })}
+            onValueChange={(v) => setParent({ type: v as PolicyType })}
             error={errors.type}
             description={
               draft.type !== "Endorsement"
                 ? undefined
                 : policy?.endorsementSeq && policy.parentPolicyId === draft.parentPolicyId
-                  ? `Endorsement ke-${policy.endorsementSeq} pada polis induk.`
+                  ? `Endorsement ke-${policy.endorsementSeq} pada polis yang di-endorse.`
                   : "Nomor urut endorsement diisi otomatis saat disimpan."
             }
           />
           {needsParent ? (
             <SearchSelect
               className="sm:col-span-2"
-              label="Polis Induk"
-              required
+              label={parentPolicyLabel(draft.type)}
+              // Renewal boleh diganti nomor polis sebelumnya di bawah.
+              required={draft.type !== "Renewal"}
               items={parentItems}
               value={draft.parentPolicyId}
               onValueChange={fromParent}
@@ -518,9 +533,19 @@ export function PolicyForm({
               error={errors.parentPolicyId}
               description={
                 draft.type === "Renewal"
-                  ? "Periode baru melanjutkan tanggal berakhir polis induk."
-                  : "Tertanggung, asuransi, dan share mengikuti polis induk."
+                  ? "Data dan periode baru mengikuti polis sebelumnya. Belum ada di sistem? Isi nomornya di bawah."
+                  : "Tertanggung, asuransi, dan share mengikuti polis ini."
               }
+            />
+          ) : null}
+          {draft.type === "Renewal" && !draft.parentPolicyId ? (
+            <TextField
+              className="sm:col-span-2"
+              label="No. Polis Sebelumnya"
+              value={draft.previousPolicyNo ?? ""}
+              onChange={(v) => setParent({ previousPolicyNo: v })}
+              placeholder="PAR/2025/JKT/…"
+              description="Isi bila polis sebelumnya belum ada di sistem. Data polis diisi manual."
             />
           ) : null}
         </div>

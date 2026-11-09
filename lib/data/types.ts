@@ -468,6 +468,11 @@ export interface Policy {
   placingSlipNo?: string | null
   /** Polis induk untuk renewal, endorsement, dan pembatalan. */
   parentPolicyId: string | null
+  /**
+   * No. polis sebelumnya untuk renewal yang polis lamanya belum ada di sistem.
+   * Kosong bila polis sebelumnya dipilih lewat parentPolicyId.
+   */
+  previousPolicyNo?: string | null
   insuredName: string
   /** Asuransi leader. Pembagian share lengkap ada di `insurers`. */
   insurer: string

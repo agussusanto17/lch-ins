@@ -68,6 +68,7 @@ import { addMonths } from "@/lib/date"
 import type { ExportSpec } from "@/lib/export"
 import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
+import { parentPolicyNote } from "@/lib/policy-parent"
 import type { PolicyFormOptions } from "@/lib/server/policies"
 import { store } from "@/lib/store"
 
@@ -142,6 +143,13 @@ export function PolicyDatabase({
   const rows = tab === "all" ? base : base.filter((p) => p.type === tab)
   const totalPremium = rows.reduce((a, p) => a + premiumIdr(p), 0)
   const policyNoById = new Map(policies.map((p) => [p.id, p.policyNo]))
+  // "renewal dari …", "endorsement …", atau "pembatalan …" di bawah no. polis.
+  const parentNote = (p: Policy) =>
+    parentPolicyNote({
+      type: p.type,
+      previousPolicyNo: p.previousPolicyNo,
+      parentPolicyNo: p.parentPolicyId ? (policyNoById.get(p.parentPolicyId) ?? "—") : null,
+    })
 
   const {
     page,
@@ -274,9 +282,9 @@ export function PolicyDatabase({
       { header: "Tipe", value: (p) => p.type },
       { header: "Endorsement Ke", value: (p) => p.endorsementSeq ?? "" },
       {
-        header: "Polis Induk",
+        header: "Polis Sebelumnya / Induk",
         value: (p) =>
-          p.parentPolicyId ? policyNoById.get(p.parentPolicyId) : "",
+          (p.parentPolicyId ? policyNoById.get(p.parentPolicyId) : p.previousPolicyNo) ?? "",
       },
       { header: "Tertanggung", value: (p) => p.insuredName, width: 36 },
       { header: "Asuransi", value: (p) => p.insurer, width: 36 },
@@ -434,10 +442,9 @@ export function PolicyDatabase({
                           </TableCell>
                           <TableCell className="tabular font-medium">
                             {p.policyNo}
-                            {p.parentPolicyId ? (
+                            {parentNote(p) ? (
                               <span className="block text-xs font-normal text-muted-foreground">
-                                induk{" "}
-                                {policyNoById.get(p.parentPolicyId) ?? "—"}
+                                {parentNote(p)}
                               </span>
                             ) : null}
                           </TableCell>

@@ -1468,6 +1468,10 @@ model Policy {
   policyTypeId        String   @map("policy_type_id") @db.Uuid
   /// Polis induk untuk renewal, endorsement, dan pembatalan.
   parentPolicyId      String?  @map("parent_policy_id") @db.Uuid
+  /// No. polis sebelumnya untuk renewal yang polis lamanya belum ada di sistem,
+  /// karena sistem baru dipakai sejak 2026 (Agus, 9 November 2026). Kosong bila
+  /// polis sebelumnya dipilih lewat parent_policy_id.
+  previousPolicyNo    String?  @map("previous_policy_no")
   /// Nomor urut endorsement pada polis induk, diisi server saat polis endorsement disimpan.
   endorsementSeq      Int?     @map("endorsement_seq")
   cobOjkClassId       String?  @map("cob_ojk_class_id") @db.Uuid
