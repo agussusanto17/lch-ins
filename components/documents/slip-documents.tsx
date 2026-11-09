@@ -36,7 +36,7 @@ import { derivedDocNumber } from "@/components/underwriting/slip-model"
 import { Button } from "@/components/ui/button"
 import { rateUnitFor } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data"
-import { dateLong } from "@/lib/format"
+import { dateEn } from "@/lib/format"
 import { isMultiLocation } from "@/lib/slip-locations"
 import { isMultiItem } from "@/lib/slip-items"
 import { usesOpenCover } from "@/lib/open-cover"
@@ -155,7 +155,7 @@ export function PlacingSlipDocument(props: DocProps) {
       <BrokerageBlock slip={slip} />
 
       <SignatureGrid
-        place={`Jakarta, ${dateLong(slip.updatedAt)}`}
+        place={`Jakarta, ${dateEn(slip.updatedAt)}`}
         confirmationTitle="KONFIRMASI PENANGGUNG / INSURER CONFIRMATION"
         confirmationParty="Nama Perusahaan Asuransi & Authorized Signatory"
       />
@@ -206,7 +206,7 @@ export function QuotationSlipDocument(props: DocProps) {
       <SecurityPanelBlock slip={slip} />
 
       <SignatureGrid
-        place={`Jakarta, ${dateLong(slip.updatedAt)}`}
+        place={`Jakarta, ${dateEn(slip.updatedAt)}`}
         confirmationTitle="KONFIRMASI TERTANGGUNG / INSURED CONFIRMATION"
       />
 
@@ -253,7 +253,7 @@ export function CoverNoteDocument(props: DocProps) {
 
       <SectionHeading>SIGNED</SectionHeading>
       <InsurerSignatureGrid slip={slip} />
-      <p className="mt-8 text-[13px]">Jakarta, {dateLong(slip.updatedAt)}</p>
+      <p className="mt-8 text-[13px]">Jakarta, {dateEn(slip.updatedAt)}</p>
 
       <AttachmentList slip={slip} />
 
@@ -308,7 +308,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       ) : null}
 
       <p className="mt-8 mb-1 text-[13px]">
-        Jakarta, {dateLong(slip.updatedAt)}
+        Jakarta, {dateEn(slip.updatedAt)}
       </p>
       <div className="avoid-break mt-4 grid grid-cols-1 gap-x-8 text-[13px] sm:grid-cols-2">
         <div>
