@@ -25,6 +25,7 @@ import { requireManage } from "@/lib/server/session"
 import {
   ATTACHMENT_LIMITS,
   deleteSlipAttachment,
+  setSlipAttachmentPrint,
   uploadSlipAttachment,
 } from "@/lib/server/slip-files"
 import { previewDocumentNumber } from "@/server/services/number-generator"
@@ -310,6 +311,25 @@ export async function deleteSlipAttachmentAction(
   } catch (err: unknown) {
     unstable_rethrow(err)
     return { ok: false, error: err instanceof Error ? err.message : "Gagal menghapus lampiran." }
+  }
+}
+
+/** Isi lampiran ikut tercetak di dokumen slip atau hanya namanya. */
+export async function setSlipAttachmentPrintAction(
+  attachmentId: string,
+  printContent: boolean
+): Promise<ActionResponse<SlipAttachment[]>> {
+  try {
+    const user = await requireManage("/underwriting")
+    if (!attachmentIdSchema.safeParse(attachmentId).success || typeof printContent !== "boolean") {
+      return { ok: false, error: "Lampiran tidak valid." }
+    }
+    const { slipId, attachments } = await setSlipAttachmentPrint(attachmentId, printContent, user.id)
+    revalidateUnderwritingPaths(slipId)
+    return { ok: true, data: attachments }
+  } catch (err: unknown) {
+    unstable_rethrow(err)
+    return { ok: false, error: err instanceof Error ? err.message : "Gagal mengubah lampiran." }
   }
 }
 

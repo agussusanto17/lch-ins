@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
+import { AttachmentContents } from "@/components/documents/attachment-contents"
 import { DocumentShell } from "@/components/documents/document-shell"
 import {
   BrokerageBlock,
@@ -35,6 +36,7 @@ import { Letterhead } from "@/components/documents/letterhead"
 import { derivedDocNumber } from "@/components/underwriting/slip-model"
 import { Button } from "@/components/ui/button"
 import { rateUnitFor } from "@/lib/calc"
+import type { AttachmentPrints } from "@/lib/attachment-print"
 import type { PlacingSlip } from "@/lib/data"
 import { dateLong } from "@/lib/format"
 import { isMultiLocation } from "@/lib/slip-locations"
@@ -48,7 +50,12 @@ import { useRecord } from "@/lib/store"
  * form langsung terlihat di dokumen. Data server dipakai sebagai cadangan.
  */
 
-type DocProps = { id: string; initial: PlacingSlip | null }
+type DocProps = {
+  id: string
+  initial: PlacingSlip | null
+  /** Isi lampiran yang dicetak di halaman akhir, dimuat server. */
+  prints?: AttachmentPrints
+}
 
 function useSlip({ id, initial }: DocProps) {
   const stored = useRecord("slips", id)
@@ -166,6 +173,7 @@ export function PlacingSlipDocument(props: DocProps) {
 
       <ClauseWordingAppendix slip={slip} />
 
+      <AttachmentContents slip={slip} prints={props.prints} />
     </DocumentShell>
   )
 }
@@ -216,6 +224,7 @@ export function QuotationSlipDocument(props: DocProps) {
 
       <ClauseWordingAppendix slip={slip} />
 
+      <AttachmentContents slip={slip} prints={props.prints} />
     </DocumentShell>
   )
 }
@@ -258,6 +267,8 @@ export function CoverNoteDocument(props: DocProps) {
       <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
+
+      <AttachmentContents slip={slip} prints={props.prints} />
     </DocumentShell>
   )
 }
@@ -334,6 +345,8 @@ export function ClosingInstructionDocument(props: DocProps) {
       <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
+
+      <AttachmentContents slip={slip} prints={props.prints} />
     </DocumentShell>
   )
 }

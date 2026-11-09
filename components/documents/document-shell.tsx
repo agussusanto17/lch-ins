@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSyncExternalStore } from "react"
-import { ArrowLeft, Printer, TriangleAlert } from "lucide-react"
+import { ArrowLeft, Loader2, Printer, TriangleAlert } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -11,6 +11,7 @@ import { LchLogo } from "@/components/documents/letterhead"
 import { PrintedAt } from "@/components/documents/printed-at"
 import { hasAppShellHistory } from "@/lib/app-shell-history"
 import { repeatsPrintHeaderFooter } from "@/lib/print-support"
+import { pendingPrintTasks, subscribePrintTasks } from "@/lib/print-tasks"
 
 const noSubscribe = () => () => {}
 
@@ -35,6 +36,9 @@ export function DocumentShell({
     () => repeatsPrintHeaderFooter(navigator.userAgent),
     () => true
   )
+  // Isi lampiran (gambar, halaman PDF) yang belum selesai dimuat belum ikut
+  // tercetak, jadi tombol cetak menunggu.
+  const pendingContent = useSyncExternalStore(subscribePrintTasks, pendingPrintTasks, () => 0)
 
   return (
     <div
@@ -68,9 +72,13 @@ export function DocumentShell({
               atau Edge supaya muncul di setiap halaman.
             </p>
           )}
-          <Button size="sm" onClick={() => window.print()}>
-            <Printer data-icon="inline-start" />
-            Print / Save PDF
+          <Button size="sm" disabled={pendingContent > 0} onClick={() => window.print()}>
+            {pendingContent > 0 ? (
+              <Loader2 data-icon="inline-start" className="animate-spin" />
+            ) : (
+              <Printer data-icon="inline-start" />
+            )}
+            {pendingContent > 0 ? "Menyiapkan lampiran…" : "Print / Save PDF"}
           </Button>
         </div>
       </div>
