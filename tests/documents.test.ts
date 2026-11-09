@@ -69,16 +69,23 @@ test("letterhead footer applies full-width bleed on screen and 18mm print paddin
   )
 })
 
-test("doc-blocks unbolds clause list titles when not inline and preserves bold in wording appendix", () => {
+test("doc-blocks prints clause list titles unbolded without wording and keeps bold titles in the wording appendix", () => {
   const docBlocks = fs.readFileSync(
     path.join(process.cwd(), "components/documents/doc-blocks.tsx"),
     "utf-8"
   )
 
-  // In ClausesBlock: clause items should be unbolded when !inline
+  // ClausesBlock: titles only, unbolded, in all four slip documents (Harry, 9 Nov 2026).
+  const start = docBlocks.indexOf("export function ClausesBlock")
+  const clausesBlock = docBlocks.slice(start, docBlocks.indexOf("\n}\n", start))
+  assert.ok(start >= 0, "ClausesBlock should exist")
   assert.ok(
-    docBlocks.includes('className={inline ? "font-semibold" : undefined}'),
-    "ClausesBlock should not apply font-semibold when not inline"
+    !clausesBlock.includes("font-semibold"),
+    "ClausesBlock should not bold clause titles"
+  )
+  assert.ok(
+    !clausesBlock.includes("dangerouslySetInnerHTML"),
+    "ClausesBlock should print titles only; wording belongs in the appendix"
   )
 
   // In ClauseWordingAppendix: titles remain font-semibold

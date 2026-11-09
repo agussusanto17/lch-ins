@@ -235,7 +235,7 @@ export function CoverNoteDocument(props: DocProps) {
       <InterestBlock slip={slip} />
       <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
-      <ClausesBlock slip={slip} inline />
+      <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
@@ -258,6 +258,8 @@ export function CoverNoteDocument(props: DocProps) {
       <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
+
+      <ClauseWordingAppendix slip={slip} />
     </DocumentShell>
   )
 }
@@ -289,7 +291,7 @@ export function ClosingInstructionDocument(props: DocProps) {
         </>
       ) : null}
 
-      <ClausesBlock slip={slip} inline />
+      <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
@@ -334,6 +336,8 @@ export function ClosingInstructionDocument(props: DocProps) {
       <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
+
+      <ClauseWordingAppendix slip={slip} />
     </DocumentShell>
   )
 }
