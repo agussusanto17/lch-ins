@@ -15,7 +15,8 @@ import {
   ExclusionsBlock,
   InsurerSignatureGrid,
   InterestBlock,
-  LocationPremiumSchedule,
+  LocationPremiumAttached,
+  LocationScheduleAppendix,
   ObjectPremiumSchedule,
   ParEqvetCalculationBlock,
   ParEqvetRateBlock,
@@ -29,7 +30,8 @@ import {
   SignatureGrid,
   isParEqvetSlip,
   premiumRows,
-  VehiclePremiumSchedule,
+  VehiclePremiumAttached,
+  VehicleScheduleAppendix,
 } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
 import { derivedDocNumber } from "@/components/underwriting/slip-model"
@@ -87,17 +89,15 @@ function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
   if (usesOpenCover(slip)) return <OpenCoverRateBlock slip={slip} />
   // Slip multi lokasi mencetak jadwal premi per lokasi saja (Opsi B); slip
   // satu lokasi tetap mencetak bagian RATE.
-  if (isMultiLocation(slip)) return <LocationPremiumSchedule slip={slip} />
-  // Slip multi kendaraan atau multi objek: jadwal premi per kendaraan atau
-  // objek, lalu diskon dan biaya.
+  // Banyak lokasi atau kendaraan: badan dokumen menulis "As Attached", jadwal
+  // premi dicetak di lampiran DAFTAR LOKASI atau DAFTAR UNIT KENDARAAN.
+  if (isMultiLocation(slip)) return <LocationPremiumAttached slip={slip} />
+  if (isMultiVehicle(slip)) return <VehiclePremiumAttached slip={slip} />
+  // Slip multi objek COB lain: jadwal premi per objek, lalu diskon dan biaya.
   if (isMultiItem(slip)) {
     return (
       <>
-        {isMultiVehicle(slip) ? (
-          <VehiclePremiumSchedule slip={slip} />
-        ) : (
-          <ObjectPremiumSchedule slip={slip} />
-        )}
+        <ObjectPremiumSchedule slip={slip} />
         <PayableTable slip={slip} />
       </>
     )
@@ -164,6 +164,10 @@ export function PlacingSlipDocument(props: DocProps) {
 
       <ParticipantAppendix slip={slip} />
 
+      <LocationScheduleAppendix slip={slip} />
+
+      <VehicleScheduleAppendix slip={slip} />
+
       <ClauseWordingAppendix slip={slip} />
 
     </DocumentShell>
@@ -214,6 +218,10 @@ export function QuotationSlipDocument(props: DocProps) {
 
       <ParticipantAppendix slip={slip} />
 
+      <LocationScheduleAppendix slip={slip} />
+
+      <VehicleScheduleAppendix slip={slip} />
+
       <ClauseWordingAppendix slip={slip} />
 
     </DocumentShell>
@@ -258,6 +266,10 @@ export function CoverNoteDocument(props: DocProps) {
       <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
+
+      <LocationScheduleAppendix slip={slip} />
+
+      <VehicleScheduleAppendix slip={slip} />
 
       <ClauseWordingAppendix slip={slip} />
     </DocumentShell>
@@ -336,6 +348,10 @@ export function ClosingInstructionDocument(props: DocProps) {
       <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
+
+      <LocationScheduleAppendix slip={slip} />
+
+      <VehicleScheduleAppendix slip={slip} />
 
       <ClauseWordingAppendix slip={slip} />
     </DocumentShell>
