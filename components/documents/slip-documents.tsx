@@ -345,7 +345,8 @@ export function ClosingInstructionDocument(props: DocProps) {
        * yang sudah ditandatangani (SISKA RAHARJA, TRUCKINDO). Tidak ada blok
        * per asuransi seperti Cover Note (Agus, 9 November 2026). Nama asuransi
        * dicetak bila hanya satu; co-insurance dibiarkan kosong untuk cap
-       * asuransi penerima.
+       * asuransi penerima. Tanggal diisi asuransi saat menerima, seperti
+       * "Date" di CI SISKA RAHARJA.
        */}
       <div className="avoid-break mt-4 grid grid-cols-1 gap-x-8 gap-y-10 text-[13px] sm:grid-cols-2">
         <div>
@@ -361,6 +362,9 @@ export function ClosingInstructionDocument(props: DocProps) {
           </p>
           <p className="border-t pt-1 font-bold">{acceptingInsurer(slip) ?? " "}</p>
           <p className="text-xs text-muted-foreground">Authorized Signatory</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Tanggal: ...................
+          </p>
         </div>
       </div>
 

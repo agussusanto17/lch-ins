@@ -49,7 +49,10 @@
   - di sebelah kanan blok Disiapkan oleh / Prepared by LCH, ada satu kolom
     "Diterima & Ditandatangani / Accepted & Signed by,";
   - nama asuransi dicetak di kolom itu bila panel hanya berisi satu asuransi.
-    Co-insurance dibiarkan kosong untuk nama dan cap asuransi penerima.
+    Co-insurance dibiarkan kosong untuk nama dan cap asuransi penerima;
+  - "Tanggal: ……" tetap ada di kolom itu, untuk tanggal asuransi menerima,
+    seperti "Date" di CI SISKA RAHARJA. Blok ini hanya dipindah dari bagian
+    SIGNED ke sebelah blok LCH (coretan kedua Agus).
 - `InsurerSignatureGrid` (blok per asuransi yang dulu dipakai keduanya) dihapus
   karena tidak dipakai lagi.
 - Format tanggal tetap seperti dokumen lain ("10 November 2026"), tidak memakai
@@ -83,8 +86,8 @@
     - PDF A4 dua kolom; dengan tiga asuransi, blok ketiga pindah ke halaman
       berikutnya di kolom kiri tanpa terpotong.
   - Closing Instruction dari slip empat asuransi dan satu asuransi:
-    - tidak ada bagian SIGNED dan tidak ada Tanggal;
-    - satu kolom penerimaan, sejajar di kanan blok LCH;
+    - tidak ada bagian SIGNED;
+    - satu kolom penerimaan, sejajar di kanan blok LCH, dengan Tanggal;
     - nama asuransi hanya tercetak di slip satu asuransi.
   - Tanpa error halaman.
 - Sesi sementara sudah dihapus.
