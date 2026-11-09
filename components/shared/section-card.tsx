@@ -80,12 +80,16 @@ export function SectionCard({
     )
   }
 
+  // Judul memakai lebar aslinya, ringkasan mengisi sisa ruang dan dipotong
+  // dengan elipsis. Sebelumnya kolom ringkasan "auto": nama tertanggung yang
+  // panjang memakan seluruh lebar dan menimpa judul (temuan Harry,
+  // 9 November 2026).
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <Card className={cn("gap-0", className)}>
         <CardHeader
           className={cn(
-            "grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 transition-[padding]",
+            "items-center gap-x-4 gap-y-2 transition-[padding] has-data-[slot=card-action]:grid-cols-[auto_minmax(0,1fr)]",
             open ? "border-b pb-4" : "pb-0"
           )}
         >
@@ -101,13 +105,16 @@ export function SectionCard({
             />
             {heading}
           </CollapsibleTrigger>
-          <CardAction className="flex items-center gap-3 self-center">
+          <CardAction className="flex min-w-0 items-center justify-end gap-3 self-center justify-self-stretch">
             {summary ? (
-              <span className="hidden text-xs text-muted-foreground sm:inline">
+              <span
+                className="hidden min-w-0 truncate text-xs text-muted-foreground sm:block"
+                title={typeof summary === "string" ? summary : undefined}
+              >
                 {summary}
               </span>
             ) : null}
-            {action}
+            {action ? <div className="shrink-0">{action}</div> : null}
           </CardAction>
         </CardHeader>
         <CollapsibleContent className="overflow-hidden data-open:animate-collapse-down data-closed:animate-collapse-up">
