@@ -63,6 +63,7 @@ function storage() {
           // Checksum tambahan bawaan SDK baru tidak didukung semua server S3.
           requestChecksumCalculation: "WHEN_REQUIRED",
           responseChecksumValidation: "WHEN_REQUIRED",
+          maxAttempts: 2,
         }),
       }
     : null
@@ -71,6 +72,41 @@ function storage() {
 
 export function objectStorageEnabled() {
   return storage() !== null
+}
+
+export function isObjectStorageRequired(): boolean {
+  return process.env.REQUIRE_OBJECT_STORAGE === "true"
+}
+
+export function isStorageUnavailableError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const err = error as {
+    name?: string
+    message?: string
+    code?: string
+    $metadata?: { httpStatusCode?: number }
+  }
+  if (err.$metadata?.httpStatusCode && err.$metadata.httpStatusCode >= 500) {
+    return true
+  }
+  if (err.name === "TimeoutError" || err.name === "ConnectTimeoutError") {
+    return true
+  }
+  if (
+    err.code === "ECONNREFUSED" ||
+    err.code === "ETIMEDOUT" ||
+    err.code === "ENOTFOUND"
+  ) {
+    return true
+  }
+  const msg = (err.message || "").toLowerCase()
+  return (
+    msg.includes("econnrefused") ||
+    msg.includes("etimedout") ||
+    msg.includes("enotfound") ||
+    msg.includes("fetch failed") ||
+    msg.includes("timeout")
+  )
 }
 
 function required() {
@@ -104,6 +140,15 @@ export async function getObject(key: string): Promise<Uint8Array<ArrayBuffer>> {
   if (!result.Body) throw new Error(`Objek ${key} kosong.`)
   // Disalin ke ArrayBuffer biasa supaya bisa langsung jadi body Response.
   return new Uint8Array(await result.Body.transformToByteArray())
+}
+
+export async function getObjectStream(key: string): Promise<ReadableStream> {
+  const { client, bucket } = required()
+  const result = await client.send(
+    new GetObjectCommand({ Bucket: bucket, Key: key })
+  )
+  if (!result.Body) throw new Error(`Objek ${key} kosong.`)
+  return result.Body.transformToWebStream()
 }
 
 /** Hapus beberapa objek. Objek yang sudah tidak ada tidak dianggap gagal. */
