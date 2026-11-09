@@ -10,6 +10,7 @@ import {
   ClauseWordingAppendix,
   ClausesBlock,
   CoverageBlock,
+  CoverNoteSignature,
   DeductibleBlock,
   DetailTable,
   DocTitle,
@@ -268,9 +269,7 @@ export function CoverNoteDocument(props: DocProps) {
         </>
       ) : null}
 
-      <SectionHeading>SIGNED</SectionHeading>
-      <InsurerSignatureGrid slip={slip} />
-      <p className="mt-8 text-[13px]">Jakarta, {dateEn(slip.updatedAt)}</p>
+      <CoverNoteSignature slip={slip} place={`Jakarta, ${dateEn(slip.updatedAt)}`} />
 
       <AttachmentList slip={slip} />
 

@@ -1870,6 +1870,70 @@ function InsurerSignature({
 }
 
 /**
+ * Tanda tangan Draft Cover Note mengikuti contoh CN LCH (Agus, 9 November
+ * 2026; CN 728 co-insurance dan CN 743 satu asuransi): tempat dan tanggal di
+ * atas, lalu satu blok per asuransi berisi nama, ruang tanda tangan, dan
+ * "( …… )". Co-insurance dicetak kiri-kanan sesuai urutan panel dengan
+ * "(25% share as Leader)" di bawah nama; satu asuransi cukup namanya, karena
+ * share 100% sudah tertulis di SECURITY.
+ */
+export function CoverNoteSignature({
+  slip,
+  place,
+}: {
+  slip: PlacingSlip
+  place: string
+}) {
+  const panel = (slip.securityPanel ?? []).filter((p) => p.insurer)
+  const shared = panel.length > 1
+  return (
+    <div className="mt-8 text-[13px]">
+      <p className="break-after-avoid">{place}</p>
+      <div className="mt-5 grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2">
+        {panel.length ? (
+          panel.map((p) => (
+            <CoverNoteSignatory key={p.id} party={p} shared={shared} />
+          ))
+        ) : (
+          <CoverNoteSignatory />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Nama asuransi di blok tanda tangan: huruf besar seperti contoh CN, kecuali "Tbk". */
+function signatoryName(insurer: string) {
+  return insurer.toUpperCase().replace(/\bTBK\b/g, "Tbk")
+}
+
+function CoverNoteSignatory({
+  party,
+  shared,
+}: {
+  party?: SecurityPanelRow
+  /** Co-insurance: share dan peran dicetak di bawah nama. */
+  shared?: boolean
+}) {
+  return (
+    <div className="avoid-break">
+      {party ? (
+        <p className="font-bold">{signatoryName(party.insurer)}</p>
+      ) : (
+        <p className="font-bold text-muted-foreground">Nama Perusahaan Asuransi</p>
+      )}
+      {party && shared ? (
+        <p className="text-xs italic">
+          ({num(party.share, 0, 2)}% share {party.role.replace(/^As /, "as ")})
+        </p>
+      ) : null}
+      <div className="h-16" />
+      <p>( …………………………………… )</p>
+    </div>
+  )
+}
+
+/**
  * Security tanpa judul kolom (LCH, 3 November 2026). Satu asuransi berarti
  * share 100% tanpa leader atau member, jadi cukup namanya; share dan As Leader
  * / As Member baru dicetak kalau asuransinya lebih dari satu.
