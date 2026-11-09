@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `feat/lampiran-unit-as-attached`
-- **PR:** belum dibuka
+- **PR:** [#182](https://github.com/agussusanto17/lch-ins/pull/182)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
