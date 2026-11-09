@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `fix/judul-section-tertimpa-ringkasan`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#191](https://github.com/agussusanto17/lch-ins/pull/191)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
