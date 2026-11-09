@@ -24,6 +24,7 @@ interface SlipFileRow {
   description: string | null
   filePath: string
   sizeBytes: number
+  printContent: boolean
   uploadedAt: Date
 }
 
@@ -34,6 +35,7 @@ export function toSlipAttachment(row: SlipFileRow): SlipAttachment {
     description: row.description ?? undefined,
     url: storedFileUrl(row.filePath),
     sizeBytes: row.sizeBytes,
+    printContent: row.printContent,
     uploadedAt: row.uploadedAt.toISOString(),
   }
 }
@@ -130,6 +132,35 @@ export async function uploadSlipAttachment(
     await discardStoredFile(stored.id)
     throw err
   }
+}
+
+/**
+ * Atur apakah isi lampiran ikut tercetak di halaman akhir dokumen slip.
+ * Mengikuti aturan ubah slip: Closed dan Cancelled terkunci.
+ */
+export async function setSlipAttachmentPrint(
+  attachmentId: string,
+  printContent: boolean,
+  userId: string
+): Promise<{ slipId: string; attachments: SlipAttachment[] }> {
+  return prisma.$transaction(async (tx) => {
+    const row = await tx.slipFile.findUnique({ where: { id: attachmentId } })
+    if (!row) throw new Error("Lampiran tidak ditemukan.")
+    const slip = await editableSlip(tx, row.slipId)
+    if (row.printContent !== printContent) {
+      await tx.slipFile.update({ where: { id: attachmentId }, data: { printContent } })
+      await recordAudit(tx, {
+        userId,
+        entity: "placing_slips",
+        entityId: row.slipId,
+        action: "Update",
+        before: { attachment: row.description ?? row.fileName, printContent: row.printContent },
+        after: { attachment: row.description ?? row.fileName, printContent },
+        context: { slipNo: slip.slip_no ?? "Draft" },
+      })
+    }
+    return { slipId: row.slipId, attachments: await listAttachments(tx, row.slipId) }
+  })
 }
 
 /** Hapus satu lampiran beserta isi berkasnya. */

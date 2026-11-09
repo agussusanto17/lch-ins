@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import {
   deleteSlipAttachmentAction,
+  setSlipAttachmentPrintAction,
   uploadSlipAttachmentAction,
 } from "@/app/(app)/underwriting/actions"
 import {
@@ -19,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import type { SlipAttachment } from "@/lib/data/types"
 import { dateShort } from "@/lib/format"
@@ -38,7 +40,9 @@ const isExcel = (name: string) => /\.xlsx$/i.test(name)
 /**
  * Lampiran placing slip: vessel schedule, daftar unit, atau klausul hasil scan
  * (analisa contoh slip LCH, Tahap 3 nomor 19). Berkas langsung tersimpan saat
- * diunggah, terpisah dari Simpan Draft. Cetakan slip mencetak daftarnya.
+ * diunggah, terpisah dari Simpan Draft. Cetakan slip mencetak daftarnya, dan
+ * isi lampiran yang dicentang Cetak isi ikut tercetak di halaman akhir
+ * (jawaban Harry, 9 November 2026).
  */
 export function SlipAttachments({
   slipId,
@@ -55,6 +59,7 @@ export function SlipAttachments({
   const [description, setDescription] = React.useState("")
   const [pending, setPending] = React.useState(false)
   const [removing, setRemoving] = React.useState<SlipAttachment | null>(null)
+  const [toggling, setToggling] = React.useState<string | null>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
   async function upload(file: File) {
@@ -78,6 +83,17 @@ export function SlipAttachments({
     setDescription("")
     onChange(res.data)
     toast.success("Lampiran ditambahkan", { description: file.name })
+  }
+
+  async function setPrint(item: SlipAttachment, printContent: boolean) {
+    setToggling(item.id)
+    const res = await setSlipAttachmentPrintAction(item.id, printContent)
+    setToggling(null)
+    if (!res.ok || !res.data) {
+      toast.error("Gagal mengubah lampiran", { description: res.error })
+      return
+    }
+    onChange(res.data)
   }
 
   async function remove(item: SlipAttachment) {
@@ -136,8 +152,9 @@ export function SlipAttachments({
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {ATTACHMENT_HINT} Daftar lampiran ikut tercetak di dokumen slip;
-            isinya dikirim terpisah bersama PDF slip.
+            {ATTACHMENT_HINT} Daftar lampiran tercetak di dokumen slip. Isi
+            lampiran yang dicentang Cetak isi ikut tercetak di halaman akhir:
+            gambar dan PDF per halaman, Excel sebagai tabel.
           </p>
         </div>
       ) : null}
@@ -156,10 +173,21 @@ export function SlipAttachments({
                     {fileSize(a.sizeBytes)} · {dateShort(a.uploadedAt)}
                   </p>
                 </div>
+                <label className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                  <Checkbox
+                    checked={a.printContent !== false}
+                    disabled={locked || toggling === a.id}
+                    onCheckedChange={(checked) => void setPrint(a, checked === true)}
+                    aria-label={`Cetak isi ${a.description || a.fileName}`}
+                  />
+                  Cetak isi
+                </label>
                 {a.url ? (
                   <Button
                     variant="ghost"
                     size="sm"
+                    // Lebar tetap supaya centang Cetak isi sejajar di semua baris.
+                    className="w-16"
                     nativeButton={false}
                     render={<a href={a.url} target="_blank" rel="noopener noreferrer" />}
                   >

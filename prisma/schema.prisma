@@ -1569,6 +1569,10 @@ model SlipFile {
   filePath    String   @map("file_path")
   sizeBytes   Int      @default(0) @map("size_bytes")
   sortOrder   Int      @default(0) @map("sort_order")
+  /// Isi lampiran ikut tercetak di halaman akhir dokumen slip: gambar per
+  /// halaman, Excel sebagai tabel, PDF per halaman (jawaban Harry, 9 November
+  /// 2026). Mati berarti hanya namanya yang tercetak di daftar ATTACHMENTS.
+  printContent Boolean @default(true) @map("print_content")
   uploadedBy  String   @map("uploaded_by") @db.Uuid
   uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz(6)
 

@@ -261,6 +261,8 @@ export interface SlipAttachment {
   /** Alamat untuk membuka atau mengunduh isinya. */
   url?: string
   sizeBytes: number
+  /** Isi lampiran ikut tercetak di halaman akhir dokumen slip. */
+  printContent?: boolean
   uploadedAt: string
 }
 
