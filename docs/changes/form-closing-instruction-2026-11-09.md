@@ -24,6 +24,8 @@ Selain itu, slip dengan status "Closed" sebelumnya terkunci secara ketat (*immut
 - **Navigasi dokumen dan revalidasi cache:**
   - Tombol kembali (back) pada dokumen Closing Instruction (`/underwriting/closing/[id]`) kini mengarah ke form input `/underwriting/closing/edit/[id]`.
   - Fungsi `revalidateUnderwritingPaths` di `app/(app)/underwriting/actions.ts` diperluas untuk merevalidasi `/underwriting/closing/edit/${id}`.
+- **Penamaan heading lampiran klausula dokumen:**
+  - Mengubah penamaan judul lampiran klausula di dokumen cetak (`components/documents/doc-blocks.tsx`) dari `CLAUSE WORDING` menjadi `CLAUSE WORDINGS`.
 
 ## File utama
 
@@ -32,10 +34,12 @@ Selain itu, slip dengan status "Closed" sebelumnya terkunci secara ketat (*immut
 - `components/underwriting/placing-slip-form.tsx`: Penambahan mode `"closing"`, banner revisi Closed, logika "Simpan Revisi", dan navigasi ke rute closing.
 - `components/underwriting/slip-table.tsx`: Penambahan aksi menu "Closing instruction" dan pembukaan akses edit untuk slip Closed.
 - `components/documents/slip-documents.tsx`: Penyesuaian `backHref` dokumen Closing Instruction ke form input closing.
+- `components/documents/doc-blocks.tsx`: Perubahan section heading lampiran klausula menjadi `CLAUSE WORDINGS`.
 - `lib/server/placing-slips.ts`: Relaksasi validasi status pada `updatePlacingSlip` agar slip Closed dapat dimutasi/direvisi.
 - `lib/server/slip-files.ts`: Relaksasi validasi status pada `editableSlip` agar lampiran slip Closed dapat dikelola saat revisi.
 - `app/(app)/underwriting/actions.ts`: Penambahan revalidasi path `/underwriting/closing/edit/${id}`.
 - `tests/closing-instruction.test.ts`: Pengujian unit untuk penomoran dokumen CI, relaksasi status Closed, dan revalidasi rute.
+- `tests/documents.test.ts`: Pengujian unit penamaan heading lampiran `CLAUSE WORDINGS`.
 
 ## Dampak
 
