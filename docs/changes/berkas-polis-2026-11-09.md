@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `feat/berkas-polis`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#195](https://github.com/agussusanto17/lch-ins/pull/195)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
