@@ -10,6 +10,7 @@ import { participantListSchema } from "@/lib/participant-schema"
 import { brokerageLimitIssue, rateUnitFor } from "@/lib/calc"
 import { rateLineName } from "@/components/underwriting/slip-model"
 import {
+  coverUsesOjkTariff,
   createPlacingSlip,
   deletePlacingSlip,
   getPlacingSlipById,
@@ -351,7 +352,12 @@ export async function savePlacingSlipAction(
     }
 
     // Brokerage exceeding OJK statutory cap cannot be saved, not merely blocked at release.
-    const brokerageIssue = brokerageLimitIssue(slip)
+    // Whether the cap applies comes from the cover type in Master Data, not the browser.
+    const ojkTariff = await coverUsesOjkTariff(slip.cob, slip.typeOfCover)
+    const brokerageIssue = brokerageLimitIssue({
+      ...slip,
+      ojkTariff: ojkTariff ? undefined : false,
+    })
     if (brokerageIssue) return { ok: false, error: brokerageIssue }
 
     const input = parsed.data as PlacingSlipInput

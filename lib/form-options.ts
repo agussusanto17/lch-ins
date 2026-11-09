@@ -21,6 +21,8 @@ export interface CoverOption {
   usesSections: boolean
   /** Slip type of cover ini open cover (rate tanpa premi pasti), misalnya MOP. */
   openCover: boolean
+  /** Slip type of cover ini memakai tarif OJK; mati untuk Heavy Equipment. */
+  ojkTariff: boolean
   /** Label periode bawaan di dokumen, misalnya Date of Tournament. */
   periodLabel: string | null
   /** Lama periode bawaan dalam hari, untuk tanggal akhir otomatis. */

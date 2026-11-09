@@ -75,10 +75,16 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
   const [coverDetailLabels, setCoverDetailLabels] = React.useState("")
   const [coverUsesSections, setCoverUsesSections] = React.useState(false)
   const [coverOpenCover, setCoverOpenCover] = React.useState(false)
+  const [coverOjkTariff, setCoverOjkTariff] = React.useState(true)
   const [coverPeriodLabel, setCoverPeriodLabel] = React.useState("")
   const [coverPeriodDays, setCoverPeriodDays] = React.useState<number | null>(null)
   const [coverPeriodEndText, setCoverPeriodEndText] = React.useState("")
   const [coverIsActive, setCoverIsActive] = React.useState(true)
+
+  // Tarif OJK hanya ada untuk form Property dan Motor Vehicle.
+  const parentFormVariant = cobs.find((c) => c.id === parentCobId)?.formVariant?.code
+  const parentHasOjkTariff =
+    parentFormVariant === "property" || parentFormVariant === "motor"
 
   const [prevInitialCobs, setPrevInitialCobs] = React.useState(initialCobs)
   if (prevInitialCobs !== initialCobs) {
@@ -121,6 +127,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverDetailLabels("")
     setCoverUsesSections(false)
     setCoverOpenCover(false)
+    setCoverOjkTariff(true)
     setCoverPeriodLabel("")
     setCoverPeriodDays(null)
     setCoverPeriodEndText("")
@@ -137,6 +144,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
     setCoverDetailLabels((cover.detailLabels ?? []).join("\n"))
     setCoverUsesSections(cover.usesSections ?? false)
     setCoverOpenCover(cover.openCover ?? false)
+    setCoverOjkTariff(cover.ojkTariff ?? true)
     setCoverPeriodLabel(cover.periodLabel ?? "")
     setCoverPeriodDays(cover.periodDays ?? null)
     setCoverPeriodEndText(cover.periodEndText ?? "")
@@ -162,6 +170,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           detailLabels,
           usesSections: coverUsesSections,
           openCover: coverOpenCover,
+          ojkTariff: coverOjkTariff,
           periodLabel: coverPeriodLabel,
           periodDays: coverPeriodDays,
           periodEndText: coverPeriodEndText,
@@ -187,6 +196,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                           detailLabels: res.data?.detailLabels ?? [],
                           usesSections: res.data?.usesSections ?? false,
                           openCover: res.data?.openCover ?? false,
+                          ojkTariff: res.data?.ojkTariff ?? true,
                           periodLabel: res.data?.periodLabel ?? null,
                           periodDays: res.data?.periodDays ?? null,
                           periodEndText: res.data?.periodEndText ?? null,
@@ -207,6 +217,7 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
           detailLabels,
           usesSections: coverUsesSections,
           openCover: coverOpenCover,
+          ojkTariff: coverOjkTariff,
           periodLabel: coverPeriodLabel,
           periodDays: coverPeriodDays,
           periodEndText: coverPeriodEndText,
@@ -658,6 +669,26 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
               </div>
               <Switch checked={coverOpenCover} onCheckedChange={setCoverOpenCover} />
             </div>
+
+            {parentHasOjkTariff ? (
+              <div className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+                <div className="flex flex-col">
+                  <span id="cover-ojk-tariff-label" className="text-sm font-medium">
+                    Pakai tarif OJK
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Rate slip dibatasi tarif OJK dan brokerage dibatasi biaya
+                    akuisisi OJK. Matikan untuk cover di luar tarif OJK,
+                    misalnya Heavy Equipment.
+                  </span>
+                </div>
+                <Switch
+                  aria-labelledby="cover-ojk-tariff-label"
+                  checked={coverOjkTariff}
+                  onCheckedChange={setCoverOjkTariff}
+                />
+              </div>
+            ) : null}
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">
               <span className="text-sm font-medium">Status Aktif Operasional</span>

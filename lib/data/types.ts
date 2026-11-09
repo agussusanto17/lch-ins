@@ -406,6 +406,13 @@ export interface PlacingSlip {
   openCover?: boolean
   openCoverRates?: OpenCoverRate[]
   /**
+   * false bila type of cover slip tidak memakai tarif OJK, misalnya Heavy
+   * Equipment (Harry, 9 November 2026): rate tanpa batas OJK dan brokerage
+   * tanpa batas biaya akuisisi. Dibaca dari Master Data, tidak disimpan di
+   * slip; kosong berarti memakai tarif OJK.
+   */
+  ojkTariff?: boolean
+  /**
    * Judul kelompok per klausul di `clauseIds`, untuk slip tanpa section,
    * misalnya "Extensions" dan "General Conditions". Klausul tanpa judul
    * masuk kelompok tanpa judul.
