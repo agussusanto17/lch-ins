@@ -452,6 +452,8 @@ export interface PlacingSlip {
   additionalFee?: number
   createdAt: string
   updatedAt: string
+  /** Nama pengguna yang membuat slip, dari server; untuk kolom dan filter di daftar Placement. */
+  createdByName?: string
   /* pasca-release */
   subjectivity?: string
   securityPanel?: SecurityPanelRow[]

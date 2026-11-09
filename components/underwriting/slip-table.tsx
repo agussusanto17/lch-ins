@@ -202,12 +202,26 @@ export function SlipTable({
   const [query, setQuery] = React.useState("")
   const [status, setStatus] = React.useState("all")
   const [cob, setCob] = React.useState("all")
+  const [creator, setCreator] = React.useState("all")
+
+  // Pilihan filter pembuat diambil dari slip yang ada, jadi tidak ada pilihan
+  // yang hasilnya kosong (Agus, 9 November 2026).
+  const creatorItems = React.useMemo(() => {
+    const names = [
+      ...new Set(slips.map((s) => s.createdByName).filter((n): n is string => Boolean(n))),
+    ].sort((a, b) => a.localeCompare(b, "id"))
+    return [
+      { label: "Semua pembuat", value: "all" },
+      ...names.map((n) => ({ label: n, value: n })),
+    ]
+  }, [slips])
 
   const rows = React.useMemo(() => {
     const q = query.trim().toLowerCase()
     return slips.filter((s) => {
       if (status !== "all" && s.status !== status) return false
       if (cob !== "all" && s.cob !== cob) return false
+      if (creator !== "all" && s.createdByName !== creator) return false
       if (!q) return true
       return [
         s.slipNo ?? "",
@@ -222,7 +236,7 @@ export function SlipTable({
         ]),
       ].some((v) => v.toLowerCase().includes(q))
     })
-  }, [slips, query, status, cob])
+  }, [slips, query, status, cob, creator])
 
   const {
     page,
@@ -256,6 +270,7 @@ export function SlipTable({
       },
       { header: "Status", value: (s) => s.status },
       { header: "Diperbarui", value: (s) => s.updatedAt, type: "date" },
+      { header: "Dibuat oleh", value: (s) => s.createdByName ?? "", width: 24 },
     ],
   }
 
@@ -303,28 +318,52 @@ export function SlipTable({
             </SelectGroup>
           </SelectContent>
         </Select>
+        <Select
+          items={creatorItems}
+          value={creator}
+          onValueChange={(v) => setCreator(v as string)}
+        >
+          <SelectTrigger size="sm" className="w-44" aria-label="Filter pembuat slip">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {creatorItems.map((i) => (
+                <SelectItem key={i.value} value={i.value}>
+                  {i.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <ExportButtons className="ml-auto" spec={exportSpec} />
       </div>
 
       <Card className="gap-0 overflow-hidden py-0">
-        <Table className="min-w-210">
+        <Table className="min-w-240">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className={ACTION_COL_CLASS}>
                 <span className="sr-only">Aksi</span>
               </TableHead>
               <TableHead>No. Slip</TableHead>
-              <TableHead>Nama Tertanggung</TableHead>
-              <TableHead>Type of Cover</TableHead>
+              {/*
+               * Dua kolom teks ini mengikuti lebar layar (persen, isinya
+               * dipotong), supaya kolom Dibuat oleh tetap muat di kartu tanpa
+               * digeser ke samping.
+               */}
+              <TableHead className="w-[16%]">Nama Tertanggung</TableHead>
+              <TableHead className="w-[13%]">Type of Cover</TableHead>
               <TableHead className="text-right">Total Sum Insured</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="pr-4">Diperbarui</TableHead>
+              <TableHead>Diperbarui</TableHead>
+              <TableHead className="pr-4">Dibuat oleh</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableEmpty
-                colSpan={7}
+                colSpan={8}
                 message="Tidak ada placing slip yang cocok"
               />
             ) : (
@@ -344,14 +383,18 @@ export function SlipTable({
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="max-w-60">
-                    <p className="truncate font-medium">{s.insuredName}</p>
+                  <TableCell className="w-[16%] max-w-0">
+                    <p className="truncate font-medium" title={s.insuredName}>
+                      {s.insuredName}
+                    </p>
                     <p className="truncate text-xs text-muted-foreground">
                       {s.cob}
                     </p>
                   </TableCell>
-                  <TableCell className="max-w-52.5">
-                    <p className="truncate">{s.typeOfCover}</p>
+                  <TableCell className="w-[13%] max-w-0">
+                    <p className="truncate" title={s.typeOfCover}>
+                      {s.typeOfCover}
+                    </p>
                     {s.occupation ? (
                       <p className="truncate text-xs text-muted-foreground">
                         {slipOccupationText(s)}
@@ -373,8 +416,13 @@ export function SlipTable({
                   <TableCell>
                     <StatusBadge status={s.status} />
                   </TableCell>
-                  <TableCell className="tabular pr-4 text-muted-foreground">
+                  <TableCell className="tabular text-muted-foreground">
                     {dateShort(s.updatedAt)}
+                  </TableCell>
+                  <TableCell className="max-w-32 pr-4">
+                    <p className="truncate" title={s.createdByName}>
+                      {s.createdByName || "—"}
+                    </p>
                   </TableCell>
                 </TableRow>
               ))
