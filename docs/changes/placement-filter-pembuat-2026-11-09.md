@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `feat/placement-filter-pembuat`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#193](https://github.com/agussusanto17/lch-ins/pull/193)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
