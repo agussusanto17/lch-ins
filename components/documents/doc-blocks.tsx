@@ -840,7 +840,7 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
 
   return (
     <section className="print-break">
-      <SectionHeading>CLAUSE WORDING</SectionHeading>
+      <SectionHeading>CLAUSE WORDINGS</SectionHeading>
       <div className="flex flex-col gap-3 text-[12px]">
         {groups.map((g, gi) =>
           g.clauses.map((c, i) => (

@@ -1459,8 +1459,8 @@ export async function updatePlacingSlip(
     throw new Error("Placing slip tidak ditemukan.")
   }
 
-  if (existing.status === "Cancelled" || existing.status === "Closed") {
-    throw new Error(`Placing Slip berstatus ${existing.status} tidak dapat diubah.`)
+  if (existing.status === "Cancelled") {
+    throw new Error("Placing Slip berstatus Cancelled tidak dapat diubah.")
   }
 
   const resolvedClientId = await resolveClientId(input.clientId, input.insuredName)

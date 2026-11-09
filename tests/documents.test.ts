@@ -81,9 +81,13 @@ test("doc-blocks unbolds clause list titles when not inline and preserves bold i
     "ClausesBlock should not apply font-semibold when not inline"
   )
 
-  // In ClauseWordingAppendix: titles remain font-semibold
+  // In ClauseWordingAppendix: titles remain font-semibold and heading is CLAUSE WORDINGS
   const appendixSection = docBlocks.slice(
     docBlocks.indexOf("function ClauseWordingAppendix")
+  )
+  assert.ok(
+    appendixSection.includes("<SectionHeading>CLAUSE WORDINGS</SectionHeading>"),
+    "ClauseWordingAppendix should render CLAUSE WORDINGS as section heading"
   )
   assert.ok(
     appendixSection.includes('className="font-semibold"'),
