@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `feat/cetak-isi-lampiran-slip`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#185](https://github.com/agussusanto17/lch-ins/pull/185)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
