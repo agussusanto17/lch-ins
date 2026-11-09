@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `feat/strict-vps-object-storage`
-- **PR:** # (isi setelah PR dibuka)
+- **PR:** #177
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
