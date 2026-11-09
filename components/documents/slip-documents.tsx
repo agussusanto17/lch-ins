@@ -191,7 +191,7 @@ export function QuotationSlipDocument(props: DocProps) {
       {slip.subjectivity ? (
         <>
           <SectionHeading>SUBJECTIVITY</SectionHeading>
-          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground">
+          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground text-justify">
             {slip.subjectivity}
           </p>
         </>
@@ -245,7 +245,7 @@ export function CoverNoteDocument(props: DocProps) {
       {slip.coverNoteRemarks ? (
         <>
           <SectionHeading>REMARKS</SectionHeading>
-          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground">
+          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground text-justify">
             {slip.coverNoteRemarks}
           </p>
         </>
@@ -283,7 +283,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       {slip.subjectivity ? (
         <>
           <SectionHeading>SUBJECTIVITY</SectionHeading>
-          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground">
+          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground text-justify">
             {slip.subjectivity}
           </p>
         </>
@@ -301,7 +301,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       {slip.closingInstruction ? (
         <>
           <SectionHeading>INSTRUCTION</SectionHeading>
-          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground">
+          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground text-justify">
             {slip.closingInstruction}
           </p>
         </>
