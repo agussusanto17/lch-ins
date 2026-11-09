@@ -23,6 +23,8 @@ export const userRoleBadgeVariants = cva(
           "bg-teal-500/10 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
         direksi:
           "bg-slate-500/10 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
+        policy_admin:
+          "bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300",
         fallback: "bg-muted text-muted-foreground",
       },
     },

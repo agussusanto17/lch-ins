@@ -39,6 +39,11 @@ export const CANONICAL_ROLES = [
     label: "Direksi",
     description: "Pengawasan eksekutif dengan akses lihat penuh seluruh modul",
   },
+  {
+    code: "policy_admin",
+    label: "Policy Admin",
+    description: "Pengelolaan database polis dengan akses lihat modul Marketing dan Teknik",
+  },
 ] as const
 
 export type RoleCode = (typeof CANONICAL_ROLES)[number]["code"]
@@ -55,6 +60,7 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   finance: "Finance",
   accounting: "Accounting",
   direksi: "Direksi",
+  policy_admin: "Policy Admin",
 }
 
 export function isValidRoleCode(code: string): code is RoleCode {
@@ -101,47 +107,35 @@ const COLUMNS = [
   "finance",
   "accounting",
   "direksi",
+  "policy_admin",
 ] as const satisfies readonly RoleCode[]
 
 /**
- * Matriks hak akses dari Sheet Hak Akses yang diisi LCH, 21 Oktober 2026.
+ * Matriks hak akses per menu berdasarkan Sheet Hak Akses LCH.
  *
- * Satu baris per menu. Kolomnya sengaja ditulis sebagai array berurutan, bukan
- * objek, supaya baris di sini bisa dibandingkan sebaris demi sebaris dengan
- * file aslinya:
- *
- *   Admin  Marketing  Placement/Teknik  Klaim  Finance  Accounting  Direksi
- *
- * Kelola berarti lihat, tambah, ubah, hapus, dan release. Lihat berarti
- * halamannya tetap terbuka tetapi tindakan yang mengubah data ditolak. Tidak
- * berarti menunya tidak tampil sama sekali.
- *
- * Pencocokan memakai prefix terpanjang, sehingga Master Clauses bisa berbeda
- * dari Underwriting walau alamatnya berada di bawahnya.
+ * Kolom: Admin, Marketing, Placement, Klaim, Finance, Accounting, Direksi, Policy Admin.
+ * Menggunakan pencocokan awalan terpanjang untuk menentukan hak akses subrute.
  */
 export const ACCESS_MATRIX: Record<string, readonly AccessLevel[]> = {
-  // Baris diurutkan mengikuti 14 menu dari sheet LCH
-  // Kolom: Admin, Marketing, Placement, Claim, Finance, Accounting, Direksi
-  "/": [K, L, L, L, L, L, L],
-  "/marketing": [K, K, K, L, T, T, L],
-  "/underwriting": [K, L, K, L, L, L, L],
-  "/underwriting/master-clauses": [K, T, T, T, T, T, T],
-  "/policies": [K, L, K, L, L, L, L],
-  "/claims": [K, L, K, K, L, L, L],
-  "/finance/notes": [K, L, L, L, K, L, L],
-  "/finance/payments": [K, L, L, L, K, K, L],
-  "/finance/receivables": [K, L, L, L, K, K, L],
-  "/accounting/journal": [K, T, T, T, K, K, L],
-  "/accounting/statements": [K, T, T, T, L, K, L],
-  "/master-data": [K, T, T, T, T, T, T],
-  "/reports": [K, T, K, T, T, T, T],
-  "/users": [K, T, T, T, T, T, L],
+  // Kolom: Admin, Marketing, Placement, Claim, Finance, Accounting, Direksi, Policy Admin
+  "/": [K, L, L, L, L, L, L, L],
+  "/marketing": [K, K, K, L, T, T, L, L],
+  "/underwriting": [K, L, K, L, L, L, L, L],
+  "/underwriting/master-clauses": [K, T, T, T, T, T, T, T],
+  "/policies": [K, L, K, L, L, L, L, K],
+  "/claims": [K, L, K, K, L, L, L, T],
+  "/finance/notes": [K, L, L, L, K, L, L, T],
+  "/finance/payments": [K, L, L, L, K, K, L, T],
+  "/finance/receivables": [K, L, L, L, K, K, L, T],
+  "/accounting/journal": [K, T, T, T, K, K, L, T],
+  "/accounting/statements": [K, T, T, T, L, K, L, T],
+  "/master-data": [K, T, T, T, T, T, T, T],
+  "/reports": [K, T, K, T, T, T, T, T],
+  "/users": [K, T, T, T, T, T, L, T],
 
-  // Dua menu berikut tidak ada di sheet LCH; mereka menghapusnya dari usulan
-  // awal. Dibatasi Admin sampai LCH memutuskan, karena isinya menyentuh
-  // seluruh modul.
-  "/audit-trail": [K, T, T, T, T, T, T],
-  "/settings": [K, T, T, T, T, T, T],
+  // Menu audit trail dan pengaturan dibatasi Admin karena berdampak lintas modul.
+  "/audit-trail": [K, T, T, T, T, T, T, T],
+  "/settings": [K, T, T, T, T, T, T, T],
 }
 
 /** Public routes accessible without authentication. */
