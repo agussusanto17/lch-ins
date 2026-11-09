@@ -120,7 +120,8 @@ export const NAV_GROUPS: NavGroup[] = [
           { title: "Nilai Pilihan Dropdown", href: "/master-data/lookups" },
         ],
       },
-      { title: "Report", href: "/reports", icon: ChartColumn },
+      // Report keuangan dan akuntansi nanti jadi menu sendiri (Agus, 9 November 2026).
+      { title: "Report Operational", href: "/reports", icon: ChartColumn },
     ],
   },
   {

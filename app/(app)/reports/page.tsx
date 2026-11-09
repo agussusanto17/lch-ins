@@ -7,7 +7,7 @@ import { listClaims } from "@/lib/server/claims"
 import { listPolicies } from "@/lib/server/policies"
 import { requireAccess } from "@/lib/server/session"
 
-export const metadata: Metadata = { title: "Report — LCH Insurance Brokers" }
+export const metadata: Metadata = { title: "Report Operational — LCH Insurance Brokers" }
 
 export default async function ReportsPage() {
   const user = await requireAccess("/reports")
@@ -21,7 +21,7 @@ export default async function ReportsPage() {
   return (
     <PageShell>
       <PageHeader
-        title="Report"
+        title="Report Operational"
         description="Laporan periodik produksi, polis, dan klaim"
         actions={<ExportButtons />}
       />
