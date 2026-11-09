@@ -23,6 +23,7 @@ export default async function MasterClausesPage({
     query: one(sp.q) ?? "",
     sourceGroup: one(sp.group) ?? "",
     cobId: one(sp.cob) ?? "",
+    emptyWording: one(sp.wording) === "kosong",
     page: Number(one(sp.page)) || 1,
     pageSize: Number(one(sp.size)) || undefined,
   }

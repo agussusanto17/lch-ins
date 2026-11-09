@@ -1,0 +1,378 @@
+kelompok,kode_cob,kode_toc,judul_klausul,contoh_slip
+CIS,12,1203,Cancellation Clause (30 days notice),5
+CIS,12,1203,Cyber Loss Absolute Exclusion Clause,5
+CIS,12,1203,Electronic Recognition Clause EDRC “B” (Amended),5
+CIS,12,1203,Errors and Omission Clause,5
+CIS,12,1203,Excluding Transshipment with Public Transportation/Online Transportation,5
+CIS,12,1203,"Extended to include reasonable cost of replacement or reinstatement of stamp franking machine, safe, security case, or other specially designed container for the carriage or holding of Money, to a condition equal to but not better than when new",5
+CIS,12,1203,Extension for Money in the custody of staff whilst on business trip,5
+CIS,12,1203,"Institute Radioactive Contamination, Chemical, Biological, Bio-Chemical and Electromagnetic Weapons Exclusion Clause (CL 370)",5
+CIS,12,1203,Klausul Syarat Penyimpanan Uang,5
+CIS,12,1203,Klausul Terkait Putusan MK Pasal 251 KUHD,5
+CIS,12,1203,Memorandum on Dispute Clause (AAUI 2021),5
+CIS,12,1203,Nominated Loss Adjuster Clause,5
+CIS,12,1203,Non Invalidation Clause,5
+CIS,12,1203,Pro-rata Return of Premium Clause (Subject To No Claim),5
+CIS,12,1203,Reinstatement of Sum Insured Clause (additional premium),5
+CIS,12,1203,"Strikes, Riots and Civil Commotion Extension Clause",5
+CIS,12,1203,Waiver of Subrogation Clause (against subsidiary and/or affiliated and/or associated companies),5
+CIS,12,1203,“Employee” is defined as natural person,5
+CIT,03,0308,"Accompanied by authorized employee who is not the driver of the vehicle, transits to be made using company owned car",6
+CIT,03,0308,Cancellation Clause (30 days notice),6
+CIT,03,0308,Cyber Loss Absolute Exclusion Clause,6
+CIT,03,0308,Excluding Transshipment with Public Transportation/Online Transportation,6
+CIT,03,0308,"Extended to include reasonable cost of replacement or reinstatement of stamp franking machine, safe, security case, or other specially designed container for the carriage or holding of Money, to a condition equal to but not better than when new",6
+CIT,03,0308,Extension for Money in the custody of staff whilst on business trip,6
+CIT,03,0308,"Institute Radioactive Contamination, Chemical, Biological, Bio-Chemical and Electromagnetic Weapons Exclusion Clause (CL 370)",6
+CIT,03,0308,Klausula terkait putusan MK 83-2024 Pasal 251 KUHD,6
+CIT,03,0308,Memorandum on Dispute Clause (AAUI 2021),6
+CIT,03,0308,Non Invalidation Clause,6
+CIT,03,0308,Pro-rata Return of Premium Clause (Subject To No Claim),6
+CIT,03,0308,Reinstatement of Sum Insured Clause (additional premium),6
+CIT,03,0308,"Strikes, Riots and Civil Commotion Extension Clause",6
+CIT,03,0308,Waiver of Subrogation Clause (against subsidiary and/or affiliated and/or associated companies),6
+CIT,03,0308,“Employee” is defined as natural person,6
+Cargo,03,,2nd hand replacement clause for 2nd hand machinery,2
+Cargo,03,,Cancellation Clause (30 days),2 24 25
+Cargo,03,,Cargo ISM Endorsement,2 24 25
+Cargo,03,,Communicable Disease Exclusion Clause (Cargo) JC2020-011,24 25
+Cargo,03,,Electronic Date Recognition Clause,2 24 25
+Cargo,03,,From Warehouse to Final end customers warehouse of Unloading (including all transshipments and storage within the ordinary course of transit),24 25
+Cargo,03,,"From Warehouse to Final end customers warehouse of Unloading (including all transshipments and storage within the ordinary course of transit) except for Sudan, Ethiopia, and Myanmar up to port only",2
+Cargo,03,,Indonesia Jurisdiction Clause,2 24 25
+Cargo,03,,Information Technology Hazards Exclusion Clause – JEL 16/11/01,2 24 25
+Cargo,03,,Insolvency Clause,2
+Cargo,03,,Institute Cyber Attack Exclusion Clause 10/11/2003,2 24 25
+Cargo,03,,Institute Malicious Damage Clause (CL. 266) 1/8/82,2
+Cargo,03,,"Institute Radioactive Contamination, Chemical, Biological, Bio-chemical, and Electromagnetic Weapons Exclusion Clause 10/11/2003 (CL. 370)",2 24 25
+Cargo,03,,Institute Replacement Clause (For Brand New Machinery Only) - if applicable,24 25
+Cargo,03,,Institute Strikes Clauses (Cargo) (1/1/2009),2
+Cargo,03,,Institute Strikes Clauses (Cargo) (1/1/2009) / Frozen Food,24 25
+Cargo,03,,Institute War Clauses (Cargo) (1/1/2009),2
+Cargo,03,,Institute War Clauses (Cargo) (1/1/2009) / Frozen Food,24 25
+Cargo,03,,JELC Communicable Disease Exclusion – JX2020-009A Clause in respect of Marine,2 24 25
+Cargo,03,,Marine Cyber Endorsement LMA 5403,2 24 25
+Cargo,03,,Missing Goods Clause,2 24 25
+Cargo,03,,No overload of cargo,2
+Cargo,03,,Premium Payment Warranty 30 days after billing from the Insurance,2
+Cargo,03,,"Safety lashing and suitable packing in accordance to the goods, voyage & conveyance",2
+Cargo,03,,Seepage and Pollution Exclusion Clause 1.1.89,2 24 25
+Cargo,03,,Sellers interest in respect of shipments sold by the insured on ‘FOB’ ‘C&F’ or similar terms,2 24 25
+Cargo,03,,Special Conditions Concerning Duty of Disclosure and the Consequence of Breach Thereof,2 24 25
+Cargo,03,,Transshipment Risks,2 24 25
+Cargo,03,,Waiver of Subrogation against the carrier,2 24 25
+Engineering,08,,AKAD/Contract Clause,22
+Engineering,08,,ASBESTOS EXCLUSION,14
+Engineering,08,,AUTOMATIC ADDITIONS AND DELETIONS (TO BE DECLARED WITHIN 60 DAYS OF ACQUISITION),14
+Engineering,08,,Automatic Increase Clause,1 22
+Engineering,08,,AUTOMATIC REINSTATEMENT,14
+Engineering,08,,BANKER’S CLAUSE - (IF APPLICABLE),14
+Engineering,08,,Cessation of Work Clause,1
+Engineering,08,,"Claim Preparations Cost Clause (reasonable amount, maximum USD 30,000)",1
+Engineering,08,,Claim Settlement Clause,1 22
+Engineering,08,,CLAIMS CONTROL,14
+Engineering,08,,Clause 19.2.A,1 22
+Engineering,08,,CONSTRUCTIVE TOTAL LOSS (75%),14
+Engineering,08,,CONTRACTS (RIGHTS OF THIRD PARTIES) ACT 2001 EXCLUSION,14
+Engineering,08,,Cost of Re-erection Clause,1
+Engineering,08,,Cross Liability Clause,22
+Engineering,08,,CUT THROUGH,14
+Engineering,08,,CYBER PRIMARY EXCLUSION,14
+Engineering,08,,Damage to own existing structures,1 22
+Engineering,08,,DESCRIPTION OF PROPERTY INSURED,14
+Engineering,08,,ELECTRICAL INSTALLATION CLAUSE 4B,14
+Engineering,08,,ELECTRONIC DATE RECOGNITION (EDRC) “A”,14
+Engineering,08,,Escalation Clause,1
+Engineering,08,,Expediting Expenses Clause,1
+Engineering,08,,EXPEDITING EXPENSES INCLUDING AIRFREIGHT (LIMIT: 10% OF ACTUAL REPAIR COST),14
+Engineering,08,,"Extended Period of Indemnity 52 Cold Testing, Hot Testing, and Commissioning",1
+Engineering,08,,Fire Brigade Cost Clause (reasonable amount),1 22
+Engineering,08,,Free Issue Materials (sub-limit 10% of loss),22
+Engineering,08,,HIRE PURCHASE,14
+Engineering,08,,INCIDENTAL TRANSIT (ON LAND ONLY),14
+Engineering,08,,INCLUDING HIRING OUT,14
+Engineering,08,,INCLUDING LOSS/DAMAGE DUE TO TOTAL OR PARTIAL IMMERSION IN TIDAL WATERS,14
+Engineering,08,,INCLUDING WATERBORNE RISKS,14
+Engineering,08,,Indonesian Jurisdiction Clause,1 22
+Engineering,08,,Insured’s Consultants (including Board of Directors of Principal/Owner’s representatives who are in charge in the Project),1 22
+Engineering,08,,Land Transit Clause (5% of ETCV for each conveyance),1
+Engineering,08,,LOADING AND UNLOADING AND/OR LIFTING/UNLIFTING FROM ONE VESSEL TO ANOTHER INCLUDING ONTO SHORE AND VICE VERSA,14
+Engineering,08,,Loading and Unloading Clause,1
+Engineering,08,,LOSS PAYABLE (IF APPLICABLE),14
+Engineering,08,,MR 110 - Safety measures with respect to precipitation flood and inundation,1
+Engineering,08,,"MR 119 - Principal’s Existing Property or Property Belonging to or Held in Care, Custody or Control by the Insured",1 22
+Engineering,08,,"MR001 - Riot, Strike, Malicious Damage and Civil Commotion (RSMDCC)",1 22
+Engineering,08,,MR002 - Cross Liability Clause,1
+Engineering,08,,MR003 - Maintenance Visit (6 months),1
+Engineering,08,,MR004 - Extended Maintenance Clause,1 22
+Engineering,08,,MR005 - Time Schedule Clause,1
+Engineering,08,,MR013 - Offsite Storage Clause,1 22
+Engineering,08,,MR100 – Cover for Testing of Machinery and Installation,1 22
+Engineering,08,,"MR102 - Special Conditions Concerning Underground Cables, Pipes and Other Facilities",22
+Engineering,08,,MR113 - Inland Transit Clause (10% of ETCV for each conveyance and within Indonesia),22
+Engineering,08,,MR115 - Designer’s Risks Clause,1 22
+Engineering,08,,MR116 - Prior used/occupancy Clause,1 22
+Engineering,08,,"MR120 - Vibration, Removal or Weakening of Support",1 22
+Engineering,08,,MR121 - Piling foundation and retaining wall works,22
+Engineering,08,,MR200 - Manufacturer’s Risk Clause,1
+Engineering,08,,MR206 - Special Conditions Concerning Fire-Fighting Facilities,22
+Engineering,08,,MR221 – Automatic Cover for Minor Contract Works,1
+Engineering,08,,MR302 - Surrounding Property and Third Party Liability,1
+Engineering,08,,NEW REPLACEMENT,14
+Engineering,08,,NO CLAIM BONUS,14
+Engineering,08,,Nominated Adjuster Clause,1 22
+Engineering,08,,NOTICE OF CANCELLATION (30 DAYS),14
+Engineering,08,,Notice of cancellation Clause for Riot Strike Malicious Damage Civil Commotion cover (30 days),1 22
+Engineering,08,,Offsite Fabrication and Storage Clause,1 22
+Engineering,08,,OPERATED BY SKILLED AND AUTHORISED PERSON,14
+Engineering,08,,Plans and Documents,1 22
+Engineering,08,,POLLUTION AND CONTAMINATION EXCLUSION,14
+Engineering,08,,PREMIUM PAYMENT WARRANTY (60 DAYS FROM INCEPTION),14
+Engineering,08,,"Preventive Measure and Loss Minimization (reasonable amount max USD 25,000)",1
+Engineering,08,,Professional Fees Clause,1 22
+Engineering,08,,Prorate additional premium for extension period (subject to no claim),1 22
+Engineering,08,,Prorate return premium clause (subject to no claim),1 22
+Engineering,08,,Public Authorities Clause,1 22
+Engineering,08,,RECOVERY CHARGE,14
+Engineering,08,,Reinstatement Value Clause,22
+Engineering,08,,Replacement Value Clause,1 14 22
+Engineering,08,,RSMDCC (CODE 4.1A CC),14
+Engineering,08,,Sanction Exclusion Clause,22
+Engineering,08,,SELF-IGNITION,14
+Engineering,08,,Sharia Compliance Clause,22
+Engineering,08,,STANDARD MAINTENANCE AND GOOD OPERATION,14
+Engineering,08,,"STRIKE, RIOT AND CIVIL COMMOTION (SRCC)",14
+Engineering,08,,Sudden & accidental pollution (72 hours),22
+Engineering,08,,SURVEILLANCE,14
+Engineering,08,,"THIRD PARTY LIABILITY (LIMIT: UP TO USD15,000.00 PER VEHICLE)",14
+Engineering,08,,Time Adjustment Clause (72 hours),22
+Engineering,08,,Time Adjustment Clause (72 hours) – for earthquake / volcanic eruption / tsunami only,1
+Engineering,08,,Use of Information and Data Clause,22
+Engineering,08,,Waiver of Subrogation – against insured’s subsidiaries only,1 22
+Fidelity,12,1202,Automatic Reinstatement of Sum Insured following Loss (subject to additional premium),4
+Fidelity,12,1202,Cyber Loss Absolute Exclusion Clause – IUA 09-081,4
+Fidelity,12,1202,Electronic Date Recognition Clause (EDRC) A,4
+Fidelity,12,1202,Klausula terkait putusan MK 83-2024 Pasal 251 KUHD,4
+Fidelity,12,1202,Memorandum on Dispute Clause (C),4
+Fidelity,12,1202,Nominated Loss Adjuster Clause,4
+Fidelity,12,1202,Pro-rata refund premium in the event of policy cancellation (subject to no claim),4
+Fidelity,12,1202,Total Asbestos Exclusion Clause,4
+Fidelity,12,1202,Waiver of Subrogation Clause (against subsidiary and/or affiliated and/or associated companies),4
+Fidelity,12,1202,War & Civil War Exclusion Clause,4
+Hull,04,,ABSOLUTE ASBESTOS EXCLUSION CLAUSE,10 16
+Hull,04,,ADDITIONAL DEDUCTIBLE ADAPTATION CLAUSE 1.10.83,10
+Hull,04,,AFFILIATED COMPANIES CLAUSE,10
+Hull,04,,APPROVED SURVEYORS CLAUSE,10
+Hull,04,,BAIL CLAUSE,10
+Hull,04,,BOTTOM TREATMENT,10
+Hull,04,,BREAK AND REVIEW CLAUSE (48 MONTHS POLICY PERIOD),10
+Hull,04,,BROKERS PAYMENT OF PREMIUM AND CANCELLATION CLAUSE,10 16
+Hull,04,,CANCELLING RETURNS ONLY,10 16
+Hull,04,,CLAIMS CONTROL CLAUSE,10 11
+Hull,04,,CONTRACTS (RIGHTS OF THIRD PARTIES) ACT 2001 EXCLUSION CLAUSE,10 16
+Hull,04,,CUT THROUGH CLAUSE,10 11
+Hull,04,,DEFERRED PREMIUM WARRANTY CLAUSE,10
+Hull,04,,DETAINMENT CLAUSE UNDER CLAUSE 3 OF INSTITUTE WAR AND STRIKES CLAUSES – HULLS – TIME 1.10.83 AMENDED FROM 12 MONTHS TO 6 MONTHS,11
+Hull,04,,EACH VESSEL INSURED HEREON IS DEEMED A SEPARATE INSURANCE,10 11
+Hull,04,,GENERAL AVERAGE ABSORPTION CLAUSE,10
+Hull,04,,"GENERAL AVERAGE, SALVAGE AND/OR SPECIAL CHARGES AS PER YORK/ANTWERP RULES 1924, 1950, 1974 AMENDED 1990, 1994 OR 2004 AT OWNERS OPTION",10
+Hull,04,,HEAVY WEATHER WARRANTY,16
+Hull,04,,HELICOPTER CLAUSE,10
+Hull,04,,"INCLUDING ALL OTHER CLAUSE, CONDITIONS AND AGREEMENTS AS PER HULL & MACHINERY POLICY IN SO FAR AS APPLICABLE",16
+Hull,04,,INCLUDING ALL OTHER CLAUSES AND CONDITIONS AND AGREEMENT AS PER HULL AND MACHINERY IF AND AS REQUIRED,11
+Hull,04,,INCLUDING ALL SPECIAL TERMS OF THE HULL AND MACHINERY POLICY IN SO FAR AS APPLICABLE,16
+Hull,04,,INCLUDING COVERAGES UNDER CLAUSE 6.2.4 ’NEGLIGENCE OF REPAIRERS OR CHARTERERS PROVIDED SUCH REPAIRERS OR CHARTERERS ARE NOT AN ASSURED HEREUNDER’ WHICH SHALL NOT BE PREJUDICED IF THE ASSURED UNDERTAKES REPAIR OF THEIR OWN VESSELS,10 16
+Hull,04,,"INCLUDING IN ADDITION, WAR AND STRIKES PROTECTION AND INDEMNITY LIABILITIES AND CREW WAR LIABILITY AS PER PROTECTION AND INDEMNITY INSURANCE – WAR (INCLUDING CREW) CLAUSE, UP TO HULL VALUE OF VESSEL",11 16
+Hull,04,,"INCLUDING LONDON BLOCKING AND TRAPPING LPO 444 WITH THE WORDS “CLAUSE 1 AND” ADDED IN LINE 4 AFTER THE WORDS “APPEARING IN”, AND LINE 3 REMAINED AT 12 MONTHS",16
+Hull,04,,"INCLUDING THE INTEREST OF MORTGAGEES, LOSS PAYABLE CLAUSE AND NOTICE OF ASSIGNMENT IN RESPECT THEREOF IF AND IN TERMS AS MAY BE REQUIRED",10 11 16
+Hull,04,,INCLUDING VANDALISM AND SABOTAGE,16
+Hull,04,,INCLUDING VANDALISM SABOTAGE AND MALICIOUS DAMAGE,11
+Hull,04,,INSOLVENCY CANCELLATION CLAUSE,10
+Hull,04,,INSTITUTE ADDITIONAL PERILS CLAUSES -HULLS 1.10.83 (FOR USE ONLY WITH THE INSTITUTE TIME CLAUSES – HULLS 1/10/83) (EXCLUDING VESSELS BUILT ON OR BEFORE 2000),10
+Hull,04,,INSTITUTE CYBER ATTACK EXCLUSION CLAUSE 10.11.03,10
+Hull,04,,"INSTITUTE NOTICE OF CANCELLATION, AUTOMATIC TERMINATION OF COVER AND WAR AND NUCLEAR EXCLUSIONS CLAUSE – HULL ETC 1.1.95",11 16
+Hull,04,,"INSTITUTE RADIOACTIVE CONTAMINATION, CHEMICAL, BIOLOGICAL, BIO-CHEMICAL AND ELECTROMAGNETIC WEAPONS EXCLUSION CLAUSE 10.11.03",10 16
+Hull,04,,INSTITUTE TIME CLAUSES - HULLS (1.10.83) WITH COLLISION LIABILITY UNDER CLAUSE 8 AND CLAUSE 1.2 DELETED,16
+Hull,04,,INSTITUTE TIME CLAUSES – HULLS 1.10.83 WITH COLLISION LIABILITY UNDER CL. 8 DELETED AND CL 1.2 DELETED,10
+Hull,04,,"INSTITUTE TIME CLAUSES – HULLS – DISBURSEMENTS AND INCREASED VALUE (TOTAL LOSS ONLY, INCLUDING EXCESS LIABILITIES) (1.10.83)",16
+Hull,04,,INSTITUTE WAR AND STRIKES CLAUSE – HULLS – TIME 1.10.83,11 16
+Hull,04,,"IT IS HEREBY NOTED AND AGREED THAT COSTS OF TEMPORARY REPAIRS, THE EXCESS COST OF OVERTIME, THE ENHANCED COST OF A RIDING REPAIR TEAM AND THE COST OF AIR FRIEGHTING PARTS INCURRED IN CONNECTION WITH REPAIRS TO DAMAGE CAUSED BY AN INSURED PERIL SHALL BE DEEMED TO BE PART OF THE REASONABLE COST OF REPAIR",10
+Hull,04,,JH 2020-007A COMMUNICABLE DISEASES EXCLUSION CLAUSE,10 16
+Hull,04,,JH 2021-008 AIS OPERATIONS CLAUSE,10 16
+Hull,04,,LEASED EQUIPMENT CLAUSE,10 16
+Hull,04,,LMA3100 SANCTION LIMITATION AND EXCLUSION CLAUSE (AMENDED),16
+Hull,04,,LONDON BLOCKING AND TRAPPING ADDENDUM LPO444,11
+Hull,04,,MARINE CYBER ENDORSEMENT LMA 5403,16
+Hull,04,,MISSING VESSEL CLAUSE,10 11 16
+Hull,04,,NOTWITHSTANDING ANYTHING CONTAINED HEREIN TO THE CONTRARY IT IS AGREED TO ALLOW THE VESSEL TO ENGAGE IN LIGHTENING OPERATIONS AND/OR CARGO LOADING OR DISCHARGING FROM OR INTO ANOTER VESSEL OR VESSEL AT SEA. THE POLICY DEDUCTIBLE SHALL BE APPLICABLE IN RESPECT OF THE AGGREGATE OF ALL CLAIMS ARISING DURING THE PERIOD OF EACH OPERATIONS,10
+Hull,04,,OWN REPAIR YARD CLAUSE,10
+Hull,04,,OWNERSHIP CHANGES IF ANY WITHOUT ADVICE PROVIDED MANAGEMENT UNALTERED,10
+Hull,04,,PARTS REMOVED CLAUSE,10 16
+Hull,04,,PILOTS NON-LIABILITY CLAUSE,10 16
+Hull,04,,PREMIUM PAYABLE IN ADVANCE (IV & WAR ONLY),16
+Hull,04,,PREMIUM PAYABLE QUARTERLY IN ADVANCE (H&M ONLY),16
+Hull,04,,PREMIUM PAYMENT CLAUSE,16
+Hull,04,,RADIO & AIDS TO NAVIGATION CLAUSE,10
+Hull,04,,RANGING DAMAGE CLAUSE,10
+Hull,04,,REACTIVATION WARRANTY (JH2009/002),16
+Hull,04,,REINSURANCE CLAUSE,10 11
+Hull,04,,REPAIR CLAUSE,10
+Hull,04,,"RUSSIA, UKRAINE & BELARUS EXCLUSION CLAUSE",16
+Hull,04,,SANCTION LIMITATION AND EXCLUSION CLAUSE,10
+Hull,04,,SPECIAL CANCELLATION CLAUSE,16
+Hull,04,,SUBJECT TO ENGLISH LAW AND INDONESIAN JURISDICTION,10 11
+Hull,04,,"SUBJECT TO THE DEDUCTIBLE PROVIDED FOR IN CLAUSE 12, IT IS AGREED THAT IN THE EVENT OF THE OWNER NOT CLAIMING GENERAL AVERAGE CONTRIBUTION FROM CARGO AND/OR OTHER INTERESTS, THIS INSURANCE IS TO PAY THE WHOLE OF THE GENERAL AVERAGE UP TO USD300,000.00. THIS CLAUSE IS ALLOWED WITH PRIOR CONSENT OF THE UNDERWRITER",16
+Hull,04,,"THE APPOINTMENT OF AVERAGE ADJUSTERS, EXPERTS AND LAWYERS, IN RELATION TO MATTERS WHICH MAY GIVE RISE TO A CLAIM UNDER THIS INSURANCE IS SUBJECT TO THE UNDERWRITER’S APPROVAL",10 16
+Hull,04,,"THE ASSURED SHALL HAVE AUTHORITY TO DIRECTLY APPOINT ON UNDERWRITERS’ BEHALF, WHEN NECESSARY, ONE OF THE FOLLOWING SURVEYORS TO CARRY OUT DAMAGE OR ‘WITHOUT PREJUDICE’ SURVEYS",16
+Hull,04,,"THE INSURED VESSEL SHALL BE CONSIDERED FULLY INSURED FOR THE PURPOSE OF CLAIMS UNDER THE POLICY IN RESPECT OF GENERAL AVERAGE, SALVAGE, SALVAGE CHARGES AND SUE AND LABOUR",16
+Hull,04,,TO WAIVE ALL RIGHTS OF SUBROGATION AGAINST ALL ASSURED SPECIFIED IN THE ASSURED CLAUSE,16
+Hull,04,,UPFRONT 8.5% PERFORMANCE AND CONTINUITY BONUS,10
+Hull,04,,"VIOLENT THEFT, PIRACY AND BARRATRY EXCLUSION CLAUSE JH2005/046",16
+Hull,04,,"VIOLENT THEFT, PIRACY AND BARRATRY EXTENSION JW2005/002",11 16
+Hull,04,,WARRANTED ALL STATUTORY REGULATIONS AND RECOMMENDATIONS TO BE COMPLIED WITH FOR VESSELS WHICH IS UNCLASSED,16
+Hull,04,,WARRANTED CLASSED AND CLASS MAINTAINED THROUGHOUT THE DURATION OF POLICY PERIOD,16
+Hull,04,,"WARRANTED IMO 2020 COMPLIANT, IF APPLICABLE",16
+Hull,04,,WARRANTED THE CARRIAGE OF IMSBC GRADE A CARGO TO BE IN COMPLIANCE WITH IMSBC CODE,16
+Hull,04,,WARRANTED VESSEL CLASSED AND CLASS MAINTAINED,10
+Hull,04,,"WARRANTED VESSEL ISM COMPLIANT, IF APPLICABLE",16
+Hull,04,,WITH LEAVE TO GO ON BAREBOAT CHARTER NOTWITHSTANDING CLAUSE 4.2 OF THE INSTITUTE TIME CLAUSES – HULLS 1.10.83. (APPLICABLE TO BARGES ONLY),10
+MAR,12,1213,AKAD/CONTRACT,13
+MAR,12,1213,BIOLOGICAL AND CHEMICAL MATERIALS EXCLUSION (NMA 2962),13
+MAR,12,1213,CANCELLATION CLAUSE (30 DAYS),17
+MAR,12,1213,CHANGE OF PRODUCT,13
+MAR,12,1213,COMMUNICABLE DISEASE EXCLUSION,13
+MAR,12,1213,COMMUNICABLE DISEASE EXCLUSION – LMA 5396,17
+MAR,12,1213,CONTRACTS (RIGHTS OF THIRD PARTIES) ACT 1999 (UK) OR OTHER SUBSTANTIVELY SIMILAR LEGISLATION EXCLUSION,13 17
+MAR,12,1213,CYBER RISK EXCLUSION (LMA 5401),13
+MAR,12,1213,CYBER RISK EXCLUSION CLAUSE - NMA 2915,17
+MAR,12,1213,DISPUTES CLAUSE (C),13
+MAR,12,1213,"EDRC ""A"" - NMA 2800",17
+MAR,12,1213,ELECTRONIC DATE EXCLUSION,13
+MAR,12,1213,ELECTRONIC EQUIPMENT AND/OR DEVICE ENDORSEMENT,13
+MAR,12,1213,"INDUSTRIES SEEPAGE, POLLUTION AND CONTAMINATION EXCLUSION (NMA 1685)",13 17
+MAR,12,1213,"INSTITUTE CLASSIFICATION CLAUSE 1/1/2001 CLAUSE 354 AMENDED TO INCLUDE BKI CLASS, WARRANTED MINIMUM GRT 1,000 AND NOT EXCEEDING 30 YEARS OF AGE (EXCLUDING WOODEN VESSEL)",13 17
+MAR,12,1213,INSTITUTE CONTAINER CLAUSE – TIME 1/1/87 CLAUSE 338,17
+MAR,12,1213,INSTITUTE CYBER ATTACK EXCLUSION CLAUSE 10/11/03,13 17
+MAR,12,1213,"INSTITUTE RADIOACTIVE CONTAMINATION, CHEMICAL, BIOLOGICAL, BIO-CHEMICAL AND ELECTROMAGNETIC WEAPONS EXCLUSION 10/11/2003",13 17
+MAR,12,1213,INSTITUTE WAR AND STRIKES CLAUSES (CONTAINER) – TIME 1/1/87 CLAUSE 340,13 17
+MAR,12,1213,IT HAZARD CLARIFICATION AGREEMENT - NMA 2912,17
+MAR,12,1213,IT HAZARD EXCLUSION,13
+MAR,12,1213,LESSEE,13
+MAR,12,1213,LOSS NOTIFICATION (14 DAYS),17
+MAR,12,1213,MICRO ORGANISM ABSOLUTE EXCLUSION,13
+MAR,12,1213,NMA 2920 - TERRORISM & SABOTAGE EXCLUSION ENDORSEMENT,17
+MAR,12,1213,NOTICE OF CANCELLATION (30 DAYS),13
+MAR,12,1213,NUCLEAR ENERGY RISK EXCLUSION CLAUSE - NMA 1975 (A),17
+MAR,12,1213,PAYMENT WARRANTY CLAUSE (60 DAYS FROM MONTHLY DECLARATION),17
+MAR,12,1213,POLITICAL RISK EXCLUSION,13
+MAR,12,1213,PREMIUM PAYMENT WARRANTY (60 DAYS FROM INCEPTION),13
+MAR,12,1213,SANCTION LIMITATION AND EXCLUSION,13 17
+MAR,12,1213,SELF-IGNITION,13 17
+MAR,12,1213,SHARIA COMPLIANCE,13
+MAR,12,1213,"SUBJECT TO A CONTINUITY BONUS EQUIVALENT OF 15% OF THE GROSS PREMIUMS PAYABLE AT THE ANNUAL ANNIVERSARY OF THE POLICY IF THE PAID AND ESTIMATED CLAIMS UNDER THE POLICY DO NOT EXCEED 50% OF THE PREMIUM PAID FOR 12 MONTHS. THE ESTIMATED AND PAID CLAIMS FIGURES, PREMIUMS ARE TO BE AGREED WITHIN 30 DAYS AFTER RENEWAL DATE",17
+MAR,12,1213,TERMINATION OF TRANSIT CLAUSE (TERRORISM) JC2001/056 20/11/2001,13 17
+MAR,12,1213,TERRORISM AND SABOTAGE EXCLUSION,13
+MAR,12,1213,"THE APPOINTMENT OF AVERAGE ADJUSTERS, EXPERTS AND LAWYERS, IN RELATION TO MATTERS WHICH MAY GIVE RISE TO A CLAIM UNDER THIS INSURANCE IS SUBJECT TO THE UNDERWRITER’S APPROVAL",13 17
+MAR,12,1213,TRANSMISSION AND DISTRIBUTION LINES EXCLUSION,13
+MAR,12,1213,USE INFORMATION AND DATA,13
+MAR,12,1213,WAIVER CLAUSE,13
+MAR,12,1213,WAR AND CIVIL WAR EXCLUSION CLAUSE - NMA 464,17
+MB,08,,Electronic Recognition Clause EDRC “B” (Amended),7
+MB,08,,"Institute Radioactive Contamination, Chemical, Biological, Bio-Chemical and Electromagnetic Weapons Exclusion Clause (CL. 370)",7
+MB,08,,Klausula terkait putusan MK 83-2024 Pasal 251 KUHD,7
+MB,08,,Memorandum on Dispute Clause (AAUI 2021),7
+MB,08,,Property Damage Clarification Clause,7
+MB,08,,Radioactive Exclusion Clause,7
+MB,08,,War and Terrorism Exclusion Clause – NMA 2919,7
+MV,02,,Klausul Pembayaran Premi,21 23
+MV,02,,Loss Notification Clause (14 days),21 23
+PA,10,,AKAD/Contract Clauses,20
+PA,10,,Asbestos Exclusion Clause,19
+PA,10,,Automatic Addition and Deletion Clause,20
+PA,10,,Biological and Chemical Materials Exclusion (NMA 2962),20
+PA,10,,Change of Product Clause,20
+PA,10,,Claim cooperation clause,20
+PA,10,,Electronic Data Exclusion,20
+PA,10,,Electronic Date Recognition Clause (EDRC) A,19
+PA,10,,Electronic Equipment and/or Device Endorsement,20
+PA,10,,"Implementation of the Principles of Know Your Customer, and Requirements of Anti Money Laundering and Counter Terrorism Financing",20
+PA,10,,IT Hazard Exclusion,20
+PA,10,,Microorganism Absolute Exclusion,20
+PA,10,,"Natural Disaster (event limit max IDR 2,000,000,000 in aggregate)",20
+PA,10,,Political Risk Exclusion,20
+PA,10,,Radioactive Exclusion Clause,19
+PA,10,,"Sanction and Limitation Exclusion Clause LMA 3100 (add exclude Russia, Ukraine and Belarus)",20
+PA,10,,Severe Burns Allowance (Max 30% of Sum Insured Death) due to accident,20
+PA,10,,Shariah Compliance Clauses,20
+PA,10,,"Simple or other Fracture (limit USD 2,500 in aggregate) due to accident",20
+PA,10,,Terrorism and Sabotage Exclusion Clause,19
+PA,10,,Use of Data and Information Clause,20
+PAR,01,,"Automatic Reinstatement of Sum Insured, subject to additional premium",26
+PAR,01,,Awnings Blinds Signs Or Other Fittings of Every Description Clause (5% of Total Sum Insured),26
+PAR,01,,Constructive Total Loss (85%),26
+PAR,01,,Electronic Date Recognition Clause (Earthquake),26
+PAR,01,,"Loss of Rent Clause (limit 10% of loss, max IDR 100,000,000 in aggregate and apply time excess 3 days)",26
+PAR,01,,"Money in the premises and in transit within Republic of Indonesia for amount up to equivalent of limit max IDR 100,000,000 / per location and/or occurrence",26
+PAR,01,,"Personal Effect Clause (Sub Limit IDR 50,000,000 any one occurrence and in the aggregate)",26
+PAR,01,,Plans & Documents Clause (Limit 20% any one claim amount per occurrence),26
+PAR,01,,Premium Payment Warranty : 60 days,26
+PAR,01,,Pro-Rata Return Premium Clause (subject to no claim),26
+PAR,01,,Russia/Ukraine/Belarus (RUB) Territorial Exclusion Clause,26
+PAR,01,,Salvage & Recoveries Clause,26
+PAR,01,,Special Conditions Concerning Duty of Disclosure and The Consequence of Breach Thereof,26
+PAR,01,,"Temporary Accommodation Clause (sub limit IDR 30,000,000 any one occurrence and in aggregate for Dwelling House & named insured only)",26
+PAR,01,,Workmen’s Clause,26
+PL,09,,Absolute Asbestos Exclusion Clause,15
+PL,09,,Advertising Signs Endorsement,15
+PL,09,,Asbestos Exclusion Clause,15
+PL,09,,Bodily Injury (as per wording),15
+PL,09,,Breach of Confidentiality Extension (REB) (03/94) – LSW 435,18
+PL,09,,Claim Made Basis Endorsement,15 18
+PL,09,,Contingent Liability for Contractors and Subcontractors,8 15
+PL,09,,Contractual Liability,3
+PL,09,,Cyber Exclusion LMA 1975a 1994,8
+PL,09,,Damage to premises and their contents temporary occupied for performing work,3
+PL,09,,Defective Sanitary Arrangements Clause,15
+PL,09,,Dishonesty of Employees Extension (03/94) – LSW 432,18
+PL,09,,Electronic Date Recognition Clause (EDRC A),3 18
+PL,09,,Electronic Recognition Clause EDRC “B” (Amended),8
+PL,09,,"Emergency Medical Expense Clause (limit USD 2,500 or IDR 25,000,000)",15
+PL,09,,Emergency Medical expenses,3
+PL,09,,"Employee’s/Guest’s Effects Clause (Sub-limit USD 5,000 or IDR 50,000,000)",15
+PL,09,,First Aid Facilities,3 15
+PL,09,,"Infringement of copyright, Patent or Registered Design Extension (REB) (03/94) – LSW 427",18
+PL,09,,Klausul Ketentuan Khusus Mengenai Kewajiban Tertanggung Menyampaikan Keterangan Informasi dan Data (Fakta Material) dan Konsekuensi Pelanggaranya,18
+PL,09,,Klausula Penyesuaian (AAUI 2016),3
+PL,09,,Klausula terkait putusan MK 83-2024 Pasal 251 KUHD,8
+PL,09,,Legal Expenses inclusive to policy limit,3
+PL,09,,Liability arising out of the use of unregistered Plant and Equipment,3
+PL,09,,Libel and Slander Extension (03/94) – LSW 433,18
+PL,09,,Loss of Documents,18
+PL,09,,Non-owned and Hired Automobiles Clause (covered in contingent liability for owner & subcontractor),3
+PL,09,,Non-owned Automobile Liability Clause,15
+PL,09,,Notice of Cancellation Clause (30 days),3 15
+PL,09,,Premium Payment Warranty 30 days from inception date,18
+PL,09,,Property Damage Clarification Clause,8
+PL,09,,Radioactive Exclusion Clause,8 15
+PL,09,,Sanction Limitation and Exclusion Clause,3 15 18
+PL,09,,Severability of interest,3
+PL,09,,"Territorial Exclusion: Belarus, Russia and Ukraine LMA5583B",15
+PL,09,,Terrorism and Sabotage Exclusion Clause,3 15
+PL,09,,Transmission and distribution line exclusion clause,3
+PL,09,,Unlicensed Vehicle Clause,15
+PL,09,,Unlicensed Vehicles,8
+PL,09,,Waiver of Subrogation rights and non-vitiation clause provision,3
+PL,09,,War and Civil War Exclusion Clause,3 15 18
+PL,09,,Warranty Legal Costs & Expenses inclusively,18
+PL,09,,"Water, Flood & Fumes Extension Clause (Exclude Act of God (AOG))",15
+TS,01,0116,"Awnings, Blinds, Signs or Other Fittings of Every Description Clause",9
+TS,01,0116,Civil Authorities Clause or coverage against Action taken by the authority in an attempt to control or minimize consequence of Terrorism or Sabotage to the insured property,9
+TS,01,0116,Claim Co-Operation Clause – NMA 2737,9
+TS,01,0116,Constructive Total Loss (85% for machinery only),9
+TS,01,0116,Electronic Recognition Clause EDRC “B” (Amended),9
+TS,01,0116,"Plans & Documents Clause (limit IDR 250,000,000 amount per occurrence)",9
+TS,01,0116,Pro-Rata Return Premium Clause (subject to no claim),9
+TS,01,0116,Russia/Ukraine/Belarus (RUB) Territorial Exclusion Clause,9
+TS,01,0116,Tenant Privilege Granted Clause,9
+TS,01,0116,Time Adjustment Clause (72 Hours),9
+TS,01,0116,Workmen’s Clause,9

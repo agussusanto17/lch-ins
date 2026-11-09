@@ -12,6 +12,8 @@ export interface ClauseFilter {
   /** Kelompok produk asal di pustaka LCH: PAR, EQVET, Cargo, dan seterusnya. */
   sourceGroup?: string
   cobId?: string
+  /** Hanya clause yang wording-nya belum diisi, misalnya judul hasil impor contoh slip. */
+  emptyWording?: boolean
   page?: number
   pageSize?: number
 }
@@ -34,6 +36,7 @@ function whereFrom(filter: ClauseFilter) {
     isActive: true,
     ...(filter.sourceGroup ? { sourceGroup: filter.sourceGroup } : {}),
     ...(filter.cobId ? { cobId: filter.cobId } : {}),
+    ...(filter.emptyWording ? { wordingHtml: "" } : {}),
     ...(q
       ? {
           OR: [
