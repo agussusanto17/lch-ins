@@ -19,6 +19,7 @@ import {
 } from "@/lib/server/policies"
 import { requireAccess, requireManage } from "@/lib/server/session"
 import { saveUploadedFile } from "@/lib/server/stored-files"
+import { parentPolicyIssue } from "@/lib/policy-parent"
 
 export interface ActionResponse<T = unknown> {
   ok: boolean
@@ -34,6 +35,7 @@ const policyInputSchema = z
     clientId: z.string().min(1).nullable(),
     placingSlipId: z.string().min(1).nullable(),
     parentPolicyId: z.string().min(1).nullable(),
+    previousPolicyNo: z.string().trim().max(100, "No. polis sebelumnya maksimal 100 karakter").nullable().optional(),
     insuredName: z.string().trim().min(1, "Nama tertanggung wajib diisi"),
     insurer: z.string().trim().min(1, "Asuransi wajib diisi"),
     insurers: z.array(
@@ -80,6 +82,12 @@ const policyInputSchema = z
   .refine((d) => (d.type !== "Baru" && d.type !== "Renewal") || d.sumInsured >= 0, {
     path: ["sumInsured"],
     message: "Sum insured polis baru dan renewal tidak boleh negatif",
+  })
+  // Renewal boleh tanpa polis di sistem asal nomornya diisi; endorsement dan
+  // pembatalan tetap harus memilih polisnya.
+  .superRefine((d, ctx) => {
+    const issue = parentPolicyIssue(d)
+    if (issue) ctx.addIssue({ code: "custom", path: ["parentPolicyId"], message: issue })
   })
 
 function fail(err: unknown, fallback: string): ActionResponse<never> {

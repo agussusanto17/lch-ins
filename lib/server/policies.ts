@@ -31,6 +31,7 @@ import { effectivePaBenefitLimits, type PaBenefitLimits } from "@/lib/pa-benefit
 import type { ParticipantChanges, PolicyParticipant } from "@/lib/policy-participants"
 import { PARTICIPANT_LIMITS, usesParticipants } from "@/lib/slip-participants"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
+import { storedPreviousPolicyNo } from "@/lib/policy-parent"
 
 export type PolicyRecord = Policy
 export type PolicyInput = Omit<
@@ -88,6 +89,7 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
     slipPart:
       row.slipPart === "PAR" || row.slipPart === "EQVET" ? row.slipPart : null,
     parentPolicyId: row.parentPolicyId,
+    previousPolicyNo: row.previousPolicyNo,
     insuredName: row.insuredName,
     insurer: leader?.insurer ?? "",
     insurers,
@@ -234,6 +236,8 @@ async function policyData(tx: Tx, input: PolicyInput) {
     clientId: await findClientId(tx, input.clientId),
     placingSlipId: await findSlipId(tx, input.placingSlipId),
     parentPolicyId: await findPolicyId(tx, input.parentPolicyId),
+    // Renewal yang polis sebelumnya belum ada di sistem cukup dicatat nomornya.
+    previousPolicyNo: storedPreviousPolicyNo(input),
     cobId,
     coverTypeId: await findCoverTypeId(tx, cobId, input.typeOfCover),
     typeOfCover: input.typeOfCover?.trim() || null,
