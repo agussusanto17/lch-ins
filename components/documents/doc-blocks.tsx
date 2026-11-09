@@ -241,11 +241,11 @@ export function InfoTable({
           <tr key={k} className="align-top">
             <td className={cn("w-[190px] text-muted-foreground", cell)}>{k}</td>
             <td className={cn("w-3", cell)}>:</td>
-            <td className={cn("whitespace-pre-line", cell)}>
+            <td className={cn("whitespace-pre-line text-justify", cell)}>
               {Array.isArray(v) && v.length > 1 ? (
                 <ol className="list-decimal pl-5">
                   {v.map((item, i) => (
-                    <li key={i}>{item}</li>
+                    <li key={i} className="text-justify">{item}</li>
                   ))}
                 </ol>
               ) : (
@@ -517,7 +517,7 @@ export function CoverageBlock({ slip }: { slip: PlacingSlip }) {
   return (
     <>
       <SectionHeading>COVERAGE</SectionHeading>
-      <p className="text-[13px] leading-relaxed whitespace-pre-line">{text}</p>
+      <p className="text-[13px] leading-relaxed whitespace-pre-line text-justify">{text}</p>
     </>
   )
 }
@@ -567,7 +567,7 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
     <>
       <SectionHeading>DEDUCTIBLE &amp; CONDITIONS</SectionHeading>
       <div className="flex flex-col gap-3 text-[13px]">
-        {intro ? <p className="whitespace-pre-line">{intro}</p> : null}
+        {intro ? <p className="whitespace-pre-line text-justify">{intro}</p> : null}
         {groups.map((g) => (
           <div key={g.heading ?? "deductible"}>
             {g.heading ? (
@@ -577,7 +577,7 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
               {g.texts.map((text) => (
                 <li key={text} className="flex gap-2">
                   <span aria-hidden>-</span>
-                  <span className="whitespace-pre-line">{text}</span>
+                  <span className="whitespace-pre-line text-justify">{text}</span>
                 </li>
               ))}
             </ul>
@@ -586,7 +586,7 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
         {slip.specialConditions ? (
           <div>
             <p className="font-semibold">Special Conditions</p>
-            <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
+            <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground text-justify">
               {slip.specialConditions}
             </p>
           </div>
@@ -694,7 +694,7 @@ export function ExclusionsBlock({ slip }: { slip: PlacingSlip }) {
             {item.marker ? (
               <span className="w-6 shrink-0">{item.marker}</span>
             ) : null}
-            <span>{item.text}</span>
+            <span className="text-justify">{item.text}</span>
           </li>
         ))}
       </ul>
@@ -730,7 +730,7 @@ export function ClausesBlock({
               </p>
               {inline && wordingText(c.wording) ? (
                 <div
-                  className="rte-prose mt-0.5 ml-4 text-[12px] text-muted-foreground"
+                  className="rte-prose mt-0.5 ml-4 text-[12px] text-muted-foreground text-justify"
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
                 />
               ) : null}
@@ -855,7 +855,7 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
               </p>
               {wordingText(c.wording) ? (
                 <div
-                  className="rte-prose mt-0.5 text-[12px] text-muted-foreground"
+                  className="rte-prose mt-0.5 text-[12px] text-muted-foreground text-justify"
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
                 />
               ) : null}

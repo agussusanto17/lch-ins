@@ -233,7 +233,7 @@
     height: 32mm;
   }
   .print-footer-spacer {
-    height: 22mm;
+    height: 28mm;
   }
   .print-break {
     break-before: page;
@@ -288,6 +288,9 @@
     font-size: 0.875rem;
     line-height: 1.65;
     color: var(--foreground);
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
   }
   .rte-content > * + *,
   .rte-prose > * + * {
