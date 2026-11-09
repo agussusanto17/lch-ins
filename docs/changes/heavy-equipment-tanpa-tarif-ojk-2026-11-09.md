@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `feat/heavy-equipment-tanpa-tarif-ojk`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#183](https://github.com/agussusanto17/lch-ins/pull/183)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
