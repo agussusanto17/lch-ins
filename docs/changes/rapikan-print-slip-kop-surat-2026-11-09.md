@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `fix/rapikan-print-slip-kop-surat`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #181
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
