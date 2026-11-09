@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Ban, Copy, Eye, FileText, Pencil, Trash2 } from "lucide-react"
+import { Ban, Copy, Eye, FileCheck2, FileText, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -72,10 +72,7 @@ function actionsFor(
     return actions
   }
   actions.push({
-    label:
-      slip.status === "Closed" || slip.status === "Cancelled"
-        ? "Buka slip"
-        : "Edit slip",
+    label: slip.status === "Cancelled" ? "Buka slip" : "Edit slip",
     icon: Pencil,
     render: <Link href={`/underwriting/edit/${slip.id}`} />,
   })
@@ -88,6 +85,20 @@ function actionsFor(
       label: "Draft quotation slip",
       icon: FileText,
       render: <Link href={`/underwriting/quotation/edit/${slip.id}`} />,
+    })
+  }
+  if (slip.status === "Quoted" || slip.status === "Closed") {
+    actions.push({
+      label: "Closing instruction",
+      icon: FileCheck2,
+      render: <Link href={`/underwriting/closing/edit/${slip.id}`} />,
+    })
+  }
+  if (slip.status === "Closed") {
+    actions.push({
+      label: "Lihat closing instruction",
+      icon: Eye,
+      render: <Link href={`/underwriting/closing/${slip.id}`} />,
     })
   }
   actions.push({

@@ -243,7 +243,7 @@ export function PlacingSlipForm({
 }: {
   id?: string
   initial: PlacingSlip | null
-  mode: "new" | "edit" | "quotation"
+  mode: "new" | "edit" | "quotation" | "closing"
   vehicleOptions?: VehicleBrandOption[]
   clients: InsuredOption[]
 }) {
@@ -295,7 +295,7 @@ function SlipEditor({
   clients,
 }: {
   initial: PlacingSlip
-  mode: "new" | "edit" | "quotation"
+  mode: "new" | "edit" | "quotation" | "closing"
   vehicleOptions?: VehicleBrandOption[]
   clients: InsuredOption[]
 }) {
@@ -317,7 +317,8 @@ function SlipEditor({
   }, [])
 
   const isQuotation = mode === "quotation"
-  const showQuotationSections = isQuotation || slip.status !== "Draft"
+  const isClosing = mode === "closing"
+  const showQuotationSections = isQuotation || isClosing || slip.status !== "Draft"
 
   const availableKeys = React.useMemo(() => {
     if (showQuotationSections) {
@@ -457,7 +458,7 @@ function SlipEditor({
     return () => window.removeEventListener("beforeunload", onBeforeUnload)
   }, [dirty])
 
-  const locked = slip.status === "Cancelled" || slip.status === "Closed"
+  const locked = slip.status === "Cancelled"
   const isProperty = slip.cob === "Property"
   const isMotor = slip.cob === "Motor Vehicle"
 
@@ -630,7 +631,10 @@ function SlipEditor({
         securityPanel: prepareSecurityPanel(slip.securityPanel),
         updatedAt: today,
       }
-      const res = await savePlacingSlipAction(toSend, isQuotation ? "edit" : mode)
+      const res = await savePlacingSlipAction(
+        toSend,
+        isQuotation || isClosing ? "edit" : mode
+      )
       if (!res.ok || !res.data) {
         toast.error("Gagal menyimpan slip", { description: res.error })
         return
@@ -640,16 +644,22 @@ function SlipEditor({
       setSlip(record)
       setSavedJson(JSON.stringify(record))
       toast.success(
-        record.status === "Draft" ? "Draft tersimpan" : "Perubahan tersimpan",
+        record.status === "Draft"
+          ? "Draft tersimpan"
+          : record.status === "Closed"
+            ? "Revisi tersimpan"
+            : "Perubahan tersimpan",
         {
           description: record.slipNo ?? record.insuredName ?? undefined,
         }
       )
       if (mode === "new" || slip.id !== record.id) {
         router.replace(
-          isQuotation
-            ? `/underwriting/quotation/edit/${record.id}`
-            : `/underwriting/edit/${record.id}`
+          isClosing
+            ? `/underwriting/closing/edit/${record.id}`
+            : isQuotation
+              ? `/underwriting/quotation/edit/${record.id}`
+              : `/underwriting/edit/${record.id}`
         )
       }
     })
@@ -689,7 +699,7 @@ function SlipEditor({
         }
         const saveRes = await savePlacingSlipAction(
           toSend,
-          isQuotation ? "edit" : mode
+          isQuotation || isClosing ? "edit" : mode
         )
         if (!saveRes.ok || !saveRes.data) {
           toast.error("Gagal menyimpan slip sebelum rilis", { description: saveRes.error })
@@ -713,9 +723,11 @@ function SlipEditor({
       toast.success("Slip di-release", { description: `No. slip ${record.slipNo}` })
       if (mode === "new" || slip.id !== record.id) {
         router.replace(
-          isQuotation
-            ? `/underwriting/quotation/edit/${record.id}`
-            : `/underwriting/edit/${record.id}`
+          isClosing
+            ? `/underwriting/closing/edit/${record.id}`
+            : isQuotation
+              ? `/underwriting/quotation/edit/${record.id}`
+              : `/underwriting/edit/${record.id}`
         )
       }
     })
@@ -785,7 +797,10 @@ function SlipEditor({
           securityPanel: prepareSecurityPanel(slip.securityPanel),
           updatedAt: today,
         }
-        const res = await savePlacingSlipAction(toSend, isQuotation ? "edit" : mode)
+        const res = await savePlacingSlipAction(
+          toSend,
+          isQuotation || isClosing ? "edit" : mode
+        )
         if (res.ok && res.data) {
           store.upsert("slips", res.data)
           router.push(path(res.data.id))
@@ -801,7 +816,7 @@ function SlipEditor({
 
   const destroyLabel = slip.status === "Draft" ? "Hapus Draft" : "Batalkan Slip"
   const canDestroy =
-    (mode === "edit" || isQuotation) &&
+    (mode === "edit" || isQuotation || isClosing) &&
     slip.status !== "Cancelled" &&
     slip.status !== "Closed"
 
@@ -809,11 +824,13 @@ function SlipEditor({
     <PageShell className="gap-0 p-0">
       <SlipFormToolbar
         title={
-          isQuotation
-            ? "Quotation Slip"
-            : mode === "new"
-              ? "Buat Placing Slip Baru"
-              : "Edit Placing Slip"
+          isClosing
+            ? "Closing Instruction"
+            : isQuotation
+              ? "Quotation Slip"
+              : mode === "new"
+                ? "Buat Placing Slip Baru"
+                : "Edit Placing Slip"
         }
         subtitle={`${slip.cob}${slip.typeOfCover ? ` · ${slip.typeOfCover}` : ""}`}
         status={slip.status}
@@ -866,12 +883,16 @@ function SlipEditor({
             keputusan LCH.
           </p>
         ) : null}
+        {slip.status === "Closed" ? (
+          <p className="flex items-start gap-2 rounded-xl bg-info/10 border border-info/20 px-4 py-3 text-sm text-foreground">
+            <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+            Closing instruction sudah diterbitkan. Anda tetap dapat melakukan revisi dan menyimpan perubahan di sini jika diperlukan.
+          </p>
+        ) : null}
         {locked ? (
           <p className="flex items-start gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
             <Ban className="mt-0.5 size-4 shrink-0" />
-            Slip berstatus{" "}
-            {slip.status === "Cancelled" ? "dibatalkan" : "Closed"} dan tidak
-            bisa diubah lagi.
+            Slip berstatus dibatalkan dan tidak bisa diubah lagi.
           </p>
         ) : null}
 
@@ -2346,7 +2367,62 @@ function SlipEditor({
             {dirty ? "Batal" : "Tutup"}
           </Button>
 
-          {isQuotation ? (
+          {isClosing ? (
+            <>
+              <Button
+                variant="outline"
+                disabled={isPending}
+                onClick={() => goTo((id) => `/underwriting/quotation/${id}`)}
+              >
+                <FileText data-icon="inline-start" />
+                Quotation Slip
+              </Button>
+              {!locked ? (
+                <Button
+                  variant="outline"
+                  onClick={handleSave}
+                  disabled={!canSave || isPending}
+                >
+                  <Save data-icon="inline-start" />
+                  {isPending
+                    ? "Menyimpan…"
+                    : canSave
+                      ? slip.status === "Closed"
+                        ? "Simpan Revisi"
+                        : "Simpan Perubahan"
+                      : "Tersimpan"}
+                </Button>
+              ) : null}
+              <Button
+                variant="outline"
+                disabled={
+                  slip.status === "Closed"
+                    ? isPending
+                    : !panelValid || slip.status === "Draft" || isPending
+                }
+                title={
+                  slip.status !== "Closed" && !panelValid
+                    ? "Lengkapi panel asuransi dulu"
+                    : undefined
+                }
+                onClick={() => goTo((id) => `/underwriting/closing/${id}`)}
+              >
+                <FileCheck2 data-icon="inline-start" />
+                Dokumen Closing
+              </Button>
+              {slip.status !== "Closed" ? (
+                <Button
+                  disabled={
+                    !panelValid || slip.status === "Draft" || locked || isPending
+                  }
+                  onClick={() => setConfirmClose(true)}
+                >
+                  <FileCheck2 data-icon="inline-start" />
+                  Terbitkan Closing Instruction
+                </Button>
+              ) : null}
+            </>
+          ) : isQuotation ? (
             <>
               <Button
                 variant="outline"
@@ -2390,25 +2466,14 @@ function SlipEditor({
                 <ScrollText data-icon="inline-start" />
                 Draft Cover Note
               </Button>
-              {slip.status === "Closed" ? (
-                <Button
-                  disabled={isPending}
-                  onClick={() => router.push(`/underwriting/closing/${slip.id}`)}
-                >
-                  <FileCheck2 data-icon="inline-start" />
-                  Closing Instruction
-                </Button>
-              ) : (
-                <Button
-                  disabled={
-                    !panelValid || slip.status === "Draft" || locked || isPending
-                  }
-                  onClick={() => setConfirmClose(true)}
-                >
-                  <FileCheck2 data-icon="inline-start" />
-                  Terbitkan Closing Instruction
-                </Button>
-              )}
+              <Button
+                disabled={!panelValid || slip.status === "Draft" || isPending}
+                title={!panelValid ? "Lengkapi panel asuransi dulu" : undefined}
+                onClick={() => goTo((id) => `/underwriting/closing/edit/${id}`)}
+              >
+                <Send data-icon="inline-start" />
+                Lanjut ke Closing Instruction
+              </Button>
             </>
           ) : (
             <>
@@ -2442,7 +2507,9 @@ function SlipEditor({
                   <Send data-icon="inline-start" />
                   {isPending ? "Memproses…" : "Release & Generate No. Slip"}
                 </Button>
-              ) : slip.status === "Released" || slip.status === "Quoted" ? (
+              ) : slip.status === "Released" ||
+                slip.status === "Quoted" ||
+                slip.status === "Closed" ? (
                 <Button
                   onClick={() =>
                     goTo((id) => `/underwriting/quotation/edit/${id}`)
@@ -2464,9 +2531,7 @@ function SlipEditor({
           <AlertDialogHeader>
             <AlertDialogTitle>Terbitkan Closing Instruction?</AlertDialogTitle>
             <AlertDialogDescription>
-              Penutupan akan di-close (status Closed) dan mengunci form dari
-              perubahan. Pastikan semua detail quotation dan panel asuransi
-              sudah disetujui klien.
+              Penutupan akan di-close (status Closed) dan dokumen Closing Instruction siap dicetak. Detail penutupan tetap dapat diedit kembali jika membutuhkan revisi.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

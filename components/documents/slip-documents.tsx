@@ -268,7 +268,7 @@ export function ClosingInstructionDocument(props: DocProps) {
   const number = derivedDocNumber(slip.slipNo, "CI")
 
   return (
-    <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
+    <DocumentShell backHref={`/underwriting/closing/edit/${slip.id}`}>
       <Letterhead />
       <DocTitle
         title="CLOSING INSTRUCTION"
