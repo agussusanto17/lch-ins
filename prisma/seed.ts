@@ -113,6 +113,7 @@ const LOOKUPS: {
       ["accounting", "Accounting"],
       ["finance", "Finance"],
       ["direksi", "Direksi"],
+      ["policy_admin", "Policy Admin"],
     ],
   },
   {
