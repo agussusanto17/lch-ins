@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `fix/angka-daftar-unit-kendaraan`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#190](https://github.com/agussusanto17/lch-ins/pull/190)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
