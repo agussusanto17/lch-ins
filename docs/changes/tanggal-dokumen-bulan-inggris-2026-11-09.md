@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `fix/tanggal-dokumen-bulan-inggris`
-- **PR:** belum dibuka
+- **PR:** [#180](https://github.com/agussusanto17/lch-ins/pull/180)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
@@ -40,7 +40,7 @@ Inggris, misalnya "01 December 2026 to 01 December 2027".
 
 - `npx tsc --noEmit`: lolos.
 - eslint file yang berubah: lolos.
-- `npx tsx --test tests/*.test.ts`: lolos.
+- `npx tsx --test tests/*.test.ts`: 118 lolos.
 - `npm run build`: lolos.
 - **Uji browser lokal** dengan sesi login sementara: slip
   005/LCH-PLCMT/PS-IAR/VIII/2026, yang terakhir diubah 31 Oktober 2026,
