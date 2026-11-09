@@ -401,6 +401,10 @@ model CoverType {
   /// Slip type of cover ini open cover: rate tanpa premi pasti, premi per
   /// deklarasi di polis, misalnya 0311 MOP. Diatur LCH di Master Data.
   openCover    Boolean  @default(false) @map("open_cover")
+  /// Slip type of cover ini memakai tarif OJK: batas rate Property atau Motor
+  /// Vehicle dan batas biaya akuisisi (brokerage). Mati untuk Heavy Equipment
+  /// (Harry, 9 November 2026). Diatur LCH di Master Data.
+  ojkTariff    Boolean  @default(true) @map("ojk_tariff")
   /// Label periode bawaan di dokumen slip, misalnya "Date of Tournament"
   /// (Hole in One). Kosong berarti "Period of Insurance".
   periodLabel  String?  @map("period_label")

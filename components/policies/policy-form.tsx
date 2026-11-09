@@ -282,7 +282,12 @@ export function PolicyForm({
     })),
     draft.typeOfCover
   ).map((i) => i.value)
-  const brokerageCap = brokerageCapFor(draft.cob)
+  // Type of cover tanpa tarif OJK, misalnya Heavy Equipment, tanpa batas brokerage.
+  const brokerageCap = brokerageCapFor(
+    draft.cob,
+    coversFor(masterOptions, draft.cob).find((c) => c.name === draft.typeOfCover)
+      ?.ojkTariff
+  )
   const insurerItems = withCurrent(
     formOptions.insurers.map((name) => ({ label: name, value: name })),
     draft.insurer

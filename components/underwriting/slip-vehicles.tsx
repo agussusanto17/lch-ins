@@ -18,7 +18,7 @@ import {
 } from "@/components/underwriting/slip-model"
 import { UnitCard } from "@/components/underwriting/unit-card"
 import { Button } from "@/components/ui/button"
-import { rateUnitFor, sumPremium } from "@/lib/calc"
+import { rateUnitFor, sumPremium, usesOjkTariff } from "@/lib/calc"
 import type { PlacingSlip, RateException, RateLine } from "@/lib/data"
 import { money } from "@/lib/format"
 import { itemGroups } from "@/lib/slip-items"
@@ -28,7 +28,8 @@ import { vehicleTariff, vehicleTitle } from "@/lib/slip-vehicles"
  * Rate slip Motor Vehicle per kendaraan (Harry, 5 November 2026). Tiap kartu
  * berisi referensi tarif OJK, casco dan semua perluasan, TPL, dan PA
  * kendaraan itu, dengan format slip satu kendaraan. Data kendaraan dan TSI
- * diisi di Interest Insured.
+ * diisi di Interest Insured. Type of cover tanpa tarif OJK, misalnya Heavy
+ * Equipment, tidak menampilkan referensi, kategori, dan wilayah OJK.
  */
 export function SlipVehicles({
   slip,
@@ -53,6 +54,7 @@ export function SlipVehicles({
 }) {
   const groups = itemGroups(slip)
   const multi = groups.length > 1
+  const ojk = usesOjkTariff(slip)
 
   // Seperti kartu lokasi: dicatat per urutan, slip multi kendaraan mulai
   // terlipat, kendaraan yang baru ditambah langsung terbuka.
@@ -77,6 +79,12 @@ export function SlipVehicles({
 
   return (
     <div className="flex flex-col gap-4">
+      {!ojk ? (
+        <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+          {slip.typeOfCover || "Type of cover ini"} tidak memakai tarif OJK.
+          Rate dan brokerage tidak dibatasi batas OJK.
+        </p>
+      ) : null}
       {multi ? (
         <div className="flex justify-end">
           <Button
@@ -107,8 +115,8 @@ export function SlipVehicles({
         ).length
         const facts = [
           `TSI ${money(vehicle.amount || 0, slip.currency)}`,
-          tariff.category,
-          tariff.region?.split(":")[0],
+          ojk ? tariff.category : null,
+          ojk ? tariff.region?.split(":")[0] : null,
           `Premi ${money(premium, slip.currency)}`,
         ].filter(Boolean)
 
@@ -139,7 +147,7 @@ export function SlipVehicles({
               </>
             }
           >
-            {!locked ? (
+            {!locked && ojk ? (
               <OjkReference
                 mode="motor"
                 riskLocation={tariff.locationOrPlate}
@@ -217,9 +225,10 @@ export function SlipVehicles({
 
       <p className="text-xs text-muted-foreground">
         Rate dalam persen (%). Premi casco dan perluasan = TSI kendaraan ×
-        rate; TPL dan PA = limit × rate. Kategori dan wilayah OJK dihitung per
-        kendaraan. Data kendaraan, TSI, dan tombol Tambah kendaraan ada di
-        bagian Interest Insured.
+        rate; TPL dan PA = limit × rate.
+        {ojk ? " Kategori dan wilayah OJK dihitung per kendaraan." : null} Data
+        kendaraan, TSI, dan tombol Tambah kendaraan ada di bagian Interest
+        Insured.
       </p>
     </div>
   )

@@ -40,6 +40,7 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
               detailLabels: true,
               usesSections: true,
               openCover: true,
+              ojkTariff: true,
               periodLabel: true,
               periodDays: true,
               periodEndText: true,

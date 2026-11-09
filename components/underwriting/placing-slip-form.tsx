@@ -122,6 +122,7 @@ import {
   totalPayable,
   totalPremium,
   totalSumInsured,
+  usesOjkTariff,
 } from "@/lib/calc"
 import {
   CLAUSES,
@@ -980,6 +981,11 @@ function SlipEditor({
                       // Open cover bawaan type of cover, misalnya 0311 MOP.
                       openCover:
                         covers.find((c) => c.name === v)?.openCover ?? false,
+                      // Heavy Equipment tanpa tarif OJK (Harry, 9 November 2026).
+                      ojkTariff:
+                        covers.find((c) => c.name === v)?.ojkTariff === false
+                          ? false
+                          : undefined,
                       periodLabel: nextCoverDefault(
                         slip.periodLabel,
                         covers.find((c) => c.name === slip.typeOfCover)?.periodLabel,
@@ -1332,7 +1338,11 @@ function SlipEditor({
                     id="domicile"
                     rows={2}
                     value={slip.riskLocation ?? ""}
-                    placeholder="Alamat garasi atau kota domisili, dipakai menentukan wilayah tarif OJK"
+                    placeholder={
+                      usesOjkTariff(slip)
+                        ? "Alamat garasi atau kota domisili, dipakai menentukan wilayah tarif OJK"
+                        : "Alamat garasi atau kota domisili"
+                    }
                     onChange={(e) => set({ riskLocation: e.target.value })}
                   />
                 </Field>

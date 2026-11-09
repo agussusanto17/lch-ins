@@ -173,7 +173,14 @@ const getLookupsCache = cache(async () => {
       select: { id: true, code: true, name: true },
     }),
     prisma.coverType.findMany({
-      select: { id: true, cobId: true, code: true, name: true, abbreviation: true },
+      select: {
+        id: true,
+        cobId: true,
+        code: true,
+        name: true,
+        abbreviation: true,
+        ojkTariff: true,
+      },
     }),
     prisma.occupation.findMany({
       select: { id: true, code: true, name: true },
@@ -204,7 +211,14 @@ const getLookupsCache = cache(async () => {
 
   const coverTypesByName = new Map<
     string,
-    { id: string; code: string; name: string; cobId: string; abbreviation: string | null }
+    {
+      id: string
+      code: string
+      name: string
+      cobId: string
+      abbreviation: string | null
+      ojkTariff: boolean
+    }
   >()
   for (const ct of coverTypeRows) {
     coverTypesByName.set(`${ct.cobId}:${ct.name.trim().toLowerCase()}`, ct)
@@ -320,6 +334,24 @@ async function resolveCoverType(cobId: string, typeOfCover?: string | null) {
   return cache.coverTypesByName.get(key) ?? null
 }
 
+/**
+ * Tarif OJK type of cover slip menurut Master Data. Dipakai saat menyimpan,
+ * supaya batas brokerage tidak bergantung pada flag kiriman browser. COB atau
+ * type of cover yang tidak dikenal memakai tarif OJK.
+ */
+export async function coverUsesOjkTariff(
+  cob: string,
+  typeOfCover?: string | null
+): Promise<boolean> {
+  const cache = await getLookupsCache()
+  const cobRow = cobLookupKeys(cob)
+    .map((key) => cache.cobsByName.get(key) ?? cache.cobsByCode.get(key))
+    .find(Boolean)
+  if (!cobRow || !typeOfCover?.trim()) return true
+  const key = `${cobRow.id}:${typeOfCover.trim().toLowerCase()}`
+  return cache.coverTypesByName.get(key)?.ojkTariff !== false
+}
+
 /** "12 months" -> 12. */
 function parseIndemnityMonths(val?: string | null): number | null {
   if (!val) return null
@@ -349,7 +381,9 @@ type PrismaPlacingSlipWithRelations = Prisma.PlacingSlipGetPayload<{
   include: {
     client: { select: { id: true; name: true } }
     cob: { select: { id: true; code: true; name: true } }
-    coverType: { select: { id: true; code: true; name: true; abbreviation: true } }
+    coverType: {
+      select: { id: true; code: true; name: true; abbreviation: true; ojkTariff: true }
+    }
     coverType2: { select: { id: true; code: true; name: true; abbreviation: true } }
     occupation: { select: { id: true; code: true; name: true } }
     constructionClass: { select: { id: true; code: true; name: true } }
@@ -601,6 +635,8 @@ function toPlacingSlipRecord(
     usesSections: raw.usesSections || undefined,
     openCover: raw.openCover || undefined,
     openCoverRates: cleanOpenCoverRates(raw.openCoverRates),
+    // Tarif OJK mengikuti type of cover di Master Data, misalnya Heavy Equipment.
+    ojkTariff: raw.coverType?.ojkTariff === false ? false : undefined,
     insuredDescription: raw.insuredDescription || undefined,
     detailRows: cleanDetailRows(raw.detailRows),
     paBenefitLimits:
@@ -709,7 +745,9 @@ export async function listPlacingSlips(
     include: {
       client: { select: { id: true, name: true } },
       cob: { select: { id: true, code: true, name: true } },
-      coverType: { select: { id: true, code: true, name: true, abbreviation: true } },
+      coverType: {
+        select: { id: true, code: true, name: true, abbreviation: true, ojkTariff: true },
+      },
       coverType2: { select: { id: true, code: true, name: true, abbreviation: true } },
       occupation: { select: { id: true, code: true, name: true } },
       constructionClass: { select: { id: true, code: true, name: true } },
@@ -763,7 +801,9 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
     include: {
       client: { select: { id: true, name: true } },
       cob: { select: { id: true, code: true, name: true } },
-      coverType: { select: { id: true, code: true, name: true, abbreviation: true } },
+      coverType: {
+        select: { id: true, code: true, name: true, abbreviation: true, ojkTariff: true },
+      },
       coverType2: { select: { id: true, code: true, name: true, abbreviation: true } },
       occupation: { select: { id: true, code: true, name: true } },
       constructionClass: { select: { id: true, code: true, name: true } },

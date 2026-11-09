@@ -88,6 +88,7 @@ const coverTypeSchema = z.object({
     .optional(),
   usesSections: z.boolean().optional(),
   openCover: z.boolean().optional(),
+  ojkTariff: z.boolean().optional(),
   periodLabel: z
     .string()
     .trim()

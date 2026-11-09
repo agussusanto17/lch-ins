@@ -335,10 +335,33 @@ export const BI_RATE_LABELS = [
 export const BI_BASE_LABELS = ["FLEXAS", "FWTWD", "RSMDCC", "Other Losses"]
 
 /**
- * Acquisition cost limits per Circular Letter SE OJK No. 6/SEOJK.05/2017:
- * Property and ancillary perils max 15%; Motor Vehicle max 25%.
+ * Slip yang memakai tarif OJK. Type of cover yang tarif OJK-nya dimatikan di
+ * Master Data, misalnya Heavy Equipment (Harry, 9 November 2026), tidak punya
+ * batas rate maupun batas brokerage OJK.
  */
-export function brokerageCapFor(cob: string) {
+export function usesOjkTariff(slip: Pick<PlacingSlip, "ojkTariff">) {
+  return slip.ojkTariff !== false
+}
+
+/**
+ * Baris rate tanpa batas OJK. Batas yang pernah tersimpan ikut dibuang,
+ * misalnya saat type of cover slip diganti ke Heavy Equipment.
+ */
+export function withoutOjkBounds(lines: RateLine[]): RateLine[] {
+  return lines.map((l) =>
+    l.min == null && l.max == null && !l.boundSource
+      ? l
+      : { ...l, min: null, max: null, boundSource: undefined }
+  )
+}
+
+/**
+ * Acquisition cost limits per Circular Letter SE OJK No. 6/SEOJK.05/2017:
+ * Property and ancillary perils max 15%; Motor Vehicle max 25%. A cover type
+ * without the OJK tariff (`ojkTariff` false) has no limit.
+ */
+export function brokerageCapFor(cob: string, ojkTariff?: boolean) {
+  if (ojkTariff === false) return null
   if (cob === "Property") return 15
   if (cob === "Motor Vehicle") return 25
   return null
@@ -350,7 +373,7 @@ export function brokerageCapFor(cob: string) {
  * Motor Vehicle 25% with a 15% discount leaves at most 10%.
  */
 export function maxBrokeragePct(slip: PlacingSlip) {
-  const cap = brokerageCapFor(slip.cob)
+  const cap = brokerageCapFor(slip.cob, slip.ojkTariff)
   if (cap == null) return null
   // Rounded so 25 - 12.3 compares equal to an entered 12.7.
   return Math.max(0, Math.round((cap - (slip.discountPct || 0)) * 1e6) / 1e6)
@@ -358,7 +381,7 @@ export function maxBrokeragePct(slip: PlacingSlip) {
 
 /** "maksimal 10% (25% dikurangi diskon 15%)", or null where OJK sets no limit. */
 export function brokerageLimitText(slip: PlacingSlip) {
-  const cap = brokerageCapFor(slip.cob)
+  const cap = brokerageCapFor(slip.cob, slip.ojkTariff)
   const max = maxBrokeragePct(slip)
   if (cap == null || max == null) return null
   const discount = slip.discountPct || 0

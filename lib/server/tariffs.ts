@@ -16,6 +16,8 @@ import {
   brokerageLimitIssue,
   maxBrokeragePct,
   totalSumInsured,
+  usesOjkTariff,
+  withoutOjkBounds,
 } from "@/lib/calc"
 import {
   EQ_PROPERTY_TARIFFS,
@@ -139,6 +141,8 @@ export function getMotorExtensionBounds(
 }
 
 export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
+  // Type of cover tanpa tarif OJK, misalnya Heavy Equipment, tidak punya batas.
+  if (!usesOjkTariff(slip)) return withoutOjkBounds(slip.rateLines)
   if (slip.cob === "Property") {
     const owner = locationOwner(slip)
     const byLocation = new Map(
@@ -270,17 +274,22 @@ export async function validatePlacingSlipForRelease(
   releaseIssues.push(...coverNameIssues(slip))
   releaseIssues.push(...participantIssues(slip))
 
+  const ojk = usesOjkTariff(slip)
   const boundedRateLines = attachSlipRateBounds(slip)
-  const boundedTpl = (slip.tplLines ?? []).map((l) => {
-    if (l.min != null || l.max != null) return l
-    const b = findMotorExtensionBounds(l.label)
-    return b ? { ...l, min: b.min, max: b.max, boundSource: b.source } : l
-  })
-  const boundedPa = (slip.paLines ?? []).map((l) => {
-    if (l.min != null || l.max != null) return l
-    const b = findMotorPaBounds(l.label)
-    return b ? { ...l, min: b.min, max: b.max, boundSource: b.source } : l
-  })
+  const boundedTpl = ojk
+    ? (slip.tplLines ?? []).map((l) => {
+        if (l.min != null || l.max != null) return l
+        const b = findMotorExtensionBounds(l.label)
+        return b ? { ...l, min: b.min, max: b.max, boundSource: b.source } : l
+      })
+    : withoutOjkBounds(slip.tplLines ?? [])
+  const boundedPa = ojk
+    ? (slip.paLines ?? []).map((l) => {
+        if (l.min != null || l.max != null) return l
+        const b = findMotorPaBounds(l.label)
+        return b ? { ...l, min: b.min, max: b.max, boundSource: b.source } : l
+      })
+    : withoutOjkBounds(slip.paLines ?? [])
 
   const allLines = boundedRateLines.concat(boundedTpl).concat(boundedPa)
   const missingExceptions = getMissingExceptions(allLines, slip.rateExceptions)

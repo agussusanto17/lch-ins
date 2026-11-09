@@ -516,6 +516,9 @@ const COVER_ABBREVIATIONS: Record<string, string> = {
   "1213": "MAR",
 }
 
+/** Type of cover tanpa tarif OJK: Heavy Equipment (Harry, 9 November 2026). */
+const COVERS_WITHOUT_OJK_TARIFF = new Set(["0203"])
+
 async function seedCobAndCoverTypes() {
   const rows = readCsv("cob-toc.csv")
   const permil = await lookupId("rate_mode", "permil")
@@ -557,6 +560,7 @@ async function seedCobAndCoverTypes() {
         cobId: cobs.get(r.kode_cob)!,
         abbreviation,
         priority,
+        ojkTariff: !COVERS_WITHOUT_OJK_TARIFF.has(r.kode_toc),
       },
       // Leave abbreviations/priorities set from master data alone when the seed has none.
       update: {

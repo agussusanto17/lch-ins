@@ -3,6 +3,8 @@ import {
   recalcSlip,
   sumItems,
   totalSumInsured,
+  usesOjkTariff,
+  withoutOjkBounds,
 } from "@/lib/calc"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
@@ -724,8 +726,10 @@ export function occupationBounds(
  * Baris rate beserta batas OJK yang berlaku. Batas yang dipilih dari panel
  * referensi dipakai lebih dulu; bila belum ada, FLEXAS memakai batas okupasi
  * dan kelas konstruksi slip, jadi rate yang diketik manual tetap tervalidasi.
+ * Type of cover tanpa tarif OJK, misalnya Heavy Equipment, tidak punya batas.
  */
 export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
+  if (!usesOjkTariff(slip)) return withoutOjkBounds(slip.rateLines)
   if (slip.cob === "Property") {
     // Tiap lokasi punya okupasi dan kelas konstruksi sendiri.
     const owner = locationOwner(slip)
@@ -852,16 +856,21 @@ export function releaseIssues(slip: PlacingSlip) {
 
   // Primary rate lines receive bounds based on COB. TPL and PA apply only to
   // Motor Vehicle, where bounds are resolved per section rather than raw labels alone.
+  const ojk = usesOjkTariff(slip)
   const allLines = rateLinesWithBounds(slip)
     .concat(
-      (slip.tplLines ?? []).map((l) =>
-        withSectionBounds(l, findMotorExtensionBounds(l.label))
-      )
+      ojk
+        ? (slip.tplLines ?? []).map((l) =>
+            withSectionBounds(l, findMotorExtensionBounds(l.label))
+          )
+        : withoutOjkBounds(slip.tplLines ?? [])
     )
     .concat(
-      (slip.paLines ?? []).map((l) =>
-        withSectionBounds(l, findMotorPaBounds(l.label))
-      )
+      ojk
+        ? (slip.paLines ?? []).map((l) =>
+            withSectionBounds(l, findMotorPaBounds(l.label))
+          )
+        : withoutOjkBounds(slip.paLines ?? [])
     )
   for (const line of allLines) {
     if (isOutOfBounds(line) && !slip.rateExceptions?.[line.id]?.note?.trim()) {
@@ -979,7 +988,12 @@ export function slipFromSppa(
     Partial<
       Pick<
         CoverOption,
-        "code" | "detailLabels" | "usesSections" | "periodLabel" | "periodEndText"
+        | "code"
+        | "detailLabels"
+        | "usesSections"
+        | "ojkTariff"
+        | "periodLabel"
+        | "periodEndText"
       >
     >)[]
 ): PlacingSlip {
@@ -1038,6 +1052,7 @@ export function slipFromSppa(
     ...propertyRateLinesPatch(base, cover?.code),
     detailRows: withDetailLabels(base.detailRows, cover?.detailLabels ?? []),
     usesSections: cover?.usesSections ?? false,
+    ojkTariff: cover?.ojkTariff === false ? false : undefined,
     periodLabel: cover?.periodLabel?.trim() || undefined,
     periodEndText: cover?.periodEndText?.trim() || undefined,
     coverCode: coverCodeFor(cob, sppa.typeOfCover, covers),

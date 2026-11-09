@@ -58,6 +58,8 @@ export interface CoverTypeInput {
   usesSections?: boolean
   /** Slip type of cover ini open cover, misalnya MOP. */
   openCover?: boolean
+  /** Slip type of cover ini memakai tarif OJK; mati untuk Heavy Equipment. */
+  ojkTariff?: boolean
   /**
    * Label periode bawaan di dokumen slip, misalnya Date of Tournament. Kosong
    * berarti Period of Insurance; tidak dikirim berarti tidak diubah.
@@ -463,6 +465,7 @@ export async function createCoverType(
         detailLabels: cleanDetailLabels(input.detailLabels),
         usesSections: input.usesSections ?? false,
         openCover: input.openCover ?? false,
+        ojkTariff: input.ojkTariff ?? true,
         periodLabel: input.periodLabel?.trim() || null,
         periodDays: input.periodDays ?? null,
         periodEndText: input.periodEndText?.trim() || null,
@@ -499,6 +502,7 @@ export async function updateCoverType(
           : undefined,
         usesSections: input.usesSections ?? before.usesSections,
         openCover: input.openCover ?? before.openCover,
+        ojkTariff: input.ojkTariff ?? before.ojkTariff,
         periodLabel:
           input.periodLabel === undefined
             ? undefined
