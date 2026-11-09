@@ -1,7 +1,5 @@
 import Image from "next/image"
 
-import { cn } from "@/lib/utils"
-
 import logoLch from "@/public/images/logo-lch.jpg"
 import regulatoryBadges from "@/public/images/regulatory-badges.png"
 
@@ -23,15 +21,13 @@ export function LchLogo({
   alt?: string
 }) {
   // unoptimized: dokumen dicetak, jadi pakai file asli 1600px supaya tetap tajam.
-  // -ml-4 menutup ruang putih kiri di gambar (4,2% lebar, ±16px pada h-14)
-  // supaya logo sejajar dengan kolom teks dokumen.
   return (
     <Image
       src={logoLch}
       alt={alt}
       loading="eager"
       unoptimized
-      className={cn("-ml-4", className)}
+      className={className}
     />
   )
 }
