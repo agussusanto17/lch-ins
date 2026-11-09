@@ -36,7 +36,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   underwriting: "Placement",
   policies: "Policy Database",
   claims: "Klaim",
-  reports: "Report",
+  reports: "Report Operational",
   "master-clauses": "Master Clauses",
   finance: "Finance",
   notes: "Debit & Credit Note",

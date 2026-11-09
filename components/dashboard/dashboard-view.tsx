@@ -59,7 +59,7 @@ const QUICK_LINKS = [
     icon: TriangleAlert,
   },
   {
-    title: "Report",
+    title: "Report Operational",
     desc: "Laporan produksi & klaim",
     href: "/reports",
     icon: TrendingUp,
