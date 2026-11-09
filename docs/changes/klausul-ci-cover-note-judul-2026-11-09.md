@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `fix/klausul-ci-cover-note-judul`
-- **PR:** belum dibuka
+- **PR:** [#179](https://github.com/agussusanto17/lch-ins/pull/179)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
