@@ -471,7 +471,9 @@ const COB_FORM: Record<string, { rateMode: string; formVariant: string }> = {
  * PSAGBI (0105) EQ supaya slip PAR + EQ bernomor PAREQ seperti CI LCH; Directors
  * and Officer Liability (0913) DNO karena singkatan hanya boleh huruf dan angka
  * (file LCH menulis D&O); 0312 kosong di file LCH dan tetap MC. Yang kosong di
- * file LCH dibiarkan tanpa singkatan.
+ * file LCH dibiarkan tanpa singkatan. 0404 Hull War Risks (HWR) tidak ada di
+ * file LCH; ditambahkan dari jawaban Harry 9 November 2026, sesuai nomor
+ * CI-HWR di contoh slip LCH.
  */
 const COVER_ABBREVIATIONS: Record<string, string> = {
   "0103": "BI",
@@ -489,6 +491,7 @@ const COVER_ABBREVIATIONS: Record<string, string> = {
   "0401": "HMH",
   "0402": "HBR",
   "0403": "HMHSV",
+  "0404": "HWR",
   "0405": "SRLL",
   "0406": "MII",
   "0407": "MAPP",
