@@ -1459,8 +1459,8 @@ export async function updatePlacingSlip(
     throw new Error("Placing slip tidak ditemukan.")
   }
 
-  if (existing.status === "Cancelled" || existing.status === "Closed") {
-    throw new Error(`Placing Slip berstatus ${existing.status} tidak dapat diubah.`)
+  if (existing.status === "Cancelled") {
+    throw new Error("Placing Slip berstatus Cancelled tidak dapat diubah.")
   }
 
   const resolvedClientId = await resolveClientId(input.clientId, input.insuredName)
@@ -2010,6 +2010,11 @@ export async function deletePlacingSlip(id: string, userId: string): Promise<voi
   })
 }
 
+/** Kode cover di nomor slip, misalnya PAREQ dari 002/LCH-PLCMT/PS-PAREQ/VIII/2026. */
+function coverCodeOfSlipNo(slipNo: string) {
+  return slipNo.split("/")[2]?.replace(/^PS-?/, "") || null
+}
+
 /**
  * Pembenihan data awal 3 Placing Slip mock LCH jika tabel placing_slips masih kosong.
  */
@@ -2055,9 +2060,18 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
       const expiryDate = mock.expiryDate ? new Date(mock.expiryDate) : null
 
       await prisma.$transaction(async (tx) => {
+        // Nomor contoh diambil dari counter bulan berjalan seperti slip yang
+        // di-release, bukan nomor tulisan tangan di data contoh, supaya tidak
+        // terlihat kembar dengan nomor bulan lain (Agus, 9 November 2026).
+        const slipNo = mock.slipNo
+          ? await nextDocumentNumber(tx, {
+              code: "PS",
+              coverCode: coverCodeOfSlipNo(mock.slipNo),
+            })
+          : null
         const slip = await tx.placingSlip.create({
           data: {
-            slipNo: mock.slipNo || null,
+            slipNo,
             clientId: resolvedClientId,
             cobId: resolvedCob.id,
             coverTypeId: resolvedCoverType?.id || null,

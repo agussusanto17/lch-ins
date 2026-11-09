@@ -16,7 +16,8 @@ import {
   ExclusionsBlock,
   InsurerSignatureGrid,
   InterestBlock,
-  LocationPremiumSchedule,
+  LocationPremiumAttached,
+  LocationScheduleAppendix,
   ObjectPremiumSchedule,
   ParEqvetCalculationBlock,
   ParEqvetRateBlock,
@@ -30,7 +31,8 @@ import {
   SignatureGrid,
   isParEqvetSlip,
   premiumRows,
-  VehiclePremiumSchedule,
+  VehiclePremiumAttached,
+  VehicleScheduleAppendix,
 } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
 import { derivedDocNumber } from "@/components/underwriting/slip-model"
@@ -38,7 +40,7 @@ import { Button } from "@/components/ui/button"
 import { rateUnitFor } from "@/lib/calc"
 import type { AttachmentPrints } from "@/lib/attachment-print"
 import type { PlacingSlip } from "@/lib/data"
-import { dateLong } from "@/lib/format"
+import { dateEn } from "@/lib/format"
 import { isMultiLocation } from "@/lib/slip-locations"
 import { isMultiItem } from "@/lib/slip-items"
 import { usesOpenCover } from "@/lib/open-cover"
@@ -94,17 +96,15 @@ function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
   if (usesOpenCover(slip)) return <OpenCoverRateBlock slip={slip} />
   // Slip multi lokasi mencetak jadwal premi per lokasi saja (Opsi B); slip
   // satu lokasi tetap mencetak bagian RATE.
-  if (isMultiLocation(slip)) return <LocationPremiumSchedule slip={slip} />
-  // Slip multi kendaraan atau multi objek: jadwal premi per kendaraan atau
-  // objek, lalu diskon dan biaya.
+  // Banyak lokasi atau kendaraan: badan dokumen menulis "As Attached", jadwal
+  // premi dicetak di lampiran DAFTAR LOKASI atau DAFTAR UNIT KENDARAAN.
+  if (isMultiLocation(slip)) return <LocationPremiumAttached slip={slip} />
+  if (isMultiVehicle(slip)) return <VehiclePremiumAttached slip={slip} />
+  // Slip multi objek COB lain: jadwal premi per objek, lalu diskon dan biaya.
   if (isMultiItem(slip)) {
     return (
       <>
-        {isMultiVehicle(slip) ? (
-          <VehiclePremiumSchedule slip={slip} />
-        ) : (
-          <ObjectPremiumSchedule slip={slip} />
-        )}
+        <ObjectPremiumSchedule slip={slip} />
         <PayableTable slip={slip} />
       </>
     )
@@ -162,7 +162,7 @@ export function PlacingSlipDocument(props: DocProps) {
       <BrokerageBlock slip={slip} />
 
       <SignatureGrid
-        place={`Jakarta, ${dateLong(slip.updatedAt)}`}
+        place={`Jakarta, ${dateEn(slip.updatedAt)}`}
         confirmationTitle="KONFIRMASI PENANGGUNG / INSURER CONFIRMATION"
         confirmationParty="Nama Perusahaan Asuransi & Authorized Signatory"
       />
@@ -170,6 +170,10 @@ export function PlacingSlipDocument(props: DocProps) {
       <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
+
+      <LocationScheduleAppendix slip={slip} />
+
+      <VehicleScheduleAppendix slip={slip} />
 
       <ClauseWordingAppendix slip={slip} />
 
@@ -214,13 +218,17 @@ export function QuotationSlipDocument(props: DocProps) {
       <SecurityPanelBlock slip={slip} />
 
       <SignatureGrid
-        place={`Jakarta, ${dateLong(slip.updatedAt)}`}
+        place={`Jakarta, ${dateEn(slip.updatedAt)}`}
         confirmationTitle="KONFIRMASI TERTANGGUNG / INSURED CONFIRMATION"
       />
 
       <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
+
+      <LocationScheduleAppendix slip={slip} />
+
+      <VehicleScheduleAppendix slip={slip} />
 
       <ClauseWordingAppendix slip={slip} />
 
@@ -244,7 +252,7 @@ export function CoverNoteDocument(props: DocProps) {
       <InterestBlock slip={slip} />
       <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
-      <ClausesBlock slip={slip} inline />
+      <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
@@ -262,11 +270,17 @@ export function CoverNoteDocument(props: DocProps) {
 
       <SectionHeading>SIGNED</SectionHeading>
       <InsurerSignatureGrid slip={slip} />
-      <p className="mt-8 text-[13px]">Jakarta, {dateLong(slip.updatedAt)}</p>
+      <p className="mt-8 text-[13px]">Jakarta, {dateEn(slip.updatedAt)}</p>
 
       <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
+
+      <LocationScheduleAppendix slip={slip} />
+
+      <VehicleScheduleAppendix slip={slip} />
+
+      <ClauseWordingAppendix slip={slip} />
 
       <AttachmentContents slip={slip} prints={props.prints} />
     </DocumentShell>
@@ -279,7 +293,7 @@ export function ClosingInstructionDocument(props: DocProps) {
   const number = derivedDocNumber(slip.slipNo, "CI")
 
   return (
-    <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
+    <DocumentShell backHref={`/underwriting/closing/edit/${slip.id}`}>
       <Letterhead />
       <DocTitle
         title="CLOSING INSTRUCTION"
@@ -300,7 +314,7 @@ export function ClosingInstructionDocument(props: DocProps) {
         </>
       ) : null}
 
-      <ClausesBlock slip={slip} inline />
+      <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
@@ -319,7 +333,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       ) : null}
 
       <p className="mt-8 mb-1 text-[13px]">
-        Jakarta, {dateLong(slip.updatedAt)}
+        Jakarta, {dateEn(slip.updatedAt)}
       </p>
       <div className="avoid-break mt-4 grid grid-cols-1 gap-x-8 text-[13px] sm:grid-cols-2">
         <div>
@@ -345,6 +359,12 @@ export function ClosingInstructionDocument(props: DocProps) {
       <AttachmentList slip={slip} />
 
       <ParticipantAppendix slip={slip} />
+
+      <LocationScheduleAppendix slip={slip} />
+
+      <VehicleScheduleAppendix slip={slip} />
+
+      <ClauseWordingAppendix slip={slip} />
 
       <AttachmentContents slip={slip} prints={props.prints} />
     </DocumentShell>

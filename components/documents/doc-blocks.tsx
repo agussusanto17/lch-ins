@@ -19,7 +19,6 @@ import {
   ratePermilText,
   roundCents,
   sumItems,
-  sumPremium,
   totalPayable,
   totalPremium,
   totalSumInsured,
@@ -69,7 +68,13 @@ import {
   itemGroups,
   type ItemGroup,
 } from "@/lib/slip-items"
-import { isMultiVehicle, vehicleTitle } from "@/lib/slip-vehicles"
+import {
+  AS_ATTACHED,
+  extensionShort,
+  sameOrAttached,
+  vehicleSchedule,
+} from "@/lib/slip-schedule"
+import { isMultiVehicle } from "@/lib/slip-vehicles"
 import { cn } from "@/lib/utils"
 
 export function DocTitle({
@@ -152,7 +157,7 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
   if (usesParticipants(slip.cob) && slip.participants?.length === 1)
     rows.push(["PID / Insured Name", participantPidText(slip.participants[0])])
   if (isMultiLocation(slip)) {
-    rows.push(...locationRows(slip))
+    rows.push(...attachedLocationRows(slip))
   } else {
     const occupation = slipOccupationText(slip)
     if (occupation) rows.push(["Occupation", occupation])
@@ -190,37 +195,23 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Okupasi, lokasi, dan kelas slip Property multi lokasi, bernomor seperti CI
- * LCH Ruko & Gudang. Tiap lokasi mencetak sum insured-nya. Okupasi dan kelas
- * konstruksi cukup sekali bila semua lokasi sama, seperti CI SISKA RAHARJA.
+ * Okupasi, lokasi, dan kelas slip Property multi lokasi di badan dokumen.
+ * Okupasi dan kelas konstruksi yang sama di semua lokasi dicetak sekali;
+ * selebihnya "As Attached", dengan rincian di lampiran DAFTAR LOKASI (Agus,
+ * 9 November 2026).
  */
-function locationRows(slip: PlacingSlip): [string, string[]][] {
+function attachedLocationRows(slip: PlacingSlip): [string, string][] {
   const groups = locationGroups(slip)
-  const occupations = groups.map((g) => slipOccupationText(g.location) || "—")
-  const rows: [string, string[]][] = [
-    [
-      "Occupation",
-      new Set(occupations).size === 1 ? [occupations[0]] : occupations,
-    ],
-    [
-      "Risk(s) Location",
-      // Baris alamat mengikuti isian user; sum insured di baris sendiri.
-      groups.map((g) => {
-        const address = addressLines(g.location.riskLocation)
-        const amount = sumItems(g.section1) + sumItems(g.section2)
-        return `${address || "—"}\nSum Insured: ${money(amount, slip.currency)}`
-      }),
-    ],
-  ]
-  const classes = groups.map((g) => g.location.constructionClass ?? "")
-  if (classes.some(Boolean)) {
-    rows.push([
-      "Construction Class",
-      new Set(classes).size === 1
-        ? [constructionClassLabel(classes[0])]
-        : classes.map((c) => constructionClassLabel(c) || "—"),
-    ])
-  }
+  const rows: [string, string][] = []
+  const occupation = sameOrAttached(groups.map((g) => slipOccupationText(g.location)))
+  if (occupation) rows.push(["Occupation", occupation])
+  rows.push(["Risk(s) Location", `${AS_ATTACHED} (${groups.length} locations)`])
+  const classes = sameOrAttached(
+    groups.map((g) =>
+      g.location.constructionClass ? constructionClassLabel(g.location.constructionClass) : ""
+    )
+  )
+  if (classes) rows.push(["Construction Class", classes])
   return rows
 }
 
@@ -260,47 +251,31 @@ export function InfoTable({
 }
 
 export function InterestBlock({ slip }: { slip: PlacingSlip }) {
+  // Banyak kendaraan: rinciannya di lampiran DAFTAR UNIT KENDARAAN.
+  if (isMultiVehicle(slip)) return <VehiclesAttachedInterest slip={slip} />
   const isProperty = slip.cob === "Property"
-  // Slip multi lokasi menyebut lokasi tiap item sum insured.
   const multi = isMultiLocation(slip)
-  const sumInsuredRow = (i: LineItem, dash: boolean) => (
+  const sumInsuredRow = (i: LineItem) => (
     <li
       key={i.id}
       className="flex justify-between gap-6 border-b border-dashed py-1"
     >
-      <span className="flex gap-1.5">
-        {dash ? <span aria-hidden>—</span> : null}
-        <span>{i.description}</span>
-      </span>
+      <span>{i.description}</span>
       <span className="tabular whitespace-nowrap">
         {money(i.amount, slip.currency)}
       </span>
     </li>
   )
-  // Slip multi lokasi: item tiap section dikelompokkan di bawah judul
-  // "Lokasi n" (permintaan LCH, 6 November 2026).
+  // Slip multi lokasi menulis "As Attached"; objek per lokasi dicetak di
+  // lampiran DAFTAR LOKASI (Agus, 9 November 2026).
   const sectionList = (section: "section1" | "section2") => {
-    const groups = locationGroups(slip)
-    if (!multi) {
-      return (
-        <ul className="mt-2 flex flex-col gap-1">
-          {groups.flatMap((g) => g[section]).map((i) => sumInsuredRow(i, false))}
-        </ul>
-      )
-    }
+    if (multi) return <p className="mt-2 font-medium">{AS_ATTACHED}</p>
     return (
-      <div className="mt-2 flex flex-col gap-3">
-        {groups
-          .filter((g) => g[section].length > 0)
-          .map((g) => (
-            <div key={g.no} className="avoid-break">
-              <p className="font-medium">Lokasi {g.no}</p>
-              <ul className="mt-1 flex flex-col gap-1">
-                {g[section].map((i) => sumInsuredRow(i, true))}
-              </ul>
-            </div>
-          ))}
-      </div>
+      <ul className="mt-2 flex flex-col gap-1">
+        {locationGroups(slip)
+          .flatMap((g) => g[section])
+          .map((i) => sumInsuredRow(i))}
+      </ul>
     )
   }
   // Slip ber-section (CAR, EAR) mengelompokkan objek per section.
@@ -702,14 +677,12 @@ export function ExclusionsBlock({ slip }: { slip: PlacingSlip }) {
   )
 }
 
-/** inline = wording penuh langsung di daftar (Quotation/Cover Note/CI). */
-export function ClausesBlock({
-  slip,
-  inline,
-}: {
-  slip: PlacingSlip
-  inline?: boolean
-}) {
+/**
+ * Daftar judul klausula sebelum tanda tangan. Wording lengkap dicetak di
+ * lampiran CLAUSE WORDING setelah tanda tangan, di keempat dokumen slip
+ * (Harry, 9 November 2026).
+ */
+export function ClausesBlock({ slip }: { slip: PlacingSlip }) {
   const groups = clauseGroups(slip)
   if (!groups.length) return null
 
@@ -725,15 +698,9 @@ export function ClausesBlock({
                   {g.heading}
                 </ClauseGroupHeading>
               ) : null}
-              <p className={inline ? "font-semibold" : undefined}>
-                {i + 1}. {inline ? c.title : clauseTitleCase(c.title)}
+              <p>
+                {i + 1}. {clauseTitleCase(c.title)}
               </p>
-              {inline && wordingText(c.wording) ? (
-                <div
-                  className="rte-prose mt-0.5 ml-4 text-[12px] text-muted-foreground text-justify"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
-                />
-              ) : null}
             </li>
           ))
         )}
@@ -840,7 +807,7 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
 
   return (
     <section className="print-break">
-      <SectionHeading>CLAUSE WORDING</SectionHeading>
+      <SectionHeading>CLAUSE WORDINGS</SectionHeading>
       <div className="flex flex-col gap-3 text-[12px]">
         {groups.map((g, gi) =>
           g.clauses.map((c, i) => (
@@ -1246,30 +1213,27 @@ function scheduleRows(lines: ParEqvetLine[], groups: LocationGroup[]) {
     })
 }
 
+/** Satu baris total di badan dokumen; rinciannya di tabel lampiran. */
+function AttachedTotal({ label, value }: { label: string; value: string }) {
+  return (
+    <p className="mt-3 flex justify-between rounded bg-primary/8 px-3 py-2 text-[13px] font-bold text-primary">
+      <span>{label}</span>
+      <span className="tabular">{value}</span>
+    </p>
+  )
+}
+
 /**
- * Rate & premium slip Property multi lokasi (Opsi B, disetujui Harry 5
- * November 2026): satu baris per lokasi dan cover, PAR dan EQVET terpisah,
- * lalu Discount, Policy Cost, dan Stamp Duty sebelum Grand Total. Bagian RATE
- * hanya dicetak bila semua lokasi memakai rate yang sama; selain itu rate
- * cukup dibaca di tabel.
+ * Badan dokumen slip Property multi lokasi: bagian RATE bila semua lokasi
+ * memakai rate yang sama (seperti CI SISKA RAHARJA), "As Attached" untuk
+ * premi, dan Grand Total. Jadwal premi per lokasi (Opsi B, disetujui Harry 5
+ * November 2026) dicetak di lampiran DAFTAR LOKASI (Agus, 9 November 2026).
  */
-export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
+export function LocationPremiumAttached({ slip }: { slip: PlacingSlip }) {
   const calc = calculateParEqvet(slip)
-  const parEqvet = isParEqvetSlip(slip)
   const groups = locationGroups(slip)
-  // Rate yang sama di semua lokasi dicetak sekali di bagian RATE, seperti CI
-  // SISKA RAHARJA; tabel di bawahnya tetap per lokasi.
   const sharedRates = locationsShareRates(slip)
   const first = groups[0]
-  const currency = calc.currency
-  const amount = (value: number) => num(value, 2)
-  const policies = [calc.par, calc.eqvet].filter((g) => g.subtotal > 0).length
-  const discount = roundCents(calc.par.discountAmount + calc.eqvet.discountAmount)
-  const sections = [calc.par, calc.eqvet]
-    .map((group) => ({ group, rows: scheduleRows(group.lines, groups) }))
-    .filter((s) => s.rows.length > 0 || s.group.subtotal > 0)
-  const cell = "py-1.5 pr-2 align-top"
-
   return (
     <>
       {sharedRates ? (
@@ -1287,13 +1251,34 @@ export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
         </>
       ) : null}
       <div className="mt-6">
-        <InfoTable
-          rows={[
-            [sharedRates ? "Premium" : "Rate & Premium", "As per schedule below"],
-          ]}
-        />
+        <InfoTable rows={[[sharedRates ? "Premium" : "Rate & Premium", AS_ATTACHED]]} />
       </div>
-      <SectionHeading>PREMIUM CALCULATION</SectionHeading>
+      <AttachedTotal
+        label={isParEqvetSlip(slip) ? "Grand Total Premium (PAR+EQVET)" : "Total Payable"}
+        value={moneyCents(calc.grandTotal, calc.currency)}
+      />
+    </>
+  )
+}
+
+/**
+ * Jadwal premi per lokasi dan cover, PAR dan EQVET terpisah, lalu Discount,
+ * Policy Cost, dan Stamp Duty sebelum Grand Total.
+ */
+function LocationScheduleTable({ slip }: { slip: PlacingSlip }) {
+  const calc = calculateParEqvet(slip)
+  const parEqvet = isParEqvetSlip(slip)
+  const groups = locationGroups(slip)
+  const currency = calc.currency
+  const amount = (value: number) => num(value, 2)
+  const policies = [calc.par, calc.eqvet].filter((g) => g.subtotal > 0).length
+  const discount = roundCents(calc.par.discountAmount + calc.eqvet.discountAmount)
+  const sections = [calc.par, calc.eqvet]
+    .map((group) => ({ group, rows: scheduleRows(group.lines, groups) }))
+    .filter((s) => s.rows.length > 0 || s.group.subtotal > 0)
+  const cell = "py-1.5 pr-2 align-top"
+
+  return (
       <table className="w-full text-[12px]">
         <thead>
           <tr className="border-b text-left text-muted-foreground">
@@ -1383,111 +1368,303 @@ export function LocationPremiumSchedule({ slip }: { slip: PlacingSlip }) {
           </tr>
         </tbody>
       </table>
+  )
+}
+
+/** Judul lampiran tabel: nama tertanggung dan periode, seperti CI Truckindo. */
+function AppendixTitle({ slip, title }: { slip: PlacingSlip; title: string }) {
+  const [periodLabel, periodText] = slipPeriodRow(slip)
+  return (
+    <div className="mb-4">
+      <SectionHeading>{title}</SectionHeading>
+      <p className="text-[12.5px] font-semibold">{slip.insuredName.trim() || "—"}</p>
+      <p className="text-[12px] text-muted-foreground">
+        {periodLabel}: {periodText.split("\n")[0]}
+      </p>
+    </div>
+  )
+}
+
+/**
+ * Lampiran DAFTAR LOKASI slip Property multi lokasi: alamat, okupasi, kelas,
+ * dan objek per lokasi, lalu jadwal premi per lokasi. Badan dokumen cukup
+ * menulis "As Attached" (Agus, 9 November 2026).
+ */
+export function LocationScheduleAppendix({ slip }: { slip: PlacingSlip }) {
+  if (!isMultiLocation(slip)) return null
+  const groups = locationGroups(slip)
+  const currency = slip.currency || "IDR"
+  const amount = (value: number) => num(value, 2)
+  const cell = "py-1.5 pr-2 align-top"
+  const items = (list: LineItem[]) =>
+    list.length ? (
+      <ul className="flex flex-col gap-0.5">
+        {list.map((i) => (
+          <li key={i.id} className="flex justify-between gap-3">
+            <span>{i.description || "—"}</span>
+            <span className="tabular whitespace-nowrap">{amount(i.amount || 0)}</span>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      "—"
+    )
+  const hasSection2 = groups.some((g) => g.section2.length > 0)
+
+  return (
+    <section className="print-break mt-10">
+      <AppendixTitle slip={slip} title="DAFTAR LOKASI" />
+      <table className="w-full text-[11.5px]">
+        <thead>
+          <tr className="border-b text-left text-muted-foreground">
+            <th className="w-10 py-2 pr-2 font-semibold">No</th>
+            <th className="py-2 pr-2 font-semibold">Risk Location</th>
+            <th className="py-2 pr-2 font-semibold">Occupation / Class</th>
+            <th className="py-2 pr-2 font-semibold">Section 1 — Material Damage ({currency})</th>
+            {hasSection2 ? (
+              <th className="py-2 pr-2 font-semibold">Section 2 — Business Interruption ({currency})</th>
+            ) : null}
+            <th className="py-2 text-right font-semibold">Sum Insured ({currency})</th>
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((g) => (
+            <tr key={g.no} className="avoid-break border-b border-dashed">
+              <td className={cell}>{g.no}</td>
+              <td className={cn(cell, "whitespace-pre-line")}>
+                {addressLines(g.location.riskLocation) || "—"}
+              </td>
+              <td className={cell}>
+                {slipOccupationText(g.location) || "—"}
+                {g.location.constructionClass ? (
+                  <span className="block text-muted-foreground">
+                    {constructionClassLabel(g.location.constructionClass)}
+                  </span>
+                ) : null}
+              </td>
+              <td className={cell}>{items(g.section1)}</td>
+              {hasSection2 ? <td className={cell}>{items(g.section2)}</td> : null}
+              <td className="tabular py-1.5 text-right align-top whitespace-nowrap">
+                {amount(sumItems(g.section1) + sumItems(g.section2))}
+              </td>
+            </tr>
+          ))}
+          <tr className="avoid-break bg-muted/60 font-bold">
+            <td colSpan={hasSection2 ? 5 : 4} className="px-2 py-2">
+              Total Sum Insured
+            </td>
+            <td className="tabular px-2 py-2 text-right whitespace-nowrap">
+              {amount(totalSumInsured(slip))}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <SectionHeading>PREMIUM CALCULATION</SectionHeading>
+      <LocationScheduleTable slip={slip} />
+    </section>
+  )
+}
+
+/**
+ * Badan dokumen slip Motor Vehicle multi kendaraan, seperti CI LCH Truckindo
+ * dan SBI Fleet: rincian kendaraan "As Attached", lalu Total Sum Insured.
+ */
+function VehiclesAttachedInterest({ slip }: { slip: PlacingSlip }) {
+  return (
+    <>
+      <SectionHeading>INTEREST INSURED</SectionHeading>
+      <InfoTable
+        rows={[
+          [
+            "Object of Insured",
+            // Teks berbaris, bukan daftar: InfoTable menomori isi berbentuk array.
+            [
+              `Merk / Model / Sub Model : ${AS_ATTACHED}`,
+              `Type / Year of Built : ${AS_ATTACHED}`,
+              `Police No. : ${AS_ATTACHED}`,
+              `Chassis No. / Engine No. : ${AS_ATTACHED}`,
+              `Colour : ${AS_ATTACHED}`,
+            ].join("\n"),
+          ],
+        ]}
+      />
+      <p className="mt-3 flex justify-between rounded bg-primary/8 px-3 py-2 text-[13px] font-semibold text-primary">
+        <span>Total Sum Insured ({slip.interestItems.length} units)</span>
+        <span className="tabular">{money(totalSumInsured(slip), slip.currency)}</span>
+      </p>
+    </>
+  )
+}
+
+/** Badan dokumen slip Motor Vehicle multi kendaraan: "As Attached" dan Total Payable. */
+export function VehiclePremiumAttached({ slip }: { slip: PlacingSlip }) {
+  return (
+    <>
+      <div className="mt-6">
+        <InfoTable rows={[["Rate & Premium", AS_ATTACHED]]} />
+      </div>
+      <AttachedTotal label="Total Payable" value={moneyCents(totalPayable(slip), slip.currency)} />
     </>
   )
 }
 
 /**
- * Rate & premium slip Motor Vehicle multi kendaraan, seperti jadwal premi per
- * lokasi slip Property: per kendaraan casco dan perluasan dari TSI-nya, lalu
- * TPL dan PA dari limitnya, dengan subtotal per kendaraan. Diskon, admin
- * cost, stamp duty, dan Total Payable dicetak di bawahnya oleh PayableTable.
+ * Lampiran DAFTAR UNIT KENDARAAN: satu baris per kendaraan, isinya sama
+ * dengan tabel CI LCH Truckindo (Agus, 9 November 2026). Kolom yang
+ * berkaitan ditumpuk supaya muat di A4 portrait: Chrome tetap memakai lebar
+ * portrait untuk isi halaman landscape, jadi tabel lebar akan terpotong.
  */
-export function VehiclePremiumSchedule({ slip }: { slip: PlacingSlip }) {
-  const groups = itemGroups(slip)
+export function VehicleScheduleAppendix({ slip }: { slip: PlacingSlip }) {
+  if (!isMultiVehicle(slip)) return null
+  const { extensionLabels, rows } = vehicleSchedule(slip)
   const currency = slip.currency || "IDR"
-  const amount = (value: number) => num(value, 2)
-  const shown = (l: RateLine) => l.rate !== null || l.premium > 0
-  const cell = "py-1.5 pr-2 align-top"
+  // Angka bulat tanpa ",00" seperti tabel CI Truckindo, supaya muat di A4 portrait.
+  const amount = (value: number) => num(value, 0, 2)
+  const rate = (value: number | null | undefined) =>
+    value == null ? "—" : `${rateText(value)}%`
+  const heavy = /heavy/i.test(slip.typeOfCover || "")
+  const th = "border px-1 py-1.5 text-left align-bottom font-semibold"
+  const td = "border px-1 py-1 align-top break-words"
+  const right = "text-right tabular"
+  const hasExt = extensionLabels.length > 0
+  const hasTpl = rows.some((r) => r.tplLimit || r.tplPremium)
+  const hasPa = rows.some((r) => r.paDriverLimit || r.paPassengerLimit)
+  const muted = "block text-muted-foreground"
 
   return (
-    <>
-      <div className="mt-6">
-        <InfoTable rows={[["Rate & Premium", "As per schedule below"]]} />
-      </div>
-      <SectionHeading>PREMIUM CALCULATION</SectionHeading>
-      <table className="w-full text-[12px]">
-        <thead>
-          <tr className="border-b text-left text-muted-foreground">
-            <th className="w-20 py-2 pr-2 font-semibold">Kendaraan</th>
-            <th className="py-2 pr-2 font-semibold">Objek</th>
-            <th className="py-2 pr-2 text-right font-semibold">
-              TSI / Limit ({currency})
-            </th>
-            <th className="py-2 pr-2 font-semibold">Cover</th>
-            <th className="py-2 pr-2 text-right font-semibold">Rate</th>
-            <th className="py-2 text-right font-semibold">
-              Premium ({currency})
-            </th>
+    <section className="print-break mt-10">
+      <AppendixTitle slip={slip} title={heavy ? "DAFTAR UNIT ALAT BERAT" : "DAFTAR UNIT KENDARAAN"} />
+      <table className="w-full table-fixed border-collapse text-[9px] leading-snug">
+        <colgroup>
+          <col className="w-[3%]" />
+          <col className="w-[16%]" />
+          <col className="w-[16%]" />
+          <col className="w-[10%]" />
+          <col className="w-[12%]" />
+          {hasExt ? <col className="w-[15%]" /> : null}
+          {hasTpl ? <col className="w-[8%]" /> : null}
+          {hasPa ? <col className="w-[10%]" /> : null}
+          <col className="w-[10%]" />
+        </colgroup>
+        <thead className="bg-muted/60">
+          <tr>
+            <th className={th}>No</th>
+            <th className={th}>Merk / Type / Model<span className={muted}>Tahun · Warna · No. Polisi</span></th>
+            <th className={th}>No. Rangka<span className={muted}>No. Mesin</span></th>
+            <th className={cn(th, "text-right")}>Sum Insured ({currency})</th>
+            <th className={th}>Coverage<span className={muted}>Rate · Premi</span></th>
+            {hasExt ? <th className={th}>Perluasan<span className={muted}>Rate · Premi</span></th> : null}
+            {hasTpl ? <th className={th}>TPL<span className={muted}>Limit · Premi</span></th> : null}
+            {hasPa ? <th className={th}>PA<span className={muted}>Limit · Premi</span></th> : null}
+            <th className={cn(th, "text-right")}>Total Premi</th>
           </tr>
         </thead>
         <tbody>
-          {groups.map((g) => {
-            const casco = g.rateLines.filter(shown)
-            const limits = [
-              ...g.tplLines.filter(shown).map((l) => ({ line: l, cover: "Third Party Liability" })),
-              ...g.paLines.filter(shown).map((l) => ({ line: l, cover: `Personal Accident — ${l.label}` })),
-            ]
-            const subtotal =
-              sumPremium(g.rateLines) + sumPremium(g.tplLines) + sumPremium(g.paLines)
-            return (
-              <Fragment key={g.item.id}>
-                {casco.map((l, i) => (
-                  <tr key={l.id} className="avoid-break border-b border-dashed">
-                    <td className={cell}>{i === 0 ? g.no : ""}</td>
-                    <td className={cell}>{i === 0 ? vehicleTitle(g.item) : ""}</td>
-                    <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
-                      {i === 0 ? amount(g.item.amount || 0) : ""}
-                    </td>
-                    <td className={cell}>{l.label}</td>
-                    <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
-                      {l.rate !== null ? `${rateText(l.rate)}%` : "—"}
-                    </td>
-                    <td className="tabular py-1.5 text-right align-top whitespace-nowrap">
-                      {amount(l.premium)}
-                    </td>
-                  </tr>
-                ))}
-                {limits.map(({ line, cover }, i) => (
-                  <tr key={line.id} className="avoid-break border-b border-dashed">
-                    <td className={cell}>{!casco.length && i === 0 ? g.no : ""}</td>
-                    <td className={cell}>
-                      {!casco.length && i === 0 ? vehicleTitle(g.item) : ""}
-                    </td>
-                    <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
-                      {amount(Number(line.basis ?? 0))}
-                    </td>
-                    <td className={cell}>{cover}</td>
-                    <td className={cn(cell, "tabular text-right whitespace-nowrap")}>
-                      {line.rate !== null ? `${rateText(line.rate)}%` : "—"}
-                    </td>
-                    <td className="tabular py-1.5 text-right align-top whitespace-nowrap">
-                      {amount(line.premium)}
-                    </td>
-                  </tr>
-                ))}
-                <tr className="avoid-break border-b font-semibold">
-                  <td colSpan={5} className="py-1.5 pr-2">
-                    Premium kendaraan {g.no}
-                  </td>
-                  <td className="tabular py-1.5 text-right whitespace-nowrap">
-                    {amount(subtotal)}
-                  </td>
-                </tr>
-              </Fragment>
-            )
-          })}
-          <tr className="avoid-break bg-muted/60 font-bold">
-            <td colSpan={5} className="px-2 py-2">
-              Total Premium
-            </td>
-            <td className="tabular px-2 py-2 text-right whitespace-nowrap">
-              {amount(totalPremium(slip))}
-            </td>
+          {rows.map((r) => (
+            <tr key={r.no} className="avoid-break">
+              <td className={cn(td, "text-center")}>{r.no}</td>
+              <td className={td}>
+                {r.vehicle.name}
+                <span className={muted}>
+                  {[r.vehicle.year, r.vehicle.color].filter(Boolean).join(" · ") || "—"}
+                </span>
+                <span className="block font-medium">{r.vehicle.plate || "—"}</span>
+              </td>
+              <td className={td}>
+                {r.vehicle.chassis || "—"}
+                <span className={muted}>{r.vehicle.engine || "—"}</span>
+              </td>
+              <td className={cn(td, right)}>{amount(r.sumInsured)}</td>
+              <td className={td}>
+                {r.coverage?.label ?? "—"}
+                {r.coverage ? (
+                  <span className={muted}>
+                    {rate(r.coverage.rate)} · {amount(r.coverage.premium)}
+                  </span>
+                ) : null}
+              </td>
+              {hasExt ? (
+                <td className={td}>
+                  {extensionLabels
+                    .filter((l) => r.extensions[l])
+                    .map((l) => (
+                      <span key={l} className="block">
+                        {extensionShort(l)} {rate(r.extensions[l].rate)} · {amount(r.extensions[l].premium)}
+                      </span>
+                    ))}
+                </td>
+              ) : null}
+              {hasTpl ? (
+                <td className={td}>
+                  {r.tplLimit || r.tplPremium ? (
+                    <>
+                      {amount(r.tplLimit)}
+                      <span className={muted}>{amount(r.tplPremium)}</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              ) : null}
+              {hasPa ? (
+                <td className={td}>
+                  {r.paDriverLimit ? (
+                    <span className="block">
+                      Driver {amount(r.paDriverLimit)}
+                      <span className={muted}>{amount(r.paDriverPremium)}</span>
+                    </span>
+                  ) : null}
+                  {r.paPassengerLimit ? (
+                    <span className="block">
+                      Penumpang {amount(r.paPassengerLimit)}
+                      <span className={muted}>{amount(r.paPassengerPremium)}</span>
+                    </span>
+                  ) : null}
+                  {!r.paDriverLimit && !r.paPassengerLimit ? "—" : null}
+                </td>
+              ) : null}
+              <td className={cn(td, right, "font-semibold")}>{amount(r.total)}</td>
+            </tr>
+          ))}
+          <tr className="avoid-break font-bold">
+            <td colSpan={3} className={cn(td, "text-right")}>Total</td>
+            <td className={cn(td, right)}>{amount(rows.reduce((a, r) => a + r.sumInsured, 0))}</td>
+            <td colSpan={1 + (hasExt ? 1 : 0) + (hasTpl ? 1 : 0) + (hasPa ? 1 : 0)} className={td} />
+            <td className={cn(td, right)}>{amount(totalPremium(slip))}</td>
           </tr>
         </tbody>
       </table>
-    </>
+      <table className="mt-3 ml-auto w-72 text-[11px]">
+        <tbody>
+          <tr className="border-b">
+            <td className="py-1">Total Premium</td>
+            <td className="tabular py-1 text-right">{moneyCents(totalPremium(slip), currency)}</td>
+          </tr>
+          {slip.discountPct ? (
+            <tr className="border-b">
+              <td className="py-1">Discount ({num(slip.discountPct, 2)}%)</td>
+              <td className="tabular py-1 text-right">({moneyCents(discountAmount(slip), currency)})</td>
+            </tr>
+          ) : null}
+          {slip.adminCost ? (
+            <tr className="border-b">
+              <td className="py-1">Admin Cost</td>
+              <td className="tabular py-1 text-right">{moneyCents(slip.adminCost, currency)}</td>
+            </tr>
+          ) : null}
+          {slip.stampDuty ? (
+            <tr className="border-b">
+              <td className="py-1">Stamp Duty</td>
+              <td className="tabular py-1 text-right">{moneyCents(slip.stampDuty, currency)}</td>
+            </tr>
+          ) : null}
+          <tr className="font-bold">
+            <td className="py-1">Total Payable</td>
+            <td className="tabular py-1 text-right">{moneyCents(totalPayable(slip), currency)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
   )
 }
 

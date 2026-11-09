@@ -63,8 +63,8 @@ async function editableSlip(tx: Tx, slipId: string) {
     SELECT slip_no, status::text AS status FROM placing_slips WHERE id = ${slipId}::uuid FOR UPDATE`
   const slip = rows[0]
   if (!slip) throw new Error("Placing slip tidak ditemukan.")
-  if (slip.status === "Cancelled" || slip.status === "Closed") {
-    throw new Error(`Placing Slip berstatus ${slip.status} tidak dapat diubah.`)
+  if (slip.status === "Cancelled") {
+    throw new Error("Placing Slip berstatus Cancelled tidak dapat diubah.")
   }
   return slip
 }
