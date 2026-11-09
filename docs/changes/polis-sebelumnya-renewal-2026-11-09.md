@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-09
 - **Branch:** `fix/polis-sebelumnya-renewal`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#189](https://github.com/agussusanto17/lch-ins/pull/189)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
