@@ -47,6 +47,7 @@ import {
   slipDocumentDate,
 } from "@/lib/document-dates"
 import { dateEn } from "@/lib/format"
+import { isProvisionalPolicyNo } from "@/lib/policy-from-slip"
 import { isMultiLocation } from "@/lib/slip-locations"
 import { isMultiItem } from "@/lib/slip-items"
 import { usesOpenCover } from "@/lib/open-cover"
@@ -63,6 +64,38 @@ type DocProps = {
   initial: PlacingSlip | null
   /** Isi lampiran yang dicetak di halaman akhir, dimuat server. */
   prints?: AttachmentPrints
+  /** Nomor polis yang tercatat dari slip ini (Closing Instruction), dimuat server. */
+  linkedPolicies?: string[]
+}
+
+/**
+ * Keterangan di atas Closing Instruction: polis yang tercatat otomatis di
+ * Policy Database saat CI terbit (meeting LCH, 10 November 2026).
+ */
+function LinkedPoliciesNotice({ policies }: { policies: string[] }) {
+  if (!policies.length) {
+    return (
+      <p className="text-muted-foreground">
+        Belum ada polis di Policy Database untuk Closing Instruction ini.{" "}
+        <Link href="/policies" className="font-medium text-primary underline-offset-2 hover:underline">
+          Buka Policy Database
+        </Link>
+      </p>
+    )
+  }
+  const provisional = policies.some(isProvisionalPolicyNo)
+  return (
+    <p>
+      Polis tercatat di Policy Database:{" "}
+      <span className="font-medium tabular">{policies.join(", ")}</span>.
+      {provisional
+        ? " Nomor sementara dari CI; ganti dengan nomor polis dari asuransi dan unggah polisnya."
+        : null}{" "}
+      <Link href="/policies" className="font-medium text-primary underline-offset-2 hover:underline">
+        Buka Policy Database
+      </Link>
+    </p>
+  )
 }
 
 function useSlip({ id, initial }: DocProps) {
@@ -317,7 +350,15 @@ export function ClosingInstructionDocument(props: DocProps) {
   const kop = letterheadFor(date)
 
   return (
-    <DocumentShell backHref={`/underwriting/closing/edit/${slip.id}`} variant={kop}>
+    <DocumentShell
+      backHref={`/underwriting/closing/edit/${slip.id}`}
+      variant={kop}
+      notice={
+        slip.status === "Closed" && props.linkedPolicies ? (
+          <LinkedPoliciesNotice policies={props.linkedPolicies} />
+        ) : undefined
+      }
+    >
       <Letterhead variant={kop} />
       <DocTitle
         title="CLOSING INSTRUCTION"

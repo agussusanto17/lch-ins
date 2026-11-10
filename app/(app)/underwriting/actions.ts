@@ -21,6 +21,7 @@ import {
   type PlacingSlipRecord,
 } from "@/lib/server/placing-slips"
 import { validatePlacingSlipForRelease } from "@/lib/server/tariffs"
+import { recordPoliciesFromClosing } from "@/lib/server/auto-policies"
 import { prisma } from "@/lib/prisma"
 import { requireManage } from "@/lib/server/session"
 import {
@@ -35,6 +36,28 @@ export interface ActionResponse<T = void> {
   ok: boolean
   data?: T
   error?: string
+  /** Info tambahan untuk pengguna, misalnya polis yang tercatat otomatis. */
+  notice?: string
+}
+
+/**
+ * Polis otomatis saat Closing Instruction terbit (meeting LCH, 10 November
+ * 2026). Gagal mencatat polis tidak membatalkan CI yang sudah tersimpan;
+ * alasannya dikembalikan sebagai info supaya polis bisa dicatat manual.
+ */
+async function autoPolicyNotice(slipId: string, userId: string) {
+  try {
+    const { created, skipped } = await recordPoliciesFromClosing(slipId, userId)
+    if (created.length) {
+      revalidatePath("/policies")
+      return `Polis tercatat di Policy Database dengan nomor sementara ${created.join(", ")}. Ganti nomornya dan unggah polis dari asuransi di sana.`
+    }
+    return skipped ?? undefined
+  } catch (err) {
+    unstable_rethrow(err)
+    const message = err instanceof Error ? err.message : "kesalahan tidak dikenal"
+    return `Polis belum tercatat otomatis: ${message} Catat manual di Policy Database.`
+  }
 }
 
 /** Tanggal dokumen "YYYY-MM-DD"; string kosong berarti dikosongkan. */
@@ -396,6 +419,7 @@ export async function savePlacingSlipAction(
     const input = parsed.data as PlacingSlipInput
 
     let result: PlacingSlipRecord
+    let previousStatus: SlipStatus | null = null
 
     const isNew =
       mode === "new" ||
@@ -407,16 +431,27 @@ export async function savePlacingSlipAction(
       // Check whether slip with mock ID already exists in database
       const existing = slip.id ? await getPlacingSlipById(slip.id) : null
       if (existing) {
+        previousStatus = existing.status
         result = await updatePlacingSlip(existing.dbId, input, user.id)
       } else {
         result = await createPlacingSlip(input, user.id)
       }
     } else {
+      const before = await prisma.placingSlip.findUnique({
+        where: { id: slip.id },
+        select: { status: true },
+      })
+      previousStatus = before?.status ?? null
       result = await updatePlacingSlip(slip.id, input, user.id)
     }
 
     revalidateUnderwritingPaths(result.id)
-    return { ok: true, data: result }
+    // Closing Instruction baru terbit: polisnya langsung tercatat.
+    const notice =
+      result.status === "Closed" && previousStatus !== "Closed"
+        ? await autoPolicyNotice(result.id, user.id)
+        : undefined
+    return { ok: true, data: result, notice }
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Gagal menyimpan Placing Slip."
@@ -511,7 +546,11 @@ export async function togglePlacingSlipStatusAction(
 
     const updated = await togglePlacingSlipStatus(target.dbId, status, user.id)
     revalidateUnderwritingPaths(updated.id)
-    return { ok: true, data: updated }
+    const notice =
+      status === "Closed" && target.status !== "Closed"
+        ? await autoPolicyNotice(updated.id, user.id)
+        : undefined
+    return { ok: true, data: updated, notice }
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Gagal mengubah status Placing Slip."

@@ -22,6 +22,7 @@ export function DocumentShell({
   wide = false,
   letterhead = true,
   variant = "lch",
+  notice,
 }: {
   backHref: string
   children: React.ReactNode
@@ -31,6 +32,8 @@ export function DocumentShell({
   letterhead?: boolean
   /** Kop dan footer menurut tanggal dokumen: Lestari Cipta Hokindo sebelum 1 September 2025. */
   variant?: LetterheadVariant
+  /** Keterangan di atas dokumen yang tidak ikut tercetak. */
+  notice?: React.ReactNode
 }) {
   // Server dan render pertama menganggap browser mendukung, jadi tidak ada
   // hydration mismatch; peringatan baru muncul setelah user agent terbaca.
@@ -86,6 +89,12 @@ export function DocumentShell({
           </Button>
         </div>
       </div>
+
+      {notice ? (
+        <div className="no-print rounded-xl border bg-muted/40 px-4 py-3 text-sm">
+          {notice}
+        </div>
+      ) : null}
 
       <article className="print-sheet rounded-2xl border bg-card p-8 text-card-foreground shadow-sm md:p-12 overflow-x-auto print:overflow-visible">
         {/* Header berulang di setiap halaman cetak */}
