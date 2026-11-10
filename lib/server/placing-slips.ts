@@ -148,6 +148,7 @@ export interface PlacingSlipInput {
   brokeragePct?: number
   includeVat?: boolean
   additionalFee?: number
+  additionalFeeIncludeVat?: boolean
   subjectivity?: string | null
   closingInstruction?: string | null
   coverNoteRemarks?: string | null
@@ -726,6 +727,7 @@ function toPlacingSlipRecord(
     brokeragePct: Number(raw.brokeragePct),
     includeVat: raw.includeVat,
     additionalFee: Number(raw.additionalFee ?? 0),
+    additionalFeeIncludeVat: raw.additionalFeeIncludeVat,
     subjectivity: raw.subjectivity || undefined,
     closingInstruction: raw.closingInstruction || undefined,
     coverNoteRemarks: raw.coverNoteRemarks || undefined,
@@ -928,6 +930,11 @@ function slipAdditionalFee(cobName: string, fee: number | undefined) {
   return new Prisma.Decimal(
     usesAdditionalFee(normalizeCob(cobName)) ? (fee ?? 0) : 0
   )
+}
+
+/** Tanda PPN additional fee hanya berlaku untuk COB yang punya additional fee. */
+function slipAdditionalFeeIncludeVat(cobName: string, includeVat: boolean | undefined) {
+  return usesAdditionalFee(normalizeCob(cobName)) && (includeVat ?? false)
 }
 
 interface SavedLocation {
@@ -1248,6 +1255,7 @@ export async function createPlacingSlip(
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
         includeVat: input.includeVat ?? false,
         additionalFee: slipAdditionalFee(resolvedCob.name, input.additionalFee),
+        additionalFeeIncludeVat: slipAdditionalFeeIncludeVat(resolvedCob.name, input.additionalFeeIncludeVat),
         subjectivity: input.subjectivity?.trim() || null,
         closingInstruction: input.closingInstruction?.trim() || null,
         coverNoteRemarks: input.coverNoteRemarks?.trim() || null,
@@ -1654,6 +1662,7 @@ export async function updatePlacingSlip(
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
         includeVat: input.includeVat ?? false,
         additionalFee: slipAdditionalFee(resolvedCob.name, input.additionalFee),
+        additionalFeeIncludeVat: slipAdditionalFeeIncludeVat(resolvedCob.name, input.additionalFeeIncludeVat),
         subjectivity: input.subjectivity?.trim() || null,
         closingInstruction: input.closingInstruction?.trim() || null,
         coverNoteRemarks: input.coverNoteRemarks?.trim() || null,
@@ -1935,6 +1944,10 @@ export async function updatePlacingSlip(
         insuredName: existing.insuredName,
         status: existing.status,
         ...previousDates,
+        brokeragePct: Number(existing.brokeragePct),
+        includeVat: existing.includeVat,
+        additionalFee: Number(existing.additionalFee),
+        additionalFeeIncludeVat: existing.additionalFeeIncludeVat,
       },
       after: {
         insuredName: input.insuredName,
@@ -1942,6 +1955,10 @@ export async function updatePlacingSlip(
         releaseDate: documentDates.releaseDate ?? null,
         quotedDate: documentDates.quotedDate ?? null,
         closingDate: documentDates.closingDate ?? null,
+        brokeragePct: input.brokeragePct ?? 0,
+        includeVat: input.includeVat ?? false,
+        additionalFee: Number(slipAdditionalFee(resolvedCob.name, input.additionalFee)),
+        additionalFeeIncludeVat: slipAdditionalFeeIncludeVat(resolvedCob.name, input.additionalFeeIncludeVat),
       },
     })
   })

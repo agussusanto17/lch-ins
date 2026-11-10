@@ -297,6 +297,18 @@ export function brokerageVatAmount(slip: PlacingSlip) {
   return roundCents(b - b / (1 + BROKERAGE_VAT_RATE))
 }
 
+/**
+ * PPN di dalam additional fee kalau fee diisi termasuk PPN, dengan tarif yang
+ * sama seperti brokerage (permintaan LCH, 10 November 2026).
+ */
+export function additionalFeeVatAmount(
+  slip: Pick<PlacingSlip, "additionalFee" | "additionalFeeIncludeVat">
+) {
+  if (!slip.additionalFeeIncludeVat) return 0
+  const fee = slip.additionalFee ?? 0
+  return roundCents(fee - fee / (1 + BROKERAGE_VAT_RATE))
+}
+
 export function slipRateBasis(slip: PlacingSlip) {
   return totalSumInsured(slip)
 }

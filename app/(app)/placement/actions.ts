@@ -21,7 +21,10 @@ import {
   type PlacingSlipRecord,
 } from "@/lib/server/placing-slips"
 import { validatePlacingSlipForRelease } from "@/lib/server/tariffs"
-import { recordPoliciesFromClosing } from "@/lib/server/auto-policies"
+import {
+  recordPoliciesFromClosing,
+  syncPoliciesFromSlipRevision,
+} from "@/lib/server/auto-policies"
 import { prisma } from "@/lib/prisma"
 import { requireManage } from "@/lib/server/session"
 import {
@@ -57,6 +60,24 @@ async function autoPolicyNotice(slipId: string, userId: string) {
     unstable_rethrow(err)
     const message = err instanceof Error ? err.message : "kesalahan tidak dikenal"
     return `Polis belum tercatat otomatis: ${message} Catat manual di Policy Database.`
+  }
+}
+
+/**
+ * Revisi slip setelah CI terbit diteruskan ke polis bernomor sementara. Gagal
+ * meneruskan tidak membatalkan revisi yang sudah tersimpan; alasannya
+ * dikembalikan sebagai info supaya polis bisa diperbarui manual.
+ */
+async function revisionPolicyNotice(before: PlacingSlipRecord, userId: string) {
+  try {
+    const updated = await syncPoliciesFromSlipRevision(before, userId)
+    if (!updated.length) return undefined
+    revalidatePath("/policies")
+    return `Polis ${updated.join(", ")} ikut diperbarui dari revisi slip.`
+  } catch (err) {
+    unstable_rethrow(err)
+    const message = err instanceof Error ? err.message : "kesalahan tidak dikenal"
+    return `Polis belum ikut diperbarui: ${message} Perbarui manual di Policy Database.`
   }
 }
 
@@ -324,6 +345,7 @@ const placingSlipSchema = z.object({
   stampDuty: z.coerce.number().optional(),
   brokeragePct: z.coerce.number().optional(),
   includeVat: z.boolean().optional(),
+  additionalFeeIncludeVat: z.boolean().optional(),
   additionalFee: z.coerce
     .number()
     .min(0, "Additional fee tidak boleh negatif")
@@ -447,6 +469,8 @@ export async function savePlacingSlipAction(
 
     let result: PlacingSlipRecord
     let previousStatus: SlipStatus | null = null
+    // Slip sebelum revisi, kalau CI-nya sudah terbit: revisinya diteruskan ke polis.
+    let closedBefore: PlacingSlipRecord | null = null
 
     const isNew =
       mode === "new" ||
@@ -469,15 +493,19 @@ export async function savePlacingSlipAction(
         select: { status: true },
       })
       previousStatus = before?.status ?? null
+      if (previousStatus === "Closed") closedBefore = await getPlacingSlipById(slip.id)
       result = await updatePlacingSlip(slip.id, input, user.id)
     }
 
     revalidateUnderwritingPaths(result.id)
-    // Closing Instruction baru terbit: polisnya langsung tercatat.
+    // Closing Instruction baru terbit: polisnya langsung tercatat. Revisi
+    // sesudahnya ikut ke polis yang masih bernomor sementara.
     const notice =
       result.status === "Closed" && previousStatus !== "Closed"
         ? await autoPolicyNotice(result.id, user.id)
-        : undefined
+        : closedBefore && result.status === "Closed"
+          ? await revisionPolicyNotice(closedBefore, user.id)
+          : undefined
     return { ok: true, data: result, notice }
   } catch (err: unknown) {
     const message =
@@ -685,6 +713,7 @@ export async function duplicatePlacingSlipAction(
       brokeragePct: source.brokeragePct,
       includeVat: source.includeVat,
       additionalFee: source.additionalFee,
+      additionalFeeIncludeVat: source.additionalFeeIncludeVat,
     }
 
     const created = await createPlacingSlip(duplicateInput, user.id)

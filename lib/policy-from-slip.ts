@@ -64,6 +64,31 @@ export function policyFieldsFromSlip(
   }
 }
 
+/**
+ * Isian polis dari slip yang berubah antara dua versi slip. Dipakai untuk
+ * meneruskan revisi slip setelah CI terbit ke polisnya: hanya yang berubah
+ * yang disalin, jadi isian yang diubah petugas polis tidak tertimpa. Panel
+ * asuransi dibandingkan dari nama, share, dan peran, bukan id barisnya.
+ */
+export function changedSlipFields(
+  before: PolicySlipFields,
+  after: PolicySlipFields
+): Partial<PolicySlipFields> {
+  const comparable = (fields: PolicySlipFields, key: keyof PolicySlipFields) =>
+    JSON.stringify(
+      key === "insurers"
+        ? fields.insurers.map((r) => [r.insurer, r.share, r.role])
+        : fields[key]
+    )
+  const changes: Partial<PolicySlipFields> = {}
+  for (const key of Object.keys(after) as (keyof PolicySlipFields)[]) {
+    if (comparable(before, key) !== comparable(after, key)) {
+      Object.assign(changes, { [key]: after[key] })
+    }
+  }
+  return changes
+}
+
 /** Nomor polis tahun lalu dari baris Existing Policy No. slip, tanda renewal. */
 export function slipExistingPolicyNo(slip: PlacingSlip): string | null {
   const row = (slip.detailRows ?? []).find(

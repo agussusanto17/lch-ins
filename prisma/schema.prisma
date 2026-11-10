@@ -1172,6 +1172,8 @@ model PlacingSlip {
   /// Fee di luar brokerage untuk produksi, hanya slip Property dan Motor
   /// Vehicle. Tidak dicetak di dokumen slip; ikut ke polis yang dibuat dari slip.
   additionalFee Decimal @default(0) @map("additional_fee") @db.Decimal(18, 2)
+  /// Additional fee sudah termasuk PPN 2,2%, seperti Include VAT di brokerage.
+  additionalFeeIncludeVat Boolean @default(false) @map("additional_fee_include_vat")
 
   /// Tidak dipakai lagi sejak 5 Nov 2026: loss limit menjadi persentase per
   /// baris rate (`slip_rate_lines.loss_limit_pct`). Kolom dibiarkan supaya

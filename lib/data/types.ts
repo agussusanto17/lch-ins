@@ -450,6 +450,8 @@ export interface PlacingSlip {
    * Tidak dicetak di slip; disalin ke polis yang dibuat dari slip.
    */
   additionalFee?: number
+  /** Additional fee sudah termasuk PPN 2,2%, seperti Include VAT di brokerage. */
+  additionalFeeIncludeVat?: boolean
   createdAt: string
   updatedAt: string
   /**
