@@ -28,8 +28,9 @@ test("each document prints its own date", () => {
   }
   assert.equal(slipDocumentDate(slip, "placing"), "2025-08-04")
   assert.equal(slipDocumentDate(slip, "quotation"), "2025-08-11")
-  assert.equal(slipDocumentDate(slip, "coverNote"), "2025-08-11")
   assert.equal(slipDocumentDate(slip, "closing"), "2025-09-02")
+  // Draft Cover Note terbit setelah Closing Instruction, jadi ikut tanggal closing.
+  assert.equal(slipDocumentDate(slip, "coverNote"), "2025-09-02")
 })
 
 test("a document without its date falls back to the last save, in WIB", () => {

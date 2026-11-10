@@ -260,13 +260,16 @@ export function QuotationSlipDocument(props: DocProps) {
 export function CoverNoteDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
-  // Tanggal quoted, sama dengan Quotation Slip; footer ikut kop pada tanggal itu.
+  // Terbit setelah Closing Instruction, jadi memakai tanggal closing; footer ikut
+  // kop pada tanggal itu.
   const date = slipDocumentDate(slip, "coverNote")
   return (
     // Draft cover note prints without the LCH letterhead and number, following
-    // the marked-up sample of 6 Nov 2026.
+    // the marked-up sample of 6 Nov 2026. Isinya mengikuti Closing Instruction
+    // tanpa brokerage dan tanpa instruksi ke asuransi, seperti contoh CN 728 dan
+    // CN 743 (meeting LCH, 10 November 2026).
     <DocumentShell
-      backHref={`/underwriting/quotation/edit/${slip.id}`}
+      backHref={`/underwriting/closing/edit/${slip.id}`}
       letterhead={false}
       variant={letterheadFor(date)}
     >
@@ -275,6 +278,17 @@ export function CoverNoteDocument(props: DocProps) {
       <InterestBlock slip={slip} />
       <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
+
+      {slip.subjectivity ? (
+        <>
+          <SectionHeading>SUBJECTIVITY</SectionHeading>
+          <HangingIndentText
+            text={slip.subjectivity}
+            className="text-[12.5px] leading-relaxed text-muted-foreground"
+          />
+        </>
+      ) : null}
+
       <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
 
