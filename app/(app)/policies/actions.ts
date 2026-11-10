@@ -164,7 +164,7 @@ export async function deletePolicyAction(id: string): Promise<ActionResponse<voi
   }
 }
 
-const policyFileKindSchema = z.enum(["Policy", "PremiumNote", "CommissionNote"])
+const policyFileKindSchema = z.enum(["Policy", "PremiumNote", "CommissionNote", "Slip"])
 
 /**
  * Tautkan berkas polis yang sudah diunggah per potongan (lib/upload-client.ts)

@@ -17,7 +17,11 @@ import {
 } from "@/components/ui/sheet"
 import type { Policy, PolicyFileKind } from "@/lib/data"
 import { dateShort } from "@/lib/format"
-import { POLICY_FILE_KINDS, policyFilesOfKind } from "@/lib/policy-files"
+import {
+  POLICY_FILE_KINDS,
+  policyFileKindsFor,
+  policyFilesOfKind,
+} from "@/lib/policy-files"
 import { store } from "@/lib/store"
 import { uploadInParts } from "@/lib/upload-client"
 import {
@@ -87,7 +91,7 @@ export function PolicyFilesSheet({
         </SheetHeader>
 
         <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-5">
-          {POLICY_FILE_KINDS.map(({ kind, label }) => {
+          {policyFileKindsFor(policy ?? {}).map(({ kind, label }) => {
             const files = policyFilesOfKind(policy?.files ?? [], kind)
             const busy = uploading?.kind === kind
             return (

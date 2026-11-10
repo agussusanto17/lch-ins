@@ -46,7 +46,11 @@ import { openCoverRateText, usesOpenCover } from "@/lib/open-cover"
 import { parentPolicyIssue, parentPolicyLabel } from "@/lib/policy-parent"
 import { cancellationSuggestion } from "@/lib/policy-cancellation"
 import { isProvisionalPolicyNo, policyFieldsFromSlip } from "@/lib/policy-from-slip"
-import { POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
+import {
+  POLICY_FILE_KINDS,
+  latestPolicyFile,
+  policyFileKindsFor,
+} from "@/lib/policy-files"
 import { rosterPolicy } from "@/lib/policy-participants"
 import type { ClientOption } from "@/lib/server/clients"
 import type { PolicyFormOptions, PolicyInput } from "@/lib/server/policies"
@@ -873,9 +877,15 @@ export function PolicyForm({
             <p className="text-sm font-medium">Berkas Polis</p>
             <p className="text-xs text-muted-foreground">
               {POLICY_FILE_HINT} File baru disimpan sebagai versi berikutnya.
+              {draft.placingSlipId
+                ? null
+                : " Slip diisi dokumen slip kalau slipnya dibuat di luar sistem."}
             </p>
           </div>
-          {POLICY_FILE_KINDS.map(({ kind, label }) => {
+          {policyFileKindsFor({
+            placingSlipId: draft.placingSlipId,
+            files: policy?.files,
+          }).map(({ kind, label }) => {
             const picked = pickedFiles[kind]
             const latest = policy ? latestPolicyFile(policy.files, kind) : undefined
             return (
