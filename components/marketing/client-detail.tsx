@@ -75,7 +75,7 @@ export function ClientDetail({
   const permission = usePermission()
   const masterOptions = useFormOptions()
   const canManageMarketing = permission.canManage("/marketing")
-  const canManageUnderwriting = permission.canManage("/underwriting")
+  const canManageUnderwriting = permission.canManage("/placement")
 
   // Data klien dari database. Dulu dicari di store sesi memakai id di URL,
   // sehingga tautan lama (c-005) menampilkan data contoh beserta slip, polis,
@@ -149,7 +149,7 @@ export function ClientDetail({
             )}
             {canManageUnderwriting && (
               <Button
-                render={<Link href={`/underwriting/new?client=${client.id}`} />}
+                render={<Link href={`/placement/new?client=${client.id}`} />}
                 nativeButton={false}
               >
                 <FilePlus2 data-icon="inline-start" />
@@ -328,8 +328,8 @@ export function ClientDetail({
                       <Link
                         href={
                           canManageUnderwriting
-                            ? `/underwriting/edit/${s.id}`
-                            : `/underwriting/slip/${s.id}`
+                            ? `/placement/edit/${s.id}`
+                            : `/placement/slip/${s.id}`
                         }
                         className="tabular font-semibold text-primary hover:underline"
                       >

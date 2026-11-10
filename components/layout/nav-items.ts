@@ -46,7 +46,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Operasional",
     items: [
       { title: "Marketing", href: "/marketing", icon: Users },
-      { title: "Placement", href: "/underwriting", icon: FileText },
+      { title: "Placement", href: "/placement", icon: FileText },
       { title: "Policy Database", href: "/policies", icon: ShieldCheck },
       { title: "Klaim", href: "/claims", icon: TriangleAlert },
     ],
@@ -96,7 +96,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       {
         title: "Master Clauses",
-        href: "/underwriting/master-clauses",
+        href: "/placement/master-clauses",
         icon: BookOpenText,
       },
       {

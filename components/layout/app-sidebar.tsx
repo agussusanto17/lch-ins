@@ -35,10 +35,10 @@ import { cn } from "@/lib/utils"
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/"
-  if (href === "/underwriting") {
+  if (href === "/placement") {
     return (
-      pathname.startsWith("/underwriting") &&
-      !pathname.startsWith("/underwriting/master-clauses")
+      pathname.startsWith("/placement") &&
+      !pathname.startsWith("/placement/master-clauses")
     )
   }
   return pathname === href || pathname.startsWith(`${href}/`)

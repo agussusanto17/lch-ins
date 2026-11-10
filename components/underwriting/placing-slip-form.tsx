@@ -82,7 +82,7 @@ import {
   savePlacingSlipAction,
   togglePlacingSlipStatusAction,
   type ClausePickerItem,
-} from "@/app/(app)/underwriting/actions"
+} from "@/app/(app)/placement/actions"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -287,7 +287,7 @@ export function PlacingSlipForm({
             Slip mungkin sudah dihapus, atau dibuat di sesi lain dan belum
             tersimpan ke server.
           </p>
-          <Button render={<Link href="/underwriting" />} nativeButton={false}>
+          <Button render={<Link href="/placement" />} nativeButton={false}>
             <ArrowLeft data-icon="inline-start" />
             Kembali ke Placement
           </Button>
@@ -468,7 +468,7 @@ function SlipEditor({
       if (res.notice) {
         toast.info("Policy Database", { description: res.notice, duration: 10000 })
       }
-      router.push(`/underwriting/closing/${record.id}`)
+      router.push(`/placement/closing/${record.id}`)
     })
   }
 
@@ -678,10 +678,10 @@ function SlipEditor({
       if (mode === "new" || slip.id !== record.id) {
         router.replace(
           isClosing
-            ? `/underwriting/closing/edit/${record.id}`
+            ? `/placement/closing/edit/${record.id}`
             : isQuotation
-              ? `/underwriting/quotation/edit/${record.id}`
-              : `/underwriting/edit/${record.id}`
+              ? `/placement/quotation/edit/${record.id}`
+              : `/placement/edit/${record.id}`
         )
       }
     })
@@ -746,10 +746,10 @@ function SlipEditor({
       if (mode === "new" || slip.id !== record.id) {
         router.replace(
           isClosing
-            ? `/underwriting/closing/edit/${record.id}`
+            ? `/placement/closing/edit/${record.id}`
             : isQuotation
-              ? `/underwriting/quotation/edit/${record.id}`
-              : `/underwriting/edit/${record.id}`
+              ? `/placement/quotation/edit/${record.id}`
+              : `/placement/edit/${record.id}`
         )
       }
     })
@@ -767,7 +767,7 @@ function SlipEditor({
           return
         }
         toast.success("Draft slip dihapus")
-        router.push("/underwriting")
+        router.push("/placement")
         return
       }
       const cancelRes = await togglePlacingSlipStatusAction(slip.id, "Cancelled")
@@ -857,7 +857,7 @@ function SlipEditor({
         subtitle={`${slip.cob}${slip.typeOfCover ? ` · ${slip.typeOfCover}` : ""}`}
         status={slip.status}
         slipNo={slip.slipNo}
-        backHref="/underwriting"
+        backHref="/placement"
         allOpen={allOpen}
         onToggleAll={() => {
           const next = !allOpen
@@ -2428,7 +2428,7 @@ function SlipEditor({
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button
             variant="ghost"
-            render={<Link href="/underwriting" />}
+            render={<Link href="/placement" />}
             nativeButton={false}
           >
             {dirty ? "Batal" : "Tutup"}
@@ -2439,7 +2439,7 @@ function SlipEditor({
               <Button
                 variant="outline"
                 disabled={isPending}
-                onClick={() => goTo((id) => `/underwriting/quotation/${id}`)}
+                onClick={() => goTo((id) => `/placement/quotation/${id}`)}
               >
                 <FileText data-icon="inline-start" />
                 Quotation Slip
@@ -2472,7 +2472,7 @@ function SlipEditor({
                     ? "Lengkapi panel asuransi dulu"
                     : undefined
                 }
-                onClick={() => goTo((id) => `/underwriting/closing/${id}`)}
+                onClick={() => goTo((id) => `/placement/closing/${id}`)}
               >
                 <FileCheck2 data-icon="inline-start" />
                 Dokumen Closing
@@ -2486,7 +2486,7 @@ function SlipEditor({
                     ? "Tersedia setelah Closing Instruction diterbitkan"
                     : undefined
                 }
-                onClick={() => goTo((id) => `/underwriting/cover-note/${id}`)}
+                onClick={() => goTo((id) => `/placement/cover-note/${id}`)}
               >
                 <ScrollText data-icon="inline-start" />
                 Draft Cover Note
@@ -2508,7 +2508,7 @@ function SlipEditor({
               <Button
                 variant="outline"
                 disabled={isPending}
-                onClick={() => goTo((id) => `/underwriting/slip/${id}`)}
+                onClick={() => goTo((id) => `/placement/slip/${id}`)}
               >
                 <Eye data-icon="inline-start" />
                 Lihat Placing Slip
@@ -2533,7 +2533,7 @@ function SlipEditor({
                 variant="outline"
                 disabled={!panelValid || slip.status === "Draft" || isPending}
                 title={!panelValid ? "Lengkapi panel asuransi dulu" : undefined}
-                onClick={() => goTo((id) => `/underwriting/quotation/${id}`)}
+                onClick={() => goTo((id) => `/placement/quotation/${id}`)}
               >
                 <FileText data-icon="inline-start" />
                 Quotation Slip
@@ -2541,7 +2541,7 @@ function SlipEditor({
               <Button
                 disabled={!panelValid || slip.status === "Draft" || isPending}
                 title={!panelValid ? "Lengkapi panel asuransi dulu" : undefined}
-                onClick={() => goTo((id) => `/underwriting/closing/edit/${id}`)}
+                onClick={() => goTo((id) => `/placement/closing/edit/${id}`)}
               >
                 <Send data-icon="inline-start" />
                 Lanjut ke Closing Instruction
@@ -2552,7 +2552,7 @@ function SlipEditor({
               {mode === "edit" ? (
                 <Button
                   variant="outline"
-                  onClick={() => goTo((id) => `/underwriting/slip/${id}`)}
+                  onClick={() => goTo((id) => `/placement/slip/${id}`)}
                 >
                   <Eye data-icon="inline-start" />
                   Lihat Dokumen
@@ -2584,7 +2584,7 @@ function SlipEditor({
                 slip.status === "Closed" ? (
                 <Button
                   onClick={() =>
-                    goTo((id) => `/underwriting/quotation/edit/${id}`)
+                    goTo((id) => `/placement/quotation/edit/${id}`)
                   }
                   disabled={isPending}
                 >

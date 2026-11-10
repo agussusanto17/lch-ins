@@ -44,7 +44,7 @@ const QUICK_LINKS = [
   {
     title: "Buat Placing Slip",
     desc: "Mulai placing slip baru",
-    href: "/underwriting/new",
+    href: "/placement/new",
     icon: FilePlus2,
   },
   {
@@ -114,7 +114,7 @@ export function DashboardView({
         description={`Ringkasan operasional PT. LCH Insurance Brokers — periode ${monthLabel(month - 1, year)}`}
         actions={
           <Button
-            render={<Link href="/underwriting/new" />}
+            render={<Link href="/placement/new" />}
             nativeButton={false}
           >
             <FilePlus2 data-icon="inline-start" />

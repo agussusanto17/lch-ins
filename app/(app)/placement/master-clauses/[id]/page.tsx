@@ -26,7 +26,7 @@ export default async function EditClausePage({
   if (!clause) notFound()
 
   const canManageClause = user
-    ? canManage(user.roles, "/underwriting/master-clauses")
+    ? canManage(user.roles, "/placement/master-clauses")
     : false
 
   return (

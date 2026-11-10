@@ -23,7 +23,7 @@ export default function NotFound() {
           </Button>
           <Button
             variant="outline"
-            render={<Link href="/underwriting" />}
+            render={<Link href="/placement" />}
             nativeButton={false}
           >
             <Search data-icon="inline-start" />

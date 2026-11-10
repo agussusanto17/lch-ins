@@ -8,7 +8,7 @@ import {
   deleteSlipAttachmentAction,
   setSlipAttachmentPrintAction,
   uploadSlipAttachmentAction,
-} from "@/app/(app)/underwriting/actions"
+} from "@/app/(app)/placement/actions"
 import {
   AlertDialog,
   AlertDialogAction,

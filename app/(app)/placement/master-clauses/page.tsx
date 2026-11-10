@@ -36,7 +36,7 @@ export default async function MasterClausesPage({
   ])
 
   const canManageClauses = user
-    ? canManage(user.roles, "/underwriting/master-clauses")
+    ? canManage(user.roles, "/placement/master-clauses")
     : false
 
   return (

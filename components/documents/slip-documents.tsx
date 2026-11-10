@@ -124,7 +124,7 @@ function Missing() {
       <p className="max-w-sm text-sm text-muted-foreground">
         Placing slip untuk dokumen ini tidak ada atau belum disimpan.
       </p>
-      <Button render={<Link href="/underwriting" />} nativeButton={false}>
+      <Button render={<Link href="/placement" />} nativeButton={false}>
         <ArrowLeft data-icon="inline-start" />
         Kembali ke Placement
       </Button>
@@ -185,7 +185,7 @@ export function PlacingSlipDocument(props: DocProps) {
   const date = slipDocumentDate(slip, "placing")
   const kop = letterheadFor(date)
   return (
-    <DocumentShell backHref={`/underwriting/edit/${slip.id}`} variant={kop}>
+    <DocumentShell backHref={`/placement/edit/${slip.id}`} variant={kop}>
       <Letterhead variant={kop} />
       <DocTitle
         title="PLACING SLIP"
@@ -239,7 +239,7 @@ export function QuotationSlipDocument(props: DocProps) {
   const kop = letterheadFor(date)
 
   return (
-    <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`} variant={kop}>
+    <DocumentShell backHref={`/placement/quotation/edit/${slip.id}`} variant={kop}>
       <Letterhead variant={kop} />
       <DocTitle
         title="QUOTATION SLIP"
@@ -302,7 +302,7 @@ export function CoverNoteDocument(props: DocProps) {
     // tanpa brokerage dan tanpa instruksi ke asuransi, seperti contoh CN 728 dan
     // CN 743 (meeting LCH, 10 November 2026).
     <DocumentShell
-      backHref={`/underwriting/closing/edit/${slip.id}`}
+      backHref={`/placement/closing/edit/${slip.id}`}
       letterhead={false}
       variant={letterheadFor(date)}
     >
@@ -365,7 +365,7 @@ export function ClosingInstructionDocument(props: DocProps) {
 
   return (
     <DocumentShell
-      backHref={`/underwriting/closing/edit/${slip.id}`}
+      backHref={`/placement/closing/edit/${slip.id}`}
       variant={kop}
       notice={
         slip.status === "Closed" && props.linkedPolicies ? (

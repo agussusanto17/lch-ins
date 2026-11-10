@@ -10,7 +10,7 @@ import {
 } from "@/lib/server/clauses"
 import { requireManage } from "@/lib/server/session"
 
-const LIST_PATH = "/underwriting/master-clauses"
+const LIST_PATH = "/placement/master-clauses"
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 

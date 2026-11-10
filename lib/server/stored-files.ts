@@ -24,7 +24,7 @@ const PURPOSE_MENU: Record<FilePurpose, string> = {
   client_document: "/marketing",
   claim_document: "/claims",
   policy_file: "/policies",
-  slip_attachment: "/underwriting",
+  slip_attachment: "/placement",
 }
 
 /**
