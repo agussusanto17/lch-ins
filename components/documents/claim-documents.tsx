@@ -1,5 +1,5 @@
 import { DocumentShell } from "@/components/documents/document-shell"
-import { DocTitle, InfoTable } from "@/components/documents/doc-blocks"
+import { DocTitle, HangingIndentText, InfoTable } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
 import { toIdr } from "@/lib/calc"
 import type { ClaimFilterParams } from "@/lib/claim-filter"
@@ -257,8 +257,8 @@ export function ClaimDetailDocument({
             <h3 className="mb-1.5 font-semibold text-primary uppercase tracking-wide text-[10.5px]">
               5. Catatan Tambahan
             </h3>
-            <div className="rounded-md border p-2.5 text-muted-foreground whitespace-pre-wrap">
-              {claim.notes}
+            <div className="rounded-md border p-2.5 text-muted-foreground">
+              <HangingIndentText text={claim.notes} className="text-justify" />
             </div>
           </section>
         )}
@@ -348,7 +348,9 @@ export function ClaimDetailDocument({
                     <td className="py-1.5 pr-2 whitespace-nowrap font-medium">
                       {dateShort(f.followupDate)}
                     </td>
-                    <td className="py-1.5 pr-2">{f.note}</td>
+                    <td className="py-1.5 pr-2 text-justify">
+                      <HangingIndentText text={f.note} />
+                    </td>
                     <td className="py-1.5 text-muted-foreground">{f.createdByName || "-"}</td>
                   </tr>
                 ))

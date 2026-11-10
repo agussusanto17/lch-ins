@@ -147,7 +147,7 @@ export function RenewalLetterDocument({
         </table>
 
         <p className="mt-4">Dengan hormat,</p>
-        <p className="mt-3">
+        <p className="mt-3 text-justify">
           Bersama surat ini kami sampaikan bahwa polis asuransi dengan rincian
           berikut {expiryPhrase}:
         </p>
@@ -178,14 +178,14 @@ export function RenewalLetterDocument({
           />
         </div>
 
-        <p>
+        <p className="text-justify">
           Agar perlindungan asuransi tetap berjalan tanpa jeda, kami mohon
           konfirmasi perpanjangan polis sebelum tanggal berakhir tersebut.
           Apabila terdapat perubahan data tertanggung, nilai pertanggungan, atau
           lokasi risiko, mohon informasikan kepada kami agar dapat kami teruskan
           kepada pihak asuransi.
         </p>
-        <p className="mt-3">
+        <p className="mt-3 text-justify">
           Atas perhatian dan kerja samanya, kami ucapkan terima kasih.
         </p>
 

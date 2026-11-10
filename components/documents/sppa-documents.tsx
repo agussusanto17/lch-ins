@@ -120,7 +120,7 @@ function KycValue({ value }: { value?: string }) {
   return (
     <span
       className={cn(
-        "min-h-5 border-b border-dotted border-foreground/40 whitespace-pre-line",
+        "min-h-5 border-b border-dotted border-foreground/40 whitespace-pre-line text-justify",
         !value && "h-5"
       )}
     >

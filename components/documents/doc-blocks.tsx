@@ -315,10 +315,12 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
   const sumInsuredRow = (i: LineItem) => (
     <li
       key={i.id}
-      className="flex justify-between gap-6 border-b border-dashed py-1"
+      className="flex justify-between items-start gap-6 border-b border-dashed py-1"
     >
-      <span>{i.description}</span>
-      <span className="tabular whitespace-nowrap">
+      <div className="flex-1 min-w-0 text-justify">
+        <HangingIndentText text={i.description} />
+      </div>
+      <span className="tabular whitespace-nowrap shrink-0 self-start">
         {money(i.amount, slip.currency)}
       </span>
     </li>
@@ -343,23 +345,35 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
     const vehicleLabel = [i.vehicleBrandName, i.vehicleTypeName]
       .filter(Boolean)
       .join(" ")
+    const numPrefix = isMultiItem(slip) ? `${index + 1}. ` : ""
+    const vPrefix = vehicleLabel ? `${vehicleLabel}${i.description ? " — " : ""}` : ""
     return (
       <li
         key={i.id}
-        className="flex justify-between gap-6 border-b border-dashed py-1"
+        className="flex justify-between items-start gap-6 border-b border-dashed py-1"
       >
-        <span className="leading-relaxed whitespace-pre-line">
-          {/* Nomor objek dirujuk jadwal premi slip multi objek. */}
-          {isMultiItem(slip) ? `${index + 1}. ` : ""}
-          {vehicleLabel ? (
-            <span className="mr-1.5 font-semibold text-foreground">
-              {vehicleLabel}
-              {i.description ? " —" : ""}
-            </span>
-          ) : null}
-          {i.description}
-        </span>
-        <span className="tabular whitespace-nowrap">
+        <div className="flex-1 min-w-0 text-justify leading-relaxed">
+          {numPrefix || vPrefix ? (
+            <div className="flex gap-2 text-justify">
+              {numPrefix ? (
+                <span className="shrink-0 select-none font-semibold">
+                  {numPrefix}
+                </span>
+              ) : null}
+              <div className="flex-1 min-w-0 text-justify">
+                {vPrefix ? (
+                  <span className="font-semibold text-foreground mr-1.5">
+                    {vPrefix}
+                  </span>
+                ) : null}
+                <HangingIndentText text={i.description} />
+              </div>
+            </div>
+          ) : (
+            <HangingIndentText text={i.description} />
+          )}
+        </div>
+        <span className="tabular whitespace-nowrap shrink-0 self-start">
           {/* Nilai "limit saja" tidak ikut Total Sum Insured di bawah. */}
           {isLimitOnlyItem(slip.cob, i) ? "Limit " : ""}
           {money(i.amount, slip.currency)}
@@ -394,9 +408,10 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
             <div>
               <p className="font-semibold">Section 1 — Material Damage</p>
               {slip.interestSection1 ? (
-                <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
-                  {slip.interestSection1}
-                </p>
+                <HangingIndentText
+                  text={slip.interestSection1}
+                  className="mt-1 leading-relaxed text-muted-foreground text-justify"
+                />
               ) : null}
               {sectionList("section1")}
               <p className="mt-1 flex justify-between text-xs font-medium">
@@ -412,9 +427,10 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
             <div>
               <p className="font-semibold">Section 2 — Business Interruption</p>
               {slip.interestSection2 ? (
-                <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground">
-                  {slip.interestSection2}
-                </p>
+                <HangingIndentText
+                  text={slip.interestSection2}
+                  className="mt-1 leading-relaxed text-muted-foreground text-justify"
+                />
               ) : null}
               {sectionList("section2")}
               <p className="mt-1 flex justify-between text-xs font-medium">
@@ -731,11 +747,11 @@ export function ExclusionsBlock({ slip }: { slip: PlacingSlip }) {
       <SectionHeading>EXCLUSIONS</SectionHeading>
       <ul className="flex flex-col gap-1 text-[12.5px] leading-relaxed">
         {items.map((item, i) => (
-          <li key={i} className="flex gap-2">
+          <li key={i} className="flex gap-2 text-justify">
             {item.marker ? (
-              <span className="w-6 shrink-0">{item.marker}</span>
+              <span className="w-6 shrink-0 select-none">{item.marker}</span>
             ) : null}
-            <span className="text-justify">{item.text}</span>
+            <span className="flex-1 min-w-0 text-justify">{item.text}</span>
           </li>
         ))}
       </ul>
@@ -791,7 +807,7 @@ export function AttachmentList({ slip }: { slip: PlacingSlip }) {
       <SectionHeading>ATTACHMENTS</SectionHeading>
       <ol className="list-decimal pl-5 text-[13px] leading-relaxed">
         {list.map((a) => (
-          <li key={a.id}>{a.description || a.fileName}</li>
+          <li key={a.id} className="text-justify">{a.description || a.fileName}</li>
         ))}
       </ol>
     </section>
@@ -1479,9 +1495,11 @@ export function LocationScheduleAppendix({ slip }: { slip: PlacingSlip }) {
     list.length ? (
       <ul className="flex flex-col gap-0.5">
         {list.map((i) => (
-          <li key={i.id} className="flex justify-between gap-3">
-            <span>{i.description || "—"}</span>
-            <span className="tabular whitespace-nowrap">{amount(i.amount || 0)}</span>
+          <li key={i.id} className="flex justify-between items-start gap-3">
+            <div className="flex-1 min-w-0 text-justify">
+              <HangingIndentText text={i.description || "—"} />
+            </div>
+            <span className="tabular whitespace-nowrap shrink-0 self-start">{amount(i.amount || 0)}</span>
           </li>
         ))}
       </ul>
