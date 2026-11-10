@@ -130,7 +130,10 @@ export const ACCESS_MATRIX: Record<string, readonly AccessLevel[]> = {
   "/accounting/journal": [K, T, T, T, K, K, L, T],
   "/accounting/statements": [K, T, T, T, L, K, L, T],
   "/master-data": [K, T, T, T, T, T, T, T],
-  "/reports": [K, T, K, T, T, T, T, T],
+  // Report Operational: Lihat untuk Marketing, Klaim, dan Direksi disetujui
+  // 10 November 2026. Halamannya tanpa aksi ubah, jadi Lihat sudah mencakup
+  // filter, print, dan export. Bagian Klaim diatur `canSeeReportClaims`.
+  "/reports": [K, L, K, L, T, T, L, T],
   "/users": [K, T, T, T, T, T, L, T],
 
   // Menu audit trail dan pengaturan dibatasi Admin karena berdampak lintas modul.
@@ -214,4 +217,27 @@ export function canManage(
   path: string
 ): boolean {
   return accessLevel(roles, path) === "kelola"
+}
+
+/**
+ * Role yang melihat bagian Klaim di Report Operational. Teknik hanya melihat
+ * produksi dan polis (permintaan LCH, 4 November 2026, PR #112). Pengguna
+ * berperan ganda, misalnya Marketing dan Teknik, mengikuti role yang paling
+ * longgar, sama seperti `accessLevel`.
+ */
+const REPORT_CLAIM_ROLES: readonly RoleCode[] = [
+  "admin",
+  "marketing",
+  "claim",
+  "direksi",
+]
+
+export function canSeeReportClaims(
+  roles: string | string[] | undefined
+): boolean {
+  if (!roles) return false
+  const roleList = Array.isArray(roles) ? roles : [roles]
+  return roleList.some((role) =>
+    (REPORT_CLAIM_ROLES as readonly string[]).includes(role)
+  )
 }
