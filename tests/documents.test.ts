@@ -160,6 +160,14 @@ test("parseBulletLine parses bullet markers and numbered list items correctly", 
     marker: "a.",
     content: "Lettered item",
   })
+  assert.deepEqual(parseBulletLine("A. BUILDINGS"), {
+    marker: "A.",
+    content: "BUILDINGS",
+  })
+  assert.deepEqual(parseBulletLine("B. MACHINERY & EQUIPMENT"), {
+    marker: "B.",
+    content: "MACHINERY & EQUIPMENT",
+  })
   assert.deepEqual(parseBulletLine("b) Lettered paren item"), {
     marker: "b)",
     content: "Lettered paren item",
@@ -183,6 +191,32 @@ test("parseBulletLine parses bullet markers and numbered list items correctly", 
   assert.equal(parseBulletLine("—"), null)
   assert.equal(parseBulletLine("-"), null)
   assert.equal(parseBulletLine("PT. Asuransi LCH"), null)
+  assert.equal(parseBulletLine("PT. HABCO PRIMATAMA"), null)
+  assert.equal(parseBulletLine("CV. MAJU JAYA"), null)
   assert.equal(parseBulletLine("01 January 2026 - 31 December 2026"), null)
   assert.equal(parseBulletLine("A standard paragraph without bullets"), null)
+})
+
+test("InterestBlock and ExclusionsBlock format items with text-justify and HangingIndentText", () => {
+  const docBlocks = fs.readFileSync(
+    path.join(process.cwd(), "components/documents/doc-blocks.tsx"),
+    "utf-8"
+  )
+
+  const interestStart = docBlocks.indexOf("export function InterestBlock")
+  const interestBlock = docBlocks.slice(
+    interestStart,
+    docBlocks.indexOf("export function OpenCoverRateBlock", interestStart)
+  )
+
+  assert.ok(interestBlock.includes("<HangingIndentText text={i.description} />"))
+  assert.ok(interestBlock.includes("<HangingIndentText\n                  text={slip.interestSection1}"))
+  assert.ok(interestBlock.includes("<HangingIndentText\n                  text={slip.interestSection2}"))
+
+  const exclusionsStart = docBlocks.indexOf("export function ExclusionsBlock")
+  const exclusionsBlock = docBlocks.slice(
+    exclusionsStart,
+    docBlocks.indexOf("export function ClausesBlock", exclusionsStart)
+  )
+  assert.ok(exclusionsBlock.includes('className="flex-1 min-w-0 text-justify"'))
 })
