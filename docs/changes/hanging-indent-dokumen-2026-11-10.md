@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `fix/hanging-indent-dokumen`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #196
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
