@@ -15,6 +15,7 @@ import {
   DetailTable,
   DocTitle,
   ExclusionsBlock,
+  HangingIndentText,
   InterestBlock,
   LocationPremiumAttached,
   LocationScheduleAppendix,
@@ -209,9 +210,10 @@ export function QuotationSlipDocument(props: DocProps) {
       {slip.subjectivity ? (
         <>
           <SectionHeading>SUBJECTIVITY</SectionHeading>
-          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground text-justify">
-            {slip.subjectivity}
-          </p>
+          <HangingIndentText
+            text={slip.subjectivity}
+            className="text-[12.5px] leading-relaxed text-muted-foreground"
+          />
         </>
       ) : null}
 
@@ -268,9 +270,10 @@ export function CoverNoteDocument(props: DocProps) {
       {slip.coverNoteRemarks ? (
         <>
           <SectionHeading>REMARKS</SectionHeading>
-          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground text-justify">
-            {slip.coverNoteRemarks}
-          </p>
+          <HangingIndentText
+            text={slip.coverNoteRemarks}
+            className="text-[12.5px] leading-relaxed text-muted-foreground"
+          />
         </>
       ) : null}
 
@@ -312,9 +315,10 @@ export function ClosingInstructionDocument(props: DocProps) {
       {slip.subjectivity ? (
         <>
           <SectionHeading>SUBJECTIVITY</SectionHeading>
-          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground text-justify">
-            {slip.subjectivity}
-          </p>
+          <HangingIndentText
+            text={slip.subjectivity}
+            className="text-[12.5px] leading-relaxed text-muted-foreground"
+          />
         </>
       ) : null}
 
@@ -330,9 +334,10 @@ export function ClosingInstructionDocument(props: DocProps) {
       {slip.closingInstruction ? (
         <>
           <SectionHeading>INSTRUCTION</SectionHeading>
-          <p className="text-[12.5px] leading-relaxed whitespace-pre-line text-muted-foreground text-justify">
-            {slip.closingInstruction}
-          </p>
+          <HangingIndentText
+            text={slip.closingInstruction}
+            className="text-[12.5px] leading-relaxed text-muted-foreground"
+          />
         </>
       ) : null}
 

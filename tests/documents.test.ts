@@ -101,3 +101,88 @@ test("doc-blocks prints clause list titles unbolded without wording and keeps bo
     "ClauseWordingAppendix should keep titles bolded"
   )
 })
+
+test("parseBulletLine parses bullet markers and numbered list items correctly", async () => {
+  const { parseBulletLine } = await import("../lib/document-format.js")
+
+  // Hyphen bullet (such as Wording Form list item in screenshot)
+  assert.deepEqual(
+    parseBulletLine(
+      "- Munich-Re Wording Amended with Riot, Strike, Malicious Damage and Civil Commotion Endorsement (Code 4.1B/2007)"
+    ),
+    {
+      marker: "-",
+      content:
+        "Munich-Re Wording Amended with Riot, Strike, Malicious Damage and Civil Commotion Endorsement (Code 4.1B/2007)",
+    }
+  )
+
+  // En-dash and em-dash bullets
+  assert.deepEqual(parseBulletLine("– En-dash item"), {
+    marker: "–",
+    content: "En-dash item",
+  })
+  assert.deepEqual(parseBulletLine("— Em-dash item"), {
+    marker: "—",
+    content: "Em-dash item",
+  })
+
+  // Dot bullet and asterisk
+  assert.deepEqual(parseBulletLine("• Bullet dot item"), {
+    marker: "•",
+    content: "Bullet dot item",
+  })
+  assert.deepEqual(parseBulletLine("* Asterisk item"), {
+    marker: "*",
+    content: "Asterisk item",
+  })
+
+  // Numbered list items
+  assert.deepEqual(parseBulletLine("1. Clause title"), {
+    marker: "1.",
+    content: "Clause title",
+  })
+  assert.deepEqual(parseBulletLine("2) Second item"), {
+    marker: "2)",
+    content: "Second item",
+  })
+  assert.deepEqual(parseBulletLine("(1) Sub-item in parens"), {
+    marker: "(1)",
+    content: "Sub-item in parens",
+  })
+  assert.deepEqual(parseBulletLine("(1). Sub-item with trailing dot"), {
+    marker: "(1).",
+    content: "Sub-item with trailing dot",
+  })
+
+  // Lettered list items
+  assert.deepEqual(parseBulletLine("a. Lettered item"), {
+    marker: "a.",
+    content: "Lettered item",
+  })
+  assert.deepEqual(parseBulletLine("b) Lettered paren item"), {
+    marker: "b)",
+    content: "Lettered paren item",
+  })
+  assert.deepEqual(parseBulletLine("(a) Parens letter"), {
+    marker: "(a)",
+    content: "Parens letter",
+  })
+
+  // Roman numerals
+  assert.deepEqual(parseBulletLine("i. Roman item"), {
+    marker: "i.",
+    content: "Roman item",
+  })
+  assert.deepEqual(parseBulletLine("iv. Fourth roman"), {
+    marker: "iv.",
+    content: "Fourth roman",
+  })
+
+  // Negative tests: ordinary text without markers should not match
+  assert.equal(parseBulletLine("—"), null)
+  assert.equal(parseBulletLine("-"), null)
+  assert.equal(parseBulletLine("PT. Asuransi LCH"), null)
+  assert.equal(parseBulletLine("01 January 2026 - 31 December 2026"), null)
+  assert.equal(parseBulletLine("A standard paragraph without bullets"), null)
+})
