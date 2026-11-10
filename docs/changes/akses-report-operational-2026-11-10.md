@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `feat/akses-report-operational`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#197](https://github.com/agussusanto17/lch-ins/pull/197)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
