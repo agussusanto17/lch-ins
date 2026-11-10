@@ -54,7 +54,7 @@ export function DocumentFooter({
 }) {
   if (isPrintFixed) {
     return (
-      <footer className="w-full bg-[#2e243e] px-[18mm] py-2.5 text-white">
+      <footer className="w-full bg-[#2e243e] px-[18mm] py-2.5 text-white [print-color-adjust:exact] [-webkit-print-color-adjust:exact]">
         <div className="flex items-center justify-between gap-4">
           <div className="text-[10px] sm:text-[10.5px] leading-snug font-normal text-white">
             <p className="font-medium text-white/95">

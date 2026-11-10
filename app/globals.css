@@ -188,6 +188,11 @@
     background: #fff !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
   }
   .no-print,
   [data-slot="sidebar"],
@@ -228,6 +233,8 @@
     right: 0;
     width: 100%;
     z-index: 1000;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
   .print-header-spacer {
     height: 32mm;

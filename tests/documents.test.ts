@@ -19,11 +19,18 @@ test("globals.css defines top-level @page and synchronized 18mm print margins", 
     "@page should be placed before @media print at root level"
   )
 
-  // Verify full-bleed footer
+  // Verify full-bleed footer with exact print colors
   assert.match(
     css,
-    /\.print-footer-fixed\s*\{[^}]*left:\s*0;[^}]*right:\s*0;[^}]*width:\s*100%;/,
-    "print-footer-fixed should bleed 100% full width"
+    /\.print-footer-fixed\s*\{[^}]*left:\s*0;[^}]*right:\s*0;[^}]*width:\s*100%;[^}]*print-color-adjust:\s*exact;/,
+    "print-footer-fixed should bleed 100% full width with exact print colors"
+  )
+
+  // Verify html and body overflow reset in @media print
+  assert.match(
+    css,
+    /@media print\s*\{[^}]*html,\s*body\s*\{[^}]*overflow:\s*visible !important;/,
+    "html and body should reset overflow to visible in @media print"
   )
 
   // Verify 18mm header margin
@@ -45,8 +52,8 @@ test("document-shell uses 18mm content margins and full-width print overrides", 
     "table content cell should use 18mm print horizontal padding"
   )
   assert.ok(
-    shell.includes("print:m-0 print:p-0 print:max-w-none print:w-full"),
-    "outer shell should reset print constraints"
+    shell.includes("print:m-0 print:p-0 print:max-w-none print:w-full print:block print:gap-0"),
+    "outer shell should reset print constraints and switch to block layout"
   )
 })
 
