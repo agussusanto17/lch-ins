@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `feat/lampiran-slip-polis`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#208](https://github.com/agussusanto17/lch-ins/pull/208)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
