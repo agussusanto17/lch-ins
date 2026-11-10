@@ -39,6 +39,7 @@ import {
   TotalBar,
 } from "@/components/underwriting/line-items"
 import { InsuredPicker } from "@/components/underwriting/insured-picker"
+import { InsurerCombobox } from "@/components/underwriting/insurer-combobox"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
 import { SlipLocations } from "@/components/underwriting/slip-locations"
 import { SlipItemRates } from "@/components/underwriting/slip-item-rates"
@@ -2197,26 +2198,15 @@ function SlipEditor({
                         row.insurer && duplicateInsurerNames.has(row.insurer) && "border-destructive/60"
                       )}
                     >
-                      <Select
+                      <InsurerCombobox
                         disabled={locked}
-                        value={row.insurer || undefined}
+                        items={withCurrent(insurerItems, row.insurer)}
+                        value={row.insurer}
+                        aria-label="Perusahaan asuransi"
                         onValueChange={(insurer) =>
-                          patchPanelRow(row.id, { insurer: insurer ?? "" })
+                          patchPanelRow(row.id, { insurer })
                         }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Pilih asuransi…" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {withCurrent(insurerItems, row.insurer).map((ins) => (
-                              <SelectItem key={ins} value={ins}>
-                                {ins}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+                      />
 
                       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 lg:contents">
                         <NumberInput
