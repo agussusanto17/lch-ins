@@ -1958,7 +1958,12 @@ function CoverNoteSignatory({
  * November 2026).
  */
 export function SecurityPanelBlock({ slip }: { slip: PlacingSlip }) {
-  const rows = (slip.securityPanel ?? []).filter((p) => p.insurer)
+  return <SecurityTable rows={slip.securityPanel ?? []} />
+}
+
+/** Panel asuransi dan share-nya; dipakai slip dan cetak endorsement polis. */
+export function SecurityTable({ rows: panel }: { rows: SecurityPanelRow[] }) {
+  const rows = panel.filter((p) => p.insurer)
   if (!rows.length) return null
   const shared = rows.length > 1
   return (
