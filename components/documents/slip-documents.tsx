@@ -140,6 +140,23 @@ function LinkedPoliciesNotice({
   )
 }
 
+/**
+ * SUBJECTIVITY dicetak tepat di atas SECURITY di Quotation Slip, Cover Note,
+ * dan Closing Instruction (permintaan LCH, 10 November 2026).
+ */
+function SubjectivityBlock({ slip }: { slip: PlacingSlip }) {
+  if (!slip.subjectivity) return null
+  return (
+    <>
+      <SectionHeading>SUBJECTIVITY</SectionHeading>
+      <HangingIndentText
+        text={slip.subjectivity}
+        className="text-[12.5px] leading-relaxed text-muted-foreground"
+      />
+    </>
+  )
+}
+
 function useSlip({ id, initial }: DocProps) {
   const stored = useRecord("slips", id)
   // Daftar slip tidak memuat peserta PA grup dan lampiran; ambil dari detail
@@ -293,21 +310,13 @@ export function QuotationSlipDocument(props: DocProps) {
       <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
 
-      {slip.subjectivity ? (
-        <>
-          <SectionHeading>SUBJECTIVITY</SectionHeading>
-          <HangingIndentText
-            text={slip.subjectivity}
-            className="text-[12.5px] leading-relaxed text-muted-foreground"
-          />
-        </>
-      ) : null}
-
       {/* Same layout as Placing Slip: titles here, full wording in the appendix. */}
       <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
+
+      <SubjectivityBlock slip={slip} />
 
       <SecurityPanelBlock slip={slip} />
 
@@ -354,20 +363,12 @@ export function CoverNoteDocument(props: DocProps) {
       <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
 
-      {slip.subjectivity ? (
-        <>
-          <SectionHeading>SUBJECTIVITY</SectionHeading>
-          <HangingIndentText
-            text={slip.subjectivity}
-            className="text-[12.5px] leading-relaxed text-muted-foreground"
-          />
-        </>
-      ) : null}
-
       <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
+
+      <SubjectivityBlock slip={slip} />
 
       <SecurityPanelBlock slip={slip} />
 
@@ -430,22 +431,14 @@ export function ClosingInstructionDocument(props: DocProps) {
       <CoverageBlock slip={slip} />
       <DeductibleBlock slip={slip} />
 
-      {slip.subjectivity ? (
-        <>
-          <SectionHeading>SUBJECTIVITY</SectionHeading>
-          <HangingIndentText
-            text={slip.subjectivity}
-            className="text-[12.5px] leading-relaxed text-muted-foreground"
-          />
-        </>
-      ) : null}
-
       <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
 
       <SlipRateAndPremium slip={slip} />
 
       <BrokerageBlock slip={slip} />
+
+      <SubjectivityBlock slip={slip} />
 
       <SecurityPanelBlock slip={slip} />
 
