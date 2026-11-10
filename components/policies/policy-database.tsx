@@ -1,11 +1,13 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
   FilePlus2,
   FileText,
   Pencil,
   Plus,
+  Printer,
   RefreshCcw,
   Trash2,
   Users,
@@ -188,8 +190,20 @@ export function PolicyDatabase({
             },
           ]
         : []
+    // Cetak endorsement dan pembatalan mengikuti contoh EDM 01 (10 November 2026).
+    const printAction: RowAction[] =
+      p.type === "Endorsement" || p.type === "Cancellation"
+        ? [
+            {
+              label: p.type === "Cancellation" ? "Cetak cancellation" : "Cetak endorsement",
+              icon: Printer,
+              render: <Link href={`/policies/endorsement/${p.id}`} />,
+            },
+          ]
+        : []
     if (!canManage) {
       return [
+        ...printAction,
         {
           label: "Berkas polis",
           icon: FileText,
@@ -205,6 +219,7 @@ export function PolicyDatabase({
     const renewable = p.type === "Baru" || p.type === "Renewal"
     const actions: RowAction[] = [
       { label: "Edit polis", icon: Pencil, onSelect: () => openForm(p) },
+      ...printAction,
       {
         label: "Berkas polis",
         icon: FileText,
