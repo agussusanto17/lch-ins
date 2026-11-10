@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react"
 
+import { usePermission } from "@/components/auth/permission-provider"
 import { CobChart } from "@/components/dashboard/cob-chart"
 import { ProductionChart } from "@/components/dashboard/production-chart"
 import { PageHeader, PageShell } from "@/components/layout/page-header"
@@ -86,6 +87,9 @@ export function DashboardView({
    * terlihat; dashboard tidak, karena Next mengambil ulang datanya setiap dibuka.
    */
   const today = useToday()
+  const { canAccess } = usePermission()
+  // Akses Cepat hanya menampilkan menu yang boleh dibuka role pengguna.
+  const quickLinks = QUICK_LINKS.filter((q) => canAccess(q.href))
   const clients = initialClients
   const policies = initialPolicies
   const claims = initialClaims
@@ -247,7 +251,7 @@ export function DashboardView({
         </SectionCard>
 
         <SectionCard title="Akses Cepat" contentClassName="flex flex-col gap-1">
-          {QUICK_LINKS.map((q) => (
+          {quickLinks.map((q) => (
             <Link
               key={q.href}
               href={q.href}

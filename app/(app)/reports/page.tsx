@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { PageHeader, PageShell } from "@/components/layout/page-header"
 import { ExportButtons } from "@/components/shared/table-toolbar"
 import { ReportView } from "@/components/reports/report-view"
+import { canSeeReportClaims } from "@/lib/access"
 import { listClaims } from "@/lib/server/claims"
 import { listPolicies } from "@/lib/server/policies"
 import { requireAccess } from "@/lib/server/session"
@@ -11,11 +12,11 @@ export const metadata: Metadata = { title: "Report Operational — LCH Insurance
 
 export default async function ReportsPage() {
   const user = await requireAccess("/reports")
-  const isPlacementOnly =
-    user.roles.includes("placement") && !user.roles.includes("admin")
+  // Data klaim tidak diambil untuk pengguna yang tidak boleh melihatnya.
+  const showClaims = canSeeReportClaims(user.roles)
   const [policies, claims] = await Promise.all([
     listPolicies(),
-    isPlacementOnly ? Promise.resolve([]) : listClaims(),
+    showClaims ? listClaims() : Promise.resolve([]),
   ])
 
   return (
@@ -28,7 +29,7 @@ export default async function ReportsPage() {
       <ReportView
         policies={policies}
         claims={claims}
-        showClaims={!isPlacementOnly}
+        showClaims={showClaims}
       />
     </PageShell>
   )
