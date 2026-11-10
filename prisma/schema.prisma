@@ -1480,6 +1480,18 @@ model Policy {
   /// Fee di luar brokerage, dalam mata uang polis. Nol kalau tidak ada.
   /// Pengembalian fee pada endorsement atau pembatalan bernilai negatif.
   additionalFee       Decimal  @default(0) @map("additional_fee") @db.Decimal(18, 2)
+  /// Rate (%) endorsement: premi = sum insured × rate × hari prorata / 365,
+  /// hari prorata dari tanggal efektif s/d tanggal berakhir (Harry, 11 November
+  /// 2026). Kosong berarti premi diisi manual.
+  rate                Decimal? @db.Decimal(12, 6)
+  /// Sum insured dasar premi prorata. Kosong berarti memakai sum insured
+  /// endorsement (tambahan UP); diisi UP penuh kalau rate atau jaminan berubah
+  /// tanpa mengubah UP, seperti rumus prorata Harry.
+  premiumBasis        Decimal? @map("premium_basis") @db.Decimal(18, 2)
+  /// Biaya administrasi dan bea meterai endorsement; total premi = premi +
+  /// keduanya. Premi produksi tetap kolom premium.
+  adminCost           Decimal  @default(0) @map("admin_cost") @db.Decimal(18, 2)
+  stampDuty           Decimal  @default(0) @map("stamp_duty") @db.Decimal(18, 2)
   /// Tanggal premi dibayar; kosong berarti belum dibayar. Diisi manual di
   /// Policy Database dan tampil saat klaim dicatat (meeting LCH, 10 November
   /// 2026). Bagian B bisa mengisinya dari pencatatan pembayaran premi.

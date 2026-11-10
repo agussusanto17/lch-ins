@@ -516,6 +516,13 @@ export interface Policy {
    * Kosong sama dengan 0; pengembalian fee bernilai negatif.
    */
   additionalFee?: number
+  /** Rate (%) endorsement; premi = sum insured × rate × hari prorata / 365. */
+  rate?: number | null
+  /** Sum insured dasar premi prorata; kosong berarti memakai sum insured endorsement. */
+  premiumBasis?: number | null
+  /** Biaya administrasi dan bea meterai endorsement; masuk total premi. */
+  adminCost?: number
+  stampDuty?: number
   /**
    * Bagian slip PAR + EQVET yang menjadi polis ini. Kosong untuk slip yang
    * terbit sebagai satu polis dan polis tanpa slip.

@@ -34,6 +34,7 @@ import type { ParticipantChanges, PolicyParticipant } from "@/lib/policy-partici
 import { PARTICIPANT_LIMITS, usesParticipants } from "@/lib/slip-participants"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
 import { storedPreviousPolicyNo } from "@/lib/policy-parent"
+import { endorsementPremium } from "@/lib/endorsement-premium"
 
 export type PolicyRecord = Policy
 export type PolicyInput = Omit<
@@ -104,6 +105,10 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
     premium: Number(row.premium),
     brokeragePct: Number(row.brokeragePct),
     additionalFee: Number(row.additionalFee),
+    rate: row.rate == null ? null : Number(row.rate),
+    premiumBasis: row.premiumBasis == null ? null : Number(row.premiumBasis),
+    adminCost: Number(row.adminCost),
+    stampDuty: Number(row.stampDuty),
     // Dicocokkan lewat kode, jadi nama yang diganti di Master Data aman.
     type: systemValueFromRow(POLICY_TYPE_CODES, row.policyType, "Baru"),
     riskLocation: row.riskLocation ?? "",
@@ -137,6 +142,10 @@ function auditSnapshot(p: PolicyRecord) {
     premium: p.premium,
     brokeragePct: p.brokeragePct,
     additionalFee: p.additionalFee ?? 0,
+    rate: p.rate ?? null,
+    premiumBasis: p.premiumBasis ?? null,
+    adminCost: p.adminCost ?? 0,
+    stampDuty: p.stampDuty ?? 0,
     slipPart: p.slipPart ?? null,
     endorsementSeq: p.endorsementSeq,
     cobOjkClassId: p.cobOjkClassId,
@@ -253,9 +262,15 @@ async function policyData(tx: Tx, input: PolicyInput) {
     expiryDate: new Date(input.expiryDate),
     currencyCode: input.currency,
     sumInsured: input.sumInsured,
-    premium: input.premium,
+    // Endorsement dengan rate: premi prorata dihitung ulang di server.
+    premium: endorsementPremium(input) ?? input.premium,
     brokeragePct: input.brokeragePct,
     additionalFee: input.additionalFee ?? 0,
+    // Rate, admin cost, dan stamp duty hanya untuk endorsement.
+    rate: input.type === "Endorsement" ? (input.rate ?? null) : null,
+    premiumBasis: input.type === "Endorsement" ? (input.premiumBasis ?? null) : null,
+    adminCost: input.type === "Endorsement" ? (input.adminCost ?? 0) : 0,
+    stampDuty: input.type === "Endorsement" ? (input.stampDuty ?? 0) : 0,
     riskLocation: input.riskLocation.trim() || null,
     cobOjkClassId: await findCobOjkClassId(tx, input.cobOjkClassId),
     placementLocationId: await findPlacementLocationId(tx, input.placementLocationId),
