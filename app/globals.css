@@ -308,11 +308,18 @@
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: -0.01em;
+    text-align: left;
   }
   .rte-content h3,
   .rte-prose h3 {
     font-size: 0.9375rem;
     font-weight: 600;
+    text-align: left;
+  }
+  .rte-content p,
+  .rte-prose p {
+    text-align: justify;
+    text-justify: inter-word;
   }
   .rte-content ul,
   .rte-prose ul {
@@ -323,6 +330,11 @@
   .rte-prose ol {
     list-style: decimal;
     padding-left: 1.4rem;
+  }
+  .rte-content li,
+  .rte-prose li {
+    text-align: justify;
+    text-justify: inter-word;
   }
   .rte-content li + li,
   .rte-prose li + li {
