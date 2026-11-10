@@ -761,7 +761,7 @@ export function ExclusionsBlock({ slip }: { slip: PlacingSlip }) {
 
 /**
  * Daftar judul klausula sebelum tanda tangan. Wording lengkap dicetak di
- * lampiran CLAUSE WORDING setelah tanda tangan, di keempat dokumen slip
+ * lampiran CLAUSE WORDINGS setelah tanda tangan, di keempat dokumen slip
  * (Harry, 9 November 2026).
  */
 export function ClausesBlock({ slip }: { slip: PlacingSlip }) {
@@ -780,9 +780,9 @@ export function ClausesBlock({ slip }: { slip: PlacingSlip }) {
                   {g.heading}
                 </ClauseGroupHeading>
               ) : null}
-              <div className="flex gap-2 text-justify">
+              <div className="flex gap-2">
                 <span className="shrink-0 select-none">{i + 1}.</span>
-                <span className="flex-1 min-w-0 text-justify">
+                <span className="flex-1 min-w-0 text-left">
                   {clauseTitleCase(c.title)}
                 </span>
               </div>
@@ -902,20 +902,22 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
                   {g.heading}
                 </ClauseGroupHeading>
               ) : null}
-              <p className="font-semibold">
-                <span className="flex gap-2 text-justify">
-                  <span className="shrink-0 select-none">{i + 1}.</span>
-                  <span className="flex-1 min-w-0 text-justify">
-                    {c.title}
-                  </span>
+              <div className="flex gap-2">
+                <span className="shrink-0 select-none font-semibold text-left">
+                  {i + 1}.
                 </span>
-              </p>
-              {wordingText(c.wording) ? (
-                <div
-                  className="rte-prose mt-0.5 text-[12px] text-muted-foreground text-justify"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
-                />
-              ) : null}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-left">
+                    {c.title}
+                  </p>
+                  {wordingText(c.wording) ? (
+                    <div
+                      className="rte-prose mt-0.5 text-[12px] text-muted-foreground text-justify"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
+                    />
+                  ) : null}
+                </div>
+              </div>
             </div>
           ))
         )}
