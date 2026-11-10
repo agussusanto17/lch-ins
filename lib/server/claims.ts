@@ -10,6 +10,8 @@ import { effectivePaBenefitLimits, type PaBenefitOption } from "@/lib/pa-benefit
 import { participantActiveOn } from "@/lib/policy-participants"
 import { prisma } from "@/lib/prisma"
 import { rosterPolicyId } from "@/lib/server/policies"
+import { getPlacingSlipById } from "@/lib/server/placing-slips"
+import { deductibleGroups, type DeductibleGroupText } from "@/lib/slip-deductibles"
 import { recordAudit } from "@/server/services/audit"
 import { nextDocumentNumber } from "@/server/services/number-generator"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
@@ -327,6 +329,58 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
     }),
     adjusters,
     paBenefits,
+  }
+}
+
+/**
+ * Info polis untuk form dan detail klaim (meeting LCH, 10 November 2026):
+ * status premi, deductible dari placing slip asal polis, dan file polis
+ * terakhir yang diunggah di Policy Database.
+ */
+export interface ClaimPolicyInfo {
+  /** "YYYY-MM-DD"; kosong berarti premi belum dibayar. */
+  premiumPaidDate: string | null
+  /** Polis dibuat dari placing slip, jadi deductible-nya tercatat. */
+  fromSlip: boolean
+  deductibleIntro: string | null
+  deductibles: DeductibleGroupText[]
+  policyFile: { url: string; fileName: string; version: number } | null
+}
+
+export async function getClaimPolicyInfo(policyId: string): Promise<ClaimPolicyInfo | null> {
+  const policy = await prisma.policy.findUnique({
+    where: { id: policyId },
+    select: {
+      premiumPaidDate: true,
+      placingSlipId: true,
+      slipPart: true,
+      files: {
+        where: { kind: "Policy" },
+        orderBy: { version: "desc" },
+        take: 1,
+        select: { fileName: true, filePath: true, version: true },
+      },
+    },
+  })
+  if (!policy) return null
+
+  const slip = policy.placingSlipId ? await getPlacingSlipById(policy.placingSlipId) : null
+  // Slip PAR + EQVET terbit sebagai dua polis; deductible ikut bagian polisnya.
+  const part =
+    policy.slipPart === "PAR" || policy.slipPart === "EQVET" ? policy.slipPart : null
+  const file = policy.files[0]
+  const fileUrl = file ? storedFileUrl(file.filePath) : undefined
+  return {
+    premiumPaidDate: policy.premiumPaidDate
+      ? policy.premiumPaidDate.toISOString().slice(0, 10)
+      : null,
+    fromSlip: slip !== null,
+    deductibleIntro: slip?.deductibleIntro?.trim() || null,
+    deductibles: slip ? deductibleGroups(slip, part) : [],
+    policyFile:
+      file && fileUrl
+        ? { url: fileUrl, fileName: file.fileName, version: file.version }
+        : null,
   }
 }
 

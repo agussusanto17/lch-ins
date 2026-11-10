@@ -92,6 +92,7 @@ function emptyDraft(): Draft {
     cobOjkClassId: null,
     placementLocationId: null,
     groupingInsured: "",
+    premiumPaidDate: null,
   }
 }
 
@@ -802,6 +803,13 @@ export function PolicyForm({
             value={draft.groupingInsured ?? ""}
             onChange={(v) => set({ groupingInsured: v })}
             description="Pengelompokan klien untuk laporan produksi."
+          />
+          <TextField
+            label="Tanggal Premi Dibayar"
+            type="date"
+            value={draft.premiumPaidDate ?? ""}
+            onChange={(v) => set({ premiumPaidDate: v || null })}
+            description="Kosongkan kalau premi belum dibayar. Tampil sebagai info saat klaim dicatat."
           />
         </div>
 
