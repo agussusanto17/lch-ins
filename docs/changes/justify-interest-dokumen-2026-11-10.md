@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `fix/justify-interest-dokumen`
-- **PR:** (akan diisi setelah PR dibuka)
+- **PR:** #198
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
