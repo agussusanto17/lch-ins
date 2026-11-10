@@ -100,6 +100,12 @@ function actionsFor(
       icon: Eye,
       render: <Link href={`/underwriting/closing/${slip.id}`} />,
     })
+    // Draft Cover Note terbit setelah Closing Instruction (meeting LCH, 10 November 2026).
+    actions.push({
+      label: "Lihat draft cover note",
+      icon: Eye,
+      render: <Link href={`/underwriting/cover-note/${slip.id}`} />,
+    })
   }
   actions.push({
     label: "Duplikat jadi draft baru",

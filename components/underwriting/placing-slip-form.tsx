@@ -174,15 +174,19 @@ const SECTION_KEYS = [
 ] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
 
-/** Tanggal yang dicetak di baris "Jakarta, …" tiap dokumen (Harry, 10 November 2026). */
+/**
+ * Tanggal yang dicetak di baris "Jakarta, …" tiap dokumen (Harry, 10 November
+ * 2026). Draft Cover Note terbit setelah Closing Instruction, jadi ikut tanggal
+ * closing (meeting LCH, 10 November 2026).
+ */
 const DOCUMENT_DATE_FIELDS = [
   { key: "releaseDate", label: "Placing Slip", hint: "Tanggal release" },
+  { key: "quotedDate", label: "Quotation Slip", hint: "Tanggal quoted" },
   {
-    key: "quotedDate",
-    label: "Quotation Slip & Draft Cover Note",
-    hint: "Tanggal quoted",
+    key: "closingDate",
+    label: "Closing Instruction & Draft Cover Note",
+    hint: "Tanggal closing",
   },
-  { key: "closingDate", label: "Closing Instruction", hint: "Tanggal closing" },
 ] as const
 
 const toItem = (v: string) => ({ label: v, value: v })
@@ -2469,6 +2473,20 @@ function SlipEditor({
                 <FileCheck2 data-icon="inline-start" />
                 Dokumen Closing
               </Button>
+              {/* Draft Cover Note terbit setelah Closing Instruction (meeting LCH, 10 November 2026). */}
+              <Button
+                variant="outline"
+                disabled={slip.status !== "Closed" || isPending}
+                title={
+                  slip.status !== "Closed"
+                    ? "Tersedia setelah Closing Instruction diterbitkan"
+                    : undefined
+                }
+                onClick={() => goTo((id) => `/underwriting/cover-note/${id}`)}
+              >
+                <ScrollText data-icon="inline-start" />
+                Draft Cover Note
+              </Button>
               {slip.status !== "Closed" ? (
                 <Button
                   disabled={
@@ -2515,15 +2533,6 @@ function SlipEditor({
               >
                 <FileText data-icon="inline-start" />
                 Quotation Slip
-              </Button>
-              <Button
-                variant="outline"
-                disabled={!panelValid || slip.status === "Draft" || isPending}
-                title={!panelValid ? "Lengkapi panel asuransi dulu" : undefined}
-                onClick={() => goTo((id) => `/underwriting/cover-note/${id}`)}
-              >
-                <ScrollText data-icon="inline-start" />
-                Draft Cover Note
               </Button>
               <Button
                 disabled={!panelValid || slip.status === "Draft" || isPending}

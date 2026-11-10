@@ -3,10 +3,13 @@
  *
  * Disetujui Harry, 10 November 2026 (pertanyaan no. 10 dan 11):
  * - Placing Slip memakai tanggal release.
- * - Quotation Slip dan Draft Cover Note memakai tanggal quoted.
+ * - Quotation Slip memakai tanggal quoted.
  * - Closing Instruction memakai tanggal closing.
  * - Tanggal bisa diubah manual untuk dokumen lama, dan dokumen bertanggal
  *   sebelum 1 September 2025 memakai kop Lestari Cipta Hokindo.
+ *
+ * Draft Cover Note terbit setelah Closing Instruction (meeting LCH,
+ * 10 November 2026), jadi memakai tanggal closing seperti CI.
  */
 
 import { todayIso } from "@/lib/date"
@@ -55,9 +58,9 @@ export function slipDocumentDate(
   const own =
     kind === "placing"
       ? slip.releaseDate
-      : kind === "closing"
-        ? slip.closingDate
-        : slip.quotedDate
+      : kind === "quotation"
+        ? slip.quotedDate
+        : slip.closingDate
   if (own && ISO_DATE.test(own)) return own
   const saved = new Date(slip.updatedAt)
   return Number.isNaN(saved.getTime()) ? todayIso() : todayIso(saved)
