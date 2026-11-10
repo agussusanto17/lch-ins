@@ -60,6 +60,33 @@ async function autoPolicyNotice(slipId: string, userId: string) {
   }
 }
 
+/**
+ * Catat polis dari Closing Instruction yang sudah terbit, lewat tombol di
+ * dokumen CI. Untuk slip yang Closed sebelum pencatatan otomatis ada, atau
+ * yang pencatatan otomatisnya gagal; alasan gagal dikembalikan apa adanya
+ * supaya terlihat di halaman. Bagian yang sudah punya polis tidak dibuat lagi.
+ */
+export async function recordPoliciesFromClosingAction(
+  slipId: string
+): Promise<ActionResponse<{ created: string[] }>> {
+  try {
+    const user = await requireManage("/policies")
+    if (!z.uuid().safeParse(slipId).success) {
+      return { ok: false, error: "Placing slip tidak valid." }
+    }
+    const { created, skipped } = await recordPoliciesFromClosing(slipId, user.id)
+    if (created.length) {
+      revalidatePath("/policies")
+      revalidatePath(`/placement/closing/${slipId}`)
+      return { ok: true, data: { created } }
+    }
+    return { ok: false, error: skipped ?? "Polis untuk Closing Instruction ini sudah tercatat." }
+  } catch (err) {
+    unstable_rethrow(err)
+    return { ok: false, error: err instanceof Error ? err.message : "Gagal mencatat polis." }
+  }
+}
+
 /** Tanggal dokumen "YYYY-MM-DD"; string kosong berarti dikosongkan. */
 const documentDateSchema = z
   .union([

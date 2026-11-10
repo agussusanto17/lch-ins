@@ -1,8 +1,11 @@
 "use client"
 
+import { useState, useTransition } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 
+import { recordPoliciesFromClosingAction } from "@/app/(app)/placement/actions"
 import { AttachmentContents } from "@/components/documents/attachment-contents"
 import { DocumentShell } from "@/components/documents/document-shell"
 import {
@@ -66,21 +69,60 @@ type DocProps = {
   prints?: AttachmentPrints
   /** Nomor polis yang tercatat dari slip ini (Closing Instruction), dimuat server. */
   linkedPolicies?: string[]
+  /** User boleh mengelola Policy Database, jadi tombol "Catat polis" tampil. */
+  canRecordPolicy?: boolean
 }
 
 /**
  * Keterangan di atas Closing Instruction: polis yang tercatat otomatis di
- * Policy Database saat CI terbit (meeting LCH, 10 November 2026).
+ * Policy Database saat CI terbit (meeting LCH, 10 November 2026). Kalau belum
+ * ada polis, misalnya slip Closed sebelum pencatatan otomatis atau
+ * pencatatannya gagal, user Policy Database bisa mencatatnya dari sini.
  */
-function LinkedPoliciesNotice({ policies }: { policies: string[] }) {
+function LinkedPoliciesNotice({
+  slipId,
+  policies,
+  canRecord,
+}: {
+  slipId: string
+  policies: string[]
+  canRecord: boolean
+}) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  const record = () => {
+    setError(null)
+    startTransition(async () => {
+      const res = await recordPoliciesFromClosingAction(slipId)
+      if (res.ok) router.refresh()
+      else setError(res.error ?? "Gagal mencatat polis.")
+    })
+  }
+
   if (!policies.length) {
     return (
-      <p className="text-muted-foreground">
-        Belum ada polis di Policy Database untuk Closing Instruction ini.{" "}
-        <Link href="/policies" className="font-medium text-primary underline-offset-2 hover:underline">
-          Buka Policy Database
-        </Link>
-      </p>
+      <div className="flex flex-col gap-2">
+        <p className="text-muted-foreground">
+          Belum ada polis di Policy Database untuk Closing Instruction ini.{" "}
+          <Link href="/policies" className="font-medium text-primary underline-offset-2 hover:underline">
+            Buka Policy Database
+          </Link>
+        </p>
+        {canRecord ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <Button size="sm" onClick={record} disabled={isPending}>
+              {isPending ? "Mencatat polis…" : "Catat polis dari CI ini"}
+            </Button>
+            {error ? (
+              <span role="alert" className="text-destructive">
+                Polis belum tercatat: {error}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     )
   }
   const provisional = policies.some(isProvisionalPolicyNo)
@@ -369,7 +411,11 @@ export function ClosingInstructionDocument(props: DocProps) {
       variant={kop}
       notice={
         slip.status === "Closed" && props.linkedPolicies ? (
-          <LinkedPoliciesNotice policies={props.linkedPolicies} />
+          <LinkedPoliciesNotice
+            slipId={slip.id}
+            policies={props.linkedPolicies}
+            canRecord={props.canRecordPolicy ?? false}
+          />
         ) : undefined
       }
     >
