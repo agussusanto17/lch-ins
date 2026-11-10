@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `chore/domain-apps-lch-co-id`
-- **PR:** (akan diisi setelah PR dibuka)
+- **PR:** #217
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
