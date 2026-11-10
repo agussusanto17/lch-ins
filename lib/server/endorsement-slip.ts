@@ -2,6 +2,12 @@ import "server-only"
 
 import type { Client } from "@/lib/data/types"
 import { todayIso } from "@/lib/date"
+import {
+  attachmentSeq,
+  sumInsuredBefore,
+  type SiblingEndorsement,
+} from "@/lib/endorsement-slip"
+import { POLICY_TYPE_CODES } from "@/lib/form-options"
 import { prisma } from "@/lib/prisma"
 import { getClientById } from "@/lib/server/clients"
 import { getPlacingSlipById, type PlacingSlipRecord } from "@/lib/server/placing-slips"
@@ -18,6 +24,8 @@ export interface EndorsementSlipData {
   address: string
   /** Sum insured sebelum endorsement ini: polis induk ditambah endorsement sebelumnya. */
   sumInsuredBefore: number | null
+  /** Nomor lampiran; pembatalan memakai nomor sesudah endorsement terakhir. */
+  attachmentSeq: number | null
   deductibles: DeductibleGroupText[]
   /** Tanggal endorsement dicatat (WIB), untuk tanggal dokumen. */
   recordedDate: string
@@ -44,19 +52,24 @@ export async function getEndorsementSlipData(id: string): Promise<EndorsementSli
   const clientId = policy.clientId ?? parent?.clientId ?? null
   const client = clientId ? await getClientById(clientId) : null
 
-  const [recorded, earlier] = await Promise.all([
+  const [recorded, siblingRows] = await Promise.all([
     prisma.policy.findUnique({ where: { id }, select: { createdAt: true } }),
     parent
       ? prisma.policy.findMany({
-          where: {
-            parentPolicyId: parent.id,
-            id: { not: id },
-            endorsementSeq: { lt: policy.endorsementSeq ?? 0 },
+          where: { parentPolicyId: parent.id, id: { not: id } },
+          select: {
+            sumInsured: true,
+            endorsementSeq: true,
+            policyType: { select: { code: true } },
           },
-          select: { sumInsured: true },
         })
       : Promise.resolve([]),
   ])
+  const siblings: SiblingEndorsement[] = siblingRows.map((s) => ({
+    isEndorsement: s.policyType.code === POLICY_TYPE_CODES.Endorsement,
+    seq: s.endorsementSeq,
+    sumInsured: Number(s.sumInsured),
+  }))
 
   const part =
     parent?.slipPart === "PAR" || parent?.slipPart === "EQVET" ? parent.slipPart : null
@@ -66,8 +79,9 @@ export async function getEndorsementSlipData(id: string): Promise<EndorsementSli
     slip,
     address: mailingAddress(client),
     sumInsuredBefore: parent
-      ? earlier.reduce((sum, e) => sum + Number(e.sumInsured), parent.sumInsured)
+      ? sumInsuredBefore(policy.type, policy.endorsementSeq, parent.sumInsured, siblings)
       : null,
+    attachmentSeq: attachmentSeq(policy.type, policy.endorsementSeq, siblings),
     deductibles: slip ? deductibleGroups(slip, part) : [],
     recordedDate: todayIso(recorded?.createdAt ?? new Date()),
   }

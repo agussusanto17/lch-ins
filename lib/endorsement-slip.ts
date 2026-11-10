@@ -12,6 +12,49 @@ export function endorsementTitle(type: PolicyType) {
   return type === "Cancellation" ? "CANCELLATION" : "ENDORSEMENT"
 }
 
+/** Endorsement lain pada polis induk yang sama, untuk nomor dan nilai sebelumnya. */
+export interface SiblingEndorsement {
+  /** Hanya tipe Endorsement; renewal dan pembatalan lain tidak dihitung. */
+  isEndorsement: boolean
+  seq: number | null
+  sumInsured: number
+}
+
+/**
+ * Nomor lampiran. Endorsement memakai urutannya sendiri. Pembatalan tidak
+ * punya urutan di Policy Database, jadi memakai nomor sesudah endorsement
+ * terakhir, seperti contoh CANCELLATION asuransi yang tetap bernomor lampiran.
+ */
+export function attachmentSeq(
+  type: PolicyType,
+  ownSeq: number | null | undefined,
+  siblings: SiblingEndorsement[]
+): number | null {
+  if (ownSeq) return ownSeq
+  if (type !== "Cancellation") return null
+  return Math.max(0, ...siblings.filter((s) => s.isEndorsement).map((s) => s.seq ?? 0)) + 1
+}
+
+/**
+ * Nilai pertanggungan sebelum perubahan ini: polis induk ditambah endorsement
+ * sebelumnya. Pembatalan berlaku atas pertanggungan yang berjalan, jadi semua
+ * endorsement ikut dihitung, sama seperti usulan premi pembatalan.
+ */
+export function sumInsuredBefore(
+  type: PolicyType,
+  ownSeq: number | null | undefined,
+  parentSumInsured: number,
+  siblings: SiblingEndorsement[]
+) {
+  return siblings
+    .filter(
+      (s) =>
+        s.isEndorsement &&
+        (type === "Cancellation" || (s.seq !== null && ownSeq != null && s.seq < ownSeq))
+    )
+    .reduce((sum, s) => sum + s.sumInsured, parentSumInsured)
+}
+
 /** Nomor lampiran dua digit, seperti "01" di contoh EDM. */
 export function endorsementNo(seq: number | null | undefined) {
   return seq ? String(seq).padStart(2, "0") : "—"
