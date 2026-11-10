@@ -43,7 +43,7 @@ export function DocumentShell({
   return (
     <div
       className={cn(
-        "mx-auto flex w-full flex-col gap-4 px-4 pb-4 md:px-6 md:pb-6 print:m-0 print:p-0 print:max-w-none print:w-full",
+        "mx-auto flex w-full flex-col gap-4 px-4 pb-4 md:px-6 md:pb-6 print:m-0 print:p-0 print:max-w-none print:w-full print:block print:gap-0",
         wide ? "max-w-[1100px]" : "max-w-[900px]"
       )}
     >
