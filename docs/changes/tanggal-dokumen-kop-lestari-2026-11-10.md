@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `feat/tanggal-dokumen-kop-lestari`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#201](https://github.com/agussusanto17/lch-ins/pull/201)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
