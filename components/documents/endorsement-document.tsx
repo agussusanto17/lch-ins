@@ -75,7 +75,7 @@ export function EndorsementDocument({ data }: { data: EndorsementSlipData }) {
   const changesSumInsured = data.sumInsuredBefore !== null && policy.sumInsured !== 0
 
   const rows: Row[] = [
-    { id: "Lampiran No.", en: "Endorsement No.", value: endorsementNo(policy.endorsementSeq) },
+    { id: "Lampiran No.", en: "Endorsement No.", value: endorsementNo(data.attachmentSeq) },
     {
       id: "Merupakan bagian yang tidak terpisahkan dari Polis No.",
       en: "Attaching to and forming part of Policy No.",
