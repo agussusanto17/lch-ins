@@ -110,6 +110,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Toggle } from "@/components/ui/toggle"
 import {
+  additionalFeeVatAmount,
   brokerageAmount,
   brokerageLimitIssue,
   brokerageLimitText,
@@ -675,6 +676,10 @@ function SlipEditor({
           description: record.slipNo ?? record.insuredName ?? undefined,
         }
       )
+      // Revisi slip setelah CI terbit ikut ke polis bernomor sementara.
+      if (res.notice) {
+        toast.info("Policy Database", { description: res.notice, duration: 10000 })
+      }
       if (mode === "new" || slip.id !== record.id) {
         router.replace(
           isClosing
@@ -2083,26 +2088,6 @@ function SlipEditor({
                   </p>
                 )
               ) : null}
-              {usesAdditionalFee(slip.cob) ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="additional-fee">
-                      Additional Fee ({slip.currency})
-                    </FieldLabel>
-                    <NumberInput
-                      id="additional-fee"
-                      preset="money"
-                      min={0}
-                      value={slip.additionalFee || null}
-                      onValueChange={(v) => set({ additionalFee: v ?? 0 })}
-                    />
-                    <FieldDescription>
-                      Kosongkan kalau tidak ada. Hanya untuk produksi, tidak
-                      dicetak di slip.
-                    </FieldDescription>
-                  </Field>
-                </div>
-              ) : null}
               <div className="grid grid-cols-1 gap-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
@@ -2144,6 +2129,62 @@ function SlipEditor({
                   </>
                 ) : null}
               </div>
+              {usesAdditionalFee(slip.cob) ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="additional-fee">
+                      Additional Fee ({slip.currency})
+                    </FieldLabel>
+                    <NumberInput
+                      id="additional-fee"
+                      preset="money"
+                      min={0}
+                      value={slip.additionalFee || null}
+                      onValueChange={(v) => set({ additionalFee: v ?? 0 })}
+                    />
+                    <FieldDescription>
+                      Kosongkan kalau tidak ada. Hanya untuk produksi, tidak
+                      dicetak di slip.
+                    </FieldDescription>
+                  </Field>
+                  {/* Include/exclude PPN seperti brokerage (permintaan LCH, 10 November 2026). */}
+                  <Field orientation="horizontal" className="md:mt-8 md:self-start">
+                    <Switch
+                      id="fee-vat"
+                      checked={slip.additionalFeeIncludeVat ?? false}
+                      onCheckedChange={(v) =>
+                        set({ additionalFeeIncludeVat: Boolean(v) })
+                      }
+                    />
+                    <FieldLabel htmlFor="fee-vat" className="font-normal">
+                      Include VAT (PPN 2,2%)
+                    </FieldLabel>
+                  </Field>
+                  {slip.additionalFeeIncludeVat && (slip.additionalFee ?? 0) > 0 ? (
+                    <div className="grid grid-cols-1 gap-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2 md:col-span-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          PPN 2,2% (termasuk)
+                        </span>
+                        <span className="tabular font-semibold">
+                          {money(additionalFeeVatAmount(slip), slip.currency)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Fee sebelum PPN
+                        </span>
+                        <span className="tabular font-semibold">
+                          {money(
+                            (slip.additionalFee ?? 0) - additionalFeeVatAmount(slip),
+                            slip.currency
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </SectionCard>
 

@@ -101,7 +101,9 @@ const FIELD_LABELS: Record<string, string> = {
   rate: "Rate",
   rateModeId: "Mode rate",
   brokeragePct: "Brokerage (%)",
+  includeVat: "Brokerage termasuk PPN",
   additionalFee: "Additional fee",
+  additionalFeeIncludeVat: "Additional fee termasuk PPN",
   adminCost: "Biaya admin",
   stampDuty: "Bea meterai",
   periodStart: "Periode mulai",
@@ -173,6 +175,7 @@ const FIELD_LABELS: Record<string, string> = {
 const MONEY_FIELDS = new Set([
   "sumInsured",
   "premium",
+  "additionalFee",
   "adminCost",
   "stampDuty",
   "estimatedLoss",

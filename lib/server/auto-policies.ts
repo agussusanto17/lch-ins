@@ -5,13 +5,15 @@ import { slipPolicyParts } from "@/lib/calc"
 import type { SlipPart } from "@/lib/data/types"
 import { usesOpenCover } from "@/lib/open-cover"
 import {
+  changedSlipFields,
+  isProvisionalPolicyNo,
   policyFieldsFromSlip,
   provisionalPolicyNo,
   slipExistingPolicyNo,
 } from "@/lib/policy-from-slip"
 import { prisma } from "@/lib/prisma"
-import { getPlacingSlipById } from "@/lib/server/placing-slips"
-import { createPolicy } from "@/lib/server/policies"
+import { getPlacingSlipById, type PlacingSlipRecord } from "@/lib/server/placing-slips"
+import { createPolicy, getPolicyById, updatePolicy } from "@/lib/server/policies"
 
 /** Nomor polis yang berasal dari slip ini, untuk keterangan di dokumen CI. */
 export async function policyNosForSlip(slipId: string): Promise<string[]> {
@@ -104,4 +106,56 @@ export async function recordPoliciesFromClosing(
     created.push(policy.policyNo)
   }
   return { created, skipped: null }
+}
+
+/**
+ * Revisi slip setelah Closing Instruction terbit ikut ke polis yang masih
+ * bernomor sementara dari CI (laporan Agus, 10 November 2026: additional fee
+ * yang diisi setelah CI terbit tidak masuk report produksi).
+ *
+ * - Hanya isian slip yang berubah pada revisi ini yang disalin, jadi isian
+ *   yang diubah petugas polis di Policy Database tidak tertimpa.
+ * - Polis yang nomornya sudah diganti nomor polis dari asuransi tidak
+ *   disentuh, karena sejak itu datanya mengikuti polis asli.
+ *
+ * `before` adalah slip sebelum revisi disimpan. Mengembalikan nomor polis yang
+ * ikut diperbarui.
+ */
+export async function syncPoliciesFromSlipRevision(
+  before: PlacingSlipRecord,
+  userId: string
+): Promise<string[]> {
+  const after = await getPlacingSlipById(before.id)
+  if (!after || after.status !== "Closed") return []
+  const policies = await prisma.policy.findMany({
+    where: { placingSlipId: after.id },
+    select: { id: true, policyNo: true, slipPart: true },
+    orderBy: { createdAt: "asc" },
+  })
+  const targets = policies.filter((p) => isProvisionalPolicyNo(p.policyNo))
+  if (!targets.length) return []
+
+  const clientOf = (id: string | null | undefined) =>
+    id
+      ? prisma.client.findUnique({ where: { id }, select: { id: true, name: true } })
+      : Promise.resolve(null)
+  const clientAfter = await clientOf(after.clientId)
+  const clientBefore =
+    before.clientId === after.clientId ? clientAfter : await clientOf(before.clientId)
+
+  const updated: string[] = []
+  for (const target of targets) {
+    const part: SlipPart | null =
+      target.slipPart === "PAR" || target.slipPart === "EQVET" ? target.slipPart : null
+    const changes = changedSlipFields(
+      policyFieldsFromSlip(before, part, clientBefore),
+      policyFieldsFromSlip(after, part, clientAfter)
+    )
+    if (!Object.keys(changes).length) continue
+    const policy = await getPolicyById(target.id)
+    if (!policy) continue
+    const saved = await updatePolicy(policy.id, { ...policy, ...changes }, userId)
+    updated.push(saved.policyNo)
+  }
+  return updated
 }
