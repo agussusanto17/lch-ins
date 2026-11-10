@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `feat/polis-otomatis-dari-ci`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#206](https://github.com/agussusanto17/lch-ins/pull/206)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
