@@ -96,6 +96,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { letterheadFor } from "@/lib/document-dates"
 import { NumberInput } from "@/components/ui/number-input"
 import {
   Select,
@@ -169,8 +170,20 @@ const SECTION_KEYS = [
   "security",
   "closing",
   "coverNote",
+  "documentDates",
 ] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
+
+/** Tanggal yang dicetak di baris "Jakarta, …" tiap dokumen (Harry, 10 November 2026). */
+const DOCUMENT_DATE_FIELDS = [
+  { key: "releaseDate", label: "Placing Slip", hint: "Tanggal release" },
+  {
+    key: "quotedDate",
+    label: "Quotation Slip & Draft Cover Note",
+    hint: "Tanggal quoted",
+  },
+  { key: "closingDate", label: "Closing Instruction", hint: "Tanggal closing" },
+] as const
 
 const toItem = (v: string) => ({ label: v, value: v })
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -2353,6 +2366,42 @@ function SlipEditor({
               </SectionCard>
             </>
           ) : null}
+
+          <SectionCard
+            title="Tanggal Dokumen"
+            description="Dicetak di baris “Jakarta, …” di atas tanda tangan. Terisi otomatis saat slip di-release, quoted, dan closing; ubah untuk dokumen lama."
+            {...sectionProps("documentDates")}
+          >
+            <div className="grid gap-4 md:grid-cols-3">
+              {DOCUMENT_DATE_FIELDS.map((field) => {
+                const value = slip[field.key] ?? ""
+                const lestari = value !== "" && letterheadFor(value) === "lestari"
+                return (
+                  <Field key={field.key}>
+                    <FieldLabel htmlFor={`document-date-${field.key}`}>
+                      {field.label}
+                    </FieldLabel>
+                    <Input
+                      id={`document-date-${field.key}`}
+                      type="date"
+                      value={value}
+                      disabled={locked}
+                      onChange={(e) => {
+                        const patch: Partial<PlacingSlip> = {}
+                        patch[field.key] = e.target.value || null
+                        set(patch)
+                      }}
+                    />
+                    <FieldDescription>
+                      {lestari
+                        ? `${field.hint} · kop Lestari Cipta Hokindo`
+                        : field.hint}
+                    </FieldDescription>
+                  </Field>
+                )
+              })}
+            </div>
+          </SectionCard>
         </fieldset>
       </SlipFormBody>
 

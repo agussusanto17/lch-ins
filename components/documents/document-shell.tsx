@@ -7,9 +7,10 @@ import { ArrowLeft, Loader2, Printer, TriangleAlert } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { LchLogo } from "@/components/documents/letterhead"
+import { CompanyLogo } from "@/components/documents/letterhead"
 import { PrintedAt } from "@/components/documents/printed-at"
 import { hasAppShellHistory } from "@/lib/app-shell-history"
+import type { LetterheadVariant } from "@/lib/document-dates"
 import { repeatsPrintHeaderFooter } from "@/lib/print-support"
 import { pendingPrintTasks, subscribePrintTasks } from "@/lib/print-tasks"
 
@@ -20,6 +21,7 @@ export function DocumentShell({
   children,
   wide = false,
   letterhead = true,
+  variant = "lch",
 }: {
   backHref: string
   children: React.ReactNode
@@ -27,6 +29,8 @@ export function DocumentShell({
   wide?: boolean
   /** False drops the repeating LCH logo; the top spacer stays as the page margin. */
   letterhead?: boolean
+  /** Kop dan footer menurut tanggal dokumen: Lestari Cipta Hokindo sebelum 1 September 2025. */
+  variant?: LetterheadVariant
 }) {
   // Server dan render pertama menganggap browser mendukung, jadi tidak ada
   // hydration mismatch; peringatan baru muncul setelah user agent terbaca.
@@ -87,13 +91,13 @@ export function DocumentShell({
         {/* Header berulang di setiap halaman cetak */}
         {letterhead ? (
           <div className="print-header-fixed hidden print:block">
-            <LchLogo className="h-14 w-auto" />
+            <CompanyLogo variant={variant} />
           </div>
         ) : null}
 
         {/* Footer navy berulang di setiap halaman cetak */}
         <div className="print-footer-fixed hidden print:block">
-          <PrintedAt isPrintFixed />
+          <PrintedAt isPrintFixed variant={variant} />
         </div>
 
         {/* Tabel layout cetak: thead/tfoot spacer otomatis memberi ruang kosong di setiap halaman */}
@@ -119,7 +123,7 @@ export function DocumentShell({
         </table>
 
         {/* Screen footer sits outside the table so it always spans the full card width. */}
-        <PrintedAt />
+        <PrintedAt variant={variant} />
       </article>
 
       <p className="no-print pb-6 text-center text-xs text-muted-foreground">

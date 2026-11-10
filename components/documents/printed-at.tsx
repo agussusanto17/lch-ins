@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { DocumentFooter } from "@/components/documents/letterhead"
+import type { LetterheadVariant } from "@/lib/document-dates"
 
 function noopSubscribe() {
   return () => {}
@@ -11,8 +12,10 @@ function noopSubscribe() {
 /** Waktu cetak diambil saat halaman dibuka di browser, bukan saat build. */
 export function PrintedAt({
   isPrintFixed = false,
+  variant = "lch",
 }: {
   isPrintFixed?: boolean
+  variant?: LetterheadVariant
 } = {}) {
   const label = React.useSyncExternalStore(
     noopSubscribe,
@@ -27,6 +30,7 @@ export function PrintedAt({
   return (
     <DocumentFooter
       isPrintFixed={isPrintFixed}
+      variant={variant}
       printedAt={label ? `${label} WIB` : "—"}
     />
   )

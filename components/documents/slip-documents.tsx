@@ -41,6 +41,11 @@ import { Button } from "@/components/ui/button"
 import { rateUnitFor } from "@/lib/calc"
 import type { AttachmentPrints } from "@/lib/attachment-print"
 import type { PlacingSlip } from "@/lib/data"
+import {
+  LETTERHEAD_COMPANY,
+  letterheadFor,
+  slipDocumentDate,
+} from "@/lib/document-dates"
 import { dateEn } from "@/lib/format"
 import { isMultiLocation } from "@/lib/slip-locations"
 import { isMultiItem } from "@/lib/slip-items"
@@ -143,9 +148,12 @@ function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
 export function PlacingSlipDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
+  // Tanggal release; dokumen sebelum 1 September 2025 memakai kop Lestari.
+  const date = slipDocumentDate(slip, "placing")
+  const kop = letterheadFor(date)
   return (
-    <DocumentShell backHref={`/underwriting/edit/${slip.id}`}>
-      <Letterhead />
+    <DocumentShell backHref={`/underwriting/edit/${slip.id}`} variant={kop}>
+      <Letterhead variant={kop} />
       <DocTitle
         title="PLACING SLIP"
         number={
@@ -169,7 +177,8 @@ export function PlacingSlipDocument(props: DocProps) {
       <BrokerageBlock slip={slip} />
 
       <SignatureGrid
-        place={`Jakarta, ${dateEn(slip.updatedAt)}`}
+        place={`Jakarta, ${dateEn(date)}`}
+        company={LETTERHEAD_COMPANY[kop]}
         confirmationTitle="KONFIRMASI PENANGGUNG / INSURER CONFIRMATION"
         confirmationParty="Nama Perusahaan Asuransi & Authorized Signatory"
       />
@@ -193,10 +202,12 @@ export function QuotationSlipDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
   const number = derivedDocNumber(slip.slipNo, "QS")
+  const date = slipDocumentDate(slip, "quotation")
+  const kop = letterheadFor(date)
 
   return (
-    <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`}>
-      <Letterhead />
+    <DocumentShell backHref={`/underwriting/quotation/edit/${slip.id}`} variant={kop}>
+      <Letterhead variant={kop} />
       <DocTitle
         title="QUOTATION SLIP"
         number={number ? `No. ${number}` : "DRAFT"}
@@ -226,7 +237,8 @@ export function QuotationSlipDocument(props: DocProps) {
       <SecurityPanelBlock slip={slip} />
 
       <SignatureGrid
-        place={`Jakarta, ${dateEn(slip.updatedAt)}`}
+        place={`Jakarta, ${dateEn(date)}`}
+        company={LETTERHEAD_COMPANY[kop]}
         confirmationTitle="KONFIRMASI TERTANGGUNG / INSURED CONFIRMATION"
       />
 
@@ -248,12 +260,15 @@ export function QuotationSlipDocument(props: DocProps) {
 export function CoverNoteDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
+  // Tanggal quoted, sama dengan Quotation Slip; footer ikut kop pada tanggal itu.
+  const date = slipDocumentDate(slip, "coverNote")
   return (
     // Draft cover note prints without the LCH letterhead and number, following
     // the marked-up sample of 6 Nov 2026.
     <DocumentShell
       backHref={`/underwriting/quotation/edit/${slip.id}`}
       letterhead={false}
+      variant={letterheadFor(date)}
     >
       <DocTitle title="COVER NOTE" />
       <DetailTable slip={slip} />
@@ -277,7 +292,7 @@ export function CoverNoteDocument(props: DocProps) {
         </>
       ) : null}
 
-      <CoverNoteSignature slip={slip} place={`Jakarta, ${dateEn(slip.updatedAt)}`} />
+      <CoverNoteSignature slip={slip} place={`Jakarta, ${dateEn(date)}`} />
 
       <AttachmentList slip={slip} />
 
@@ -298,10 +313,12 @@ export function ClosingInstructionDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
   const number = derivedDocNumber(slip.slipNo, "CI")
+  const date = slipDocumentDate(slip, "closing")
+  const kop = letterheadFor(date)
 
   return (
-    <DocumentShell backHref={`/underwriting/closing/edit/${slip.id}`}>
-      <Letterhead />
+    <DocumentShell backHref={`/underwriting/closing/edit/${slip.id}`} variant={kop}>
+      <Letterhead variant={kop} />
       <DocTitle
         title="CLOSING INSTRUCTION"
         number={number ? `No. ${number}` : "DRAFT"}
@@ -342,7 +359,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       ) : null}
 
       <p className="mt-8 mb-1 break-after-avoid text-[13px]">
-        Jakarta, {dateEn(slip.updatedAt)}
+        Jakarta, {dateEn(date)}
       </p>
       {/*
        * Closing Instruction dikirim ke masing-masing asuransi, jadi tanda
@@ -358,7 +375,7 @@ export function ClosingInstructionDocument(props: DocProps) {
           <p className="mb-14 text-muted-foreground">
             Disiapkan oleh / Prepared by,
           </p>
-          <p className="border-t pt-1 font-bold">PT. LCH Insurance Brokers</p>
+          <p className="border-t pt-1 font-bold">{LETTERHEAD_COMPANY[kop]}</p>
           <p className="text-xs text-muted-foreground">Authorized Signatory</p>
         </div>
         <div>

@@ -37,6 +37,15 @@ export interface ActionResponse<T = void> {
   error?: string
 }
 
+/** Tanggal dokumen "YYYY-MM-DD"; string kosong berarti dikosongkan. */
+const documentDateSchema = z
+  .union([
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal dokumen tidak valid."),
+    z.literal(""),
+  ])
+  .nullish()
+  .transform((value) => (value === "" ? null : value))
+
 export interface ClausePickerItem {
   id: string
   title: string
@@ -140,6 +149,9 @@ const placingSlipSchema = z.object({
   periodTba: z.boolean().optional(),
   inceptionDate: z.string().nullish(),
   expiryDate: z.string().nullish(),
+  releaseDate: documentDateSchema,
+  quotedDate: documentDateSchema,
+  closingDate: documentDateSchema,
   periodNote: z
     .string()
     .max(500, "Keterangan periode maksimal 500 karakter")
