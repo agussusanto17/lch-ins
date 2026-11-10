@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-11
 - **Branch:** `feat/premi-prorata-endorsement`
-- **PR:** [#217](https://github.com/agussusanto17/lch-ins/pull/217)
+- **PR:** [#218](https://github.com/agussusanto17/lch-ins/pull/218)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
