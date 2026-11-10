@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `fix/klaim-closed-tanggal-berkas`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#202](https://github.com/agussusanto17/lch-ins/pull/202)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
