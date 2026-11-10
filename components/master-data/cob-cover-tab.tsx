@@ -21,17 +21,10 @@ import { TableEmpty } from "@/components/shared/table-empty"
 import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { SearchInput } from "@/components/shared/table-toolbar"
 import { usePermission } from "@/components/auth/permission-provider"
+import { FormDrawer } from "@/components/shared/form-drawer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { NumberInput } from "@/components/ui/number-input"
 import { Label } from "@/components/ui/label"
@@ -153,6 +146,8 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
   }
 
   function handleSaveCover() {
+    // Drawer tidak menunggu transisi, jadi klik ganda dicegah di sini.
+    if (isPending) return
     if (!coverCode.trim() || !coverName.trim()) {
       toast.error("Kode dan nama Cover Type wajib diisi")
       return
@@ -517,205 +512,184 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
         itemName="COB"
       />
 
-      <Dialog open={coverDialogOpen} onOpenChange={setCoverDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCover ? "Edit Type of Cover" : "Tambah Sub-Cover Type"}
-            </DialogTitle>
-            <DialogDescription>
-              Sub-tipe jaminan asuransi (contoh: 0311 Marine Cargo Open Cover).
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-3.5 py-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cover-code">
-                Kode Sub-Cover (3-6 karakter unik) <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="cover-code"
-                placeholder="Contoh: 0101, 0311"
-                value={coverCode}
-                onChange={(e) => setCoverCode(e.target.value)}
-                maxLength={6}
-                className="font-mono"
-              />
-              {!editingCover ? (
-                <p className="text-[11px] text-muted-foreground">
-                  Dua digit kode COB sudah terisi. Lanjutkan dengan nomor urut,
-                  misalnya ketik 11 untuk 0311.
-                </p>
-              ) : null}
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cover-name">
-                Nama Type of Cover <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="cover-name"
-                placeholder="Contoh: Marine Cargo Open Cover, Property All Risks"
-                value={coverName}
-                onChange={(e) => setCoverName(e.target.value)}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cover-abbreviation">
-                Singkatan di Nomor Slip
-              </Label>
-              <Input
-                id="cover-abbreviation"
-                placeholder="Contoh: PAR, IAR, MC"
-                value={coverAbbreviation}
-                onChange={(e) => setCoverAbbreviation(e.target.value.toUpperCase())}
-                maxLength={10}
-                className="font-mono"
-              />
+      {/* Form panjang memakai drawer samping, sama seperti form entri lain (Agus, 11 November 2026). */}
+      <FormDrawer
+        open={coverDialogOpen}
+        onOpenChange={setCoverDialogOpen}
+        title={editingCover ? "Edit Type of Cover" : "Tambah Sub-Cover Type"}
+        description="Sub-tipe jaminan asuransi (contoh: 0311 Marine Cargo Open Cover)."
+        onSubmit={handleSaveCover}
+        submitLabel={editingCover ? "Simpan Perubahan" : "Tambah Sub-Cover"}
+        className="data-[side=right]:sm:max-w-xl"
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="cover-code">
+              Kode Sub-Cover (3-6 karakter unik) <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="cover-code"
+              placeholder="Contoh: 0101, 0311"
+              value={coverCode}
+              onChange={(e) => setCoverCode(e.target.value)}
+              maxLength={6}
+              className="font-mono"
+            />
+            {!editingCover ? (
               <p className="text-[11px] text-muted-foreground">
-                Dipakai di nomor slip, misalnya 001/LCH-PLCMT/PS-PAR/X/2026.
-                Kosongkan bila nomor slip cukup PS tanpa singkatan.
+                Dua digit kode COB sudah terisi. Lanjutkan dengan nomor urut,
+                misalnya ketik 11 untuk 0311.
               </p>
-            </div>
+            ) : null}
+          </div>
 
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="cover-name">
+              Nama Type of Cover <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="cover-name"
+              placeholder="Contoh: Marine Cargo Open Cover, Property All Risks"
+              value={coverName}
+              onChange={(e) => setCoverName(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="cover-abbreviation">
+              Singkatan di Nomor Slip
+            </Label>
+            <Input
+              id="cover-abbreviation"
+              placeholder="Contoh: PAR, IAR, MC"
+              value={coverAbbreviation}
+              onChange={(e) => setCoverAbbreviation(e.target.value.toUpperCase())}
+              maxLength={10}
+              className="font-mono"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Dipakai di nomor slip, misalnya 001/LCH-PLCMT/PS-PAR/X/2026.
+              Kosongkan bila nomor slip cukup PS tanpa singkatan.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="cover-detail-labels">
+              Label Detail Tambahan
+            </Label>
+            <Textarea
+              id="cover-detail-labels"
+              rows={4}
+              placeholder={"Contoh:\nRetroactive Date\nTerritorial Limit\nJurisdiction"}
+              value={coverDetailLabels}
+              onChange={(e) => setCoverDetailLabels(e.target.value)}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Satu label per baris. Label ini otomatis muncul di Detail
+              tambahan placing slip saat type of cover ini dipilih, lalu
+              dicetak di tabel detail dokumen bila isinya diisi.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="cover-period-label">Label Periode di Dokumen</Label>
+            <Input
+              id="cover-period-label"
+              placeholder="Period of Insurance"
+              maxLength={200}
+              value={coverPeriodLabel}
+              onChange={(e) => setCoverPeriodLabel(e.target.value)}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Pengganti label Period of Insurance di dokumen slip, misalnya
+              Estimated Time of Departure (ETD) atau Date of Tournament.
+              Kosongkan untuk Period of Insurance.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cover-detail-labels">
-                Label Detail Tambahan
-              </Label>
-              <Textarea
-                id="cover-detail-labels"
-                rows={4}
-                placeholder={"Contoh:\nRetroactive Date\nTerritorial Limit\nJurisdiction"}
-                value={coverDetailLabels}
-                onChange={(e) => setCoverDetailLabels(e.target.value)}
+              <Label htmlFor="cover-period-days">Lama Periode (hari)</Label>
+              <NumberInput
+                id="cover-period-days"
+                placeholder="Tidak otomatis"
+                value={coverPeriodDays}
+                onValueChange={(v) =>
+                  setCoverPeriodDays(v == null ? null : Math.max(0, Math.round(v)))
+                }
               />
-              <p className="text-[11px] text-muted-foreground">
-                Satu label per baris. Label ini otomatis muncul di Detail
-                tambahan placing slip saat type of cover ini dipilih, lalu
-                dicetak di tabel detail dokumen bila isinya diisi.
-              </p>
             </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cover-period-label">Label Periode di Dokumen</Label>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label htmlFor="cover-period-end-text">
+                Teks Akhir Periode di Dokumen
+              </Label>
               <Input
-                id="cover-period-label"
-                placeholder="Period of Insurance"
+                id="cover-period-end-text"
+                placeholder="Kosongkan untuk mencetak tanggal akhir"
                 maxLength={200}
-                value={coverPeriodLabel}
-                onChange={(e) => setCoverPeriodLabel(e.target.value)}
+                value={coverPeriodEndText}
+                onChange={(e) => setCoverPeriodEndText(e.target.value)}
               />
-              <p className="text-[11px] text-muted-foreground">
-                Pengganti label Period of Insurance di dokumen slip, misalnya
-                Estimated Time of Departure (ETD) atau Date of Tournament.
-                Kosongkan untuk Period of Insurance.
-              </p>
             </div>
+            <p className="text-[11px] text-muted-foreground sm:col-span-3">
+              Lama periode mengisi expiry date slip otomatis dari inception
+              date, misalnya 14 hari untuk single shipment atau 0 untuk acara
+              satu hari. Teks akhir periode menggantikan tanggal akhir di
+              dokumen, misalnya &ldquo;until final destination&rdquo;.
+            </p>
+          </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="cover-period-days">Lama Periode (hari)</Label>
-                <NumberInput
-                  id="cover-period-days"
-                  placeholder="Tidak otomatis"
-                  value={coverPeriodDays}
-                  onValueChange={(v) =>
-                    setCoverPeriodDays(v == null ? null : Math.max(0, Math.round(v)))
-                  }
-                />
-              </div>
-              <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <Label htmlFor="cover-period-end-text">
-                  Teks Akhir Periode di Dokumen
-                </Label>
-                <Input
-                  id="cover-period-end-text"
-                  placeholder="Kosongkan untuk mencetak tanggal akhir"
-                  maxLength={200}
-                  value={coverPeriodEndText}
-                  onChange={(e) => setCoverPeriodEndText(e.target.value)}
-                />
-              </div>
-              <p className="text-[11px] text-muted-foreground sm:col-span-3">
-                Lama periode mengisi expiry date slip otomatis dari inception
-                date, misalnya 14 hari untuk single shipment atau 0 untuk acara
-                satu hari. Teks akhir periode menggantikan tanggal akhir di
-                dokumen, misalnya &ldquo;until final destination&rdquo;.
-              </p>
+          <div className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">Pakai Section 1 &amp; 2</span>
+              <span className="text-[11px] text-muted-foreground">
+                Slip dibagi Section 1 Material Damage dan Section 2 Third
+                Party Liability, misalnya CAR dan EAR.
+              </span>
             </div>
+            <Switch
+              checked={coverUsesSections}
+              onCheckedChange={setCoverUsesSections}
+            />
+          </div>
 
+          <div className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">Open cover</span>
+              <span className="text-[11px] text-muted-foreground">
+                Slip berisi rate per kategori tanpa premi pasti; premi
+                dicatat per deklarasi di polis, misalnya MOP.
+              </span>
+            </div>
+            <Switch checked={coverOpenCover} onCheckedChange={setCoverOpenCover} />
+          </div>
+
+          {parentHasOjkTariff ? (
             <div className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
               <div className="flex flex-col">
-                <span className="text-sm font-medium">Pakai Section 1 &amp; 2</span>
+                <span id="cover-ojk-tariff-label" className="text-sm font-medium">
+                  Pakai tarif OJK
+                </span>
                 <span className="text-[11px] text-muted-foreground">
-                  Slip dibagi Section 1 Material Damage dan Section 2 Third
-                  Party Liability, misalnya CAR dan EAR.
+                  Rate slip dibatasi tarif OJK dan brokerage dibatasi biaya
+                  akuisisi OJK. Matikan untuk cover di luar tarif OJK,
+                  misalnya Heavy Equipment.
                 </span>
               </div>
               <Switch
-                checked={coverUsesSections}
-                onCheckedChange={setCoverUsesSections}
+                aria-labelledby="cover-ojk-tariff-label"
+                checked={coverOjkTariff}
+                onCheckedChange={setCoverOjkTariff}
               />
             </div>
+          ) : null}
 
-            <div className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">Open cover</span>
-                <span className="text-[11px] text-muted-foreground">
-                  Slip berisi rate per kategori tanpa premi pasti; premi
-                  dicatat per deklarasi di polis, misalnya MOP.
-                </span>
-              </div>
-              <Switch checked={coverOpenCover} onCheckedChange={setCoverOpenCover} />
-            </div>
-
-            {parentHasOjkTariff ? (
-              <div className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
-                <div className="flex flex-col">
-                  <span id="cover-ojk-tariff-label" className="text-sm font-medium">
-                    Pakai tarif OJK
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    Rate slip dibatasi tarif OJK dan brokerage dibatasi biaya
-                    akuisisi OJK. Matikan untuk cover di luar tarif OJK,
-                    misalnya Heavy Equipment.
-                  </span>
-                </div>
-                <Switch
-                  aria-labelledby="cover-ojk-tariff-label"
-                  checked={coverOjkTariff}
-                  onCheckedChange={setCoverOjkTariff}
-                />
-              </div>
-            ) : null}
-
-            <div className="flex items-center justify-between rounded-lg border p-2.5">
-              <span className="text-sm font-medium">Status Aktif Operasional</span>
-              <Switch checked={coverIsActive} onCheckedChange={setCoverIsActive} />
-            </div>
+          <div className="flex items-center justify-between rounded-lg border p-2.5">
+            <span className="text-sm font-medium">Status Aktif Operasional</span>
+            <Switch checked={coverIsActive} onCheckedChange={setCoverIsActive} />
           </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setCoverDialogOpen(false)}
-            >
-              Batal
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSaveCover}
-              disabled={isPending}
-            >
-              {editingCover ? "Simpan Perubahan" : "Tambah Sub-Cover"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </FormDrawer>
     </div>
   )
 }
