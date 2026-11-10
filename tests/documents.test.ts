@@ -94,8 +94,17 @@ test("doc-blocks prints clause list titles unbolded without wording and keeps bo
     !clausesBlock.includes("dangerouslySetInnerHTML"),
     "ClausesBlock should print titles only; wording belongs in the appendix"
   )
+  assert.ok(
+    clausesBlock.includes('className="flex-1 min-w-0 text-left"'),
+    "ClausesBlock should use natural left alignment for titles"
+  )
+  assert.ok(
+    !clausesBlock.includes("text-justify"),
+    "ClausesBlock titles should not force justified text"
+  )
 
-  // In ClauseWordingAppendix: titles remain font-semibold and heading is CLAUSE WORDINGS
+  // In ClauseWordingAppendix: titles remain font-semibold, heading is CLAUSE WORDINGS,
+  // and content preserves hanging indentation relative to the clause number
   const appendixSection = docBlocks.slice(
     docBlocks.indexOf("function ClauseWordingAppendix")
   )
@@ -104,8 +113,39 @@ test("doc-blocks prints clause list titles unbolded without wording and keeps bo
     "ClauseWordingAppendix should render CLAUSE WORDINGS as section heading"
   )
   assert.ok(
-    appendixSection.includes('className="font-semibold"'),
-    "ClauseWordingAppendix should keep titles bolded"
+    appendixSection.includes('className="font-semibold text-left"'),
+    "ClauseWordingAppendix should keep titles bolded with natural left alignment"
+  )
+  assert.ok(
+    appendixSection.includes('<div className="flex-1 min-w-0">'),
+    "ClauseWordingAppendix should nest clause title and wording body inside flex-1 min-w-0 column for hanging indent"
+  )
+  assert.ok(
+    appendixSection.includes('className="rte-prose mt-0.5 text-[12px] text-muted-foreground text-justify"'),
+    "ClauseWordingAppendix should justify descriptive wording paragraphs"
+  )
+})
+
+test("globals.css configures natural left alignment for headings and justified text for paragraphs in rich text", () => {
+  const css = fs.readFileSync(
+    path.join(process.cwd(), "app/globals.css"),
+    "utf-8"
+  )
+
+  assert.match(
+    css,
+    /\.rte-content h2,\s*\.rte-prose h2\s*\{[^}]*text-align:\s*left;/,
+    "h2 in rich text should have natural left alignment"
+  )
+  assert.match(
+    css,
+    /\.rte-content h3,\s*\.rte-prose h3\s*\{[^}]*text-align:\s*left;/,
+    "h3 in rich text should have natural left alignment"
+  )
+  assert.match(
+    css,
+    /\.rte-content p,\s*\.rte-prose p\s*\{[^}]*text-align:\s*justify;[^}]*text-justify:\s*inter-word;/,
+    "paragraphs in rich text should have justified text alignment"
   )
 })
 
