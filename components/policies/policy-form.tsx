@@ -44,6 +44,7 @@ import {
 import { dateShort, money } from "@/lib/format"
 import { openCoverRateText, usesOpenCover } from "@/lib/open-cover"
 import { parentPolicyIssue, parentPolicyLabel } from "@/lib/policy-parent"
+import { cancellationSuggestion } from "@/lib/policy-cancellation"
 import { isProvisionalPolicyNo, policyFieldsFromSlip } from "@/lib/policy-from-slip"
 import { POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
 import { rosterPolicy } from "@/lib/policy-participants"
@@ -264,6 +265,24 @@ export function PolicyForm({
   const rosterOwner = parentPolicy ? rosterPolicy(parentPolicy, policies) : null
   const participantChangesOn =
     !policy && draft.type === "Endorsement" && rosterOwner?.cob === "General Accident"
+  // Endorsement dan pembatalan: tanggal mulai adalah tanggal efektif perubahan.
+  const changesParent = draft.type === "Endorsement" || draft.type === "Cancellation"
+  // Usulan pengembalian premi prorata untuk pembatalan, dari polis asal beserta
+  // endorsement-nya, seperti dokumen pembatalan asuransi dari Harry (10 November 2026).
+  const cancelledPolicy = draft.type === "Cancellation" ? (rosterOwner ?? parentPolicy) : null
+  const cancellation =
+    cancelledPolicy && /^\d{4}-\d{2}-\d{2}$/.test(draft.inceptionDate)
+      ? cancellationSuggestion({
+          policy: cancelledPolicy,
+          endorsements: policies.filter(
+            (p) =>
+              p.type === "Endorsement" &&
+              p.id !== draft.id &&
+              rosterPolicy(p, policies)?.id === cancelledPolicy.id
+          ),
+          effectiveDate: draft.inceptionDate,
+        })
+      : null
   // Polis dari placing slip: data penempatan mengikuti slip dan dikunci.
   // Polis baru bisa dilepas dari slip untuk diisi manual; perubahan sesudah
   // polis terbit lewat endorsement. Periode slip yang TBA tetap diisi di sini.
@@ -563,10 +582,12 @@ export function PolicyForm({
               rows={3}
               value={draft.remarks ?? ""}
               onChange={(v) => set({ remarks: v })}
+              // Kalimat contoh mengikuti dokumen endorsement dan pembatalan asuransi
+              // yang dikirim Harry (10 November 2026).
               placeholder={
                 draft.type === "Endorsement"
-                  ? "Contoh: penambahan lokasi Gudang 2 mulai 1 Desember 2026"
-                  : "Contoh: dibatalkan atas permintaan tertanggung, premi dikembalikan prorata"
+                  ? "Contoh: efektif per awal periode, perubahan harga pertanggungan dari Rp 223.500.000 menjadi Rp 200.000.000 dan rate TPL dari 0,75% menjadi 1,125%."
+                  : "Contoh: efektif per 22 Mei 2026, polis ini dibatalkan secara prorata. Subject to no claim."
               }
               description={
                 draft.type === "Endorsement"
@@ -655,12 +676,19 @@ export function PolicyForm({
           </fieldset>
           <fieldset disabled={periodLocked} className="contents">
             <TextField
-              label="Tanggal Mulai"
+              label={changesParent ? "Tanggal Efektif" : "Tanggal Mulai"}
               required
               type="date"
               value={draft.inceptionDate}
               onChange={(v) => set({ inceptionDate: v })}
               error={errors.inceptionDate}
+              description={
+                draft.type === "Cancellation"
+                  ? "Polis dibatalkan terhitung sejak tanggal ini."
+                  : draft.type === "Endorsement"
+                    ? "Perubahan berlaku terhitung sejak tanggal ini."
+                    : undefined
+              }
             />
             <TextField
               label="Tanggal Berakhir"
@@ -717,6 +745,35 @@ export function PolicyForm({
               }
             />
           </fieldset>
+          {cancellation ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted/60 px-3 py-2.5 text-sm sm:col-span-2">
+              <p className="mr-auto">
+                Usulan pengembalian premi prorata{" "}
+                <span className="tabular font-medium">
+                  {money(cancellation.premium, draft.currency)}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  Premi {money(cancellation.basePremium, draft.currency)} × sisa{" "}
+                  {cancellation.remainingDays}/{cancellation.periodDays} hari, seperti
+                  perhitungan pembatalan asuransi. Biaya pembatalan dari asuransi, kalau
+                  ada, ditambahkan sendiri.
+                </span>
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  set({
+                    premium: cancellation.premium,
+                    sumInsured: cancellation.sumInsured,
+                  })
+                }
+              >
+                Pakai usulan
+              </Button>
+            </div>
+          ) : null}
           <fieldset disabled={slipLocked} className="contents">
             <NumberField
               label="Brokerage (%)"
