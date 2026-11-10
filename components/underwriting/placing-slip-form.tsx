@@ -464,6 +464,10 @@ function SlipEditor({
       toast.success("Closing instruction diterbitkan", {
         description: `Placing slip ${record.slipNo ?? ""} selesai dan di-close.`,
       })
+      // Polis otomatis tercatat di Policy Database (meeting LCH, 10 November 2026).
+      if (res.notice) {
+        toast.info("Policy Database", { description: res.notice, duration: 10000 })
+      }
       router.push(`/underwriting/closing/${record.id}`)
     })
   }

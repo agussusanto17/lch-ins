@@ -22,13 +22,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
 import { EndorsementParticipants } from "@/components/policies/endorsement-participants"
-import {
-  brokerageCapFor,
-  slipPolicyParts,
-  slipPolicyPremium,
-  sumPercent,
-  totalSumInsured,
-} from "@/lib/calc"
+import { brokerageCapFor, slipPolicyParts, sumPercent } from "@/lib/calc"
 import {
   POLICY_TYPES,
   POLICY_TYPES_WITH_PARENT,
@@ -50,6 +44,7 @@ import {
 import { dateShort, money } from "@/lib/format"
 import { openCoverRateText, usesOpenCover } from "@/lib/open-cover"
 import { parentPolicyIssue, parentPolicyLabel } from "@/lib/policy-parent"
+import { isProvisionalPolicyNo, policyFieldsFromSlip } from "@/lib/policy-from-slip"
 import { POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
 import { rosterPolicy } from "@/lib/policy-participants"
 import type { ClientOption } from "@/lib/server/clients"
@@ -316,34 +311,9 @@ export function PolicyForm({
     .filter((c) => c.isActive || c.id === draft.cobOjkClassId)
     .map((c) => ({ label: c.name, value: c.id }))
 
+  // Aturan salin sama dengan polis otomatis saat Closing Instruction terbit.
   function slipPatch(slip: PlacingSlip, part: SlipPart | null): Partial<Draft> {
-    const panel = slip.securityPanel?.filter((r) => r.insurer) ?? []
-    const leader = panel.find((r) => r.role === "As Leader") ?? panel[0]
-    const client = clientOptionFor(slip.clientId)
-    return {
-      placingSlipId: slip.id,
-      slipPart: part,
-      clientId: client?.id ?? slip.clientId,
-      insuredName: client?.name ?? slip.insuredName,
-      cob: slip.cob,
-      // Polis EQVET dari slip PAR + EQVET memakai type of cover kedua.
-      typeOfCover:
-        part === "EQVET" && slip.typeOfCover2
-          ? slip.typeOfCover2
-          : slip.typeOfCover,
-      currency: slip.currency,
-      inceptionDate: slip.inceptionDate ?? "",
-      expiryDate: slip.expiryDate ?? "",
-      // Open cover: nilai dan premi diisi per deklarasi.
-      sumInsured: usesOpenCover(slip) ? 0 : totalSumInsured(slip),
-      // Slip PAR + EQVET: premi per bagian, additional fee ikut polis PAR.
-      premium: usesOpenCover(slip) ? 0 : slipPolicyPremium(slip, part),
-      brokeragePct: slip.brokeragePct,
-      additionalFee: part === "EQVET" ? 0 : (slip.additionalFee ?? 0),
-      riskLocation: slip.riskLocation ?? "",
-      insurer: leader?.insurer ?? "",
-      insurers: panel,
-    }
+    return policyFieldsFromSlip(slip, part, clientOptionFor(slip.clientId))
   }
 
   function fromSlip(slipId: string | null) {
@@ -532,6 +502,11 @@ export function PolicyForm({
             onChange={(v) => set({ policyNo: v })}
             placeholder="PAR/2026/JKT/…"
             error={errors.policyNo}
+            description={
+              isProvisionalPolicyNo(draft.policyNo)
+                ? "Nomor sementara dari Closing Instruction. Ganti dengan nomor polis dari asuransi."
+                : undefined
+            }
           />
           <SelectInput
             label="Tipe Polis"
