@@ -20,6 +20,8 @@ import {
   listClaimFollowups,
   addClaimFollowup,
   deleteClaimFollowup,
+  getClaimPolicyInfo,
+  type ClaimPolicyInfo,
   type ClaimInput,
   type ClaimRecord,
   type ClaimDocumentRecord,
@@ -76,6 +78,24 @@ export async function getClaimRosterAction(
   } catch (err) {
     unstable_rethrow(err)
     return { ok: false, error: err instanceof Error ? err.message : "Gagal memuat peserta polis" }
+  }
+}
+
+/** Status premi, deductible, dan file polis untuk form dan detail klaim. */
+export async function getClaimPolicyInfoAction(
+  policyId: string
+): Promise<ActionResponse<ClaimPolicyInfo>> {
+  try {
+    await requireAccess("/claims")
+    if (!z.uuid().safeParse(policyId).success) {
+      return { ok: false, error: "Polis tidak valid" }
+    }
+    const info = await getClaimPolicyInfo(policyId)
+    if (!info) return { ok: false, error: "Polis tidak ditemukan" }
+    return { ok: true, data: info }
+  } catch (err) {
+    unstable_rethrow(err)
+    return { ok: false, error: err instanceof Error ? err.message : "Gagal memuat info polis" }
   }
 }
 

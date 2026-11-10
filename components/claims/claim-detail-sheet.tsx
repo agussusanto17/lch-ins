@@ -34,6 +34,11 @@ import {
   uploadClaimDocumentFileAction,
 } from "@/app/(app)/claims/actions"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
+import {
+  PolicyFileLink,
+  PremiumStatusBadge,
+  useClaimPolicyInfo,
+} from "@/components/claims/claim-policy-info"
 import { usePermission } from "@/components/auth/permission-provider"
 import { useFormOptions } from "@/components/shared/form-options-provider"
 import { Button } from "@/components/ui/button"
@@ -86,6 +91,8 @@ export function ClaimDetailSheet({
   const permission = usePermission()
   const canManage = permission.canManage("/claims")
   const masterOptions = useFormOptions()
+  // Status premi dan file polis untuk bagian Polis terkait.
+  const { info: policyInfo } = useClaimPolicyInfo(open ? claim?.policyId : null)
   const [activeTab, setActiveTab] = React.useState("overview")
   const [documents, setDocuments] = React.useState<ClaimDocumentRecord[]>([])
   // Loading diturunkan dari id klaim yang datanya sudah dimuat, tanpa setState sinkron di effect.
@@ -452,6 +459,18 @@ export function ClaimDetailSheet({
                         value={<span className="tabular">{claim.policyNo}</span>}
                       />
                       <Row label="Asuransi" value={claim.insurer} />
+                      {policyInfo ? (
+                        <>
+                          <Row
+                            label="Status premi"
+                            value={<PremiumStatusBadge date={policyInfo.premiumPaidDate} />}
+                          />
+                          <Row
+                            label="Berkas polis"
+                            value={<PolicyFileLink file={policyInfo.policyFile} />}
+                          />
+                        </>
+                      ) : null}
                       {claim.participantName ? (
                         <Row label="Peserta" value={claim.participantName} />
                       ) : null}

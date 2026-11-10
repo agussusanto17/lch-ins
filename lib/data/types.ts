@@ -526,6 +526,11 @@ export interface Policy {
   cobOjkClassId?: string | null
   placementLocationId?: string | null
   groupingInsured?: string
+  /**
+   * Tanggal premi dibayar "YYYY-MM-DD"; kosong berarti belum dibayar. Tampil
+   * saat klaim dicatat (meeting LCH, 10 November 2026).
+   */
+  premiumPaidDate?: string | null
   files: PolicyFile[]
   /** Peserta PA grup yang masih aktif di daftar polis ini. */
   participantCount?: number

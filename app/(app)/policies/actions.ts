@@ -63,6 +63,8 @@ const policyInputSchema = z
     cobOjkClassId: z.uuid("Klasifikasi OJK tidak valid").nullable().optional(),
     placementLocationId: z.uuid("Lokasi penempatan tidak valid").nullable().optional(),
     groupingInsured: z.string().trim().max(200, "Grouping insured maksimal 200 karakter").optional(),
+    // Kosong berarti premi belum dibayar.
+    premiumPaidDate: isoDate.nullable().optional(),
     participantChanges: z
       .object({
         added: participantListSchema,

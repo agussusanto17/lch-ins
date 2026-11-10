@@ -111,6 +111,7 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
     cobOjkClassId: row.cobOjkClassId,
     placementLocationId: row.placementLocationId,
     groupingInsured: row.groupingInsured ?? "",
+    premiumPaidDate: row.premiumPaidDate ? isoDate(row.premiumPaidDate) : null,
     files: row.files.map((f) => ({
       id: f.id,
       kind: f.kind,
@@ -140,6 +141,7 @@ function auditSnapshot(p: PolicyRecord) {
     cobOjkClassId: p.cobOjkClassId,
     placementLocationId: p.placementLocationId,
     groupingInsured: p.groupingInsured,
+    premiumPaidDate: p.premiumPaidDate ?? null,
   }
 }
 
@@ -256,6 +258,7 @@ async function policyData(tx: Tx, input: PolicyInput) {
     cobOjkClassId: await findCobOjkClassId(tx, input.cobOjkClassId),
     placementLocationId: await findPlacementLocationId(tx, input.placementLocationId),
     groupingInsured: input.groupingInsured?.trim() || null,
+    premiumPaidDate: input.premiumPaidDate ? new Date(input.premiumPaidDate) : null,
   } satisfies Prisma.PolicyUncheckedCreateInput
 }
 

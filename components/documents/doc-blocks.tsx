@@ -2,7 +2,6 @@ import { Fragment } from "react"
 
 import {
   coverLabel,
-  deductibleRows,
   exclusionItems,
   slipOccupationText,
   slipPeriodRow,
@@ -28,6 +27,7 @@ import {
 
 export { isParEqvetSlip } from "@/lib/calc"
 import { sanitizeHtml } from "@/lib/sanitize"
+import { deductibleGroups } from "@/lib/slip-deductibles"
 import {
   clauseTitleCase,
   constructionClassLabel,
@@ -581,39 +581,9 @@ export function CoverageBlock({ slip }: { slip: PlacingSlip }) {
 export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
   // Deductible texts already name their peril, so the cover column is not
   // printed. Covers sharing the same text print it once, each as a "-" bullet
-  // like the rate list, with wrapped lines aligned to the text.
-  const rows = deductibleRows(slip)
-  const texts = (pick: (row: (typeof rows)[number]) => boolean) => [
-    ...new Set(
-      rows
-        .filter(pick)
-        .flatMap((r) => r.deductibles)
-        .map((text) => text.trim())
-        .filter(Boolean)
-    ),
-  ]
-  // Slip Property mengikuti CI LCH (contoh SISKA RAHARJA): deductible per
-  // section; cover BI masuk Section 2.
-  const property = slip.cob === "Property"
-  // Slip ber-section (CAR, EAR): satu baris deductible per section, judulnya
-  // judul section.
-  const sectioned = !property && slipSectionTitles(slip) !== null
-  const groups = (
-    sectioned
-      ? rows.map((r) => ({ heading: r.cover, texts: texts((x) => x === r) }))
-      : property
-      ? [
-          {
-            heading: "Section 1 — Material Damage",
-            texts: texts((r) => !BI_RATE_LABELS.includes(r.cover)),
-          },
-          {
-            heading: "Section 2 — Business Interruption",
-            texts: texts((r) => BI_RATE_LABELS.includes(r.cover)),
-          },
-        ]
-      : [{ heading: null, texts: texts(() => true) }]
-  ).filter((g) => g.texts.length > 0)
+  // like the rate list, with wrapped lines aligned to the text. Grouping per
+  // section lives in lib/slip-deductibles, shared with the claim form.
+  const groups = deductibleGroups(slip)
   // Kalimat pengantar diketik user, tidak lagi otomatis (permintaan LCH,
   // 6 November 2026).
   const intro = slip.deductibleIntro?.trim()

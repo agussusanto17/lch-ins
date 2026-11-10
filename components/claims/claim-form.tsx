@@ -10,6 +10,10 @@ import {
   getClaimRosterAction,
   updateClaimAction,
 } from "@/app/(app)/claims/actions"
+import {
+  ClaimPolicyInfoPanel,
+  useClaimPolicyInfo,
+} from "@/components/claims/claim-policy-info"
 import { FormDrawer } from "@/components/shared/form-drawer"
 import {
   NumberField,
@@ -159,6 +163,10 @@ export function ClaimForm({
   const masterOptions = useFormOptions()
   const policies = formOptions.policies
   const policy = policies.find((p) => p.id === draft.policyId) ?? null
+  // Status premi dan deductible polis yang dipilih (meeting LCH, 10 November 2026).
+  const { info: policyInfo, loading: policyInfoLoading } = useClaimPolicyInfo(
+    policy?.id
+  )
   const policyItems = policies.map((p) => ({
     label: `${p.policyNo} — ${p.insuredName}`,
     value: p.id,
@@ -395,6 +403,9 @@ export function ClaimForm({
                 <p className="font-medium text-foreground">{policy.currency}</p>
               </div>
             </div>
+          ) : null}
+          {policy ? (
+            <ClaimPolicyInfoPanel info={policyInfo} loading={policyInfoLoading} />
           ) : null}
           {rosterLoading || needsParticipant ? (
             <SearchSelect

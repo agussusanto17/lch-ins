@@ -1478,6 +1478,10 @@ model Policy {
   /// Fee di luar brokerage, dalam mata uang polis. Nol kalau tidak ada.
   /// Pengembalian fee pada endorsement atau pembatalan bernilai negatif.
   additionalFee       Decimal  @default(0) @map("additional_fee") @db.Decimal(18, 2)
+  /// Tanggal premi dibayar; kosong berarti belum dibayar. Diisi manual di
+  /// Policy Database dan tampil saat klaim dicatat (meeting LCH, 10 November
+  /// 2026). Bagian B bisa mengisinya dari pencatatan pembayaran premi.
+  premiumPaidDate     DateTime? @map("premium_paid_date") @db.Date
   /// lookup policy_type: Baru, Renewal, Endorsement, Cancellation.
   policyTypeId        String   @map("policy_type_id") @db.Uuid
   /// Polis induk untuk renewal, endorsement, dan pembatalan.
