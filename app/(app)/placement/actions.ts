@@ -314,7 +314,7 @@ export async function uploadSlipAttachmentAction(
   formData: FormData
 ): Promise<ActionResponse<SlipAttachment[]>> {
   try {
-    const user = await requireManage("/underwriting")
+    const user = await requireManage("/placement")
     if (!attachmentIdSchema.safeParse(slipId).success) {
       return { ok: false, error: "Simpan draft slip dulu sebelum menambah lampiran." }
     }
@@ -337,7 +337,7 @@ export async function deleteSlipAttachmentAction(
   attachmentId: string
 ): Promise<ActionResponse<SlipAttachment[]>> {
   try {
-    const user = await requireManage("/underwriting")
+    const user = await requireManage("/placement")
     if (!attachmentIdSchema.safeParse(attachmentId).success) {
       return { ok: false, error: "Lampiran tidak valid." }
     }
@@ -356,7 +356,7 @@ export async function setSlipAttachmentPrintAction(
   printContent: boolean
 ): Promise<ActionResponse<SlipAttachment[]>> {
   try {
-    const user = await requireManage("/underwriting")
+    const user = await requireManage("/placement")
     if (!attachmentIdSchema.safeParse(attachmentId).success || typeof printContent !== "boolean") {
       return { ok: false, error: "Lampiran tidak valid." }
     }
@@ -370,17 +370,17 @@ export async function setSlipAttachmentPrintAction(
 }
 
 function revalidateUnderwritingPaths(id?: string) {
-  revalidatePath("/underwriting")
-  revalidatePath("/underwriting/new")
+  revalidatePath("/placement")
+  revalidatePath("/placement/new")
   revalidatePath("/", "layout")
   if (id) {
-    revalidatePath(`/underwriting/edit/${id}`)
-    revalidatePath(`/underwriting/quotation/edit/${id}`)
-    revalidatePath(`/underwriting/closing/edit/${id}`)
-    revalidatePath(`/underwriting/slip/${id}`)
-    revalidatePath(`/underwriting/quotation/${id}`)
-    revalidatePath(`/underwriting/cover-note/${id}`)
-    revalidatePath(`/underwriting/closing/${id}`)
+    revalidatePath(`/placement/edit/${id}`)
+    revalidatePath(`/placement/quotation/edit/${id}`)
+    revalidatePath(`/placement/closing/edit/${id}`)
+    revalidatePath(`/placement/slip/${id}`)
+    revalidatePath(`/placement/quotation/${id}`)
+    revalidatePath(`/placement/cover-note/${id}`)
+    revalidatePath(`/placement/closing/${id}`)
   }
 }
 
@@ -389,7 +389,7 @@ export async function savePlacingSlipAction(
   mode: "new" | "edit"
 ): Promise<ActionResponse<PlacingSlipRecord>> {
   try {
-    const user = await requireManage("/underwriting")
+    const user = await requireManage("/placement")
 
     const parsed = placingSlipSchema.safeParse(slip)
     if (!parsed.success) {
@@ -466,7 +466,7 @@ export async function releasePlacingSlipAction(
   id: string
 ): Promise<ActionResponse<PlacingSlipRecord>> {
   try {
-    const user = await requireManage("/underwriting")
+    const user = await requireManage("/placement")
     if (!id || !id.trim()) {
       return { ok: false, error: "ID Placing Slip tidak valid." }
     }
@@ -519,7 +519,7 @@ export async function previewSlipNumberAction(
   coverCode: string | null
 ): Promise<ActionResponse<string | null>> {
   try {
-    await requireManage("/underwriting")
+    await requireManage("/placement")
     const slipNo = await previewDocumentNumber(prisma, { code: "PS", coverCode })
     return { ok: true, data: slipNo }
   } catch (err: unknown) {
@@ -534,7 +534,7 @@ export async function togglePlacingSlipStatusAction(
   status: SlipStatus
 ): Promise<ActionResponse<PlacingSlipRecord>> {
   try {
-    const user = await requireManage("/underwriting")
+    const user = await requireManage("/placement")
     if (!id || !id.trim()) {
       return { ok: false, error: "ID Placing Slip tidak valid." }
     }
@@ -565,7 +565,7 @@ export async function deletePlacingSlipAction(
   id: string
 ): Promise<ActionResponse<void>> {
   try {
-    const user = await requireManage("/underwriting")
+    const user = await requireManage("/placement")
     if (!id || !id.trim()) {
       return { ok: false, error: "ID Placing Slip tidak valid." }
     }
@@ -592,7 +592,7 @@ export async function duplicatePlacingSlipAction(
   id: string
 ): Promise<ActionResponse<PlacingSlipRecord>> {
   try {
-    const user = await requireManage("/underwriting")
+    const user = await requireManage("/placement")
     const source = await getPlacingSlipById(id)
     if (!source) {
       return { ok: false, error: "Placing Slip sumber tidak ditemukan." }

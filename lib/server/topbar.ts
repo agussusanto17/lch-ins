@@ -122,7 +122,7 @@ export async function getTopbarData(
   const canAccessMarketing =
     canAccess(user.roles, "/marketing") || canAccess(user.roles, "/policies")
   const canAccessClaims = canAccess(user.roles, "/claims")
-  const canAccessUnderwriting = canAccess(user.roles, "/underwriting")
+  const canAccessUnderwriting = canAccess(user.roles, "/placement")
 
   const [expiringPolicies, openClaims, draftSlips, recentSlips] =
     await Promise.all([

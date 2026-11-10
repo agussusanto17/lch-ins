@@ -16,7 +16,7 @@ const adminOnlyPaths = [
   "/master-data",
   "/master-data/cob",
   "/master-data/tariff-ojk",
-  "/underwriting/master-clauses",
+  "/placement/master-clauses",
 ]
 
 const nonAdminRoles = [
@@ -53,7 +53,7 @@ test("ACCESS_MATRIX restricts master menus to admin and opens reports read-only 
     "tidak",
     "tidak",
   ]
-  for (const path of ["/master-data", "/underwriting/master-clauses"]) {
+  for (const path of ["/master-data", "/placement/master-clauses"]) {
     assert.deepEqual(ACCESS_MATRIX[path], adminOnly)
   }
   assert.deepEqual(ACCESS_MATRIX["/reports"], [
@@ -103,7 +103,7 @@ test("policy_admin is a valid canonical role", () => {
 })
 
 test("policy_admin has view-only access to Marketing and Placement", () => {
-  for (const path of ["/marketing", "/underwriting"]) {
+  for (const path of ["/marketing", "/placement"]) {
     assert.equal(canAccess(["policy_admin"], path), true, `${path} should be accessible`)
     assert.equal(canManage(["policy_admin"], path), false, `${path} should not be manageable`)
   }
@@ -125,7 +125,7 @@ test("policy_admin cannot access other restricted modules", () => {
     "/accounting/journal",
     "/accounting/statements",
     "/master-data",
-    "/underwriting/master-clauses",
+    "/placement/master-clauses",
     "/reports",
     "/users",
     "/audit-trail",
@@ -137,15 +137,15 @@ test("policy_admin cannot access other restricted modules", () => {
 })
 
 test("policy_admin subpath resolution respects longest prefix matching", () => {
-  // Subpaths under /underwriting inherit view-only except master-clauses
-  assert.equal(canAccess(["policy_admin"], "/underwriting/slips"), true)
-  assert.equal(canManage(["policy_admin"], "/underwriting/slips"), false)
-  assert.equal(canAccess(["policy_admin"], "/underwriting/cover-notes"), true)
-  assert.equal(canManage(["policy_admin"], "/underwriting/cover-notes"), false)
+  // Subpaths under /placement inherit view-only except master-clauses
+  assert.equal(canAccess(["policy_admin"], "/placement/slips"), true)
+  assert.equal(canManage(["policy_admin"], "/placement/slips"), false)
+  assert.equal(canAccess(["policy_admin"], "/placement/cover-notes"), true)
+  assert.equal(canManage(["policy_admin"], "/placement/cover-notes"), false)
 
   // Master clauses has its own stricter row (admin only)
-  assert.equal(canAccess(["policy_admin"], "/underwriting/master-clauses"), false)
-  assert.equal(canAccess(["policy_admin"], "/underwriting/master-clauses/new"), false)
+  assert.equal(canAccess(["policy_admin"], "/placement/master-clauses"), false)
+  assert.equal(canAccess(["policy_admin"], "/placement/master-clauses/new"), false)
 
   // Subpaths under /policies inherit kelola
   assert.equal(canAccess(["policy_admin"], "/policies/new"), true)

@@ -59,7 +59,7 @@ export function SppaTable({
   const slips = useCollection("slips")
   const permission = usePermission()
   const canManageMarketing = permission.canManage("/marketing")
-  const canManageUnderwriting = permission.canManage("/underwriting")
+  const canManageUnderwriting = permission.canManage("/placement")
   const [query, setQuery] = React.useState("")
   const [isPending, startTransition] = React.useTransition()
 
@@ -120,7 +120,7 @@ export function SppaTable({
       actions.push({
         label: "Buat placing slip",
         icon: FilePlus2,
-        render: <Link href={`/underwriting/new?sppa=${s.id}`} />,
+        render: <Link href={`/placement/new?sppa=${s.id}`} />,
       })
     }
 
@@ -286,7 +286,7 @@ export function SppaTable({
                     <TableCell>
                       {linked ? (
                         <Link
-                          href={`/underwriting/edit/${linked.id}`}
+                          href={`/placement/edit/${linked.id}`}
                           className="text-primary underline-offset-2 hover:underline"
                         >
                           {linked.slipNo ?? "Draft slip"}

@@ -70,15 +70,15 @@ const SEGMENT_LABELS: Record<string, string> = {
 
 /**
  * Routes that have their own page. Intermediate segments like
- * `/underwriting/quotation` or `/finance` are not linked to prevent
+ * `/placement/quotation` or `/finance` are not linked to prevent
  * breadcrumbs from navigating to 404 pages.
  */
 const PAGES = new Set([
   "/marketing",
-  "/underwriting",
-  "/underwriting/new",
-  "/underwriting/master-clauses",
-  "/underwriting/master-clauses/new",
+  "/placement",
+  "/placement/new",
+  "/placement/master-clauses",
+  "/placement/master-clauses/new",
   "/policies",
   "/claims",
   "/reports",

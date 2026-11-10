@@ -120,8 +120,8 @@ export const ACCESS_MATRIX: Record<string, readonly AccessLevel[]> = {
   // Kolom: Admin, Marketing, Placement, Claim, Finance, Accounting, Direksi, Policy Admin
   "/": [K, L, L, L, L, L, L, L],
   "/marketing": [K, K, K, L, T, T, L, L],
-  "/underwriting": [K, L, K, L, L, L, L, L],
-  "/underwriting/master-clauses": [K, T, T, T, T, T, T, T],
+  "/placement": [K, L, K, L, L, L, L, L],
+  "/placement/master-clauses": [K, T, T, T, T, T, T, T],
   "/policies": [K, L, K, L, L, L, L, K],
   "/claims": [K, L, K, K, L, L, L, T],
   "/finance/notes": [K, L, L, L, K, L, L, T],

@@ -19,8 +19,8 @@ export default async function NewSlipPage({
   searchParams: Promise<{ sppa?: string; client?: string }>
 }) {
   const user = await currentUser()
-  if (!user || !canManage(user.roles, "/underwriting")) {
-    redirect("/underwriting")
+  if (!user || !canManage(user.roles, "/placement")) {
+    redirect("/placement")
   }
 
   const { sppa, client } = await searchParams

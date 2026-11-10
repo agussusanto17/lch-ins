@@ -33,17 +33,17 @@ test("slip locked state only applies to Cancelled status, Closed status remains 
 test("revalidateUnderwritingPaths includes closing edit route", () => {
   function getRevalidatedPaths(id: string): string[] {
     return [
-      `/underwriting/edit/${id}`,
-      `/underwriting/quotation/edit/${id}`,
-      `/underwriting/closing/edit/${id}`,
-      `/underwriting/slip/${id}`,
-      `/underwriting/quotation/${id}`,
-      `/underwriting/cover-note/${id}`,
-      `/underwriting/closing/${id}`,
+      `/placement/edit/${id}`,
+      `/placement/quotation/edit/${id}`,
+      `/placement/closing/edit/${id}`,
+      `/placement/slip/${id}`,
+      `/placement/quotation/${id}`,
+      `/placement/cover-note/${id}`,
+      `/placement/closing/${id}`,
     ]
   }
 
   const paths = getRevalidatedPaths("slip-123")
-  assert.ok(paths.includes("/underwriting/closing/edit/slip-123"))
-  assert.ok(paths.includes("/underwriting/closing/slip-123"))
+  assert.ok(paths.includes("/placement/closing/edit/slip-123"))
+  assert.ok(paths.includes("/placement/closing/slip-123"))
 })

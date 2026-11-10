@@ -9,7 +9,7 @@ import { toast } from "sonner"
 import {
   deleteClauseAction,
   saveClauseAction,
-} from "@/app/(app)/underwriting/master-clauses/actions"
+} from "@/app/(app)/placement/master-clauses/actions"
 import { usePermission } from "@/components/auth/permission-provider"
 import { PageShell } from "@/components/layout/page-header"
 import {
@@ -49,7 +49,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const LIST_HREF = "/underwriting/master-clauses"
+const LIST_HREF = "/placement/master-clauses"
 const NONE = "none"
 
 export interface ClauseFormValue {
@@ -82,7 +82,7 @@ export function ClauseForm({
   const router = useRouter()
   const permission = usePermission()
   const canManageEffective =
-    canManage ?? permission.canManage("/underwriting/master-clauses")
+    canManage ?? permission.canManage("/placement/master-clauses")
   const [title, setTitle] = React.useState(clause?.title ?? "")
   const [wording, setWording] = React.useState(clause?.wordingHtml ?? "")
   const [sourceGroup, setSourceGroup] = React.useState(

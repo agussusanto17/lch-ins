@@ -649,7 +649,7 @@ async function vehicleAction<T>(
     const data = await run(session.id)
     revalidatePath("/master-data")
     revalidatePath("/marketing")
-    revalidatePath("/underwriting")
+    revalidatePath("/placement")
     return { ok: true, data }
   } catch (err) {
     unstable_rethrow(err)

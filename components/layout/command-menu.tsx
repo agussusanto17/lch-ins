@@ -41,10 +41,10 @@ export function CommandMenu({ slips = [] }: { slips?: TopbarSlipItem[] }) {
   }
 
   const allowedActions = [
-    canManage("/underwriting")
+    canManage("/placement")
       ? {
           title: "Buat Placing Slip baru",
-          href: "/underwriting/new",
+          href: "/placement/new",
           icon: FilePlus2,
         }
       : null,
@@ -60,8 +60,8 @@ export function CommandMenu({ slips = [] }: { slips?: TopbarSlipItem[] }) {
     canAccess(item.href)
   )
 
-  const canAccessUnderwriting = canAccess("/underwriting")
-  const canManageUnderwriting = canManage("/underwriting")
+  const canAccessUnderwriting = canAccess("/placement")
+  const canManageUnderwriting = canManage("/placement")
 
   return (
     <>
@@ -128,8 +128,8 @@ export function CommandMenu({ slips = [] }: { slips?: TopbarSlipItem[] }) {
                   onSelect={() =>
                     go(
                       canManageUnderwriting
-                        ? `/underwriting/edit/${s.id}`
-                        : `/underwriting/slip/${s.id}`
+                        ? `/placement/edit/${s.id}`
+                        : `/placement/slip/${s.id}`
                     )
                   }
                 >

@@ -121,7 +121,7 @@ export function NotificationPopover({ data }: { data?: TopbarData }) {
         title: "Placing Slip Draft",
         description: `${s.slipNo ?? "Draft"} · ${s.insuredName}`,
         time: s.date ? dateShort(s.date) : "",
-        href: `/underwriting/edit/${s.id}`,
+        href: `/placement/edit/${s.id}`,
         icon: ShieldAlert,
         tone: "info",
       })

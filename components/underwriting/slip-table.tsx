@@ -46,7 +46,7 @@ import {
   deletePlacingSlipAction,
   duplicatePlacingSlipAction,
   togglePlacingSlipStatusAction,
-} from "@/app/(app)/underwriting/actions"
+} from "@/app/(app)/placement/actions"
 
 const STATUS_ITEMS = [
   { label: "Semua status", value: "all" },
@@ -65,7 +65,7 @@ function actionsFor(
     {
       label: "Lihat placing slip",
       icon: Eye,
-      render: <Link href={`/underwriting/slip/${slip.id}`} />,
+      render: <Link href={`/placement/slip/${slip.id}`} />,
     },
   ]
   if (!canManage) {
@@ -74,7 +74,7 @@ function actionsFor(
   actions.push({
     label: slip.status === "Cancelled" ? "Buka slip" : "Edit slip",
     icon: Pencil,
-    render: <Link href={`/underwriting/edit/${slip.id}`} />,
+    render: <Link href={`/placement/edit/${slip.id}`} />,
   })
   if (
     slip.status === "Released" ||
@@ -84,27 +84,27 @@ function actionsFor(
     actions.push({
       label: "Draft quotation slip",
       icon: FileText,
-      render: <Link href={`/underwriting/quotation/edit/${slip.id}`} />,
+      render: <Link href={`/placement/quotation/edit/${slip.id}`} />,
     })
   }
   if (slip.status === "Quoted" || slip.status === "Closed") {
     actions.push({
       label: "Closing instruction",
       icon: FileCheck2,
-      render: <Link href={`/underwriting/closing/edit/${slip.id}`} />,
+      render: <Link href={`/placement/closing/edit/${slip.id}`} />,
     })
   }
   if (slip.status === "Closed") {
     actions.push({
       label: "Lihat closing instruction",
       icon: Eye,
-      render: <Link href={`/underwriting/closing/${slip.id}`} />,
+      render: <Link href={`/placement/closing/${slip.id}`} />,
     })
     // Draft Cover Note terbit setelah Closing Instruction (meeting LCH, 10 November 2026).
     actions.push({
       label: "Lihat draft cover note",
       icon: Eye,
-      render: <Link href={`/underwriting/cover-note/${slip.id}`} />,
+      render: <Link href={`/placement/cover-note/${slip.id}`} />,
     })
   }
   actions.push({
@@ -204,7 +204,7 @@ export function SlipTable({
 
   const slips = useCollection("slips", initialSlips)
   const permission = usePermission()
-  const canManage = permission.canManage("/underwriting")
+  const canManage = permission.canManage("/placement")
   const [query, setQuery] = React.useState("")
   const [status, setStatus] = React.useState("all")
   const [cob, setCob] = React.useState("all")

@@ -17,8 +17,8 @@ export const dynamic = "force-dynamic"
 
 export default async function NewClausePage() {
   const user = await currentUser()
-  if (!user || !canManage(user.roles, "/underwriting/master-clauses")) {
-    redirect("/underwriting/master-clauses")
+  if (!user || !canManage(user.roles, "/placement/master-clauses")) {
+    redirect("/placement/master-clauses")
   }
 
   const [cobs, coverTypes, groups] = await Promise.all([

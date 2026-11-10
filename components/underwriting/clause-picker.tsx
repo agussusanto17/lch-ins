@@ -60,7 +60,7 @@ import { cn } from "@/lib/utils"
 import {
   getClausesForPickerAction,
   type ClausePickerItem,
-} from "@/app/(app)/underwriting/actions"
+} from "@/app/(app)/placement/actions"
 
 /** Nilai pilihan kelompok: tanpa judul dan kelompok baru. */
 const NO_GROUP = "__tanpa_judul__"

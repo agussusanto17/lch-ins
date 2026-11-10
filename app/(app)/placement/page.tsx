@@ -19,7 +19,7 @@ export default async function UnderwritingPage() {
   ])
 
   const canManageUnderwriting = user
-    ? canManage(user.roles, "/underwriting")
+    ? canManage(user.roles, "/placement")
     : false
 
   return (
@@ -30,7 +30,7 @@ export default async function UnderwritingPage() {
         actions={
           canManageUnderwriting ? (
             <Button
-              render={<Link href="/underwriting/new" />}
+              render={<Link href="/placement/new" />}
               nativeButton={false}
             >
               <FilePlus2 data-icon="inline-start" />

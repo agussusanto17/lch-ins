@@ -240,7 +240,7 @@ export async function createSppaAction(
     const created = await createSppa(parsed.data as SppaInput, user.id)
 
     revalidatePath("/marketing")
-    revalidatePath("/underwriting/new")
+    revalidatePath("/placement/new")
     return { ok: true, data: created }
   } catch (err: unknown) {
     const message =
@@ -271,7 +271,7 @@ export async function updateSppaAction(
     const updated = await updateSppa(id.trim(), parsed.data as SppaInput, user.id)
 
     revalidatePath("/marketing")
-    revalidatePath("/underwriting/new")
+    revalidatePath("/placement/new")
     return { ok: true, data: updated }
   } catch (err: unknown) {
     const message =
@@ -293,7 +293,7 @@ export async function toggleSppaStatusAction(
     await toggleSppaStatus(id.trim(), status, user.id)
 
     revalidatePath("/marketing")
-    revalidatePath("/underwriting/new")
+    revalidatePath("/placement/new")
     return { ok: true }
   } catch (err: unknown) {
     const message =
@@ -314,7 +314,7 @@ export async function deleteSppaAction(
     await deleteSppa(id.trim(), user.id)
 
     revalidatePath("/marketing")
-    revalidatePath("/underwriting/new")
+    revalidatePath("/placement/new")
     return { ok: true }
   } catch (err: unknown) {
     const message =

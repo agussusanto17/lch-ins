@@ -71,7 +71,7 @@ export function MasterClauses({
   const searchParams = useSearchParams()
   const permission = usePermission()
   const canManageEffective =
-    canManage ?? permission.canManage("/underwriting/master-clauses")
+    canManage ?? permission.canManage("/placement/master-clauses")
   const [query, setQuery] = React.useState(filter.query)
 
   /** Filter disimpan di URL supaya hasil pencarian bisa dibagikan dan di-back. */
@@ -111,7 +111,7 @@ export function MasterClauses({
   ]
 
   function actionsFor(c: ClauseListItem): RowAction[] {
-    const href = `/underwriting/master-clauses/${c.id}`
+    const href = `/placement/master-clauses/${c.id}`
     return [
       canManageEffective
         ? { label: "Edit clause", icon: Pencil, render: <Link href={href} /> }
@@ -194,7 +194,7 @@ export function MasterClauses({
 
         {canManageEffective ? (
           <Button
-            render={<Link href="/underwriting/master-clauses/new" />}
+            render={<Link href="/placement/master-clauses/new" />}
             nativeButton={false}
           >
             <Plus data-icon="inline-start" />
