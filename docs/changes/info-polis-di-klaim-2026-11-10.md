@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `feat/info-polis-di-klaim`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#203](https://github.com/agussusanto17/lch-ins/pull/203)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
