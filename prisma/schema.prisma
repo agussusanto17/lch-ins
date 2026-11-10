@@ -1482,6 +1482,9 @@ model Policy {
   /// Policy Database dan tampil saat klaim dicatat (meeting LCH, 10 November
   /// 2026). Bagian B bisa mengisinya dari pencatatan pembayaran premi.
   premiumPaidDate     DateTime? @map("premium_paid_date") @db.Date
+  /// Uraian perubahan endorsement atau alasan pembatalan, teks bebas (meeting
+  /// LCH, 10 November 2026). Hanya untuk tipe Endorsement dan Cancellation.
+  remarks             String?
   /// lookup policy_type: Baru, Renewal, Endorsement, Cancellation.
   policyTypeId        String   @map("policy_type_id") @db.Uuid
   /// Polis induk untuk renewal, endorsement, dan pembatalan.

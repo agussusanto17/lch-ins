@@ -531,6 +531,8 @@ export interface Policy {
    * saat klaim dicatat (meeting LCH, 10 November 2026).
    */
   premiumPaidDate?: string | null
+  /** Uraian perubahan endorsement atau alasan pembatalan, teks bebas. */
+  remarks?: string | null
   files: PolicyFile[]
   /** Peserta PA grup yang masih aktif di daftar polis ini. */
   participantCount?: number

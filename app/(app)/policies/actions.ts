@@ -65,6 +65,7 @@ const policyInputSchema = z
     groupingInsured: z.string().trim().max(200, "Grouping insured maksimal 200 karakter").optional(),
     // Kosong berarti premi belum dibayar.
     premiumPaidDate: isoDate.nullable().optional(),
+    remarks: z.string().max(2000, "Remarks maksimal 2000 karakter").nullable().optional(),
     participantChanges: z
       .object({
         added: participantListSchema,
