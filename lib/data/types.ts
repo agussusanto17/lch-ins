@@ -470,7 +470,7 @@ export interface PlacingSlip {
 }
 
 /** Jenis berkas polis: softcopy polis, Premium Note, atau Commission Note. */
-export type PolicyFileKind = "Policy" | "PremiumNote" | "CommissionNote"
+export type PolicyFileKind = "Policy" | "PremiumNote" | "CommissionNote" | "Slip"
 
 /** Berkas polis. Versi naik setiap upload per jenis, file lama tetap tersimpan. */
 export interface PolicyFile {

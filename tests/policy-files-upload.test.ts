@@ -3,9 +3,11 @@ import test from "node:test"
 
 import type { PolicyFile } from "../lib/data/types"
 import {
+  MAIN_POLICY_FILE_KINDS,
   POLICY_FILE_KINDS,
   latestPolicyFile,
   policyFileKindLabel,
+  policyFileKindsFor,
   policyFilesOfKind,
 } from "../lib/policy-files"
 import {
@@ -69,7 +71,12 @@ const file = (kind: PolicyFile["kind"], version: number): PolicyFile => ({
 test("berkas polis dikelompokkan per jenis dengan versinya sendiri", () => {
   assert.deepEqual(
     POLICY_FILE_KINDS.map((k) => k.label),
-    ["Polis", "Premium Note", "Commission Note"]
+    ["Polis", "Premium Note", "Commission Note", "Slip"]
+  )
+  // Kelengkapan berkas (x/3) tetap dihitung dari tiga jenis utama.
+  assert.deepEqual(
+    MAIN_POLICY_FILE_KINDS.map((k) => k.kind),
+    ["Policy", "PremiumNote", "CommissionNote"]
   )
   assert.equal(policyFileKindLabel("CommissionNote"), "Commission Note")
   const files = [file("Policy", 1), file("PremiumNote", 1), file("Policy", 2)]
@@ -80,4 +87,24 @@ test("berkas polis dikelompokkan per jenis dengan versinya sendiri", () => {
     policyFilesOfKind(files, "Policy").map((f) => f.version),
     [2, 1]
   )
+})
+
+test("berkas Slip hanya untuk polis yang slipnya di luar sistem", () => {
+  const kinds = (policy: Parameters<typeof policyFileKindsFor>[0]) =>
+    policyFileKindsFor(policy).map((k) => k.kind)
+  // Polis tanpa placing slip di sistem: slip dari luar sistem bisa diunggah.
+  assert.deepEqual(kinds({ placingSlipId: null, files: [] }), [
+    "Policy",
+    "PremiumNote",
+    "CommissionNote",
+    "Slip",
+  ])
+  // Polis dari placing slip di sistem: slipnya sudah bisa dicetak.
+  assert.deepEqual(kinds({ placingSlipId: "slip-1", files: [] }), [
+    "Policy",
+    "PremiumNote",
+    "CommissionNote",
+  ])
+  // File Slip yang sudah terunggah tetap tampil.
+  assert.ok(kinds({ placingSlipId: "slip-1", files: [file("Slip", 1)] }).includes("Slip"))
 })

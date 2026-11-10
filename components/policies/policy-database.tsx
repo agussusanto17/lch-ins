@@ -68,7 +68,7 @@ import { addMonths } from "@/lib/date"
 import type { ExportSpec } from "@/lib/export"
 import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
-import { POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
+import { MAIN_POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
 import { parentPolicyNote } from "@/lib/policy-parent"
 import type { PolicyFormOptions } from "@/lib/server/policies"
 import { store } from "@/lib/store"
@@ -475,11 +475,14 @@ export function PolicyDatabase({
                     />
                   ) : (
                     paginatedRows.map((p) => {
-                      const kinds = POLICY_FILE_KINDS.map((k) => ({
+                      // Kelengkapan dihitung dari tiga jenis utama; Slip dari luar
+                      // sistem hanya disebut di keterangan.
+                      const kinds = MAIN_POLICY_FILE_KINDS.map((k) => ({
                         ...k,
                         latest: latestPolicyFile(p.files, k.kind),
                       }))
                       const uploaded = kinds.filter((k) => k.latest)
+                      const slipFile = latestPolicyFile(p.files, "Slip")
                       return (
                         <TableRow key={p.id}>
                           <TableCell className={ACTION_COL_CLASS}>
@@ -552,13 +555,14 @@ export function PolicyDatabase({
                                 size="sm"
                                 className="-mx-2 h-7 text-primary"
                                 onClick={() => setFilesFor(p.id)}
-                                title={kinds
-                                  .map((k) =>
+                                title={[
+                                  ...kinds.map((k) =>
                                     k.latest
                                       ? `${k.label} v${k.latest.version}`
                                       : `${k.label} belum ada`
-                                  )
-                                  .join(" · ")}
+                                  ),
+                                  ...(slipFile ? [`Slip v${slipFile.version}`] : []),
+                                ].join(" · ")}
                               >
                                 <FileText data-icon="inline-start" />
                                 {uploaded.length}/{kinds.length}

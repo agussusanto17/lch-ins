@@ -1630,6 +1630,9 @@ enum PolicyFileKind {
   Policy
   PremiumNote
   CommissionNote
+  /// Dokumen slip untuk polis yang slipnya dibuat di luar sistem LCH
+  /// (meeting LCH, 10 November 2026).
+  Slip
 }
 
 /// Berkas polis. Version naik setiap upload per jenis, file lama tetap tersimpan.
