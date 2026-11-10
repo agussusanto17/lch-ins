@@ -48,6 +48,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { todayIso } from "@/lib/date"
 import { Textarea } from "@/components/ui/textarea"
 import type { Claim } from "@/lib/data"
 import { dateShort, money } from "@/lib/format"
@@ -152,7 +153,7 @@ export function ClaimDetailSheet({
   async function handleToggleDocument(doc: ClaimDocumentRecord, checked: boolean) {
     setTogglingDocId(doc.id)
     const prevDocs = documents
-    const todayStr = new Date().toISOString().slice(0, 10)
+    const todayStr = todayIso()
 
     setDocuments((prev) =>
       prev.map((d) =>
@@ -231,7 +232,13 @@ export function ClaimDetailSheet({
       return
     }
     setDocuments((prev) => prev.map((d) => (d.id === doc.id ? res.data! : d)))
-    toast.success(`File "${doc.documentTypeName}" tersimpan`, { description: file.name })
+    // Upload pertama menandai dokumen diterima, dengan tanggal upload.
+    const receivedNow = !doc.isReceived && res.data.isReceived
+    toast.success(`File "${doc.documentTypeName}" tersimpan`, {
+      description: receivedNow
+        ? `${file.name} · ditandai diterima ${res.data.receivedDate ? dateShort(res.data.receivedDate) : ""}`
+        : file.name,
+    })
   }
 
   async function handleDeleteDocument(doc: ClaimDocumentRecord) {
@@ -497,7 +504,7 @@ export function ClaimDetailSheet({
                         <p className="mt-0.5 opacity-90">
                           {allRequiredReceived
                             ? "Berkas klaim telah siap diproses ke penaksir (adjuster) atau penerbitan SPK/SPGR."
-                            : "Centang berkas yang sudah diterima dari tertanggung untuk memperbarui status kelengkapan klaim."}
+                            : "Unggah file atau centang berkas yang sudah diterima dari tertanggung. Tanggal upload dicatat sebagai tanggal dokumen diterima."}
                         </p>
                       </div>
                     </div>

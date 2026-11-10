@@ -2,6 +2,7 @@ import "server-only"
 
 import { coverCodeFor } from "@/components/underwriting/slip-model"
 import type { Claim, ClaimStage, ClaimStatus } from "@/lib/data/types"
+import { todayIso } from "@/lib/date"
 import { CLAIM_STATUS_CODES, systemValueFromRow } from "@/lib/form-options"
 import { dateShort, normalizeCob } from "@/lib/format"
 import { Prisma } from "@/lib/generated/prisma/client"
@@ -948,6 +949,45 @@ export async function listClaimDocuments(claimId: string): Promise<ClaimDocument
   }
 }
 
+/**
+ * Tanggal dokumen lengkap klaim mengikuti dokumen wajib: terisi saat semua
+ * dokumen wajib diterima, dan kosong lagi saat salah satunya dibatalkan.
+ */
+async function syncDocumentCompleteDate(
+  client: Prisma.TransactionClient,
+  claimId: string,
+  isReceived: boolean,
+  receivedDate: Date | null
+) {
+  const allDocs = await client.claimDocument.findMany({
+    where: { claimId },
+    include: { documentType: true },
+  })
+
+  const requiredDocs = allDocs.filter((d) => d.documentType?.isRequired)
+  const allRequiredReceived = requiredDocs.length > 0 && requiredDocs.every((d) => d.isReceived)
+
+  const claim = await client.claim.findUnique({
+    where: { id: claimId },
+    select: { documentCompleteDate: true },
+  })
+
+  if (allRequiredReceived && !claim?.documentCompleteDate) {
+    await client.claim.update({
+      where: { id: claimId },
+      data: { documentCompleteDate: receivedDate || new Date(todayIso()) },
+    })
+  } else if (!allRequiredReceived && claim?.documentCompleteDate && !isReceived) {
+    const unreceivedRequired = requiredDocs.some((d) => !d.isReceived)
+    if (unreceivedRequired) {
+      await client.claim.update({
+        where: { id: claimId },
+        data: { documentCompleteDate: null },
+      })
+    }
+  }
+}
+
 export async function toggleClaimDocument(
   documentId: string,
   isReceived: boolean,
@@ -955,9 +995,8 @@ export async function toggleClaimDocument(
   userId: string
 ): Promise<ClaimDocumentRecord> {
   const before = await findClaimDocument(documentId)
-  const dateVal = isReceived
-    ? (receivedDate ? new Date(receivedDate) : new Date())
-    : null
+  // Tanggal tanpa jam, hari ini di WIB (bukan UTC, yang sebelum pukul 07.00 masih kemarin).
+  const dateVal = isReceived ? new Date(receivedDate || todayIso()) : null
 
   const updated = await prisma.claimDocument.update({
     where: { id: documentId },
@@ -970,37 +1009,7 @@ export async function toggleClaimDocument(
     },
   })
 
-  const allDocs = await prisma.claimDocument.findMany({
-    where: { claimId: updated.claimId },
-    include: { documentType: true },
-  })
-
-  const requiredDocs = allDocs.filter((d) => d.documentType?.isRequired)
-  const allRequiredReceived = requiredDocs.length > 0 && requiredDocs.every((d) => d.isReceived)
-
-  const claim = await prisma.claim.findUnique({
-    where: { id: updated.claimId },
-    select: { documentCompleteDate: true },
-  })
-
-  if (allRequiredReceived && !claim?.documentCompleteDate) {
-    await prisma.claim.update({
-      where: { id: updated.claimId },
-      data: {
-        documentCompleteDate: dateVal || new Date(),
-      },
-    })
-  } else if (!allRequiredReceived && claim?.documentCompleteDate && !isReceived) {
-    const unreceivedRequired = requiredDocs.some((d) => !d.isReceived)
-    if (unreceivedRequired) {
-      await prisma.claim.update({
-        where: { id: updated.claimId },
-        data: {
-          documentCompleteDate: null,
-        },
-      })
-    }
-  }
+  await syncDocumentCompleteDate(prisma, updated.claimId, isReceived, dateVal)
 
   const record = toClaimDocumentRecord(updated)
   await recordAudit(prisma, {
@@ -1055,7 +1064,11 @@ export async function updateClaimDocument(
 
 /**
  * Link an uploaded file to a claim document and drop the file it replaces.
- * The received checkbox stays manual because it drives documentCompleteDate.
+ *
+ * Tanggal upload adalah tanggal dokumen diterima (catatan meeting LCH,
+ * 10 November 2026): upload pertama menandai dokumen diterima hari ini dan
+ * memperbarui tanggal dokumen lengkap. Dokumen yang sudah diterima, termasuk
+ * yang dicentang manual, tetap memakai tanggal diterimanya saat file diganti.
  */
 export async function attachClaimDocumentFile(
   documentId: string,
@@ -1063,14 +1076,21 @@ export async function attachClaimDocumentFile(
   userId: string
 ): Promise<ClaimDocumentRecord> {
   const before = await findClaimDocument(documentId)
+  const receiveNow = !before.isReceived
 
   return prisma.$transaction(async (tx) => {
     await assertClaimableFile(tx, fileId, "claim_document", userId)
     const updated = await tx.claimDocument.update({
       where: { id: documentId },
-      data: { filePath: storedFilePath(fileId) },
+      data: {
+        filePath: storedFilePath(fileId),
+        ...(receiveNow ? { isReceived: true, receivedDate: new Date(todayIso()) } : {}),
+      },
       include: { documentType: true },
     })
+    if (receiveNow) {
+      await syncDocumentCompleteDate(tx, updated.claimId, true, updated.receivedDate)
+    }
     if (before.filePath !== updated.filePath) {
       await deleteStoredFiles(tx, [before.filePath])
     }
