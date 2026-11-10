@@ -41,7 +41,14 @@ import {
   coversFor,
   fixedLookupItems,
 } from "@/lib/form-options"
-import { dateShort, money } from "@/lib/format"
+import { dateShort, money, num } from "@/lib/format"
+import {
+  DAYS_PER_YEAR,
+  endorsementPremium,
+  premiumBasis,
+  prorataDays,
+  totalPremium,
+} from "@/lib/endorsement-premium"
 import { openCoverRateText, usesOpenCover } from "@/lib/open-cover"
 import { parentPolicyIssue, parentPolicyLabel } from "@/lib/policy-parent"
 import { cancellationSuggestion } from "@/lib/policy-cancellation"
@@ -86,6 +93,10 @@ function emptyDraft(): Draft {
     premium: 0,
     brokeragePct: 0,
     additionalFee: 0,
+    rate: null,
+    premiumBasis: null,
+    adminCost: 0,
+    stampDuty: 0,
     slipPart: null,
     type: "Baru",
     riskLocation: "",
@@ -102,6 +113,15 @@ function withCurrent(items: Option[], value: string | null | undefined): Option[
   return value && !items.some((i) => i.value === value)
     ? [...items, { label: value, value }]
     : items
+}
+
+/**
+ * Premi endorsement dengan rate dihitung dari sum insured × rate × hari
+ * prorata / 365 (Harry, 11 November 2026). Tanpa rate, premi tetap manual.
+ */
+function withProrataPremium(d: Draft): Draft {
+  const premium = endorsementPremium(d)
+  return premium === null || premium === d.premium ? d : { ...d, premium }
 }
 
 const schema = z
@@ -131,6 +151,10 @@ const schema = z
       .min(0, "Brokerage tidak boleh negatif")
       .max(100, "Brokerage maksimal 100%"),
     additionalFee: z.number().optional(),
+    rate: z.number().min(0, "Rate tidak boleh negatif").max(100, "Rate maksimal 100%").nullable().optional(),
+    premiumBasis: z.number().nullable().optional(),
+    adminCost: z.number().min(0, "Admin cost tidak boleh negatif").optional(),
+    stampDuty: z.number().min(0, "Stamp duty tidak boleh negatif").optional(),
   })
   .superRefine((d, ctx) => {
     // Tanggal sama boleh: polis acara satu hari, misalnya Hole in One.
@@ -218,7 +242,9 @@ export function PolicyForm({
   const [addedParticipants, setAddedParticipants] = React.useState<SlipParticipant[]>([])
   const [removedParticipantIds, setRemovedParticipantIds] = React.useState<string[]>([])
 
-  const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
+  // Endorsement dengan rate: premi ikut dihitung ulang setiap isian berubah.
+  const set = (patch: Partial<Draft>) =>
+    setDraft((d) => withProrataPremium({ ...d, ...patch }))
   // Pesan polis rujukan dari simpan sebelumnya tidak berlaku lagi setelah
   // tipe, polis rujukan, atau no. polis sebelumnya diubah.
   const setParent = (patch: Partial<Draft>) => {
@@ -271,6 +297,10 @@ export function PolicyForm({
     !policy && draft.type === "Endorsement" && rosterOwner?.cob === "General Accident"
   // Endorsement dan pembatalan: tanggal mulai adalah tanggal efektif perubahan.
   const changesParent = draft.type === "Endorsement" || draft.type === "Cancellation"
+  // Premi prorata hari endorsement (Harry, 11 November 2026).
+  const isEndorsement = draft.type === "Endorsement"
+  const endorsementDays = prorataDays(draft.inceptionDate, draft.expiryDate)
+  const prorataOn = isEndorsement && Boolean(draft.rate)
   // Usulan pengembalian premi prorata untuk pembatalan, dari polis asal beserta
   // endorsement-nya, seperti dokumen pembatalan asuransi dari Harry (10 November 2026).
   const cancelledPolicy = draft.type === "Cancellation" ? (rosterOwner ?? parentPolicy) : null
@@ -734,14 +764,46 @@ export function PolicyForm({
                     : undefined
               }
             />
+            {isEndorsement ? (
+              <>
+                <NumberField
+                  label="TSI Dasar Premi"
+                  value={draft.premiumBasis ?? null}
+                  onValueChange={(v) => set({ premiumBasis: v })}
+                  error={errors.premiumBasis}
+                  description="Kosongkan kalau sama dengan Total Sum Insured. Isi UP penuh kalau rate atau jaminan berubah tanpa mengubah UP."
+                />
+                <NumberField
+                  label="Rate (%)"
+                  preset="rate"
+                  min={0}
+                  max={100}
+                  value={draft.rate ?? null}
+                  onValueChange={(v) => set({ rate: v })}
+                  error={errors.rate}
+                  description="Isi untuk menghitung premi prorata. Kosongkan kalau premi diisi manual."
+                />
+                <NumberField
+                  label="Prorata Hari"
+                  preset="integer"
+                  readOnly
+                  value={endorsementDays}
+                  onValueChange={() => {}}
+                  description={`Tanggal efektif s/d tanggal berakhir, dibagi ${DAYS_PER_YEAR} hari.`}
+                />
+              </>
+            ) : null}
             <NumberField
               label="Premium"
               required
+              readOnly={prorataOn}
               value={draft.premium}
               onValueChange={(v) => set({ premium: v ?? 0 })}
               error={errors.premium}
               description={
-                draft.type === "Endorsement" || draft.type === "Cancellation"
+                prorataOn
+                  ? `${money(premiumBasis(draft), draft.currency)} × ${num(draft.rate ?? 0, 0, 6)}% × ${endorsementDays}/${DAYS_PER_YEAR} = ${money(draft.premium, draft.currency)}`
+                  : draft.type === "Endorsement" || draft.type === "Cancellation"
                   ? "Tambahan premi positif, pengembalian premi negatif."
                   : openCoverSlip && linkedSlip
                     ? `Rate open cover: ${(linkedSlip.openCoverRates ?? [])
@@ -751,6 +813,35 @@ export function PolicyForm({
                     : money(draft.premium, draft.currency)
               }
             />
+            {isEndorsement ? (
+              <>
+                <NumberField
+                  label="Admin Cost"
+                  min={0}
+                  value={draft.adminCost ?? 0}
+                  onValueChange={(v) => set({ adminCost: v ?? 0 })}
+                  error={errors.adminCost}
+                />
+                <NumberField
+                  label="Stamp Duty"
+                  min={0}
+                  value={draft.stampDuty ?? 0}
+                  onValueChange={(v) => set({ stampDuty: v ?? 0 })}
+                  error={errors.stampDuty}
+                />
+                <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/60 px-3 py-2.5 text-sm sm:col-span-2">
+                  <p>
+                    Total Premi
+                    <span className="block text-xs text-muted-foreground">
+                      Premi + Admin Cost + Stamp Duty
+                    </span>
+                  </p>
+                  <span className="tabular font-semibold">
+                    {money(totalPremium(draft), draft.currency)}
+                  </span>
+                </div>
+              </>
+            ) : null}
           </fieldset>
           {cancellation ? (
             <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted/60 px-3 py-2.5 text-sm sm:col-span-2">

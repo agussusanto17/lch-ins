@@ -57,6 +57,11 @@ const policyInputSchema = z
     premium: z.number(),
     brokeragePct: z.number().min(0).max(100),
     additionalFee: z.number().optional(),
+    // Endorsement: rate (%) untuk premi prorata hari, admin cost, dan stamp duty.
+    rate: z.number().min(0, "Rate tidak boleh negatif").max(100, "Rate maksimal 100%").nullable().optional(),
+    premiumBasis: z.number().nullable().optional(),
+    adminCost: z.number().min(0, "Admin cost tidak boleh negatif").optional(),
+    stampDuty: z.number().min(0, "Stamp duty tidak boleh negatif").optional(),
     slipPart: z.enum(["PAR", "EQVET"]).nullable().optional(),
     type: z.enum(POLICY_TYPES),
     riskLocation: z.string(),

@@ -17,7 +17,13 @@ import {
   premiumAdjustmentLabel,
   signedMoney,
 } from "@/lib/endorsement-slip"
-import { dateLong, moneyCents } from "@/lib/format"
+import {
+  DAYS_PER_YEAR,
+  premiumBasis,
+  prorataDays,
+  totalPremium,
+} from "@/lib/endorsement-premium"
+import { dateLong, moneyCents, num } from "@/lib/format"
 import type { EndorsementSlipData } from "@/lib/server/endorsement-slip"
 import type { DeductibleGroupText } from "@/lib/slip-deductibles"
 
@@ -73,6 +79,12 @@ export function EndorsementDocument({ data }: { data: EndorsementSlipData }) {
   const adjustment = premiumAdjustmentLabel(policy.premium)
   const insurers = policy.insurers?.length ? policy.insurers : (parent?.insurers ?? [])
   const changesSumInsured = data.sumInsuredBefore !== null && policy.sumInsured !== 0
+  // Admin cost dan stamp duty endorsement, seperti Policy Cost dan Stamp Duty
+  // di rumus prorata LCH (11 November 2026).
+  const charges = [
+    { id: "Biaya Administrasi", en: "Administration Cost", amount: policy.adminCost ?? 0 },
+    { id: "Bea Meterai", en: "Stamp Duty", amount: policy.stampDuty ?? 0 },
+  ].filter((c) => c.amount !== 0)
 
   const rows: Row[] = [
     { id: "Lampiran No.", en: "Endorsement No.", value: endorsementNo(data.attachmentSeq) },
@@ -168,15 +180,32 @@ export function EndorsementDocument({ data }: { data: EndorsementSlipData }) {
             <td className="py-2">
               <span className="block">{adjustment.id}</span>
               <span className="block text-[11px] italic text-muted-foreground">{adjustment.en}</span>
+              {policy.rate ? (
+                <span className="tabular mt-0.5 block text-[12px] text-muted-foreground">
+                  {moneyCents(premiumBasis(policy), policy.currency)} × {num(policy.rate, 0, 6)}% ×{" "}
+                  {prorataDays(policy.inceptionDate, policy.expiryDate)}/{DAYS_PER_YEAR}
+                </span>
+              ) : null}
             </td>
             <td className="tabular py-2 text-right">
               {signedMoney(policy.premium, policy.currency)}
             </td>
           </tr>
+          {charges.map((c) => (
+            <tr key={c.en} className="border-b align-top">
+              <td className="py-2">
+                <span className="block">{c.id}</span>
+                <span className="block text-[11px] italic text-muted-foreground">{c.en}</span>
+              </td>
+              <td className="tabular py-2 text-right">
+                {signedMoney(c.amount, policy.currency)}
+              </td>
+            </tr>
+          ))}
           <tr className="font-semibold">
             <td className="py-2">Total</td>
             <td className="tabular py-2 text-right">
-              {signedMoney(policy.premium, policy.currency)}
+              {signedMoney(totalPremium(policy), policy.currency)}
             </td>
           </tr>
         </tbody>
