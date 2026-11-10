@@ -112,6 +112,7 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
     placementLocationId: row.placementLocationId,
     groupingInsured: row.groupingInsured ?? "",
     premiumPaidDate: row.premiumPaidDate ? isoDate(row.premiumPaidDate) : null,
+    remarks: row.remarks ?? null,
     files: row.files.map((f) => ({
       id: f.id,
       kind: f.kind,
@@ -142,6 +143,7 @@ function auditSnapshot(p: PolicyRecord) {
     placementLocationId: p.placementLocationId,
     groupingInsured: p.groupingInsured,
     premiumPaidDate: p.premiumPaidDate ?? null,
+    remarks: p.remarks ?? null,
   }
 }
 
@@ -259,6 +261,11 @@ async function policyData(tx: Tx, input: PolicyInput) {
     placementLocationId: await findPlacementLocationId(tx, input.placementLocationId),
     groupingInsured: input.groupingInsured?.trim() || null,
     premiumPaidDate: input.premiumPaidDate ? new Date(input.premiumPaidDate) : null,
+    // Remarks hanya untuk endorsement dan pembatalan.
+    remarks:
+      input.type === "Endorsement" || input.type === "Cancellation"
+        ? input.remarks?.trim() || null
+        : null,
   } satisfies Prisma.PolicyUncheckedCreateInput
 }
 

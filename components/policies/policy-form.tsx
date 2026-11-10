@@ -93,6 +93,7 @@ function emptyDraft(): Draft {
     placementLocationId: null,
     groupingInsured: "",
     premiumPaidDate: null,
+    remarks: null,
   }
 }
 
@@ -577,6 +578,26 @@ export function PolicyForm({
               onChange={(v) => setParent({ previousPolicyNo: v })}
               placeholder="PAR/2025/JKT/…"
               description="Isi bila polis sebelumnya belum ada di sistem. Data polis diisi manual."
+            />
+          ) : null}
+          {draft.type === "Endorsement" || draft.type === "Cancellation" ? (
+            <TextField
+              className="sm:col-span-2"
+              label="Remarks"
+              multiline
+              rows={3}
+              value={draft.remarks ?? ""}
+              onChange={(v) => set({ remarks: v })}
+              placeholder={
+                draft.type === "Endorsement"
+                  ? "Contoh: penambahan lokasi Gudang 2 mulai 1 Desember 2026"
+                  : "Contoh: dibatalkan atas permintaan tertanggung, premi dikembalikan prorata"
+              }
+              description={
+                draft.type === "Endorsement"
+                  ? "Uraian perubahan pada endorsement ini."
+                  : "Alasan dan ketentuan pembatalan."
+              }
             />
           ) : null}
         </div>

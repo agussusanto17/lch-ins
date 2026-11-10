@@ -80,6 +80,13 @@ const STATUS_ITEMS = [
   { label: "Expired", value: "Expired" },
 ]
 
+/** File jenis Polis dari asuransi sudah diunggah atau belum (meeting LCH, 10 November 2026). */
+const POLICY_FILE_ITEMS = [
+  { label: "Semua berkas", value: "all" },
+  { label: "Polis sudah diunggah", value: "uploaded" },
+  { label: "Polis belum diunggah", value: "missing" },
+]
+
 type FormState = {
   key: number
   policy: Policy | null
@@ -119,6 +126,7 @@ export function PolicyDatabase({
   const [query, setQuery] = React.useState("")
   const [cob, setCob] = React.useState("all")
   const [status, setStatus] = React.useState("all")
+  const [fileFilter, setFileFilter] = React.useState("all")
   const [tab, setTab] = React.useState<"all" | PolicyType>("all")
   const [form, setForm] = React.useState<FormState | null>(null)
   const [filesFor, setFilesFor] = React.useState<string | null>(null)
@@ -134,12 +142,17 @@ export function PolicyDatabase({
       if (cob !== "all" && p.cob !== cob) return false
       if (status !== "all" && policyStatus(p.expiryDate, today) !== status)
         return false
+      if (
+        fileFilter !== "all" &&
+        (fileFilter === "uploaded") !== Boolean(latestPolicyFile(p.files, "Policy"))
+      )
+        return false
       if (!q) return true
       return [p.policyNo, p.insuredName, p.insurer, p.riskLocation].some((v) =>
         v.toLowerCase().includes(q)
       )
     })
-  }, [policies, query, cob, status, today])
+  }, [policies, query, cob, status, fileFilter, today])
 
   const rows = tab === "all" ? base : base.filter((p) => p.type === tab)
   const totalPremium = rows.reduce((a, p) => a + premiumIdr(p), 0)
@@ -307,6 +320,11 @@ export function PolicyDatabase({
       },
       { header: "Status", value: (p) => policyStatus(p.expiryDate, today) },
       { header: "Lokasi Risiko", value: (p) => p.riskLocation, width: 40 },
+      { header: "Remarks", value: (p) => p.remarks ?? "", width: 40 },
+      {
+        header: "Berkas Polis",
+        value: (p) => (latestPolicyFile(p.files, "Policy") ? "Sudah diunggah" : "Belum diunggah"),
+      },
     ],
   }
 
@@ -373,6 +391,28 @@ export function PolicyDatabase({
             <SelectContent>
               <SelectGroup>
                 {STATUS_ITEMS.map((i) => (
+                  <SelectItem key={i.value} value={i.value}>
+                    {i.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            items={POLICY_FILE_ITEMS}
+            value={fileFilter}
+            onValueChange={(v) => setFileFilter(v as string)}
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-50"
+              aria-label="Filter berkas polis"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {POLICY_FILE_ITEMS.map((i) => (
                   <SelectItem key={i.value} value={i.value}>
                     {i.label}
                   </SelectItem>
@@ -450,6 +490,14 @@ export function PolicyDatabase({
                             {parentNote(p) ? (
                               <span className="block text-xs font-normal text-muted-foreground">
                                 {parentNote(p)}
+                              </span>
+                            ) : null}
+                            {p.remarks ? (
+                              <span
+                                className="block max-w-56 truncate text-xs font-normal text-muted-foreground"
+                                title={p.remarks}
+                              >
+                                {p.remarks}
                               </span>
                             ) : null}
                           </TableCell>
