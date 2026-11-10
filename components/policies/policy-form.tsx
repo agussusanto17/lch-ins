@@ -638,13 +638,16 @@ export function PolicyForm({
               }
               error={errors.insuredName}
             />
-            <SelectInput
+            {/* Bisa diketik untuk mencari, seperti panel security di slip. */}
+            <SearchSelect
               className="sm:col-span-2"
               label="Asuransi (Leader)"
               required
               items={insurerItems}
-              value={draft.insurer}
-              onValueChange={(v) => set({ insurer: v })}
+              value={draft.insurer || null}
+              onValueChange={(v) => set({ insurer: v ?? "" })}
+              placeholder="Ketik atau pilih asuransi…"
+              emptyMessage="Asuransi tidak ada di Master Data."
               error={errors.insurer}
             />
             {draft.insurers.length > 1 ? (
