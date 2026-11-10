@@ -1861,10 +1861,13 @@ export function SignatureGrid({
   place,
   confirmationTitle,
   confirmationParty,
+  company = "PT. LCH Insurance Brokers",
 }: {
   place: string
   confirmationTitle?: string
   confirmationParty?: string
+  /** Nama broker penanda tangan, mengikuti kop dokumen. */
+  company?: string
 }) {
   return (
     <div className="avoid-break mt-10 grid grid-cols-1 gap-8 text-[13px] sm:grid-cols-2">
@@ -1873,7 +1876,7 @@ export function SignatureGrid({
         <p className="mb-14 text-muted-foreground">
           Disiapkan oleh / Prepared by,
         </p>
-        <p className="border-t pt-1 font-bold">PT. LCH Insurance Brokers</p>
+        <p className="border-t pt-1 font-bold">{company}</p>
         <p className="text-xs text-muted-foreground">Authorized Signatory</p>
       </div>
       {confirmationTitle ? (

@@ -1190,6 +1190,15 @@ model PlacingSlip {
   releasedBy String?   @map("released_by") @db.Uuid
   createdBy  String    @map("created_by") @db.Uuid
 
+  /// Tanggal dokumen (disetujui Harry, 10 November 2026): Placing Slip memakai
+  /// tanggal release, Quotation Slip dan Draft Cover Note tanggal quoted,
+  /// Closing Instruction tanggal closing. Terisi otomatis saat status
+  /// berpindah dan bisa diubah manual untuk dokumen lama. Dokumen bertanggal
+  /// sebelum 1 September 2025 memakai kop Lestari Cipta Hokindo.
+  releaseDate DateTime? @map("release_date") @db.Date
+  quotedDate  DateTime? @map("quoted_date") @db.Date
+  closingDate DateTime? @map("closing_date") @db.Date
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 

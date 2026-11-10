@@ -50,6 +50,11 @@ import {
 } from "@/lib/data/ojk-motor"
 import { nextDocumentNumber } from "@/server/services/number-generator"
 import { recordAudit } from "@/server/services/audit"
+import { todayIso } from "@/lib/date"
+import {
+  documentDatesForStatus,
+  type SlipDocumentDates,
+} from "@/lib/document-dates"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
 
 const SLIP_ITEM_VEHICLE = {
@@ -89,6 +94,10 @@ export interface PlacingSlipInput {
   periodTba?: boolean
   inceptionDate?: string | null
   expiryDate?: string | null
+  /** Tanggal dokumen "YYYY-MM-DD"; lihat `lib/document-dates.ts`. */
+  releaseDate?: string | null
+  quotedDate?: string | null
+  closingDate?: string | null
   periodNote?: string | null
   periodLabel?: string | null
   periodEndText?: string | null
@@ -352,6 +361,42 @@ export async function coverUsesOjkTariff(
 }
 
 /** "12 months" -> 12. */
+/** Kolom DATE dari Prisma (tengah malam UTC) menjadi "YYYY-MM-DD". */
+function dateOnly(value: Date | null | undefined): string | null {
+  return value ? value.toISOString().slice(0, 10) : null
+}
+
+/** "YYYY-MM-DD" menjadi nilai untuk kolom DATE. */
+function dbDate(value: string | null | undefined): Date | null {
+  return value ? new Date(value) : null
+}
+
+/**
+ * Tanggal dokumen setelah status berpindah dari `from` ke `to`: tanggal yang
+ * sudah ada (termasuk yang diketik manual) dipakai, yang masih kosong diisi
+ * hari ini (WIB).
+ */
+function withStatusDates(
+  dates: SlipDocumentDates,
+  from: SlipStatus,
+  to: SlipStatus
+): SlipDocumentDates {
+  const current: SlipDocumentDates = {
+    releaseDate: dates.releaseDate ?? null,
+    quotedDate: dates.quotedDate ?? null,
+    closingDate: dates.closingDate ?? null,
+  }
+  return { ...current, ...documentDatesForStatus(current, from, to, todayIso()) }
+}
+
+function dbDocumentDates(dates: SlipDocumentDates) {
+  return {
+    ...(dates.releaseDate !== undefined ? { releaseDate: dbDate(dates.releaseDate) } : {}),
+    ...(dates.quotedDate !== undefined ? { quotedDate: dbDate(dates.quotedDate) } : {}),
+    ...(dates.closingDate !== undefined ? { closingDate: dbDate(dates.closingDate) } : {}),
+  }
+}
+
 function parseIndemnityMonths(val?: string | null): number | null {
   if (!val) return null
   const m = val.match(/\d+/)
@@ -686,6 +731,9 @@ function toPlacingSlipRecord(
     coverNoteRemarks: raw.coverNoteRemarks || undefined,
     createdAt: raw.createdAt.toISOString(),
     updatedAt: raw.updatedAt.toISOString(),
+    releaseDate: dateOnly(raw.releaseDate),
+    quotedDate: dateOnly(raw.quotedDate),
+    closingDate: dateOnly(raw.closingDate),
     clientName: raw.client.name,
     cobName: raw.cob.name,
     coverTypeName: raw.coverType?.name || null,
@@ -1166,6 +1214,9 @@ export async function createPlacingSlip(
         correspondenceAddress: input.correspondenceAddress?.trim() || null,
         currencyCode,
         status: (input.status as SlipStatus) || "Draft",
+        ...dbDocumentDates(
+          withStatusDates(input, "Draft", (input.status as SlipStatus) || "Draft")
+        ),
         periodTba: input.periodTba ?? false,
         inceptionDate,
         expiryDate,
@@ -1533,10 +1584,31 @@ export async function updatePlacingSlip(
   // Baris rate Motor Vehicle dan COB lain selain Property menunjuk objeknya.
   const itemRates = usesItemRates(normalizeCob(resolvedCob.name as CobType))
 
+  const nextStatus = (input.status as SlipStatus) || existing.status
+  const previousDates: SlipDocumentDates = {
+    releaseDate: dateOnly(existing.releaseDate),
+    quotedDate: dateOnly(existing.quotedDate),
+    closingDate: dateOnly(existing.closingDate),
+  }
+  // Field yang tidak dikirim berarti tidak diubah.
+  const documentDates = withStatusDates(
+    {
+      releaseDate:
+        input.releaseDate !== undefined ? input.releaseDate : previousDates.releaseDate,
+      quotedDate:
+        input.quotedDate !== undefined ? input.quotedDate : previousDates.quotedDate,
+      closingDate:
+        input.closingDate !== undefined ? input.closingDate : previousDates.closingDate,
+    },
+    existing.status,
+    nextStatus
+  )
+
   await prisma.$transaction(async (tx) => {
     await tx.placingSlip.update({
       where: { id },
       data: {
+        ...dbDocumentDates(documentDates),
         clientId: resolvedClientId,
         sppaId: resolvedSppaId,
         cobId: resolvedCob.id,
@@ -1862,10 +1934,14 @@ export async function updatePlacingSlip(
       before: {
         insuredName: existing.insuredName,
         status: existing.status,
+        ...previousDates,
       },
       after: {
         insuredName: input.insuredName,
         status: input.status || existing.status,
+        releaseDate: documentDates.releaseDate ?? null,
+        quotedDate: documentDates.quotedDate ?? null,
+        closingDate: documentDates.closingDate ?? null,
       },
     })
   })
@@ -1922,6 +1998,9 @@ export async function releasePlacingSlip(
       slipNo = await nextDocumentNumber(tx, { code: "PS", coverCode })
     }
 
+    // Tanggal Placing Slip: tanggal release, kecuali sudah diisi manual.
+    const releaseDate = dateOnly(existing.releaseDate) ?? todayIso()
+
     await tx.placingSlip.update({
       where: { id },
       data: {
@@ -1929,6 +2008,7 @@ export async function releasePlacingSlip(
         status: "Released",
         releasedAt: new Date(),
         releasedBy: userId,
+        releaseDate: dbDate(releaseDate),
       },
     })
 
@@ -1937,8 +2017,12 @@ export async function releasePlacingSlip(
       entity: "placing_slips",
       entityId: id,
       action: "Release",
-      before: { status: existing.status, slipNo: existing.slipNo },
-      after: { status: "Released", slipNo },
+      before: {
+        status: existing.status,
+        slipNo: existing.slipNo,
+        releaseDate: dateOnly(existing.releaseDate),
+      },
+      after: { status: "Released", slipNo, releaseDate },
     })
   })
 
@@ -1957,7 +2041,14 @@ export async function togglePlacingSlipStatus(
 ): Promise<PlacingSlipRecord> {
   const existing = await prisma.placingSlip.findUnique({
     where: { id },
-    select: { id: true, status: true, slipNo: true },
+    select: {
+      id: true,
+      status: true,
+      slipNo: true,
+      releaseDate: true,
+      quotedDate: true,
+      closingDate: true,
+    },
   })
 
   if (!existing) {
@@ -1968,10 +2059,21 @@ export async function togglePlacingSlipStatus(
     return releasePlacingSlip(id, userId)
   }
 
+  const filled = documentDatesForStatus(
+    {
+      releaseDate: dateOnly(existing.releaseDate),
+      quotedDate: dateOnly(existing.quotedDate),
+      closingDate: dateOnly(existing.closingDate),
+    },
+    existing.status,
+    status,
+    todayIso()
+  )
+
   await prisma.$transaction(async (tx) => {
     await tx.placingSlip.update({
       where: { id },
-      data: { status },
+      data: { status, ...dbDocumentDates(filled) },
     })
 
     await recordAudit(tx, {
@@ -1981,7 +2083,7 @@ export async function togglePlacingSlipStatus(
       // Pembatalan punya aksi sendiri di audit trail (Batal), bukan Ubah.
       action: status === "Cancelled" ? "Cancel" : "Update",
       before: { status: existing.status },
-      after: { status },
+      after: { status, ...filled },
     })
   })
 

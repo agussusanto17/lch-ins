@@ -452,6 +452,14 @@ export interface PlacingSlip {
   additionalFee?: number
   createdAt: string
   updatedAt: string
+  /**
+   * Tanggal dokumen "YYYY-MM-DD": Placing Slip (release), Quotation Slip dan
+   * Draft Cover Note (quoted), Closing Instruction (closing). Terisi otomatis
+   * saat status berpindah, bisa diubah manual. Lihat `lib/document-dates.ts`.
+   */
+  releaseDate?: string | null
+  quotedDate?: string | null
+  closingDate?: string | null
   /** Nama pengguna yang membuat slip, dari server; untuk kolom dan filter di daftar Placement. */
   createdByName?: string
   /* pasca-release */
