@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `fix/clause-wordings-formatting`
-- **PR:** # (isi setelah PR dibuka)
+- **PR:** #200
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
