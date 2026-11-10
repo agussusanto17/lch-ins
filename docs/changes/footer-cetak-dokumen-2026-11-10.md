@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `fix/footer-cetak-dokumen`
-- **PR:** # (isi setelah PR dibuka)
+- **PR:** #199
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
