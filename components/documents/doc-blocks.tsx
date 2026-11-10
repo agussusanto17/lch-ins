@@ -75,6 +75,7 @@ import {
   vehicleSchedule,
 } from "@/lib/slip-schedule"
 import { isMultiVehicle } from "@/lib/slip-vehicles"
+import { parseBulletLine } from "@/lib/document-format"
 import { cn } from "@/lib/utils"
 
 export function DocTitle({
@@ -215,6 +216,58 @@ function attachedLocationRows(slip: PlacingSlip): [string, string][] {
   return rows
 }
 
+/**
+ * Komponen teks dengan tata letak hanging indent (indentasi gantung).
+ * Baris berawalan bullet (- • * – —) atau nomor urut (1. 1) a. dll)
+ * dirender dengan pemisahan marker (shrink-0) dan isi kalimat (flex-1 min-w-0 text-justify),
+ * sehingga saat kalimat membungkus ke baris berikutnya teks sejajar rapi di bawah teks baris pertama,
+ * bukan jatuh di bawah simbol bullet/nomor.
+ */
+export function HangingIndentText({
+  text,
+  className,
+}: {
+  text: string | string[] | null | undefined
+  className?: string
+}) {
+  if (!text) return null
+
+  const rawLines = Array.isArray(text)
+    ? text.flatMap((t) => (typeof t === "string" ? t.split("\n") : []))
+    : typeof text === "string"
+      ? text.split("\n")
+      : [String(text)]
+
+  if (!rawLines.length) return null
+
+  return (
+    <div className={cn("flex flex-col gap-1", className)}>
+      {rawLines.map((rawLine, idx) => {
+        const trimmed = rawLine.trim()
+        if (!trimmed) {
+          return <div key={idx} className="h-1.5" />
+        }
+
+        const parsed = parseBulletLine(trimmed)
+        if (parsed) {
+          return (
+            <div key={idx} className="flex gap-2 text-justify">
+              <span className="shrink-0 select-none">{parsed.marker}</span>
+              <span className="flex-1 min-w-0 text-justify">{parsed.content}</span>
+            </div>
+          )
+        }
+
+        return (
+          <div key={idx} className="text-justify">
+            {rawLine}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function InfoTable({
   rows,
   dense = false,
@@ -232,15 +285,19 @@ export function InfoTable({
           <tr key={k} className="align-top">
             <td className={cn("w-[190px] text-muted-foreground", cell)}>{k}</td>
             <td className={cn("w-3", cell)}>:</td>
-            <td className={cn("whitespace-pre-line text-justify", cell)}>
+            <td className={cn("text-justify", cell)}>
               {Array.isArray(v) && v.length > 1 ? (
-                <ol className="list-decimal pl-5">
-                  {v.map((item, i) => (
-                    <li key={i} className="text-justify">{item}</li>
-                  ))}
-                </ol>
+                v.some((item) => typeof item === "string" && parseBulletLine(item) !== null) ? (
+                  <HangingIndentText text={v} />
+                ) : (
+                  <ol className="list-decimal pl-5">
+                    {v.map((item, i) => (
+                      <li key={i} className="text-justify">{item}</li>
+                    ))}
+                  </ol>
+                )
               ) : (
-                (Array.isArray(v) ? v[0] : v) || "—"
+                <HangingIndentText text={(Array.isArray(v) ? v[0] : v) || "—"} />
               )}
             </td>
           </tr>
@@ -465,7 +522,12 @@ export function OpenCoverRateBlock({ slip }: { slip: PlacingSlip }) {
         <tbody>
           {rates.map((r) => (
             <tr key={r.id} className="align-top">
-              <td className="py-0.5 pr-2">- {r.label || "—"}</td>
+              <td className="py-0.5 pr-2">
+                <div className="flex gap-2 text-justify">
+                  <span className="shrink-0 select-none">-</span>
+                  <span className="flex-1 min-w-0 text-justify">{r.label || "—"}</span>
+                </div>
+              </td>
               <td className="w-3 py-0.5">:</td>
               <td className="tabular py-0.5 font-medium whitespace-nowrap">
                 {openCoverRateText(r, slip.currency)}
@@ -492,7 +554,10 @@ export function CoverageBlock({ slip }: { slip: PlacingSlip }) {
   return (
     <>
       <SectionHeading>COVERAGE</SectionHeading>
-      <p className="text-[13px] leading-relaxed whitespace-pre-line text-justify">{text}</p>
+      <HangingIndentText
+        text={text}
+        className="text-[13px] leading-relaxed"
+      />
     </>
   )
 }
@@ -550,9 +615,9 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
             ) : null}
             <ul className="flex flex-col gap-1.5 text-[12.5px]">
               {g.texts.map((text) => (
-                <li key={text} className="flex gap-2">
-                  <span aria-hidden>-</span>
-                  <span className="whitespace-pre-line text-justify">{text}</span>
+                <li key={text} className="flex gap-2 text-justify">
+                  <span className="shrink-0 select-none" aria-hidden>-</span>
+                  <span className="flex-1 min-w-0 whitespace-pre-line text-justify">{text}</span>
                 </li>
               ))}
             </ul>
@@ -561,9 +626,10 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
         {slip.specialConditions ? (
           <div>
             <p className="font-semibold">Special Conditions</p>
-            <p className="mt-1 leading-relaxed whitespace-pre-line text-muted-foreground text-justify">
-              {slip.specialConditions}
-            </p>
+            <HangingIndentText
+              text={slip.specialConditions}
+              className="mt-1 leading-relaxed text-muted-foreground text-[12.5px]"
+            />
           </div>
         ) : null}
       </div>
@@ -698,9 +764,12 @@ export function ClausesBlock({ slip }: { slip: PlacingSlip }) {
                   {g.heading}
                 </ClauseGroupHeading>
               ) : null}
-              <p>
-                {i + 1}. {clauseTitleCase(c.title)}
-              </p>
+              <div className="flex gap-2 text-justify">
+                <span className="shrink-0 select-none">{i + 1}.</span>
+                <span className="flex-1 min-w-0 text-justify">
+                  {clauseTitleCase(c.title)}
+                </span>
+              </div>
             </li>
           ))
         )}
@@ -818,7 +887,12 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
                 </ClauseGroupHeading>
               ) : null}
               <p className="font-semibold">
-                {i + 1}. {c.title}
+                <span className="flex gap-2 text-justify">
+                  <span className="shrink-0 select-none">{i + 1}.</span>
+                  <span className="flex-1 min-w-0 text-justify">
+                    {c.title}
+                  </span>
+                </span>
               </p>
               {wordingText(c.wording) ? (
                 <div
@@ -1005,7 +1079,12 @@ export function ParEqvetRateBlock({ slip }: { slip: PlacingSlip }) {
       <tbody>
         {allLines.map((line) => (
           <tr key={line.id} className="align-top">
-            <td className="py-0.5 pr-2">- {line.fullName}</td>
+            <td className="py-0.5 pr-2">
+              <div className="flex gap-2 text-justify">
+                <span className="shrink-0 select-none">-</span>
+                <span className="flex-1 min-w-0 text-justify">{line.fullName}</span>
+              </div>
+            </td>
             <td className="w-3 py-0.5">:</td>
             <td className="tabular py-0.5 font-medium whitespace-nowrap">
               {rateFormula(line, bi)}
