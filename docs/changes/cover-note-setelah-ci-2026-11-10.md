@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `feat/cover-note-setelah-ci`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#205](https://github.com/agussusanto17/lch-ins/pull/205)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
