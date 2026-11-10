@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-10
 - **Branch:** `feat/filter-berkas-remarks-polis` (ditumpuk di atas `feat/info-polis-di-klaim`, #203)
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#204](https://github.com/agussusanto17/lch-ins/pull/204)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
