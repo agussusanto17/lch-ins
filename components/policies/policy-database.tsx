@@ -195,7 +195,7 @@ export function PolicyDatabase({
       p.type === "Endorsement" || p.type === "Cancellation"
         ? [
             {
-              label: p.type === "Cancellation" ? "Cetak cancellation" : "Cetak endorsement",
+              label: p.type === "Cancellation" ? "Cetak cancellation slip" : "Cetak endorsement slip",
               icon: Printer,
               render: <Link href={`/policies/endorsement/${p.id}`} />,
             },
