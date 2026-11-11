@@ -7,9 +7,12 @@
 import type { PolicyType } from "@/lib/data/types"
 import { dateLong, moneyCents } from "@/lib/format"
 
-/** Judul dokumen: ENDORSEMENT, atau CANCELLATION untuk pembatalan. */
+/**
+ * Judul dokumen: ENDORSEMENT SLIP, atau CANCELLATION SLIP untuk pembatalan
+ * (koreksi Harry di cetakan, 11 November 2026).
+ */
 export function endorsementTitle(type: PolicyType) {
-  return type === "Cancellation" ? "CANCELLATION" : "ENDORSEMENT"
+  return type === "Cancellation" ? "CANCELLATION SLIP" : "ENDORSEMENT SLIP"
 }
 
 /** Endorsement lain pada polis induk yang sama, untuk nomor dan nilai sebelumnya. */

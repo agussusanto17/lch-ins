@@ -13,9 +13,9 @@ import {
   type SiblingEndorsement,
 } from "../lib/endorsement-slip"
 
-test("the title follows the insurer samples: ENDORSEMENT or CANCELLATION", () => {
-  assert.equal(endorsementTitle("Endorsement"), "ENDORSEMENT")
-  assert.equal(endorsementTitle("Cancellation"), "CANCELLATION")
+test("the title is ENDORSEMENT SLIP or CANCELLATION SLIP, per Harry's correction", () => {
+  assert.equal(endorsementTitle("Endorsement"), "ENDORSEMENT SLIP")
+  assert.equal(endorsementTitle("Cancellation"), "CANCELLATION SLIP")
 })
 
 test("the endorsement number has two digits, as in EDM 01", () => {
