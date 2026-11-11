@@ -33,6 +33,10 @@ Catatan deploy: project Vercel membangun produksi dari fork `vourdev/lch-ins`,
 bukan dari repo ini. Setelah PR di-merge, fork perlu disinkronkan
 (`gh repo sync vourdev/lch-ins -b main`) supaya demo ikut terbaru.
 
+Database: Vercel (Prisma Postgres) dan VPS memakai database terpisah dan tidak
+disinkron. Isi DB VPS disalin dari Vercel sekali pada 8 November 2026. Setelah
+itu, data yang diinput di salah satu sisi tidak muncul di sisi lain.
+
 ## Catatan perubahan (`docs/changes/`)
 
 Tujuannya supaya orang dan agent berikutnya tahu apa yang berubah, kapan, dan
