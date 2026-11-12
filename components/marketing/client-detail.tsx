@@ -397,7 +397,7 @@ export function ClientDetail({
                       {money(p.premium, p.currency)}
                     </TableCell>
                     <TableCell className="pr-5">
-                      <StatusBadge status={policyStatus(p.expiryDate, today)} />
+                      <StatusBadge status={policyStatus(p, today)} />
                     </TableCell>
                   </TableRow>
                 ))

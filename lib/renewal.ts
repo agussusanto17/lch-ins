@@ -30,8 +30,17 @@ export function renewalBackHref(days: string, cob: string) {
 }
 
 /**
+ * Polis yang bisa diperpanjang: polis asal yang belum dibatalkan. Endorsement
+ * dan pembatalan ikut polis induknya, tidak di-renew sendiri.
+ */
+export function isRenewable(p: Pick<Policy, "type" | "cancelled">) {
+  return p.type !== "Endorsement" && p.type !== "Cancellation" && !p.cancelled
+}
+
+/**
  * Polis yang berakhir dalam `days` hari ke depan, urut dari yang paling dekat.
- * Dipakai layar Renewal Notice dan halaman cetaknya supaya isinya selalu sama.
+ * Dipakai layar Renewal Notice, halaman cetaknya, dan Dashboard supaya isinya
+ * selalu sama.
  */
 export function renewalCandidates(
   policies: Policy[],
@@ -41,8 +50,7 @@ export function renewalCandidates(
 ) {
   return policies
     .filter((p) => {
-      // Endorsement dan pembatalan ikut polis induknya, tidak di-renew sendiri.
-      if (p.type === "Endorsement" || p.type === "Cancellation") return false
+      if (!isRenewable(p)) return false
       if (cob !== "all" && p.cob !== cob) return false
       const d = daysBetween(today, p.expiryDate)
       return d >= 0 && d <= days

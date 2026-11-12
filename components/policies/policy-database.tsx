@@ -72,6 +72,7 @@ import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
 import { MAIN_POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
 import { parentPolicyNote } from "@/lib/policy-parent"
+import { isRenewable } from "@/lib/renewal"
 import type { PolicyFormOptions } from "@/lib/server/policies"
 import { store } from "@/lib/store"
 
@@ -80,6 +81,8 @@ const STATUS_ITEMS = [
   { label: "Active", value: "Active" },
   { label: "Expiring", value: "Expiring" },
   { label: "Expired", value: "Expired" },
+  // Label sama dengan badge status Cancelled.
+  { label: "Dibatalkan", value: "Cancelled" },
 ]
 
 /** File jenis Polis dari asuransi sudah diunggah atau belum (meeting LCH, 10 November 2026). */
@@ -142,8 +145,7 @@ export function PolicyDatabase({
     const q = query.trim().toLowerCase()
     return policies.filter((p) => {
       if (cob !== "all" && p.cob !== cob) return false
-      if (status !== "all" && policyStatus(p.expiryDate, today) !== status)
-        return false
+      if (status !== "all" && policyStatus(p, today) !== status) return false
       if (
         fileFilter !== "all" &&
         (fileFilter === "uploaded") !== Boolean(latestPolicyFile(p.files, "Policy"))
@@ -216,7 +218,8 @@ export function PolicyDatabase({
     const claimCount = claimCounts[p.id] ?? 0
     const childCount = policies.filter((x) => x.parentPolicyId === p.id).length
     const blocked = claimCount > 0 || childCount > 0
-    const renewable = p.type === "Baru" || p.type === "Renewal"
+    // Polis yang sudah dibatalkan tidak di-renew atau di-endorse lagi.
+    const renewable = isRenewable(p)
     const actions: RowAction[] = [
       { label: "Edit polis", icon: Pencil, onSelect: () => openForm(p) },
       ...printAction,
@@ -333,7 +336,7 @@ export function PolicyDatabase({
         value: (p) => p.additionalFee ?? 0,
         type: "money",
       },
-      { header: "Status", value: (p) => policyStatus(p.expiryDate, today) },
+      { header: "Status", value: (p) => policyStatus(p, today) },
       { header: "Lokasi Risiko", value: (p) => p.riskLocation, width: 40 },
       { header: "Remarks", value: (p) => p.remarks ?? "", width: 40 },
       {
@@ -559,9 +562,7 @@ export function PolicyDatabase({
                             ) : null}
                           </TableCell>
                           <TableCell>
-                            <StatusBadge
-                              status={policyStatus(p.expiryDate, today)}
-                            />
+                            <StatusBadge status={policyStatus(p, today)} />
                           </TableCell>
                           <TableCell className="pr-4">
                             {uploaded.length ? (

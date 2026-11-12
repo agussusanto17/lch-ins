@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { RenewalLetterDocument } from "@/components/documents/renewal-documents"
 import { todayIso } from "@/lib/date"
 import {
+  isRenewable,
   parseRenewalCob,
   parseRenewalPeriod,
   renewalBackHref,
@@ -24,7 +25,8 @@ export default async function Page({
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams])
   const policy = await getPolicyById(id)
-  if (!policy) notFound()
+  // Sama dengan daftar Renewal Notice: polis batal dan endorsement tidak disurati.
+  if (!policy || !isRenewable(policy)) notFound()
   const client = policy.clientId ? await getClientById(policy.clientId) : null
 
   return (

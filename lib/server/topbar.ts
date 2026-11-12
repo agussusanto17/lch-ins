@@ -3,7 +3,9 @@ import "server-only"
 import { canAccess } from "@/lib/access"
 import { EXPIRING_WINDOW_DAYS } from "@/lib/data/policy-status"
 import { addDays } from "@/lib/date"
+import { POLICY_TYPE_CODES } from "@/lib/form-options"
 import { prisma } from "@/lib/prisma"
+import { loadCancelledPolicies } from "@/lib/server/cancelled-policies"
 import type {
   TopbarClaimItem,
   TopbarData,
@@ -21,12 +23,19 @@ export type {
 const isoDate = (d: Date) => d.toISOString().slice(0, 10)
 
 async function fetchExpiringPolicies(today: string): Promise<TopbarPolicyItem[]> {
+  const cancelled = await loadCancelledPolicies()
   const rows = await prisma.policy.findMany({
     where: {
       expiryDate: {
         gte: new Date(today),
         lte: new Date(addDays(today, EXPIRING_WINDOW_DAYS)),
       },
+      // Sama dengan Renewal Notice: endorsement dan pembatalan ikut polis
+      // induknya, dan polis yang sudah dibatalkan tidak akan diperpanjang.
+      policyType: {
+        code: { in: [POLICY_TYPE_CODES.Baru, POLICY_TYPE_CODES.Renewal] },
+      },
+      id: { notIn: [...cancelled.keys()] },
     },
     select: {
       id: true,

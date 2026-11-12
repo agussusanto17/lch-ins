@@ -260,8 +260,15 @@ export function PolicyForm({
   const clientItems = clientOptions.map((c) => ({ label: c.name, value: c.id }))
   const clientOptionFor = (id: string | null) =>
     clientOptions.find((c) => c.id === id)
+  // Polis yang sudah dibatalkan tidak bisa dipilih lagi, kecuali induk yang
+  // tersimpan pada record ini, misalnya saat mengedit pembatalannya sendiri.
   const parentItems = policies
-    .filter((p) => p.id !== draft.id && p.type !== "Cancellation")
+    .filter(
+      (p) =>
+        p.id !== draft.id &&
+        p.type !== "Cancellation" &&
+        (!p.cancelled || p.id === policy?.parentPolicyId)
+    )
     .map((p) => ({ label: `${p.policyNo} — ${p.insuredName}`, value: p.id }))
   // Slip yang sudah menjadi polis tidak muncul lagi; slip PAR + EQVET muncul
   // sampai kedua bagiannya punya polis. Polis lama tanpa bagian memakai seluruh
