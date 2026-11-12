@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `feat/master-contoh-el-br-srl`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#237](https://github.com/agussusanto17/lch-ins/pull/237)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
