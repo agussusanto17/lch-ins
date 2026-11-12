@@ -965,11 +965,11 @@ function SlipEditor({
           </p>
         ) : null}
         {slip.status === "Released" || slip.status === "Quoted" ? (
-          <p className="flex items-start gap-2 rounded-xl bg-warning/10 px-4 py-3 text-sm text-warning">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-            Slip sudah di-release dengan nomor {slip.slipNo}. Perubahan setelah
-            release tetap bisa disimpan, sementara aturan revisi menunggu
-            keputusan LCH.
+          <p className="flex items-start gap-2 rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-sm text-foreground">
+            <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+            Slip sudah di-release dengan nomor {slip.slipNo}. Perubahan tetap
+            bisa disimpan dengan nomor yang sama, dan setiap perubahan tercatat
+            di Audit Trail.
           </p>
         ) : null}
         {slip.status === "Closed" && !changeLock ? (
