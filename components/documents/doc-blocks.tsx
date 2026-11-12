@@ -75,7 +75,7 @@ import {
   vehicleSchedule,
 } from "@/lib/slip-schedule"
 import { isMultiVehicle } from "@/lib/slip-vehicles"
-import { parseBulletLine } from "@/lib/document-format"
+import { groupNumberedItems, parseBulletLine } from "@/lib/document-format"
 import { cn } from "@/lib/utils"
 
 export function DocTitle({
@@ -124,7 +124,7 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
     slip.typeOfCover && (slip.typeOfCoverLabel?.trim() || slip.typeOfCover),
     slip.typeOfCover2 && (slip.typeOfCover2Label?.trim() || slip.typeOfCover2),
   ].filter(Boolean)
-  const rows: [string, string | string[]][] = [
+  const rows: InfoRow[] = [
     [
       "Type of Cover",
       covers.length > 1
@@ -163,7 +163,9 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
     const occupation = slipOccupationText(slip)
     if (occupation) rows.push(["Occupation", occupation])
     const location = addressLines(slip.riskLocation ?? "")
-    if (location) rows.push(["Risk Location", location])
+    // Butir bernomor (tertanggung, nama lokasi, alamat) dicetak sejajar teks
+    // setelah nomor dengan jarak antar butir (slip D'BEST, 12 November 2026).
+    if (location) rows.push(["Risk Location", location, { numberedItems: true }])
     if (slip.cob === "Property" && slip.constructionClass)
       rows.push([
         "Construction Class",
@@ -268,12 +270,43 @@ export function HangingIndentText({
   )
 }
 
+/**
+ * Daftar bernomor yang setiap butirnya bisa beberapa baris, misalnya Risk
+ * Location: nama tertanggung, nama lokasi, lalu alamat. Semua baris butir
+ * sejajar teks setelah nomor dan antar butir diberi jarak. Teks tanpa nomor
+ * dicetak seperti HangingIndentText biasa.
+ */
+export function NumberedItemsText({ text }: { text: string }) {
+  const items = groupNumberedItems(text)
+  if (!items.some((item) => item.marker)) return <HangingIndentText text={text} />
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((item, i) => (
+        <div key={i} className="flex gap-2">
+          {item.marker ? <span className="shrink-0 select-none">{item.marker}</span> : null}
+          <HangingIndentText text={item.lines} className="flex-1 min-w-0" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Baris InfoTable: label, nilai, dan opsi tampilan nilai. */
+export type InfoRow = [
+  string,
+  string | string[],
+  {
+    /** Nilai berisi butir bernomor yang masing-masing beberapa baris. */
+    numberedItems?: boolean
+  }?,
+]
+
 export function InfoTable({
   rows,
   dense = false,
 }: {
   /** Nilai berupa daftar dicetak bernomor, satu butir per baris. */
-  rows: [string, string | string[]][]
+  rows: InfoRow[]
   /** Baris rapat untuk surat yang harus muat satu halaman. */
   dense?: boolean
 }) {
@@ -281,12 +314,14 @@ export function InfoTable({
   return (
     <table className="mb-6 w-full text-[13px]">
       <tbody>
-        {rows.map(([k, v]) => (
+        {rows.map(([k, v, opts]) => (
           <tr key={k} className="align-top">
             <td className={cn("w-[190px] text-muted-foreground", cell)}>{k}</td>
             <td className={cn("w-3", cell)}>:</td>
             <td className={cn("text-justify", cell)}>
-              {Array.isArray(v) && v.length > 1 ? (
+              {opts?.numberedItems && typeof v === "string" ? (
+                <NumberedItemsText text={v} />
+              ) : Array.isArray(v) && v.length > 1 ? (
                 v.some((item) => typeof item === "string" && parseBulletLine(item) !== null) ? (
                   <HangingIndentText text={v} />
                 ) : (
