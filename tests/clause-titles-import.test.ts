@@ -40,10 +40,13 @@ const titles = parseCsv(
   readFileSync(join(ROOT, "prisma/seed-data/judul-klausul-contoh-slip.csv"), "utf8")
 )
 const covers = parseCsv(readFileSync(join(ROOT, "prisma/seed-data/cob-toc.csv"), "utf8"))
-const migration = readFileSync(
-  join(ROOT, "prisma/migrations/20261109180000_impor_judul_klausul_contoh_slip/migration.sql"),
-  "utf8"
-)
+// Impor 9 November (26 contoh) dan 12 November (contoh EL, BR, SRL).
+const migration = [
+  "20261109180000_impor_judul_klausul_contoh_slip",
+  "20261112190100_judul_klausul_contoh_el_br_srl",
+]
+  .map((name) => readFileSync(join(ROOT, `prisma/migrations/${name}/migration.sql`), "utf8"))
+  .join("\n")
 
 test("judul klausul contoh slip: seed dan migrasi berisi daftar yang sama", () => {
   assert.ok(titles.length > 300)
