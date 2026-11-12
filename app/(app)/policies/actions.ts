@@ -44,6 +44,8 @@ const policyInputSchema = z
         insurer: z.string().trim().min(1, "Nama asuransi wajib diisi"),
         share: z.number().gt(0).max(100),
         role: z.enum(["As Leader", "As Member"]),
+        // Additional fee (%) per asuransi (Harry, 12 November 2026).
+        additionalFeePct: z.number().min(0, "Additional fee tidak boleh negatif").max(100, "Additional fee maksimal 100%").optional(),
       })
     ),
     // Daftar COB ada di master data; server menolak nama yang tidak ada di sana.
@@ -56,7 +58,11 @@ const policyInputSchema = z
     sumInsured: z.number(),
     premium: z.number(),
     brokeragePct: z.number().min(0).max(100),
+    includeVat: z.boolean().optional(),
+    // Nominal fee dihitung server dari premi dan fee (%) per asuransi.
     additionalFee: z.number().optional(),
+    additionalFeePct: z.number().min(0, "Additional fee tidak boleh negatif").max(100, "Additional fee maksimal 100%").optional(),
+    additionalFeeIncludeVat: z.boolean().optional(),
     // Endorsement: rate (%) untuk premi prorata hari, admin cost, dan stamp duty.
     rate: z.number().min(0, "Rate tidak boleh negatif").max(100, "Rate maksimal 100%").nullable().optional(),
     premiumBasis: z.number().nullable().optional(),

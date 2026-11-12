@@ -256,6 +256,11 @@ export interface SecurityPanelRow {
   insurer: string
   share: number
   role: "As Leader" | "As Member"
+  /**
+   * Additional fee (%) dari premi bagian asuransi ini, diisi saat closing
+   * (Harry, 12 November 2026). Kosong sama dengan 0.
+   */
+  additionalFeePct?: number
 }
 
 /**
@@ -471,11 +476,10 @@ export interface PlacingSlip {
   brokeragePct: number
   includeVat: boolean
   /**
-   * Fee di luar brokerage untuk produksi, hanya Property dan Motor Vehicle.
-   * Tidak dicetak di slip; disalin ke polis yang dibuat dari slip.
+   * Additional fee sudah termasuk PPN 2,2%, seperti Include VAT di brokerage.
+   * Persen fee per asuransi ada di `securityPanel`; nominalnya dihitung dari
+   * premi (`additionalFeeAmount`).
    */
-  additionalFee?: number
-  /** Additional fee sudah termasuk PPN 2,2%, seperti Include VAT di brokerage. */
   additionalFeeIncludeVat?: boolean
   createdAt: string
   updatedAt: string
@@ -568,11 +572,21 @@ export interface Policy {
   /** Tambahan premi positif, pengembalian premi negatif (endorsement dan pembatalan). */
   premium: number
   brokeragePct: number
+  /** Brokerage sudah termasuk PPN 2,2%, mengikuti slip. */
+  includeVat?: boolean
   /**
-   * Fee di luar brokerage dalam mata uang polis, ikut report produksi.
-   * Kosong sama dengan 0; pengembalian fee bernilai negatif.
+   * Nominal fee di luar brokerage dalam mata uang polis, ikut report
+   * produksi: premi × fee (%) per asuransi, dihitung server. Kosong sama
+   * dengan 0; negatif pada pembatalan atau pengurangan premi.
    */
   additionalFee?: number
+  /**
+   * Additional fee (%) untuk polis satu asuransi, diisi di form polis. Polis
+   * co-insurance memakai persen per asuransi di `insurers`.
+   */
+  additionalFeePct?: number
+  /** Additional fee sudah termasuk PPN 2,2%, mengikuti slip. */
+  additionalFeeIncludeVat?: boolean
   /** Rate (%) endorsement; premi = sum insured × rate × hari prorata / 365. */
   rate?: number | null
   /** Sum insured dasar premi prorata; kosong berarti memakai sum insured endorsement. */

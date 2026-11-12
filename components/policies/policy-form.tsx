@@ -20,9 +20,16 @@ import {
   type Option,
 } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
-import { FieldGroup, FieldSeparator } from "@/components/ui/field"
+import { Field, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field"
+import { Switch } from "@/components/ui/switch"
 import { EndorsementParticipants } from "@/components/policies/endorsement-participants"
-import { brokerageCapFor, slipPolicyParts, sumPercent } from "@/lib/calc"
+import {
+  additionalFeeFor,
+  brokerageCapFor,
+  feeVatInside,
+  slipPolicyParts,
+  sumPercent,
+} from "@/lib/calc"
 import {
   POLICY_TYPES,
   POLICY_TYPES_WITH_PARENT,
@@ -92,7 +99,10 @@ function emptyDraft(): Draft {
     sumInsured: 0,
     premium: 0,
     brokeragePct: 0,
+    includeVat: false,
     additionalFee: 0,
+    additionalFeePct: 0,
+    additionalFeeIncludeVat: false,
     rate: null,
     premiumBasis: null,
     adminCost: 0,
@@ -150,7 +160,13 @@ const schema = z
       .number()
       .min(0, "Brokerage tidak boleh negatif")
       .max(100, "Brokerage maksimal 100%"),
-    additionalFee: z.number().optional(),
+    // Additional fee berupa persen dari premi (Harry, 12 November 2026);
+    // nominalnya dihitung server dan boleh negatif pada pembatalan.
+    additionalFeePct: z
+      .number()
+      .min(0, "Additional fee tidak boleh negatif")
+      .max(100, "Additional fee maksimal 100%")
+      .optional(),
     rate: z.number().min(0, "Rate tidak boleh negatif").max(100, "Rate maksimal 100%").nullable().optional(),
     premiumBasis: z.number().nullable().optional(),
     adminCost: z.number().min(0, "Admin cost tidak boleh negatif").optional(),
@@ -182,16 +198,6 @@ const schema = z
         code: "custom",
         path: ["sumInsured"],
         message: "Sum insured polis baru dan renewal tidak boleh negatif",
-      })
-    }
-    if (
-      (d.type === "Baru" || d.type === "Renewal") &&
-      (d.additionalFee ?? 0) < 0
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["additionalFee"],
-        message: "Additional fee polis baru dan renewal tidak boleh negatif",
       })
     }
     if (d.type === "Cancellation" && d.premium > 0) {
@@ -331,6 +337,21 @@ export function PolicyForm({
     ? (slips.find((s) => s.id === draft.placingSlipId) ?? null)
     : null
   const slipLocked = Boolean(draft.placingSlipId)
+  // Nominal brokerage dan additional fee dari premi, dengan status PPN-nya
+  // (Harry, 12 November 2026: persen dan nominal Rupiah tampil bersama).
+  const brokerageNominal = (draft.premium * (draft.brokeragePct || 0)) / 100
+  const feeNominal = additionalFeeFor(
+    draft.premium,
+    draft.insurers.length > 1
+      ? draft.insurers
+      : [{ share: 100, additionalFeePct: draft.additionalFeePct ?? 0 }]
+  )
+  const chargeText = (amount: number, includeVat: boolean | undefined) => {
+    const vat = feeVatInside(amount, includeVat)
+    return vat
+      ? `${money(amount, draft.currency)} · termasuk PPN 2,2% ${money(vat, draft.currency)}`
+      : money(amount, draft.currency)
+  }
   // Polis dari slip open cover adalah satu deklarasi: nilai, premi, dan
   // periodenya diisi per deklarasi; data lain tetap dari slip.
   const openCoverSlip = linkedSlip ? usesOpenCover(linkedSlip) : false
@@ -410,6 +431,9 @@ export function PolicyForm({
       currency: parent.currency,
       riskLocation: parent.riskLocation,
       brokeragePct: parent.brokeragePct,
+      includeVat: parent.includeVat ?? false,
+      additionalFeePct: parent.additionalFeePct ?? 0,
+      additionalFeeIncludeVat: parent.additionalFeeIncludeVat ?? false,
       cobOjkClassId: parent.cobOjkClassId,
       placementLocationId: parent.placementLocationId,
       groupingInsured: parent.groupingInsured,
@@ -443,7 +467,7 @@ export function PolicyForm({
       return false
     }
 
-    const insurers =
+    const listed =
       draft.insurers.length &&
       draft.insurers.some((r) => r.insurer === draft.insurer)
         ? draft.insurers
@@ -455,6 +479,12 @@ export function PolicyForm({
               role: "As Leader" as const,
             },
           ]
+    // Polis satu asuransi: fee (%) dari isian Additional Fee (%). Co-insurance
+    // memakai fee (%) per asuransi dari slip.
+    const insurers =
+      listed.length === 1
+        ? [{ ...listed[0], additionalFeePct: draft.additionalFeePct ?? 0 }]
+        : listed
     const { id, ...fields } = draft
     const input: PolicyInput = {
       ...fields,
@@ -698,6 +728,7 @@ export function PolicyForm({
                     <span className="truncate">{r.insurer}</span>
                     <span className="tabular shrink-0">
                       {r.share}% · {r.role.replace("As ", "")}
+                      {r.additionalFeePct ? ` · fee ${num(r.additionalFeePct, 0, 4)}%` : ""}
                     </span>
                   </p>
                 ))}
@@ -881,31 +912,67 @@ export function PolicyForm({
             </div>
           ) : null}
           <fieldset disabled={slipLocked} className="contents">
-            <NumberField
-              label="Brokerage (%)"
-              preset="percent"
-              value={draft.brokeragePct}
-              onValueChange={(v) => set({ brokeragePct: v ?? 0 })}
-              error={errors.brokeragePct}
-              description={
-                brokerageCap != null && draft.brokeragePct > brokerageCap
-                  ? `Melebihi batas biaya akuisisi OJK ${brokerageCap}% untuk ${draft.cob}.`
-                  : undefined
-              }
-            />
-            <NumberField
-              label="Additional Fee"
-              value={draft.additionalFee ?? 0}
-              onValueChange={(v) => set({ additionalFee: v ?? 0 })}
-              error={errors.additionalFee}
-              description={
-                draft.type === "Endorsement" || draft.type === "Cancellation"
-                  ? "Tambahan fee positif, pengembalian fee negatif."
-                  : draft.additionalFee
-                    ? money(draft.additionalFee, draft.currency)
-                    : "Opsional, fee di luar brokerage."
-              }
-            />
+            {/* Setiap persen bersama saklar PPN-nya, mengikuti slip (Harry, 12 November 2026). */}
+            <div className="flex flex-col gap-3">
+              <NumberField
+                label="Brokerage (%)"
+                preset="percent"
+                value={draft.brokeragePct}
+                onValueChange={(v) => set({ brokeragePct: v ?? 0 })}
+                error={errors.brokeragePct}
+                description={
+                  brokerageCap != null && draft.brokeragePct > brokerageCap
+                    ? `Melebihi batas biaya akuisisi OJK ${brokerageCap}% untuk ${draft.cob}.`
+                    : chargeText(brokerageNominal, draft.includeVat)
+                }
+              />
+              <Field orientation="horizontal">
+                <Switch
+                  id="policy-brokerage-vat"
+                  checked={draft.includeVat ?? false}
+                  onCheckedChange={(v) => set({ includeVat: Boolean(v) })}
+                />
+                <FieldLabel htmlFor="policy-brokerage-vat" className="font-normal">
+                  Brokerage include VAT (PPN 2,2%)
+                </FieldLabel>
+              </Field>
+            </div>
+            <div className="flex flex-col gap-3">
+              {draft.insurers.length > 1 ? (
+                <div className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium">Additional Fee</span>
+                  <span className="tabular">
+                    {chargeText(feeNominal, draft.additionalFeeIncludeVat)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Persen per asuransi dari slip, lihat daftar co-insurance.
+                  </span>
+                </div>
+              ) : (
+                <NumberField
+                  label="Additional Fee (%)"
+                  preset="percent"
+                  value={draft.additionalFeePct ?? 0}
+                  onValueChange={(v) => set({ additionalFeePct: v ?? 0 })}
+                  error={errors.additionalFeePct}
+                  description={
+                    feeNominal
+                      ? chargeText(feeNominal, draft.additionalFeeIncludeVat)
+                      : "Opsional, fee di luar brokerage: persen dari premi."
+                  }
+                />
+              )}
+              <Field orientation="horizontal">
+                <Switch
+                  id="policy-fee-vat"
+                  checked={draft.additionalFeeIncludeVat ?? false}
+                  onCheckedChange={(v) => set({ additionalFeeIncludeVat: Boolean(v) })}
+                />
+                <FieldLabel htmlFor="policy-fee-vat" className="font-normal">
+                  Additional fee include VAT (PPN 2,2%)
+                </FieldLabel>
+              </Field>
+            </div>
             <TextField
               className="sm:col-span-2"
               label="Risk Location"

@@ -3,7 +3,7 @@ import {
   PAR_EQVET_FULL_NAMES,
 } from "./data/reference"
 import { BI_SCALE_OJK } from "./data/ojk-tariff"
-import type { PlacingSlip, RateLine, SlipPart } from "./data/types"
+import type { PlacingSlip, RateLine, SecurityPanelRow, SlipPart } from "./data/types"
 import { num } from "./format"
 import { usesOpenCover } from "./open-cover"
 import { locationGroups, locationOwner, withLocations } from "./slip-locations"
@@ -298,15 +298,55 @@ export function brokerageVatAmount(slip: PlacingSlip) {
 }
 
 /**
+ * Additional fee (%) tertimbang share: Σ share × fee (%) / 100. Satu asuransi
+ * 100% dengan fee 15% menjadi 15; co-insurance 60% × 15% + 40% × 10% menjadi 13.
+ */
+export function weightedFeePct(
+  rows: readonly Pick<SecurityPanelRow, "share" | "additionalFeePct">[] | undefined
+) {
+  return (rows ?? []).reduce(
+    (sum, r) => sum + ((r.share || 0) * (r.additionalFeePct || 0)) / 100,
+    0
+  )
+}
+
+/**
+ * Nominal additional fee: premi × fee (%) per asuransi sesuai share-nya
+ * (Harry, 12 November 2026: additional fee berupa persen, diisi per asuransi
+ * saat closing). Premi negatif (refund) menghasilkan fee negatif.
+ */
+export function additionalFeeFor(
+  premium: number,
+  rows: readonly Pick<SecurityPanelRow, "share" | "additionalFeePct">[] | undefined
+) {
+  return roundCents((premium * weightedFeePct(rows)) / 100)
+}
+
+/** Nominal additional fee satu asuransi di panel: premi × share × fee (%). */
+export function insurerAdditionalFee(
+  premium: number,
+  row: Pick<SecurityPanelRow, "share" | "additionalFeePct">
+) {
+  return roundCents((premium * (row.share || 0) * (row.additionalFeePct || 0)) / 10_000)
+}
+
+/** Nominal additional fee slip dari premi slip dan fee (%) di panel Security. */
+export function additionalFeeAmount(slip: PlacingSlip) {
+  return additionalFeeFor(totalPremium(slip), slip.securityPanel)
+}
+
+/** PPN 2,2% di dalam nominal fee yang termasuk PPN, seperti brokerage. */
+export function feeVatInside(fee: number, includeVat: boolean | undefined) {
+  if (!includeVat) return 0
+  return roundCents(fee - fee / (1 + BROKERAGE_VAT_RATE))
+}
+
+/**
  * PPN di dalam additional fee kalau fee diisi termasuk PPN, dengan tarif yang
  * sama seperti brokerage (permintaan LCH, 10 November 2026).
  */
-export function additionalFeeVatAmount(
-  slip: Pick<PlacingSlip, "additionalFee" | "additionalFeeIncludeVat">
-) {
-  if (!slip.additionalFeeIncludeVat) return 0
-  const fee = slip.additionalFee ?? 0
-  return roundCents(fee - fee / (1 + BROKERAGE_VAT_RATE))
+export function additionalFeeVatAmount(slip: PlacingSlip) {
+  return feeVatInside(additionalFeeAmount(slip), slip.additionalFeeIncludeVat)
 }
 
 export function slipRateBasis(slip: PlacingSlip) {

@@ -1176,8 +1176,9 @@ model PlacingSlip {
   brokeragePct Decimal @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
   includeVat   Boolean @default(false) @map("include_vat")
 
-  /// Fee di luar brokerage untuk produksi, hanya slip Property dan Motor
-  /// Vehicle. Tidak dicetak di dokumen slip; ikut ke polis yang dibuat dari slip.
+  /// Tidak dipakai lagi sejak 12 Nov 2026: additional fee menjadi persen per
+  /// asuransi di panel Security (`slip_security_panel.additional_fee_pct`),
+  /// nominalnya dihitung dari premi. Kolom dibiarkan sebagai isian lama.
   additionalFee Decimal @default(0) @map("additional_fee") @db.Decimal(18, 2)
   /// Additional fee sudah termasuk PPN 2,2%, seperti Include VAT di brokerage.
   additionalFeeIncludeVat Boolean @default(false) @map("additional_fee_include_vat")
@@ -1386,6 +1387,9 @@ model SlipSecurityPanel {
   sharePct   Decimal @map("share_pct") @db.Decimal(12, 6)
   /// lookup security_role: As Leader atau As Member.
   positionId String  @map("position_id") @db.Uuid
+  /// Additional fee (%) dari premi bagian asuransi ini, diisi saat closing
+  /// (Harry, 12 November 2026). Hanya slip Property dan Motor Vehicle.
+  additionalFeePct Decimal @default(0) @map("additional_fee_pct") @db.Decimal(12, 6)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1504,9 +1508,14 @@ model Policy {
   /// Negatif untuk pengembalian premi pada pembatalan.
   premium             Decimal  @default(0) @db.Decimal(18, 2)
   brokeragePct        Decimal  @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
-  /// Fee di luar brokerage, dalam mata uang polis. Nol kalau tidak ada.
-  /// Pengembalian fee pada endorsement atau pembatalan bernilai negatif.
+  /// Brokerage sudah termasuk PPN 2,2%, mengikuti Include VAT di slip.
+  includeVat          Boolean  @default(false) @map("include_vat")
+  /// Nominal fee di luar brokerage, dalam mata uang polis: premi × fee (%) per
+  /// asuransi (`policy_insurers.additional_fee_pct`), dihitung server. Negatif
+  /// pada pembatalan atau pengurangan premi.
   additionalFee       Decimal  @default(0) @map("additional_fee") @db.Decimal(18, 2)
+  /// Additional fee sudah termasuk PPN 2,2%, mengikuti slip.
+  additionalFeeIncludeVat Boolean @default(false) @map("additional_fee_include_vat")
   /// Rate (%) endorsement: premi = sum insured × rate × hari prorata / 365,
   /// hari prorata dari tanggal efektif s/d tanggal berakhir (Harry, 11 November
   /// 2026). Kosong berarti premi diisi manual.
@@ -1655,6 +1664,8 @@ model PolicyInsurer {
   sharePct   Decimal @map("share_pct") @db.Decimal(12, 6)
   /// lookup security_role
   positionId String  @map("position_id") @db.Uuid
+  /// Additional fee (%) dari premi bagian asuransi ini, dari panel slip.
+  additionalFeePct Decimal @default(0) @map("additional_fee_pct") @db.Decimal(12, 6)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)

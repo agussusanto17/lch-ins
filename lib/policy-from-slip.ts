@@ -4,7 +4,7 @@
  * (meeting LCH, 10 November 2026), supaya keduanya menyalin data yang sama.
  */
 
-import { slipPolicyPremium, totalSumInsured } from "@/lib/calc"
+import { additionalFeeFor, slipPolicyPremium, totalSumInsured, weightedFeePct } from "@/lib/calc"
 import type { PlacingSlip, Policy, SlipPart } from "@/lib/data/types"
 import { usesOpenCover } from "@/lib/open-cover"
 import { isExistingPolicyLabel } from "@/lib/slip-details"
@@ -23,7 +23,10 @@ export type PolicySlipFields = Pick<
   | "sumInsured"
   | "premium"
   | "brokeragePct"
+  | "includeVat"
   | "additionalFee"
+  | "additionalFeePct"
+  | "additionalFeeIncludeVat"
   | "riskLocation"
   | "insurer"
   | "insurers"
@@ -31,9 +34,11 @@ export type PolicySlipFields = Pick<
 
 /**
  * Isian polis dari slip. Slip PAR + EQVET menjadi satu polis per bagian:
- * premi per bagian, polis EQVET memakai type of cover kedua, dan additional
- * fee ikut polis PAR. Slip open cover: nilai dan premi diisi per deklarasi.
- * Nama tertanggung mengikuti nama klien kalau klien slip diketahui.
+ * premi per bagian, dan polis EQVET memakai type of cover kedua. Additional
+ * fee setiap polis = premi polis itu × fee (%) per asuransi di panel, dengan
+ * status PPN brokerage dan fee dari slip (Harry, 12 November 2026). Slip open
+ * cover: nilai dan premi diisi per deklarasi. Nama tertanggung mengikuti nama
+ * klien kalau klien slip diketahui.
  */
 export function policyFieldsFromSlip(
   slip: PlacingSlip,
@@ -43,6 +48,7 @@ export function policyFieldsFromSlip(
   const panel = slip.securityPanel?.filter((r) => r.insurer) ?? []
   const leader = panel.find((r) => r.role === "As Leader") ?? panel[0]
   const openCover = usesOpenCover(slip)
+  const premium = openCover ? 0 : slipPolicyPremium(slip, part)
   return {
     placingSlipId: slip.id,
     slipPart: part,
@@ -55,9 +61,12 @@ export function policyFieldsFromSlip(
     inceptionDate: slip.inceptionDate ?? "",
     expiryDate: slip.expiryDate ?? "",
     sumInsured: openCover ? 0 : totalSumInsured(slip),
-    premium: openCover ? 0 : slipPolicyPremium(slip, part),
+    premium,
     brokeragePct: slip.brokeragePct,
-    additionalFee: part === "EQVET" ? 0 : (slip.additionalFee ?? 0),
+    includeVat: slip.includeVat,
+    additionalFee: additionalFeeFor(premium, panel),
+    additionalFeePct: weightedFeePct(panel),
+    additionalFeeIncludeVat: slip.additionalFeeIncludeVat ?? false,
     riskLocation: slip.riskLocation ?? "",
     insurer: leader?.insurer ?? "",
     insurers: panel,
@@ -77,7 +86,7 @@ export function changedSlipFields(
   const comparable = (fields: PolicySlipFields, key: keyof PolicySlipFields) =>
     JSON.stringify(
       key === "insurers"
-        ? fields.insurers.map((r) => [r.insurer, r.share, r.role])
+        ? fields.insurers.map((r) => [r.insurer, r.share, r.role, r.additionalFeePct ?? 0])
         : fields[key]
     )
   const changes: Partial<PolicySlipFields> = {}

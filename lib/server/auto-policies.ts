@@ -202,7 +202,7 @@ export async function recordEndorsementFromSlip(
       expiryDate: parent.expiryDate,
       sumInsured: adjustment.sumInsuredChange,
       premium: adjustment.premium,
-      additionalFee: 0,
+      // Additional fee dihitung server: premi endorsement × fee (%) asuransi polis induk.
       rate: null,
       premiumBasis: null,
       adminCost: slip.adminCost ?? 0,

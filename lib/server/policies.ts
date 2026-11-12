@@ -14,7 +14,7 @@ import type {
   SlipPart,
 } from "@/lib/data/types"
 import { policyFileKindLabel } from "@/lib/policy-files"
-import { slipPolicyParts } from "@/lib/calc"
+import { additionalFeeFor, slipPolicyParts, weightedFeePct } from "@/lib/calc"
 import { addDays } from "@/lib/date"
 import { normalizeCob } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
@@ -85,6 +85,7 @@ function toPolicyRecord(
     insurer: i.insurer.name,
     share: Number(i.sharePct),
     role: i.position.code === "leader" ? "As Leader" : "As Member",
+    additionalFeePct: Number(i.additionalFeePct),
   }))
   const leader = insurers.find((i) => i.role === "As Leader") ?? insurers[0]
   return {
@@ -108,7 +109,10 @@ function toPolicyRecord(
     sumInsured: Number(row.sumInsured),
     premium: Number(row.premium),
     brokeragePct: Number(row.brokeragePct),
+    includeVat: row.includeVat,
     additionalFee: Number(row.additionalFee),
+    additionalFeePct: weightedFeePct(insurers),
+    additionalFeeIncludeVat: row.additionalFeeIncludeVat,
     rate: row.rate == null ? null : Number(row.rate),
     premiumBasis: row.premiumBasis == null ? null : Number(row.premiumBasis),
     adminCost: Number(row.adminCost),
@@ -249,7 +253,27 @@ async function resolveInsurerId(tx: Tx, name: string): Promise<string> {
   return created.id
 }
 
+/**
+ * Baris asuransi polis beserta additional fee (%)-nya. Polis tanpa daftar
+ * asuransi menjadi satu asuransi 100% dengan fee (%) polis.
+ */
+function insurerRows(input: PolicyInput): SecurityPanelRow[] {
+  return input.insurers.length
+    ? input.insurers
+    : [
+        {
+          id: "",
+          insurer: input.insurer,
+          share: 100,
+          role: "As Leader",
+          additionalFeePct: input.additionalFeePct ?? 0,
+        },
+      ]
+}
+
 async function policyData(tx: Tx, input: PolicyInput) {
+  // Endorsement dengan rate: premi prorata dihitung ulang di server.
+  const premium = endorsementPremium(input) ?? input.premium
   const cobId = await resolveCobId(tx, input.cob)
   return {
     policyNo: input.policyNo.trim(),
@@ -267,10 +291,13 @@ async function policyData(tx: Tx, input: PolicyInput) {
     expiryDate: new Date(input.expiryDate),
     currencyCode: input.currency,
     sumInsured: input.sumInsured,
-    // Endorsement dengan rate: premi prorata dihitung ulang di server.
-    premium: endorsementPremium(input) ?? input.premium,
+    premium,
     brokeragePct: input.brokeragePct,
-    additionalFee: input.additionalFee ?? 0,
+    includeVat: input.includeVat ?? false,
+    // Nominal = premi × fee (%) per asuransi (Harry, 12 November 2026), jadi
+    // ikut berubah bersama premi, termasuk premi negatif pada pembatalan.
+    additionalFee: additionalFeeFor(premium, insurerRows(input)),
+    additionalFeeIncludeVat: input.additionalFeeIncludeVat ?? false,
     // Rate dan dasar premi untuk endorsement manual; admin cost dan stamp duty
     // untuk endorsement dan pembatalan.
     rate: input.type === "Endorsement" ? (input.rate ?? null) : null,
@@ -438,9 +465,7 @@ async function checkedSlipPart(
 }
 
 async function writeInsurers(tx: Tx, policyId: string, input: PolicyInput) {
-  const rows: SecurityPanelRow[] = input.insurers.length
-    ? input.insurers
-    : [{ id: "", insurer: input.insurer, share: 100, role: "As Leader" }]
+  const rows = insurerRows(input)
   const roles = await tx.lookupValue.findMany({
     where: { lookupType: "security_role" },
     select: { id: true, code: true },
@@ -457,6 +482,7 @@ async function writeInsurers(tx: Tx, policyId: string, input: PolicyInput) {
         insurerId: await resolveInsurerId(tx, row.insurer),
         sharePct: row.share,
         positionId,
+        additionalFeePct: row.additionalFeePct ?? 0,
       },
     })
   }
