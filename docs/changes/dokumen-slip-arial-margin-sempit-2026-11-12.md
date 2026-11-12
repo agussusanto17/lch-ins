@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `feat/dokumen-slip-arial-margin-sempit`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #236
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
