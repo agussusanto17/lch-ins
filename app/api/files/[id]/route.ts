@@ -11,12 +11,27 @@ import { opensInline, purposeMenu, readStoredFile } from "@/lib/server/stored-fi
  * role yang boleh membuka halaman klien.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await currentUser()
   if (!user) {
-    return new Response("Silakan login terlebih dahulu.", { status: 401 })
+    // Link berkas biasanya dibuka langsung di tab browser, jadi pengunjung
+    // tanpa sesi diarahkan ke halaman login, sama seperti halaman lain di
+    // proxy.ts. Setelah login, form login kembali ke berkas ini lewat `next`.
+    // Pemeriksaan sesi tetap terjadi sebelum berkas dicari, jadi redirect ini
+    // tidak membocorkan ada tidaknya sebuah ID berkas.
+    // Location sengaja relatif: browser melengkapinya dengan domain yang sedang
+    // dibuka, jadi hasilnya tidak bergantung pada host yang dilihat Next di
+    // balik nginx.
+    const next = new URL(request.url).pathname
+    return new Response(null, {
+      status: 307,
+      headers: {
+        Location: `/login?${new URLSearchParams({ next })}`,
+        "Cache-Control": "no-store",
+      },
+    })
   }
   if (user.mustChangePassword) {
     return new Response("Ganti kata sandi terlebih dahulu.", { status: 403 })
