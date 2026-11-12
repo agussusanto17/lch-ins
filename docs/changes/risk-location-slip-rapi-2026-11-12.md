@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `fix/risk-location-slip-rapi`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #239
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
