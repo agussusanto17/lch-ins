@@ -258,8 +258,8 @@ export function PlacingSlipDocument(props: DocProps) {
         muted={!slip.slipNo || slip.status === "Cancelled"}
       />
       <DetailTable slip={slip} />
-      <InterestBlock slip={slip} />
       <CoverageBlock slip={slip} />
+      <InterestBlock slip={slip} />
       <DeductibleBlock slip={slip} />
       <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
@@ -306,8 +306,8 @@ export function QuotationSlipDocument(props: DocProps) {
         muted={!number}
       />
       <DetailTable slip={slip} />
-      <InterestBlock slip={slip} />
       <CoverageBlock slip={slip} />
+      <InterestBlock slip={slip} />
       <DeductibleBlock slip={slip} />
 
       {/* Same layout as Placing Slip: titles here, full wording in the appendix. */}
@@ -360,8 +360,8 @@ export function CoverNoteDocument(props: DocProps) {
     >
       <DocTitle title="COVER NOTE" />
       <DetailTable slip={slip} />
-      <InterestBlock slip={slip} />
       <CoverageBlock slip={slip} />
+      <InterestBlock slip={slip} />
       <DeductibleBlock slip={slip} />
 
       <ClausesBlock slip={slip} />
@@ -429,8 +429,8 @@ export function ClosingInstructionDocument(props: DocProps) {
         muted={!number}
       />
       <DetailTable slip={slip} />
-      <InterestBlock slip={slip} />
       <CoverageBlock slip={slip} />
+      <InterestBlock slip={slip} />
       <DeductibleBlock slip={slip} />
 
       <ClausesBlock slip={slip} />

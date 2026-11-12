@@ -560,9 +560,10 @@ export function OpenCoverRateBlock({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Coverage dari Detail Coverage & Ketentuan, dicetak setelah INTEREST INSURED
- * seperti CI Machinery Breakdown LCH (Agus, 5 November 2026). Paragraf dan
- * baris barunya dipertahankan. Motor Vehicle tidak punya isian ini.
+ * Coverage dari Detail Coverage & Ketentuan. Awalnya dicetak setelah INTEREST
+ * INSURED seperti CI Machinery Breakdown LCH (Agus, 5 November 2026); sejak
+ * 12 November 2026 dicetak sebelum INTEREST INSURED atas permintaan LCH.
+ * Paragraf dan baris barunya dipertahankan. Motor Vehicle tidak punya isian ini.
  */
 export function CoverageBlock({ slip }: { slip: PlacingSlip }) {
   const text = slip.coverage?.trim()
