@@ -410,7 +410,7 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
               {slip.interestSection1 ? (
                 <HangingIndentText
                   text={slip.interestSection1}
-                  className="mt-1 leading-relaxed text-muted-foreground text-justify"
+                  className="mt-1 leading-relaxed text-justify"
                 />
               ) : null}
               {sectionList("section1")}
@@ -429,7 +429,7 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
               {slip.interestSection2 ? (
                 <HangingIndentText
                   text={slip.interestSection2}
-                  className="mt-1 leading-relaxed text-muted-foreground text-justify"
+                  className="mt-1 leading-relaxed text-justify"
                 />
               ) : null}
               {sectionList("section2")}
@@ -614,7 +614,7 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
             <p className="font-semibold">Special Conditions</p>
             <HangingIndentText
               text={slip.specialConditions}
-              className="mt-1 leading-relaxed text-muted-foreground text-[12.5px]"
+              className="mt-1 leading-relaxed text-[12.5px]"
             />
           </div>
         ) : null}
@@ -882,7 +882,7 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
                   </p>
                   {wordingText(c.wording) ? (
                     <div
-                      className="rte-prose mt-0.5 text-[12px] text-muted-foreground text-justify"
+                      className="rte-prose mt-0.5 text-[12px] text-justify"
                       dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
                     />
                   ) : null}

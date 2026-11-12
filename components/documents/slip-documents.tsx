@@ -151,7 +151,7 @@ function SubjectivityBlock({ slip }: { slip: PlacingSlip }) {
       <SectionHeading>SUBJECTIVITY</SectionHeading>
       <HangingIndentText
         text={slip.subjectivity}
-        className="text-[12.5px] leading-relaxed text-muted-foreground"
+        className="text-[12.5px] leading-relaxed"
       />
     </>
   )
@@ -378,7 +378,7 @@ export function CoverNoteDocument(props: DocProps) {
           <SectionHeading>REMARKS</SectionHeading>
           <HangingIndentText
             text={slip.coverNoteRemarks}
-            className="text-[12.5px] leading-relaxed text-muted-foreground"
+            className="text-[12.5px] leading-relaxed"
           />
         </>
       ) : null}
@@ -449,7 +449,7 @@ export function ClosingInstructionDocument(props: DocProps) {
           <SectionHeading>INSTRUCTION</SectionHeading>
           <HangingIndentText
             text={slip.closingInstruction}
-            className="text-[12.5px] leading-relaxed text-muted-foreground"
+            className="text-[12.5px] leading-relaxed"
           />
         </>
       ) : null}

@@ -121,9 +121,33 @@ test("doc-blocks prints clause list titles unbolded without wording and keeps bo
     "ClauseWordingAppendix should nest clause title and wording body inside flex-1 min-w-0 column for hanging indent"
   )
   assert.ok(
-    appendixSection.includes('className="rte-prose mt-0.5 text-[12px] text-muted-foreground text-justify"'),
+    appendixSection.includes('className="rte-prose mt-0.5 text-[12px] text-justify"'),
     "ClauseWordingAppendix should justify descriptive wording paragraphs"
   )
+})
+
+// Isi dokumen yang diketik user tidak abu-abu (catatan Harry, 12 November 2026).
+test("free-text content blocks in slip documents use the normal text color", () => {
+  const slipDocs = fs.readFileSync(
+    path.join(process.cwd(), "components/documents/slip-documents.tsx"),
+    "utf-8"
+  )
+  const blocks = fs.readFileSync(
+    path.join(process.cwd(), "components/documents/doc-blocks.tsx"),
+    "utf-8"
+  )
+  for (const field of ["slip.subjectivity", "slip.coverNoteRemarks", "slip.closingInstruction"]) {
+    const start = slipDocs.indexOf(`text={${field}}`)
+    assert.ok(start > 0, `${field} should be rendered with HangingIndentText`)
+    const props = slipDocs.slice(start, slipDocs.indexOf("/>", start))
+    assert.ok(!props.includes("text-muted-foreground"), `${field} should not be grey`)
+  }
+  for (const field of ["slip.interestSection1", "slip.interestSection2", "slip.specialConditions"]) {
+    const start = blocks.indexOf(`text={${field}}`)
+    assert.ok(start > 0, `${field} should be rendered with HangingIndentText`)
+    const props = blocks.slice(start, blocks.indexOf("/>", start))
+    assert.ok(!props.includes("text-muted-foreground"), `${field} should not be grey`)
+  }
 })
 
 test("globals.css configures natural left alignment for headings and justified text for paragraphs in rich text", () => {
