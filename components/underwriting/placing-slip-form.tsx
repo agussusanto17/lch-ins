@@ -371,6 +371,16 @@ function SlipEditor({
     onOpenChange: (v: boolean) => setOpenSections((o) => ({ ...o, [key]: v })),
   })
 
+  // Tombol dokumen yang terkunci karena panel belum lengkap menunjuk ke panelnya.
+  function showSecurityPanel() {
+    setOpenSections((o) => ({ ...o, security: true }))
+    requestAnimationFrame(() =>
+      document
+        .getElementById("security-panel")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    )
+  }
+
   const [issues, setIssues] = React.useState<string[] | null>(null)
   const [confirmRelease, setConfirmRelease] = React.useState(false)
   const [releaseNoPreview, setReleaseNoPreview] = React.useState<string | null>(null)
@@ -2236,6 +2246,8 @@ function SlipEditor({
               </SectionCard>
 
               <SectionCard
+                id="security-panel"
+                className="scroll-mt-36"
                 title="Security (Panel Asuransi)"
                 description="Struktur co-insurance — satu risiko dibagi ke beberapa insurer dengan share %."
                 {...sectionProps("security")}
@@ -2558,6 +2570,28 @@ function SlipEditor({
       </SlipFormBody>
 
       <SlipFormActions>
+        {(isQuotation || isClosing) &&
+        slip.status !== "Draft" &&
+        slip.status !== "Closed" &&
+        !panelValid ? (
+          // Tombol yang nonaktif tidak memunculkan tooltip, jadi alasannya
+          // ditulis di baris sendiri di atas tombol (temuan LCH, 12 November 2026).
+          <div className="flex basis-full justify-end">
+            <button
+              type="button"
+              onClick={showSecurityPanel}
+              className="flex items-start gap-1.5 text-left text-xs text-warning hover:underline"
+            >
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+              <span>
+                {isQuotation
+                  ? "Lengkapi panel asuransi untuk membuka Quotation Slip dan Closing Instruction"
+                  : "Lengkapi panel asuransi untuk menerbitkan Closing Instruction"}
+                : {pIssues[0]}
+              </span>
+            </button>
+          </div>
+        ) : null}
         {canDestroy ? (
           <Button variant="destructive" onClick={() => setConfirmDestroy(true)}>
             {slip.status === "Draft" ? (

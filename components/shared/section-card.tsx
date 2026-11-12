@@ -18,6 +18,8 @@ import {
 import { cn } from "@/lib/utils"
 
 interface SectionCardProps {
+  /** Id kartu, misalnya sebagai tujuan tautan yang menggulir ke section ini. */
+  id?: string
   title?: React.ReactNode
   description?: React.ReactNode
   /** Ringkasan singkat yang tetap terlihat saat section ditutup. */
@@ -33,6 +35,7 @@ interface SectionCardProps {
 }
 
 export function SectionCard({
+  id,
   title,
   description,
   summary,
@@ -64,7 +67,7 @@ export function SectionCard({
 
   if (!collapsible || !title) {
     return (
-      <Card className={cn("gap-0", className)}>
+      <Card id={id} className={cn("gap-0", className)}>
         {title ? (
           <CardHeader className="flex-wrap items-center gap-x-4 gap-y-2 border-b pb-4">
             {heading}
@@ -86,7 +89,7 @@ export function SectionCard({
   // 9 November 2026).
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className={cn("gap-0", className)}>
+      <Card id={id} className={cn("gap-0", className)}>
         <CardHeader
           className={cn(
             "items-center gap-x-4 gap-y-2 transition-[padding] has-data-[slot=card-action]:grid-cols-[auto_minmax(0,1fr)]",
