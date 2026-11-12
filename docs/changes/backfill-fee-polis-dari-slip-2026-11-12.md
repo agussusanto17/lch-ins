@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `fix/fee-polis-dari-slip-lama`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#228](https://github.com/agussusanto17/lch-ins/pull/228)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
