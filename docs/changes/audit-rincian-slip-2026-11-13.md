@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-13
 - **Branch:** `fix/audit-rincian-slip`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#241](https://github.com/agussusanto17/lch-ins/pull/241)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
