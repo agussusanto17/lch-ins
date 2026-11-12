@@ -98,6 +98,12 @@ const FIELD_LABELS: Record<string, string> = {
   currencyCode: "Mata uang",
   sumInsured: "Nilai pertanggungan",
   premium: "Premi",
+  // Ringkasan isi placing slip, lihat lib/slip-audit.ts.
+  totalSumInsured: "Total nilai pertanggungan",
+  totalPremium: "Total premi",
+  deductibles: "Deductible",
+  specialConditions: "Special Conditions",
+  clauses: "Klausul",
   rate: "Rate",
   rateModeId: "Mode rate",
   brokeragePct: "Brokerage (%)",
