@@ -498,6 +498,11 @@ export interface PlacingSlip {
   changeDescription?: string | null
   /** Baris premi slip asal saat endorsement dibuat. */
   beforeCalc?: EndorsementCalc | null
+  /**
+   * Endorsement atau cancellation slip yang dibuat dari slip ini dan belum
+   * dibatalkan, dari server. Selama ada, slip ini tidak bisa direvisi lagi.
+   */
+  changeSlipLock?: ChangeSlipLock | null
   /** Nama pengguna yang membuat slip, dari server; untuk kolom dan filter di daftar Placement. */
   createdByName?: string
   /* pasca-release */
@@ -505,6 +510,19 @@ export interface PlacingSlip {
   securityPanel?: SecurityPanelRow[]
   closingInstruction?: string
   coverNoteRemarks?: string
+}
+
+/**
+ * Slip perubahan yang mengunci slip asalnya (Agus, 12 November 2026). Revisi
+ * slip asal tidak ikut ke endorsement slip yang sudah dibuat, karena kondisi
+ * sebelum perubahan disimpan saat endorsement slip dibuat. Jadi perubahan polis
+ * berikutnya harus lewat endorsement slip.
+ */
+export interface ChangeSlipLock {
+  id: string
+  slipNo: string | null
+  kind: "Endorsement" | "Cancellation"
+  status: SlipStatus
 }
 
 /** Jenis berkas polis: softcopy polis, Premium Note, atau Commission Note. */

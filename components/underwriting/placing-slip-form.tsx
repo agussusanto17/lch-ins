@@ -13,6 +13,7 @@ import {
   FileCheck2,
   FileText,
   Info,
+  Lock,
   Plus,
   Save,
   ScrollText,
@@ -47,6 +48,7 @@ import { SlipItemRates } from "@/components/underwriting/slip-item-rates"
 import { OpenCoverRates } from "@/components/underwriting/open-cover-rates"
 import { SlipAttachments } from "@/components/underwriting/slip-attachments"
 import { SlipParticipants } from "@/components/underwriting/slip-participants"
+import { changeSlipLockText } from "@/lib/endorsement-slip"
 import { usesOpenCover } from "@/lib/open-cover"
 import { effectivePaBenefitLimits } from "@/lib/pa-benefits"
 import { participantsInterestItem, usesParticipants } from "@/lib/slip-participants"
@@ -276,6 +278,9 @@ export function PlacingSlipForm({
         ...stored,
         participants: stored.participants ?? initial?.participants,
         attachments: initial?.attachments ?? stored.attachments,
+        // Kunci revisi dari detail server: daftar slip di store bisa belum tahu
+        // endorsement slip yang baru dibuat dari slip ini.
+        changeSlipLock: initial ? (initial.changeSlipLock ?? null) : stored.changeSlipLock,
       }
     : initial
 
@@ -488,7 +493,10 @@ function SlipEditor({
     return () => window.removeEventListener("beforeunload", onBeforeUnload)
   }, [dirty])
 
-  const locked = slip.status === "Cancelled"
+  // Kunci revisi slip asal (Agus, 12 November 2026): setelah ada endorsement
+  // atau cancellation slip, perubahan polis dibuat lewat slip perubahan.
+  const changeLock = slip.status === "Cancelled" ? null : (slip.changeSlipLock ?? null)
+  const locked = slip.status === "Cancelled" || Boolean(changeLock)
   const isProperty = slip.cob === "Property"
   const isMotor = slip.cob === "Motor Vehicle"
 
@@ -959,7 +967,7 @@ function SlipEditor({
             keputusan LCH.
           </p>
         ) : null}
-        {slip.status === "Closed" ? (
+        {slip.status === "Closed" && !changeLock ? (
           <p className="flex items-start gap-2 rounded-xl bg-info/10 border border-info/20 px-4 py-3 text-sm text-foreground">
             <Info className="mt-0.5 size-4 shrink-0 text-primary" />
             {changeSlip
@@ -967,7 +975,20 @@ function SlipEditor({
               : "Closing instruction sudah diterbitkan. Anda tetap dapat melakukan revisi dan menyimpan perubahan di sini jika diperlukan."}
           </p>
         ) : null}
-        {locked ? (
+        {changeLock ? (
+          <p className="flex items-start gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
+            <Lock className="mt-0.5 size-4 shrink-0" />
+            <span>
+              {changeSlipLockText(changeLock)}{" "}
+              <Link
+                href={`/placement/edit/${changeLock.id}`}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Buka {changeLock.kind === "Cancellation" ? "cancellation" : "endorsement"} slip
+              </Link>
+            </span>
+          </p>
+        ) : locked ? (
           <p className="flex items-start gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
             <Ban className="mt-0.5 size-4 shrink-0" />
             Slip berstatus dibatalkan dan tidak bisa diubah lagi.

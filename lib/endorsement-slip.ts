@@ -4,7 +4,7 @@
  * `45020126008633 - CANCELLATION.pdf`, 10 November 2026).
  */
 
-import type { PolicyType } from "@/lib/data/types"
+import type { ChangeSlipLock, PolicyType } from "@/lib/data/types"
 import { dateLong, moneyCents } from "@/lib/format"
 
 /**
@@ -92,4 +92,30 @@ export function premiumAdjustmentLabel(amount: number) {
 /** Nilai bertanda seperti contoh EDM: pengurangan ditulis dalam kurung. */
 export function signedMoney(amount: number, currency: string) {
   return amount < 0 ? `(${moneyCents(-amount, currency)})` : moneyCents(amount, currency)
+}
+
+/**
+ * Nama slip perubahan untuk pesan, misalnya "endorsement slip
+ * 019/LCH-PLCMT/ES-MV/XI/2026", atau "draft endorsement slip" sebelum terbit.
+ */
+export function changeSlipName(lock: Pick<ChangeSlipLock, "kind" | "slipNo">) {
+  const kind = lock.kind === "Cancellation" ? "cancellation slip" : "endorsement slip"
+  return lock.slipNo ? `${kind} ${lock.slipNo}` : `draft ${kind}`
+}
+
+/**
+ * Alasan slip asal tidak bisa direvisi: sudah ada endorsement atau cancellation
+ * slip dari slip ini. Slip perubahan yang belum ditutup masih bisa dihapus
+ * (draft) atau dibatalkan (sudah terbit), lalu slip asal bisa direvisi lagi.
+ */
+export function changeSlipLockText(lock: Pick<ChangeSlipLock, "kind" | "slipNo" | "status">) {
+  const name = changeSlipName(lock)
+  if (lock.kind === "Cancellation" && lock.status === "Closed") {
+    return `Slip ini terkunci karena polisnya sudah dibatalkan lewat ${name}.`
+  }
+  const reason = `Slip ini terkunci karena sudah ada ${name}. Perubahan polis berikutnya dibuat lewat endorsement slip, bukan dengan merevisi slip ini.`
+  if (lock.status === "Closed") return reason
+  return lock.status === "Draft"
+    ? `${reason} Kalau slip ini masih perlu direvisi, hapus dulu ${name} itu.`
+    : `${reason} Kalau slip ini masih perlu direvisi, batalkan dulu ${name}.`
 }

@@ -95,7 +95,9 @@ function actionsFor(
     return actions
   }
   actions.push({
-    label: slip.status === "Cancelled" ? "Buka slip" : "Edit slip",
+    // Slip dibatalkan, atau slip asal yang terkunci karena sudah punya
+    // endorsement/cancellation slip, hanya bisa dibuka.
+    label: slip.status === "Cancelled" || slip.changeSlipLock ? "Buka slip" : "Edit slip",
     icon: Pencil,
     render: <Link href={`/placement/edit/${slip.id}`} />,
   })
