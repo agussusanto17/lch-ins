@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `feat/rekap-produksi-format-lch`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#231](https://github.com/agussusanto17/lch-ins/pull/231)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
