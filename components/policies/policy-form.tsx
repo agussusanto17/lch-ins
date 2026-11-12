@@ -26,6 +26,7 @@ import { EndorsementParticipants } from "@/components/policies/endorsement-parti
 import {
   additionalFeeFor,
   brokerageCapFor,
+  additionalFeeVatFor,
   feeVatInside,
   slipPolicyParts,
   sumPercent,
@@ -340,18 +341,24 @@ export function PolicyForm({
   // Nominal brokerage dan additional fee dari premi, dengan status PPN-nya
   // (Harry, 12 November 2026: persen dan nominal Rupiah tampil bersama).
   const brokerageNominal = (draft.premium * (draft.brokeragePct || 0)) / 100
-  const feeNominal = additionalFeeFor(
-    draft.premium,
+  // Co-insurance: fee (%) dan status PPN per asuransi dari slip (Harry,
+  // 12 November 2026). Polis satu asuransi: dari isian form.
+  const feeRows =
     draft.insurers.length > 1
       ? draft.insurers
-      : [{ share: 100, additionalFeePct: draft.additionalFeePct ?? 0 }]
-  )
-  const chargeText = (amount: number, includeVat: boolean | undefined) => {
-    const vat = feeVatInside(amount, includeVat)
-    return vat
+      : [
+          {
+            share: 100,
+            additionalFeePct: draft.additionalFeePct ?? 0,
+            additionalFeeIncludeVat: draft.additionalFeeIncludeVat ?? false,
+          },
+        ]
+  const feeNominal = additionalFeeFor(draft.premium, feeRows)
+  const feeVat = additionalFeeVatFor(draft.premium, feeRows)
+  const chargeText = (amount: number, vat: number) =>
+    vat
       ? `${money(amount, draft.currency)} · termasuk PPN 2,2% ${money(vat, draft.currency)}`
       : money(amount, draft.currency)
-  }
   // Polis dari slip open cover adalah satu deklarasi: nilai, premi, dan
   // periodenya diisi per deklarasi; data lain tetap dari slip.
   const openCoverSlip = linkedSlip ? usesOpenCover(linkedSlip) : false
@@ -483,7 +490,13 @@ export function PolicyForm({
     // memakai fee (%) per asuransi dari slip.
     const insurers =
       listed.length === 1
-        ? [{ ...listed[0], additionalFeePct: draft.additionalFeePct ?? 0 }]
+        ? [
+            {
+              ...listed[0],
+              additionalFeePct: draft.additionalFeePct ?? 0,
+              additionalFeeIncludeVat: draft.additionalFeeIncludeVat ?? false,
+            },
+          ]
         : listed
     const { id, ...fields } = draft
     const input: PolicyInput = {
@@ -728,7 +741,9 @@ export function PolicyForm({
                     <span className="truncate">{r.insurer}</span>
                     <span className="tabular shrink-0">
                       {r.share}% · {r.role.replace("As ", "")}
-                      {r.additionalFeePct ? ` · fee ${num(r.additionalFeePct, 0, 4)}%` : ""}
+                      {r.additionalFeePct
+                        ? ` · fee ${num(r.additionalFeePct, 0, 4)}%${r.additionalFeeIncludeVat ? " incl. VAT" : ""}`
+                        : ""}
                     </span>
                   </p>
                 ))}
@@ -923,7 +938,7 @@ export function PolicyForm({
                 description={
                   brokerageCap != null && draft.brokeragePct > brokerageCap
                     ? `Melebihi batas biaya akuisisi OJK ${brokerageCap}% untuk ${draft.cob}.`
-                    : chargeText(brokerageNominal, draft.includeVat)
+                    : chargeText(brokerageNominal, feeVatInside(brokerageNominal, draft.includeVat))
                 }
               />
               <Field orientation="horizontal">
@@ -942,10 +957,11 @@ export function PolicyForm({
                 <div className="flex flex-col gap-1 text-sm">
                   <span className="font-medium">Additional Fee</span>
                   <span className="tabular">
-                    {chargeText(feeNominal, draft.additionalFeeIncludeVat)}
+                    {chargeText(feeNominal, feeVat)}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    Persen per asuransi dari slip, lihat daftar co-insurance.
+                    Persen dan status PPN per asuransi dari slip, lihat daftar
+                    co-insurance.
                   </span>
                 </div>
               ) : (
@@ -957,21 +973,23 @@ export function PolicyForm({
                   error={errors.additionalFeePct}
                   description={
                     feeNominal
-                      ? chargeText(feeNominal, draft.additionalFeeIncludeVat)
+                      ? chargeText(feeNominal, feeVat)
                       : "Opsional, fee di luar brokerage: persen dari premi."
                   }
                 />
               )}
-              <Field orientation="horizontal">
-                <Switch
-                  id="policy-fee-vat"
-                  checked={draft.additionalFeeIncludeVat ?? false}
-                  onCheckedChange={(v) => set({ additionalFeeIncludeVat: Boolean(v) })}
-                />
-                <FieldLabel htmlFor="policy-fee-vat" className="font-normal">
-                  Additional fee include VAT (PPN 2,2%)
-                </FieldLabel>
-              </Field>
+              {draft.insurers.length > 1 ? null : (
+                <Field orientation="horizontal">
+                  <Switch
+                    id="policy-fee-vat"
+                    checked={draft.additionalFeeIncludeVat ?? false}
+                    onCheckedChange={(v) => set({ additionalFeeIncludeVat: Boolean(v) })}
+                  />
+                  <FieldLabel htmlFor="policy-fee-vat" className="font-normal">
+                    Additional fee include VAT (PPN 2,2%)
+                  </FieldLabel>
+                </Field>
+              )}
             </div>
             <TextField
               className="sm:col-span-2"

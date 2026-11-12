@@ -2269,7 +2269,7 @@ function SlipEditor({
                     className={cn(
                       "hidden gap-3 text-xs text-muted-foreground lg:grid",
                       showFee
-                        ? "lg:grid-cols-[minmax(0,1fr)_110px_170px_150px_40px]"
+                        ? "lg:grid-cols-[minmax(0,1fr)_110px_200px_150px_40px]"
                         : "lg:grid-cols-[minmax(0,1fr)_120px_150px_40px]"
                     )}
                   >
@@ -2286,7 +2286,7 @@ function SlipEditor({
                       className={cn(
                         "flex flex-col gap-2 rounded-xl border bg-card p-3 lg:grid lg:items-center lg:gap-3 lg:p-0 lg:border-0 lg:bg-transparent",
                         showFee
-                          ? "lg:grid-cols-[minmax(0,1fr)_110px_170px_150px_40px]"
+                          ? "lg:grid-cols-[minmax(0,1fr)_110px_200px_150px_40px]"
                           : "lg:grid-cols-[minmax(0,1fr)_120px_150px_40px]",
                         row.insurer && duplicateInsurerNames.has(row.insurer) && "border-destructive/60"
                       )}
@@ -2316,7 +2316,7 @@ function SlipEditor({
                         />
 
                         {showFee ? (
-                          <div className="flex flex-col gap-0.5">
+                          <div className="flex flex-col gap-1">
                             <NumberInput
                               disabled={locked}
                               preset="percent"
@@ -2329,11 +2329,31 @@ function SlipEditor({
                                 patchPanelRow(row.id, { additionalFeePct: val ?? 0 })
                               }
                             />
-                            {row.additionalFeePct ? (
-                              <span className="tabular text-right text-xs text-muted-foreground">
-                                {money(insurerAdditionalFee(totalPremium(slip), row), slip.currency)}
-                              </span>
-                            ) : null}
+                            {/* Status PPN fee per asuransi (Harry, 12 November 2026). */}
+                            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 px-1">
+                              <div className="flex items-center gap-1.5">
+                                <Switch
+                                  id={`fee-vat-${row.id}`}
+                                  size="sm"
+                                  disabled={locked}
+                                  checked={row.additionalFeeIncludeVat ?? false}
+                                  onCheckedChange={(v) =>
+                                    patchPanelRow(row.id, { additionalFeeIncludeVat: Boolean(v) })
+                                  }
+                                />
+                                <label
+                                  htmlFor={`fee-vat-${row.id}`}
+                                  className="cursor-pointer text-xs text-muted-foreground"
+                                >
+                                  Incl. VAT
+                                </label>
+                              </div>
+                              {row.additionalFeePct ? (
+                                <span className="tabular text-xs text-muted-foreground">
+                                  {money(insurerAdditionalFee(totalPremium(slip), row), slip.currency)}
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
                         ) : null}
 
@@ -2401,20 +2421,6 @@ function SlipEditor({
 
                   {showFee ? (
                     <div className="mt-2 flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
-                      {/* Include/exclude PPN seperti brokerage (permintaan LCH, 10 November 2026). */}
-                      <Field orientation="horizontal">
-                        <Switch
-                          id="fee-vat"
-                          disabled={locked}
-                          checked={slip.additionalFeeIncludeVat ?? false}
-                          onCheckedChange={(v) =>
-                            set({ additionalFeeIncludeVat: Boolean(v) })
-                          }
-                        />
-                        <FieldLabel htmlFor="fee-vat" className="font-normal">
-                          Additional fee include VAT (PPN 2,2%)
-                        </FieldLabel>
-                      </Field>
                       <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
                         <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-start sm:gap-0.5">
                           <span className="text-muted-foreground">Total additional fee</span>
@@ -2422,7 +2428,7 @@ function SlipEditor({
                             {money(additionalFeeAmount(slip), slip.currency)}
                           </span>
                         </div>
-                        {slip.additionalFeeIncludeVat ? (
+                        {additionalFeeVatAmount(slip) ? (
                           <>
                             <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-start sm:gap-0.5">
                               <span className="text-muted-foreground">PPN 2,2% (termasuk)</span>
@@ -2443,9 +2449,10 @@ function SlipEditor({
                         ) : null}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Nominal = premi × share × fee (%) tiap asuransi. Hanya
-                        untuk produksi, tidak dicetak di slip; ikut ke polis di
-                        Policy Database.
+                        Nominal = premi × share × fee (%) tiap asuransi. Nyalakan
+                        Incl. VAT di asuransi yang fee-nya sudah termasuk PPN
+                        2,2%. Hanya untuk produksi, tidak dicetak di slip; ikut
+                        ke polis di Policy Database.
                       </p>
                     </div>
                   ) : null}

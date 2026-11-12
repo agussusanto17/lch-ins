@@ -261,6 +261,11 @@ export interface SecurityPanelRow {
    * (Harry, 12 November 2026). Kosong sama dengan 0.
    */
   additionalFeePct?: number
+  /**
+   * Additional fee asuransi ini sudah termasuk PPN 2,2%. Status PPN tiap
+   * asuransi bisa berbeda (Harry, 12 November 2026).
+   */
+  additionalFeeIncludeVat?: boolean
 }
 
 /**
@@ -475,12 +480,6 @@ export interface PlacingSlip {
   stampDuty: number
   brokeragePct: number
   includeVat: boolean
-  /**
-   * Additional fee sudah termasuk PPN 2,2%, seperti Include VAT di brokerage.
-   * Persen fee per asuransi ada di `securityPanel`; nominalnya dihitung dari
-   * premi (`additionalFeeAmount`).
-   */
-  additionalFeeIncludeVat?: boolean
   createdAt: string
   updatedAt: string
   /**
@@ -585,7 +584,10 @@ export interface Policy {
    * co-insurance memakai persen per asuransi di `insurers`.
    */
   additionalFeePct?: number
-  /** Additional fee sudah termasuk PPN 2,2%, mengikuti slip. */
+  /**
+   * Additional fee polis satu asuransi sudah termasuk PPN 2,2%, diisi di form
+   * polis. Polis co-insurance memakai status PPN per asuransi di `insurers`.
+   */
   additionalFeeIncludeVat?: boolean
   /** Rate (%) endorsement; premi = sum insured × rate × hari prorata / 365. */
   rate?: number | null

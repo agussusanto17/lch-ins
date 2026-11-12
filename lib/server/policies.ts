@@ -14,7 +14,12 @@ import type {
   SlipPart,
 } from "@/lib/data/types"
 import { policyFileKindLabel } from "@/lib/policy-files"
-import { additionalFeeFor, slipPolicyParts, weightedFeePct } from "@/lib/calc"
+import {
+  additionalFeeFor,
+  additionalFeePanelText,
+  slipPolicyParts,
+  weightedFeePct,
+} from "@/lib/calc"
 import { addDays } from "@/lib/date"
 import { normalizeCob } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
@@ -86,6 +91,7 @@ function toPolicyRecord(
     share: Number(i.sharePct),
     role: i.position.code === "leader" ? "As Leader" : "As Member",
     additionalFeePct: Number(i.additionalFeePct),
+    additionalFeeIncludeVat: i.additionalFeeIncludeVat,
   }))
   const leader = insurers.find((i) => i.role === "As Leader") ?? insurers[0]
   return {
@@ -112,7 +118,9 @@ function toPolicyRecord(
     includeVat: row.includeVat,
     additionalFee: Number(row.additionalFee),
     additionalFeePct: weightedFeePct(insurers),
-    additionalFeeIncludeVat: row.additionalFeeIncludeVat,
+    // Isian form polis satu asuransi; co-insurance memakai status per asuransi.
+    additionalFeeIncludeVat:
+      insurers.length === 1 ? Boolean(insurers[0].additionalFeeIncludeVat) : false,
     rate: row.rate == null ? null : Number(row.rate),
     premiumBasis: row.premiumBasis == null ? null : Number(row.premiumBasis),
     adminCost: Number(row.adminCost),
@@ -151,6 +159,7 @@ function auditSnapshot(p: PolicyRecord) {
     premium: p.premium,
     brokeragePct: p.brokeragePct,
     additionalFee: p.additionalFee ?? 0,
+    additionalFeePanel: additionalFeePanelText(p.insurers),
     rate: p.rate ?? null,
     premiumBasis: p.premiumBasis ?? null,
     adminCost: p.adminCost ?? 0,
@@ -267,6 +276,7 @@ function insurerRows(input: PolicyInput): SecurityPanelRow[] {
           share: 100,
           role: "As Leader",
           additionalFeePct: input.additionalFeePct ?? 0,
+          additionalFeeIncludeVat: input.additionalFeeIncludeVat ?? false,
         },
       ]
 }
@@ -297,7 +307,6 @@ async function policyData(tx: Tx, input: PolicyInput) {
     // Nominal = premi × fee (%) per asuransi (Harry, 12 November 2026), jadi
     // ikut berubah bersama premi, termasuk premi negatif pada pembatalan.
     additionalFee: additionalFeeFor(premium, insurerRows(input)),
-    additionalFeeIncludeVat: input.additionalFeeIncludeVat ?? false,
     // Rate dan dasar premi untuk endorsement manual; admin cost dan stamp duty
     // untuk endorsement dan pembatalan.
     rate: input.type === "Endorsement" ? (input.rate ?? null) : null,
@@ -483,6 +492,7 @@ async function writeInsurers(tx: Tx, policyId: string, input: PolicyInput) {
         sharePct: row.share,
         positionId,
         additionalFeePct: row.additionalFeePct ?? 0,
+        additionalFeeIncludeVat: row.additionalFeeIncludeVat ?? false,
       },
     })
   }

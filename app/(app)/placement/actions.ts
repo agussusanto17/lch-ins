@@ -265,6 +265,8 @@ const securityPanelRowSchema = z.object({
     .min(0, "Additional fee tidak boleh negatif")
     .max(100, "Additional fee maksimal 100%")
     .optional(),
+  // Fee asuransi ini sudah termasuk PPN 2,2% (Harry, 12 November 2026).
+  additionalFeeIncludeVat: z.boolean().optional(),
 })
 
 const placingSlipSchema = z.object({
@@ -414,7 +416,6 @@ const placingSlipSchema = z.object({
   stampDuty: z.coerce.number().optional(),
   brokeragePct: z.coerce.number().optional(),
   includeVat: z.boolean().optional(),
-  additionalFeeIncludeVat: z.boolean().optional(),
   subjectivity: z.string().nullish(),
   closingInstruction: z.string().nullish(),
   coverNoteRemarks: z.string().nullish(),

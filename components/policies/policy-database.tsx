@@ -98,6 +98,14 @@ type FormState = {
   preset?: Partial<Policy>
 }
 
+/** Status PPN additional fee untuk export: Ya, Tidak, atau Sebagian. */
+function feeVatLabel(insurers: Policy["insurers"]) {
+  const withFee = insurers.filter((r) => (r.additionalFeePct ?? 0) > 0)
+  const included = withFee.filter((r) => r.additionalFeeIncludeVat).length
+  if (!withFee.length || !included) return "Tidak"
+  return included === withFee.length ? "Ya" : "Sebagian"
+}
+
 export function PolicyDatabase({
   initialPolicies,
   clientOptions,
@@ -343,7 +351,8 @@ export function PolicyDatabase({
         value: (p) => p.additionalFee ?? 0,
         type: "money",
       },
-      { header: "Fee incl. VAT", value: (p) => (p.additionalFeeIncludeVat ? "Ya" : "Tidak") },
+      // Status PPN fee per asuransi: Sebagian kalau berbeda antar asuransi.
+      { header: "Fee incl. VAT", value: (p) => feeVatLabel(p.insurers) },
       { header: "Status", value: (p) => policyStatus(p, today) },
       { header: "Lokasi Risiko", value: (p) => p.riskLocation, width: 40 },
       { header: "Remarks", value: (p) => p.remarks ?? "", width: 40 },
