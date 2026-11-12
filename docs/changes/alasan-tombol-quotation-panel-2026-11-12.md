@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `fix/alasan-tombol-quotation-panel`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#233](https://github.com/agussusanto17/lch-ins/pull/233)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
