@@ -24,27 +24,27 @@ test("the endorsement number has two digits, as in EDM 01", () => {
   assert.equal(endorsementNo(null), "—")
 })
 
-test("the opening sentence follows the EDM 01 and CANCELLATION wording", () => {
+test("the opening sentence is English, structured like the EDM 01 and CANCELLATION samples", () => {
   assert.equal(
     endorsementOpening("Endorsement", "2026-08-18"),
-    "Dengan ini dicatat dan disetujui bahwa terhitung sejak tanggal 18 Agustus 2026, pada polis tersebut di atas diadakan perubahan sebagai berikut :"
+    "It is hereby noted and agreed that with effect from 18 August 2026, the above-mentioned policy is amended as follows:"
   )
   assert.equal(
     endorsementOpening("Cancellation", "2026-05-22"),
-    "Dengan ini dicatat dan disetujui bahwa terhitung sejak tanggal 22 Mei 2026 :"
+    "It is hereby noted and agreed that with effect from 22 May 2026:"
   )
 })
 
 test("the change text comes from Remarks; a cancellation without remarks still says cancelled", () => {
   assert.equal(endorsementBody("Endorsement", "  Perubahan harga pertanggungan  "), "Perubahan harga pertanggungan")
   assert.equal(endorsementBody("Endorsement", null), "")
-  assert.equal(endorsementBody("Cancellation", ""), "Polis ini DIBATALKAN.")
+  assert.equal(endorsementBody("Cancellation", ""), "This policy is CANCELLED.")
 })
 
 test("premium rows name additional and return premium", () => {
-  assert.equal(premiumAdjustmentLabel(5_000).id, "Premi Tambahan")
-  assert.equal(premiumAdjustmentLabel(-387_650).en, "Return Premium")
-  assert.equal(premiumAdjustmentLabel(0).id, "Penyesuaian Premi")
+  assert.equal(premiumAdjustmentLabel(5_000), "Additional Premium")
+  assert.equal(premiumAdjustmentLabel(-387_650), "Return Premium")
+  assert.equal(premiumAdjustmentLabel(0), "Premium Adjustment")
 })
 
 test("a negative amount prints in brackets, as in the EDM premium calculation", () => {

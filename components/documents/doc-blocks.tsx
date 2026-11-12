@@ -1832,20 +1832,21 @@ export function SignatureGrid({
   confirmationTitle,
   confirmationParty,
   company = "PT. LCH Insurance Brokers",
+  preparedBy = "Disiapkan oleh / Prepared by,",
 }: {
   place: string
   confirmationTitle?: string
   confirmationParty?: string
   /** Nama broker penanda tangan, mengikuti kop dokumen. */
   company?: string
+  /** Label di atas tanda tangan; dokumen berbahasa Inggris cukup "Prepared by,". */
+  preparedBy?: string
 }) {
   return (
     <div className="avoid-break mt-10 grid grid-cols-1 gap-8 text-[13px] sm:grid-cols-2">
       <div>
         <p className="mb-1">{place}</p>
-        <p className="mb-14 text-muted-foreground">
-          Disiapkan oleh / Prepared by,
-        </p>
+        <p className="mb-14 text-muted-foreground">{preparedBy}</p>
         <p className="border-t pt-1 font-bold">{company}</p>
         <p className="text-xs text-muted-foreground">Authorized Signatory</p>
       </div>

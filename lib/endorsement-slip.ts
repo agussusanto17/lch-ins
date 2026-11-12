@@ -5,7 +5,7 @@
  */
 
 import type { ChangeSlipLock, PolicyType } from "@/lib/data/types"
-import { dateLong, moneyCents } from "@/lib/format"
+import { dateEn, moneyCents } from "@/lib/format"
 
 /**
  * Judul dokumen: ENDORSEMENT SLIP, atau CANCELLATION SLIP untuk pembatalan
@@ -64,29 +64,37 @@ export function endorsementNo(seq: number | null | undefined) {
 }
 
 /**
- * Kalimat pembuka perubahan. Endorsement menyebut "perubahan sebagai
- * berikut", pembatalan hanya tanggal efektifnya, seperti di kedua contoh.
+ * Kalimat pembuka perubahan, dalam bahasa Inggris: endorsement dan
+ * cancellation slip cukup satu bahasa (Harry, 12 November 2026). Strukturnya
+ * tetap seperti kedua contoh asuransi: endorsement menyebut "amended as
+ * follows", pembatalan hanya tanggal efektifnya.
  */
 export function endorsementOpening(type: PolicyType, effectiveDate: string) {
-  const since = `Dengan ini dicatat dan disetujui bahwa terhitung sejak tanggal ${dateLong(effectiveDate)}`
+  const since = `It is hereby noted and agreed that with effect from ${dateEn(effectiveDate)}`
   return type === "Cancellation"
-    ? `${since} :`
-    : `${since}, pada polis tersebut di atas diadakan perubahan sebagai berikut :`
+    ? `${since}:`
+    : `${since}, the above-mentioned policy is amended as follows:`
 }
+
+/** Penutup isi perubahan di endorsement dan cancellation slip. */
+export const TERMS_UNCHANGED = "All other terms and conditions remain unchanged."
 
 /** Isi perubahan dari Remarks; pembatalan tanpa remarks tetap tertulis dibatalkan. */
 export function endorsementBody(type: PolicyType, remarks: string | null | undefined) {
   const text = remarks?.trim()
   if (text) return text
-  return type === "Cancellation" ? "Polis ini DIBATALKAN." : ""
+  return type === "Cancellation" ? "This policy is CANCELLED." : ""
 }
 
-/** Label baris premi: tambahan premi, pengembalian premi (negatif), atau nihil. */
+/**
+ * Label baris premi: premi tambahan, refund premi (negatif), atau nihil.
+ * Istilah Harry "premi tambahan" dan "refund premi" (11 November 2026),
+ * dicetak dengan istilah asuransi berbahasa Inggris.
+ */
 export function premiumAdjustmentLabel(amount: number) {
-  if (amount > 0) return { id: "Premi Tambahan", en: "Additional Premium" }
-  // Istilah Harry: premi tambahan atau refund premi (11 November 2026).
-  if (amount < 0) return { id: "Refund Premi", en: "Return Premium" }
-  return { id: "Penyesuaian Premi", en: "Premium Adjustment" }
+  if (amount > 0) return "Additional Premium"
+  if (amount < 0) return "Return Premium"
+  return "Premium Adjustment"
 }
 
 /** Nilai bertanda seperti contoh EDM: pengurangan ditulis dalam kurung. */
