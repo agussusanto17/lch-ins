@@ -27,7 +27,13 @@ export default async function PoliciesPage() {
           initialPolicies={policies}
           clientOptions={clientOptions}
           formOptions={formOptions}
-          slips={slips.filter((s) => s.status === "Quoted" || s.status === "Closed")}
+          // Polis baru hanya dari placing slip; endorsement dan cancellation slip
+          // tercatat sendiri saat Closed.
+          slips={slips.filter(
+            (s) =>
+              (s.status === "Quoted" || s.status === "Closed") &&
+              (!s.kind || s.kind === "Placing")
+          )}
           claimCounts={claimCounts}
         />
       </FormOptionsBoundary>

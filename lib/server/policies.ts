@@ -266,11 +266,14 @@ async function policyData(tx: Tx, input: PolicyInput) {
     premium: endorsementPremium(input) ?? input.premium,
     brokeragePct: input.brokeragePct,
     additionalFee: input.additionalFee ?? 0,
-    // Rate, admin cost, dan stamp duty hanya untuk endorsement.
+    // Rate dan dasar premi untuk endorsement manual; admin cost dan stamp duty
+    // untuk endorsement dan pembatalan.
     rate: input.type === "Endorsement" ? (input.rate ?? null) : null,
     premiumBasis: input.type === "Endorsement" ? (input.premiumBasis ?? null) : null,
-    adminCost: input.type === "Endorsement" ? (input.adminCost ?? 0) : 0,
-    stampDuty: input.type === "Endorsement" ? (input.stampDuty ?? 0) : 0,
+    adminCost:
+      input.type === "Endorsement" || input.type === "Cancellation" ? (input.adminCost ?? 0) : 0,
+    stampDuty:
+      input.type === "Endorsement" || input.type === "Cancellation" ? (input.stampDuty ?? 0) : 0,
     riskLocation: input.riskLocation.trim() || null,
     cobOjkClassId: await findCobOjkClassId(tx, input.cobOjkClassId),
     placementLocationId: await findPlacementLocationId(tx, input.placementLocationId),
@@ -375,6 +378,8 @@ async function checkedSlipPart(
   }
   const slip = await getPlacingSlipById(slipId)
   if (!slip) throw new Error("Placing slip tidak ditemukan.")
+  // Endorsement dan cancellation slip mencatat satu record untuk polis induknya.
+  if (slip.kind && slip.kind !== "Placing") return null
   // Slip open cover menerbitkan satu polis per deklarasi (Harry, 6 November 2026).
   if (usesOpenCover(slip)) return null
   const parts = slipPolicyParts(slip)

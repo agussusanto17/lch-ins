@@ -86,3 +86,50 @@ export async function getEndorsementSlipData(id: string): Promise<EndorsementSli
     recordedDate: todayIso(recorded?.createdAt ?? new Date()),
   }
 }
+
+export interface EndorsementSlipPrint {
+  slip: PlacingSlipRecord
+  address: string
+  deductibles: DeductibleGroupText[]
+  /** Nomor lampiran: urutan endorsement di polis induk. */
+  attachmentSeq: number | null
+  /** Record Policy Database dari slip ini, kalau slip sudah Closed. */
+  recordedPolicyNo: string | null
+}
+
+/**
+ * Data cetak endorsement atau cancellation slip dari Placement (Harry,
+ * 11 November 2026). Nomor lampiran memakai urutan record yang sudah tercatat,
+ * atau nomor sesudah endorsement terakhir polis induk kalau belum tercatat.
+ */
+export async function getEndorsementSlipPrint(id: string): Promise<EndorsementSlipPrint | null> {
+  const slip = await getPlacingSlipById(id)
+  if (!slip || !slip.kind || slip.kind === "Placing") return null
+  const client = slip.clientId ? await getClientById(slip.clientId) : null
+  const [recorded, siblings] = await Promise.all([
+    prisma.policy.findFirst({
+      where: { placingSlipId: slip.dbId },
+      select: { id: true, policyNo: true, endorsementSeq: true },
+    }),
+    slip.parentPolicyId
+      ? prisma.policy.findMany({
+          where: { parentPolicyId: slip.parentPolicyId },
+          select: { id: true, endorsementSeq: true, policyType: { select: { code: true } } },
+        })
+      : Promise.resolve([]),
+  ])
+  const nextSeq =
+    Math.max(
+      0,
+      ...siblings
+        .filter((s) => s.id !== recorded?.id && s.policyType.code === POLICY_TYPE_CODES.Endorsement)
+        .map((s) => s.endorsementSeq ?? 0)
+    ) + 1
+  return {
+    slip,
+    address: slip.correspondenceAddress?.trim() || mailingAddress(client),
+    deductibles: deductibleGroups(slip, null),
+    attachmentSeq: recorded?.endorsementSeq ?? (slip.parentPolicyId ? nextSeq : null),
+    recordedPolicyNo: recorded?.policyNo ?? null,
+  }
+}
