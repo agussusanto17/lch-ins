@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `feat/vat-fee-per-asuransi`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#235](https://github.com/agussusanto17/lch-ins/pull/235)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
