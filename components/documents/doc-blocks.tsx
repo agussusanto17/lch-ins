@@ -27,7 +27,7 @@ import {
 
 export { isParEqvetSlip } from "@/lib/calc"
 import { sanitizeHtml } from "@/lib/sanitize"
-import { deductibleGroups } from "@/lib/slip-deductibles"
+import { deductibleGroups, deductiblesByUnit } from "@/lib/slip-deductibles"
 import {
   clauseTitleCase,
   constructionClassLabel,
@@ -630,21 +630,36 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
       <SectionHeading>DEDUCTIBLE &amp; CONDITIONS</SectionHeading>
       <div className="flex flex-col gap-3 text-[13px]">
         {intro ? <p className="whitespace-pre-line text-justify">{intro}</p> : null}
-        {groups.map((g) => (
-          <div key={g.heading ?? "deductible"}>
-            {g.heading ? (
-              <p className="mb-1.5 font-semibold">{g.heading}</p>
-            ) : null}
-            <ul className="flex flex-col gap-1.5 text-[12.5px]">
-              {g.texts.map((text) => (
-                <li key={text} className="flex gap-2 text-justify">
-                  <span className="shrink-0 select-none" aria-hidden>-</span>
-                  <span className="flex-1 min-w-0 whitespace-pre-line text-justify">{text}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        {/*
+         * Deductible yang berbeda per lokasi, kendaraan, atau objek dicetak
+         * per unit dengan judul "Location 1" dst. dan kelompoknya menjorok
+         * di bawahnya (Agus, 13 November 2026).
+         */}
+        {deductiblesByUnit(groups).map((block) => {
+          const list = block.groups.map((g) => (
+            <div key={g.heading ?? "deductible"}>
+              {g.heading ? (
+                <p className="mb-1.5 font-semibold">{g.heading}</p>
+              ) : null}
+              <ul className="flex flex-col gap-1.5 text-[12.5px]">
+                {g.texts.map((text) => (
+                  <li key={text} className="flex gap-2 text-justify">
+                    <span className="shrink-0 select-none" aria-hidden>-</span>
+                    <span className="flex-1 min-w-0 whitespace-pre-line text-justify">{text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+          return block.unit ? (
+            <div key={block.unit} className="avoid-break flex flex-col gap-1.5">
+              <p className="font-bold">{block.unit}</p>
+              <div className="flex flex-col gap-2 pl-4">{list}</div>
+            </div>
+          ) : (
+            list
+          )
+        })}
         {slip.specialConditions ? (
           <div>
             <p className="font-semibold">Special Conditions</p>

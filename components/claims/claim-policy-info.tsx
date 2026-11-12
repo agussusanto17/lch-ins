@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { getClaimPolicyInfoAction } from "@/app/(app)/claims/actions"
 import { ToneBadge } from "@/components/shared/status-badge"
+import { deductiblesByUnit } from "@/lib/deductible-text"
 import { dateShort } from "@/lib/format"
 import type { ClaimPolicyInfo } from "@/lib/server/claims"
 
@@ -87,23 +88,34 @@ export function ClaimPolicyInfoPanel({
           <p className="whitespace-pre-line text-foreground">{info.deductibleIntro}</p>
         ) : null}
         {info.deductibles.length ? (
-          info.deductibles.map((group) => (
-            <div key={group.heading ?? "deductible"} className="flex flex-col gap-1">
-              {group.heading ? (
-                <p className="font-medium text-foreground">{group.heading}</p>
-              ) : null}
-              <ul className="flex flex-col gap-1 text-foreground">
-                {group.texts.map((text) => (
-                  <li key={text} className="flex gap-2">
-                    <span className="shrink-0 select-none" aria-hidden>
-                      -
-                    </span>
-                    <span className="min-w-0 flex-1 whitespace-pre-line">{text}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))
+          deductiblesByUnit(info.deductibles).map((block) => {
+            const list = block.groups.map((group) => (
+              <div key={group.heading ?? "deductible"} className="flex flex-col gap-1">
+                {group.heading ? (
+                  <p className="font-medium text-foreground">{group.heading}</p>
+                ) : null}
+                <ul className="flex flex-col gap-1 text-foreground">
+                  {group.texts.map((text) => (
+                    <li key={text} className="flex gap-2">
+                      <span className="shrink-0 select-none" aria-hidden>
+                        -
+                      </span>
+                      <span className="min-w-0 flex-1 whitespace-pre-line">{text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+            // Deductible per lokasi, kendaraan, atau objek (13 November 2026).
+            return block.unit ? (
+              <div key={block.unit} className="flex flex-col gap-1">
+                <p className="font-semibold text-foreground">{block.unit}</p>
+                <div className="flex flex-col gap-1.5 border-l pl-3">{list}</div>
+              </div>
+            ) : (
+              list
+            )
+          })
         ) : info.deductibleIntro ? null : (
           <p className="text-muted-foreground">
             {info.fromSlip

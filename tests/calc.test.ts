@@ -192,21 +192,30 @@ test("rate BI dihitung per lokasi, hanya untuk lokasi dengan Section 2", () => {
   assert.equal(biPar(two.rateLines)?.premium, 798_500)
 })
 
-test("hapus lokasi pertama memindahkan deductible ke lokasi berikutnya", () => {
+test("deductible per lokasi: lokasi baru menyalin lokasi 1, hapus lokasi 1 tidak memindahkan deductible-nya", () => {
   let slip = twoLocationSlip()
-  const first = locationGroups(slip)[0]
+  const [one, two] = locationGroups(slip)
+  const flexas = (lines: RateLine[]) => lines.find((l) => l.label === "FLEXAS")!
   slip = recalcSlip({
     ...slip,
     rateLines: slip.rateLines.map((l) =>
-      l.id === first.rateLines[0].id ? { ...l, deductibles: ["Nil (for Location 1)"] } : l
+      l.id === flexas(one.rateLines).id
+        ? { ...l, deductibles: ["Nil"] }
+        : l.id === flexas(two.rateLines).id
+          ? { ...l, deductibles: ["IDR 10.000.000 any one loss"] }
+          : l
     ),
   })
-  slip = recalcSlip({ ...slip, ...removeLocationPatch(slip, first.location.id) })
+  const added = recalcSlip({ ...slip, ...addLocationPatch(slip) })
+  assert.deepEqual(flexas(locationGroups(added)[2].rateLines).deductibles, ["Nil"])
+  assert.equal(totalPayable(added), totalPayable(slip))
+
+  slip = recalcSlip({ ...slip, ...removeLocationPatch(slip, one.location.id) })
   assert.equal(slip.locations?.length, 1)
   assert.equal(slip.riskLocation, "Jl. Contoh Raya No. 2,\nMakassar")
   assert.deepEqual(
     deductibleRows(slip).find((r) => r.cover === "FLEXAS")?.deductibles,
-    ["Nil (for Location 1)"]
+    ["IDR 10.000.000 any one loss"]
   )
 })
 
@@ -281,19 +290,49 @@ test("kendaraan baru mendapat baris rate, TPL, dan PA sendiri", () => {
   assert.equal(JSON.stringify(recalcSlip(added)), JSON.stringify(added))
 })
 
-test("hapus kendaraan pertama membuang barisnya dan memindahkan deductible", () => {
+test("hapus kendaraan pertama membuang baris dan deductible-nya; kendaraan lain memakai deductible sendiri", () => {
   let slip = twoVehicleSlip()
-  const casco = itemGroups(slip)[0].rateLines[0]
+  const [one, two] = itemGroups(slip)
   slip = recalcSlip({
     ...slip,
     rateLines: slip.rateLines.map((l) =>
-      l.id === casco.id ? { ...l, deductibles: ["IDR 500.000 any one accident"] } : l
+      l.id === one.rateLines[0].id
+        ? { ...l, deductibles: ["IDR 500.000 any one accident"] }
+        : l.id === two.rateLines[0].id
+          ? { ...l, deductibles: ["IDR 1.000.000 any one accident"] }
+          : l
     ),
   })
   slip = recalcSlip({ ...slip, interestItems: slip.interestItems.slice(1) })
   assert.equal(slip.rateLines.length, 8)
   assert.equal(totalPremium(slip), 15_290_000)
-  assert.deepEqual(deductibleRows(slip)[0].deductibles, ["IDR 500.000 any one accident"])
+  assert.deepEqual(deductibleRows(slip)[0].deductibles, ["IDR 1.000.000 any one accident"])
+})
+
+test("kendaraan baru menyalin deductible kendaraan pertama, termasuk PA dan TPL", () => {
+  let slip = twoVehicleSlip()
+  const one = itemGroups(slip)[0]
+  slip = recalcSlip({
+    ...slip,
+    rateLines: slip.rateLines.map((l) =>
+      l.id === one.rateLines[0].id ? { ...l, deductibles: ["IDR 500.000 any one accident"] } : l
+    ),
+    paLines: slip.paLines.map((l) =>
+      l.id === one.paLines[0].id ? { ...l, deductibles: ["PA: Nil"] } : l
+    ),
+  })
+  const added = recalcSlip({
+    ...slip,
+    interestItems: [...slip.interestItems, { id: "v3", description: "", amount: 100_000_000 }],
+  })
+  const three = itemGroups(added)[2]
+  assert.deepEqual(three.rateLines.map((l) => l.deductibles ?? []), [
+    ["IDR 500.000 any one accident"],
+    ...three.rateLines.slice(1).map(() => []),
+  ])
+  assert.deepEqual(three.paLines.map((l) => l.deductibles ?? []), [["PA: Nil"], []])
+  assert.deepEqual(three.tplLines.map((l) => l.deductibles ?? []), [[], []])
+  assert.equal(JSON.stringify(recalcSlip(added)), JSON.stringify(added))
 })
 
 test("baris slip lama tanpa kendaraan ikut kendaraan pertama", () => {

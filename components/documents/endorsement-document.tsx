@@ -26,7 +26,7 @@ import {
 } from "@/lib/endorsement-premium"
 import { dateEn, moneyCents, num } from "@/lib/format"
 import type { EndorsementSlipData } from "@/lib/server/endorsement-slip"
-import type { DeductibleGroupText } from "@/lib/slip-deductibles"
+import { deductiblesByUnit, type DeductibleGroupText } from "@/lib/deductible-text"
 
 export type Row = { label: string; value: React.ReactNode }
 
@@ -51,16 +51,29 @@ export function DetailTable({ rows }: { rows: Row[] }) {
 }
 
 export function Deductibles({ groups }: { groups: DeductibleGroupText[] }) {
+  const list = (items: DeductibleGroupText[]) =>
+    items.map((g, i) => (
+      <span key={i} className="flex flex-col">
+        {g.heading ? <span className="font-medium">{g.heading}</span> : null}
+        {g.texts.map((t, j) => (
+          <span key={j}>{t}</span>
+        ))}
+      </span>
+    ))
+  // Deductible per lokasi, kendaraan, atau objek: judul unit sekali, lalu
+  // kelompoknya menjorok (13 November 2026).
   return (
     <span className="flex flex-col gap-1">
-      {groups.map((g, i) => (
-        <span key={i} className="flex flex-col">
-          {g.heading ? <span className="font-medium">{g.heading}</span> : null}
-          {g.texts.map((t, j) => (
-            <span key={j}>{t}</span>
-          ))}
-        </span>
-      ))}
+      {deductiblesByUnit(groups).map((block, i) =>
+        block.unit ? (
+          <span key={i} className="flex flex-col gap-0.5">
+            <span className="font-semibold">{block.unit}</span>
+            <span className="flex flex-col gap-1 pl-3">{list(block.groups)}</span>
+          </span>
+        ) : (
+          list(block.groups)
+        )
+      )}
     </span>
   )
 }

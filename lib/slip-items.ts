@@ -217,10 +217,40 @@ function standardLines(
 }
 
 /**
+ * Deductible baris objek baru, disalin dari objek berpremi pertama supaya
+ * kendaraan atau objek yang ditambah memakai deductible yang sama (bisa
+ * diubah per objek). Baris rate dicocokkan dengan label dan urutannya; TPL
+ * dan PA menyimpan deductible di baris pertama tabelnya.
+ */
+function copyDeductibles(
+  source: Pick<PlacingSlip, LineGroup>,
+  lines: Pick<PlacingSlip, LineGroup>
+): Pick<PlacingSlip, LineGroup> {
+  const withList = (line: RateLine, deductibles?: string[]) =>
+    deductibles?.length ? { ...line, deductibles: [...deductibles] } : line
+  const seen = new Map<string, number>()
+  const nth = (list: RateLine[], label: string, n: number) =>
+    list.filter((l) => l.label === label)[n]
+  return {
+    rateLines: lines.rateLines.map((line) => {
+      const n = seen.get(line.label) ?? 0
+      seen.set(line.label, n + 1)
+      return withList(line, nth(source.rateLines, line.label, n)?.deductibles)
+    }),
+    tplLines: lines.tplLines.map((line, i) =>
+      i === 0 ? withList(line, source.tplLines[0]?.deductibles) : line
+    ),
+    paLines: lines.paLines.map((line, i) =>
+      i === 0 ? withList(line, source.paLines[0]?.deductibles) : line
+    ),
+  }
+}
+
+/**
  * Setiap baris rate, TPL, dan PA menunjuk baris Interest-nya, dan setiap
- * objek punya baris rate sendiri. Baris objek yang dihapus ikut hilang;
- * deductible-nya pindah ke objek pertama, tempat deductible per cover
- * disimpan. Property tidak memakai ini.
+ * objek punya baris rate sendiri. Baris objek yang dihapus ikut hilang,
+ * termasuk deductible-nya: sejak 13 November 2026 tiap objek punya
+ * deductible sendiri. Property tidak memakai ini.
  */
 export function withItemRates(slip: PlacingSlip): PlacingSlip {
   if (!usesItemRates(slip.cob) || !slip.interestItems.length) return slip
@@ -229,23 +259,10 @@ export function withItemRates(slip: PlacingSlip): PlacingSlip {
   const next = { ...slip }
 
   for (const key of LINE_GROUPS) {
-    const carried = new Map<string, string[]>()
-    const kept: RateLine[] = []
-    for (const line of slip[key]) {
+    next[key] = slip[key].flatMap((line) => {
       const itemId = owner(line.vehicleId)
-      if (!itemId) {
-        if (line.deductibles?.length) carried.set(line.label, line.deductibles)
-        continue
-      }
-      kept.push(line.vehicleId === itemId ? line : { ...line, vehicleId: itemId })
-    }
-    next[key] = kept.map((line) => {
-      const deductibles = carried.get(line.label)
-      if (!deductibles || line.vehicleId !== first || line.deductibles?.length) {
-        return line
-      }
-      carried.delete(line.label)
-      return { ...line, deductibles }
+      if (!itemId) return []
+      return line.vehicleId === itemId ? [line] : [{ ...line, vehicleId: itemId }]
     })
   }
 
@@ -254,19 +271,38 @@ export function withItemRates(slip: PlacingSlip): PlacingSlip {
     .map((l) => l.label)
   const defaultLabels =
     slip.cob === "Motor Vehicle" ? MOTOR_RATE_LINES : [GENERIC_RATE_LABEL]
+  // Sumber deductible objek baru: objek berpremi pertama yang sudah punya baris.
+  const sourceItem = slip.interestItems.find(
+    (item) =>
+      !isLimitOnlyItem(slip.cob, item) &&
+      next.rateLines.some((l) => l.vehicleId === item.id)
+  )
+  const mine = (itemId: string | undefined) => (l: RateLine) =>
+    l.vehicleId === itemId
+  const source: Pick<PlacingSlip, LineGroup> = {
+    rateLines: next.rateLines.filter(mine(sourceItem?.id)),
+    tplLines: next.tplLines.filter(mine(sourceItem?.id)),
+    paLines: next.paLines.filter(mine(sourceItem?.id)),
+  }
   for (const item of slip.interestItems) {
     if (next.rateLines.some((l) => l.vehicleId === item.id)) continue
     // Objek baru memakai cover objek pertama, kecuali objek limit saja
     // (misalnya limit TPL Section 2) yang tidak berpremi: cukup satu baris.
-    const lines = standardLines(
+    const limitOnly = isLimitOnlyItem(slip.cob, item)
+    const standard = standardLines(
       slip.cob,
       item.id,
-      isLimitOnlyItem(slip.cob, item)
+      limitOnly
         ? [GENERIC_RATE_LABEL]
         : firstLabels.length
           ? firstLabels
           : defaultLabels
     )
+    // Slip ber-section (CAR, EAR) menyimpan deductible per section di objek
+    // pertama section itu, jadi objek baru tidak menyalin apa pun.
+    const sectioned = slip.usesSections && allowsFlatPremium(slip.cob)
+    const lines =
+      limitOnly || sectioned ? standard : copyDeductibles(source, standard)
     for (const key of LINE_GROUPS) next[key] = [...next[key], ...lines[key]]
   }
   return next
