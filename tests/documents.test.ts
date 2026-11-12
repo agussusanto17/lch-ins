@@ -291,3 +291,39 @@ test("InterestBlock and ExclusionsBlock format items with text-justify and Hangi
   )
   assert.ok(exclusionsBlock.includes('className="flex-1 min-w-0 text-justify"'))
 })
+
+test("groupNumberedItems keeps location name and address under each numbered risk location", async () => {
+  const { groupNumberedItems } = await import("../lib/document-format.js")
+  const text = [
+    "1) PT MARGAMAS INDAH DEVELOPMENT and/or Subsidiary as MORTGAGEE",
+    "MALL PANAKKUKANG",
+    "Jl. Boulevard Panakkukang Mas, Kel. Masale, Makasar",
+    "",
+    "2) PT MARGAMAS INDAH DEVELOPMENT QQ PT MYKO INTERNASIONAL HOTEL",
+    "HOTEL MYKO",
+    "Jl. Boulevard Panakkukang Mas, Kel. Masale, Makasar",
+  ].join("\n")
+  assert.deepEqual(groupNumberedItems(text), [
+    {
+      marker: "1)",
+      lines: [
+        "PT MARGAMAS INDAH DEVELOPMENT and/or Subsidiary as MORTGAGEE",
+        "MALL PANAKKUKANG",
+        "Jl. Boulevard Panakkukang Mas, Kel. Masale, Makasar",
+      ],
+    },
+    {
+      marker: "2)",
+      lines: [
+        "PT MARGAMAS INDAH DEVELOPMENT QQ PT MYKO INTERNASIONAL HOTEL",
+        "HOTEL MYKO",
+        "Jl. Boulevard Panakkukang Mas, Kel. Masale, Makasar",
+      ],
+    },
+  ])
+
+  // Alamat tanpa nomor tetap satu kelompok tanpa marker.
+  assert.deepEqual(groupNumberedItems("Grand Mall\nJl. Sudirman 1"), [
+    { marker: null, lines: ["Grand Mall", "Jl. Sudirman 1"] },
+  ])
+})
