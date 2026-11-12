@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `fix/garis-endorsement-slip`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#227](https://github.com/agussusanto17/lch-ins/pull/227)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
