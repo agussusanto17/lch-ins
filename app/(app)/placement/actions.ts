@@ -259,6 +259,12 @@ const securityPanelRowSchema = z.object({
   insurer: z.string(),
   share: z.coerce.number(),
   role: z.enum(["As Leader", "As Member"]),
+  // Additional fee (%) per asuransi, diisi saat closing (Harry, 12 November 2026).
+  additionalFeePct: z.coerce
+    .number()
+    .min(0, "Additional fee tidak boleh negatif")
+    .max(100, "Additional fee maksimal 100%")
+    .optional(),
 })
 
 const placingSlipSchema = z.object({
@@ -409,10 +415,6 @@ const placingSlipSchema = z.object({
   brokeragePct: z.coerce.number().optional(),
   includeVat: z.boolean().optional(),
   additionalFeeIncludeVat: z.boolean().optional(),
-  additionalFee: z.coerce
-    .number()
-    .min(0, "Additional fee tidak boleh negatif")
-    .nullish(),
   subjectivity: z.string().nullish(),
   closingInstruction: z.string().nullish(),
   coverNoteRemarks: z.string().nullish(),

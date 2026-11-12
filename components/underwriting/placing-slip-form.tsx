@@ -114,6 +114,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Toggle } from "@/components/ui/toggle"
 import {
+  additionalFeeAmount,
   additionalFeeVatAmount,
   brokerageAmount,
   brokerageLimitIssue,
@@ -122,6 +123,7 @@ import {
   calculateParEqvet,
   discountAmount,
   effectiveBrokeragePct,
+  insurerAdditionalFee,
   isParEqvetSlip,
   parEqvetPolicyCharge,
   sumPercent,
@@ -403,6 +405,9 @@ function SlipEditor({
 
   const panel = slip.securityPanel ?? []
   const multiInsurer = panel.filter((r) => r.insurer).length > 1
+  // Additional fee (%) per asuransi diisi saat closing (Harry, 12 November
+  // 2026), hanya untuk COB yang punya additional fee.
+  const showFee = usesAdditionalFee(slip.cob) && (isClosing || slip.status === "Closed")
   const totalShare = sumPercent(panel.map((r) => r.share))
   const pIssues = panelIssues(panel)
   const panelValid = pIssues.length === 0
@@ -2203,60 +2208,12 @@ function SlipEditor({
                 ) : null}
               </div>
               {usesAdditionalFee(slip.cob) ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="additional-fee">
-                      Additional Fee ({slip.currency})
-                    </FieldLabel>
-                    <NumberInput
-                      id="additional-fee"
-                      preset="money"
-                      min={0}
-                      value={slip.additionalFee || null}
-                      onValueChange={(v) => set({ additionalFee: v ?? 0 })}
-                    />
-                    <FieldDescription>
-                      Kosongkan kalau tidak ada. Hanya untuk produksi, tidak
-                      dicetak di slip.
-                    </FieldDescription>
-                  </Field>
-                  {/* Include/exclude PPN seperti brokerage (permintaan LCH, 10 November 2026). */}
-                  <Field orientation="horizontal" className="md:mt-8 md:self-start">
-                    <Switch
-                      id="fee-vat"
-                      checked={slip.additionalFeeIncludeVat ?? false}
-                      onCheckedChange={(v) =>
-                        set({ additionalFeeIncludeVat: Boolean(v) })
-                      }
-                    />
-                    <FieldLabel htmlFor="fee-vat" className="font-normal">
-                      Include VAT (PPN 2,2%)
-                    </FieldLabel>
-                  </Field>
-                  {slip.additionalFeeIncludeVat && (slip.additionalFee ?? 0) > 0 ? (
-                    <div className="grid grid-cols-1 gap-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2 md:col-span-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          PPN 2,2% (termasuk)
-                        </span>
-                        <span className="tabular font-semibold">
-                          {money(additionalFeeVatAmount(slip), slip.currency)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          Fee sebelum PPN
-                        </span>
-                        <span className="tabular font-semibold">
-                          {money(
-                            (slip.additionalFee ?? 0) - additionalFeeVatAmount(slip),
-                            slip.currency
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
+                // Harry, 12 November 2026: additional fee berupa persen, diisi
+                // per asuransi saat closing.
+                <p className="text-sm text-muted-foreground">
+                  Additional fee diisi dalam persen per asuransi di bagian
+                  Security (Panel Asuransi) saat closing.
+                </p>
               ) : null}
             </div>
           </SectionCard>
@@ -2296,9 +2253,17 @@ function SlipEditor({
                 }
               >
                 <div className="flex flex-col gap-2">
-                  <div className="hidden gap-3 text-xs text-muted-foreground lg:grid lg:grid-cols-[minmax(0,1fr)_120px_150px_40px]">
+                  <div
+                    className={cn(
+                      "hidden gap-3 text-xs text-muted-foreground lg:grid",
+                      showFee
+                        ? "lg:grid-cols-[minmax(0,1fr)_110px_170px_150px_40px]"
+                        : "lg:grid-cols-[minmax(0,1fr)_120px_150px_40px]"
+                    )}
+                  >
                     <span>Perusahaan Asuransi</span>
                     <span>Share (%)</span>
+                    {showFee ? <span>Additional Fee (%)</span> : null}
                     <span>{multiInsurer ? "Peran" : null}</span>
                     <span className="sr-only">Aksi</span>
                   </div>
@@ -2307,7 +2272,10 @@ function SlipEditor({
                     <div
                       key={row.id}
                       className={cn(
-                        "flex flex-col gap-2 rounded-xl border bg-card p-3 lg:grid lg:grid-cols-[minmax(0,1fr)_120px_150px_40px] lg:items-center lg:gap-3 lg:p-0 lg:border-0 lg:bg-transparent",
+                        "flex flex-col gap-2 rounded-xl border bg-card p-3 lg:grid lg:items-center lg:gap-3 lg:p-0 lg:border-0 lg:bg-transparent",
+                        showFee
+                          ? "lg:grid-cols-[minmax(0,1fr)_110px_170px_150px_40px]"
+                          : "lg:grid-cols-[minmax(0,1fr)_120px_150px_40px]",
                         row.insurer && duplicateInsurerNames.has(row.insurer) && "border-destructive/60"
                       )}
                     >
@@ -2334,6 +2302,28 @@ function SlipEditor({
                             patchPanelRow(row.id, { share: val ?? 0 })
                           }
                         />
+
+                        {showFee ? (
+                          <div className="flex flex-col gap-0.5">
+                            <NumberInput
+                              disabled={locked}
+                              preset="percent"
+                              min={0}
+                              max={100}
+                              value={row.additionalFeePct || null}
+                              placeholder="0"
+                              aria-label={`Additional fee ${row.insurer || "insurer"}`}
+                              onValueChange={(val) =>
+                                patchPanelRow(row.id, { additionalFeePct: val ?? 0 })
+                              }
+                            />
+                            {row.additionalFeePct ? (
+                              <span className="tabular text-right text-xs text-muted-foreground">
+                                {money(insurerAdditionalFee(totalPremium(slip), row), slip.currency)}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
 
                         {multiInsurer ? (
                           <Select
@@ -2396,6 +2386,57 @@ function SlipEditor({
                       </p>
                     ) : null}
                   </div>
+
+                  {showFee ? (
+                    <div className="mt-2 flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
+                      {/* Include/exclude PPN seperti brokerage (permintaan LCH, 10 November 2026). */}
+                      <Field orientation="horizontal">
+                        <Switch
+                          id="fee-vat"
+                          disabled={locked}
+                          checked={slip.additionalFeeIncludeVat ?? false}
+                          onCheckedChange={(v) =>
+                            set({ additionalFeeIncludeVat: Boolean(v) })
+                          }
+                        />
+                        <FieldLabel htmlFor="fee-vat" className="font-normal">
+                          Additional fee include VAT (PPN 2,2%)
+                        </FieldLabel>
+                      </Field>
+                      <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
+                        <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-start sm:gap-0.5">
+                          <span className="text-muted-foreground">Total additional fee</span>
+                          <span className="tabular font-semibold">
+                            {money(additionalFeeAmount(slip), slip.currency)}
+                          </span>
+                        </div>
+                        {slip.additionalFeeIncludeVat ? (
+                          <>
+                            <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-start sm:gap-0.5">
+                              <span className="text-muted-foreground">PPN 2,2% (termasuk)</span>
+                              <span className="tabular font-semibold">
+                                {money(additionalFeeVatAmount(slip), slip.currency)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-start sm:gap-0.5">
+                              <span className="text-muted-foreground">Fee sebelum PPN</span>
+                              <span className="tabular font-semibold">
+                                {money(
+                                  additionalFeeAmount(slip) - additionalFeeVatAmount(slip),
+                                  slip.currency
+                                )}
+                              </span>
+                            </div>
+                          </>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Nominal = premi × share × fee (%) tiap asuransi. Hanya
+                        untuk produksi, tidak dicetak di slip; ikut ke polis di
+                        Policy Database.
+                      </p>
+                    </div>
+                  ) : null}
 
                   {!panelValid ? (
                     <ul className="mt-1 flex flex-col gap-1 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">

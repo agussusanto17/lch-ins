@@ -331,11 +331,19 @@ export function PolicyDatabase({
         value: (p) => p.brokeragePct,
         type: "percent",
       },
+      { header: "Brokerage incl. VAT", value: (p) => (p.includeVat ? "Ya" : "Tidak") },
+      // Persen per asuransi tertimbang share; nominal = premi × persen (Harry, 12 November 2026).
+      {
+        header: "Additional Fee (%)",
+        value: (p) => p.additionalFeePct ?? 0,
+        type: "percent",
+      },
       {
         header: "Additional Fee",
         value: (p) => p.additionalFee ?? 0,
         type: "money",
       },
+      { header: "Fee incl. VAT", value: (p) => (p.additionalFeeIncludeVat ? "Ya" : "Tidak") },
       { header: "Status", value: (p) => policyStatus(p, today) },
       { header: "Lokasi Risiko", value: (p) => p.riskLocation, width: 40 },
       { header: "Remarks", value: (p) => p.remarks ?? "", width: 40 },

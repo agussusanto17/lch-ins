@@ -1,15 +1,26 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { emptySlip, switchCob } from "../components/underwriting/slip-model"
-import { additionalFeeVatAmount } from "../lib/calc"
+import { emptySlip, recalc, switchCob } from "../components/underwriting/slip-model"
+import {
+  additionalFeeFor,
+  feeVatInside,
+  insurerAdditionalFee,
+  weightedFeePct,
+} from "../lib/calc"
 import type { PlacingSlip } from "../lib/data/types"
 import { changedSlipFields, policyFieldsFromSlip } from "../lib/policy-from-slip"
 
 const client = { id: "client-1", name: "MANESH NANIK MIRPURI" }
 
 function closedMvSlip(): PlacingSlip {
-  const slip = switchCob(emptySlip(), "Motor Vehicle")
+  const base = switchCob(emptySlip(), "Motor Vehicle")
+  // Premi 1.000.000: kendaraan 100 jt × Comprehensive 1%.
+  const slip = recalc({
+    ...base,
+    interestItems: base.interestItems.map((i) => ({ ...i, amount: 100_000_000 })),
+    rateLines: base.rateLines.map((l) => (l.label === "Comprehensive Casco" ? { ...l, rate: 1 } : l)),
+  })
   return {
     ...slip,
     id: "slip-7",
@@ -21,7 +32,6 @@ function closedMvSlip(): PlacingSlip {
     inceptionDate: "2025-11-24",
     expiryDate: "2026-11-24",
     brokeragePct: 10,
-    additionalFee: 0,
     securityPanel: [
       { id: "a", insurer: "PT Asuransi Multi Artha Guna Tbk", share: 100, role: "As Leader" },
     ],
@@ -36,13 +46,27 @@ test("a revision without slip changes changes nothing on the policy", () => {
   assert.deepEqual(changedSlipFields(fields(slip), fields({ ...slip })), {})
 })
 
-test("an additional fee filled after the CI reaches the policy", () => {
-  // Kasus demo 10 November 2026: CI 007 terbit dengan fee 0, lalu fee diisi.
+test("an additional fee percent filled after the CI reaches the policy", () => {
+  // Kasus demo: CI 007 terbit tanpa fee, lalu fee 15% diisi di panel (Harry,
+  // 12 November 2026: 15 berarti 15%, bukan Rp 15).
   const before = closedMvSlip()
-  const after = { ...before, additionalFee: 150_000 }
-  assert.deepEqual(changedSlipFields(fields(before), fields(after)), {
-    additionalFee: 150_000,
-  })
+  const after = {
+    ...before,
+    securityPanel: before.securityPanel!.map((r) => ({ ...r, additionalFeePct: 15 })),
+  }
+  const changes = changedSlipFields(fields(before), fields(after))
+  assert.deepEqual(Object.keys(changes).sort(), ["additionalFee", "additionalFeePct", "insurers"])
+  assert.equal(changes.additionalFee, 150_000)
+  assert.equal(changes.additionalFeePct, 15)
+  assert.equal(changes.insurers?.[0].additionalFeePct, 15)
+})
+
+test("the policy copies the VAT switches of brokerage and additional fee", () => {
+  const slip = { ...closedMvSlip(), includeVat: true, additionalFeeIncludeVat: true }
+  const f = fields(slip)
+  assert.equal(f.includeVat, true)
+  assert.equal(f.additionalFeeIncludeVat, true)
+  assert.equal(fields(closedMvSlip()).additionalFeeIncludeVat, false)
 })
 
 test("only the slip fields that changed are copied", () => {
@@ -83,18 +107,24 @@ test("a new co-insurer changes the panel but keeps the leader", () => {
   )
 })
 
-test("the EQVET policy ignores the additional fee, which stays on PAR", () => {
-  const before = { ...closedMvSlip(), additionalFee: 0 }
-  const after = { ...before, additionalFee: 50_000 }
-  assert.deepEqual(changedSlipFields(fields(before, "EQVET"), fields(after, "EQVET")), {})
-  assert.deepEqual(changedSlipFields(fields(before, "PAR"), fields(after, "PAR")), {
-    additionalFee: 50_000,
-  })
+test("co-insurance fee uses each insurer's percent on its share of the premium", () => {
+  const rows = [
+    { share: 60, additionalFeePct: 15 },
+    { share: 40, additionalFeePct: 10 },
+  ]
+  assert.equal(weightedFeePct(rows), 13)
+  assert.equal(additionalFeeFor(1_000_000, rows), 130_000)
+  assert.equal(insurerAdditionalFee(1_000_000, rows[0]), 90_000)
+  assert.equal(insurerAdditionalFee(1_000_000, rows[1]), 40_000)
+  assert.equal(additionalFeeFor(1_000_000, [{ share: 100 }]), 0)
+})
+
+test("a refund premium gives a negative fee", () => {
+  assert.equal(additionalFeeFor(-200_000, [{ share: 100, additionalFeePct: 15 }]), -30_000)
 })
 
 test("additional fee VAT uses the brokerage rate of 2.2% when included", () => {
-  assert.equal(additionalFeeVatAmount({ additionalFee: 102_200, additionalFeeIncludeVat: false }), 0)
-  assert.equal(additionalFeeVatAmount({ additionalFee: 102_200, additionalFeeIncludeVat: true }), 2_200)
-  assert.equal(additionalFeeVatAmount({ additionalFee: 0, additionalFeeIncludeVat: true }), 0)
-  assert.equal(additionalFeeVatAmount({ additionalFeeIncludeVat: true }), 0)
+  assert.equal(feeVatInside(102_200, false), 0)
+  assert.equal(feeVatInside(102_200, true), 2_200)
+  assert.equal(feeVatInside(0, true), 0)
 })

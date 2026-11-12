@@ -178,7 +178,6 @@ export interface PlacingSlipInput {
   stampDuty?: number
   brokeragePct?: number
   includeVat?: boolean
-  additionalFee?: number
   additionalFeeIncludeVat?: boolean
   subjectivity?: string | null
   closingInstruction?: string | null
@@ -618,6 +617,7 @@ function toPlacingSlipRecord(
     insurer: sp.insurer.name,
     share: Number(sp.sharePct),
     role: sp.position.name === "As Leader" ? "As Leader" : "As Member",
+    additionalFeePct: Number(sp.additionalFeePct),
   }))
 
   // Clauses & Overrides, per section. Section 0 (tanpa section) dan 2 hanya
@@ -763,7 +763,6 @@ function toPlacingSlipRecord(
     stampDuty: Number(raw.stampDuty),
     brokeragePct: Number(raw.brokeragePct),
     includeVat: raw.includeVat,
-    additionalFee: Number(raw.additionalFee ?? 0),
     additionalFeeIncludeVat: raw.additionalFeeIncludeVat,
     subjectivity: raw.subjectivity || undefined,
     closingInstruction: raw.closingInstruction || undefined,
@@ -948,7 +947,6 @@ export function copySlipInput(source: PlacingSlipRecord): PlacingSlipInput {
     stampDuty: source.stampDuty,
     brokeragePct: source.brokeragePct,
     includeVat: source.includeVat,
-    additionalFee: source.additionalFee,
     additionalFeeIncludeVat: source.additionalFeeIncludeVat,
   }
 }
@@ -1129,10 +1127,13 @@ function cleanDeductibles(deductibles: string[] | undefined) {
     .slice(0, MAX_DEDUCTIBLES)
 }
 
-/** Additional fee hanya disimpan untuk Property dan Motor Vehicle; COB lain 0. */
-function slipAdditionalFee(cobName: string, fee: number | undefined) {
+/**
+ * Additional fee (%) per asuransi di panel, hanya untuk Property dan Motor
+ * Vehicle; COB lain 0 (Harry, 12 November 2026: fee diisi saat closing).
+ */
+function panelFeePct(cobName: string, pct: number | undefined) {
   return new Prisma.Decimal(
-    usesAdditionalFee(normalizeCob(cobName)) ? (fee ?? 0) : 0
+    usesAdditionalFee(normalizeCob(cobName)) ? Math.max(0, pct ?? 0) : 0
   )
 }
 
@@ -1458,7 +1459,6 @@ export async function createPlacingSlip(
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
         includeVat: input.includeVat ?? false,
-        additionalFee: slipAdditionalFee(resolvedCob.name, input.additionalFee),
         additionalFeeIncludeVat: slipAdditionalFeeIncludeVat(resolvedCob.name, input.additionalFeeIncludeVat),
         subjectivity: input.subjectivity?.trim() || null,
         closingInstruction: input.closingInstruction?.trim() || null,
@@ -1691,6 +1691,7 @@ export async function createPlacingSlip(
             insurerId: insurer.id,
             sharePct: new Prisma.Decimal(sp.share || 0),
             positionId,
+            additionalFeePct: panelFeePct(resolvedCob.name, sp.additionalFeePct),
           },
         })
       }
@@ -1876,7 +1877,6 @@ export async function updatePlacingSlip(
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
         includeVat: input.includeVat ?? false,
-        additionalFee: slipAdditionalFee(resolvedCob.name, input.additionalFee),
         additionalFeeIncludeVat: slipAdditionalFeeIncludeVat(resolvedCob.name, input.additionalFeeIncludeVat),
         subjectivity: input.subjectivity?.trim() || null,
         closingInstruction: input.closingInstruction?.trim() || null,
@@ -2119,6 +2119,7 @@ export async function updatePlacingSlip(
             insurerId: insurer.id,
             sharePct: new Prisma.Decimal(sp.share || 0),
             positionId,
+            additionalFeePct: panelFeePct(resolvedCob.name, sp.additionalFeePct),
           },
         })
       }
@@ -2168,7 +2169,6 @@ export async function updatePlacingSlip(
         ...previousDates,
         brokeragePct: Number(existing.brokeragePct),
         includeVat: existing.includeVat,
-        additionalFee: Number(existing.additionalFee),
         additionalFeeIncludeVat: existing.additionalFeeIncludeVat,
       },
       after: {
@@ -2179,7 +2179,6 @@ export async function updatePlacingSlip(
         closingDate: documentDates.closingDate ?? null,
         brokeragePct: input.brokeragePct ?? 0,
         includeVat: input.includeVat ?? false,
-        additionalFee: Number(slipAdditionalFee(resolvedCob.name, input.additionalFee)),
         additionalFeeIncludeVat: slipAdditionalFeeIncludeVat(resolvedCob.name, input.additionalFeeIncludeVat),
       },
     })
