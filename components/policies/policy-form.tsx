@@ -624,16 +624,17 @@ export function PolicyForm({
               value={draft.remarks ?? ""}
               onChange={(v) => set({ remarks: v })}
               // Kalimat contoh mengikuti dokumen endorsement dan pembatalan asuransi
-              // yang dikirim Harry (10 November 2026).
+              // yang dikirim Harry (10 November 2026). Slip dicetak dalam bahasa
+              // Inggris (Harry, 12 November 2026), jadi contohnya juga.
               placeholder={
                 draft.type === "Endorsement"
-                  ? "Contoh: efektif per awal periode, perubahan harga pertanggungan dari Rp 223.500.000 menjadi Rp 200.000.000 dan rate TPL dari 0,75% menjadi 1,125%."
-                  : "Contoh: efektif per 22 Mei 2026, polis ini dibatalkan secara prorata. Subject to no claim."
+                  ? "Example: effective from inception, the sum insured is amended from IDR 223,500,000 to IDR 200,000,000 and the TPL rate from 0.75% to 1.125%."
+                  : "Example: effective 22 May 2026, this policy is cancelled on a pro-rata basis. Subject to no claim."
               }
               description={
                 draft.type === "Endorsement"
-                  ? "Uraian perubahan pada endorsement ini."
-                  : "Alasan dan ketentuan pembatalan."
+                  ? "Uraian perubahan pada endorsement ini, dicetak di endorsement slip (bahasa Inggris)."
+                  : "Alasan dan ketentuan pembatalan, dicetak di cancellation slip (bahasa Inggris)."
               }
             />
           ) : null}

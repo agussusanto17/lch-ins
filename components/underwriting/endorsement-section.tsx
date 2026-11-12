@@ -107,12 +107,13 @@ export function EndorsementSection({
               onChange={(e) => set({ changeDescription: e.target.value })}
               placeholder={
                 cancellation
-                  ? "Contoh: Efektif per tanggal 22 Mei 2026, polis ini DIBATALKAN secara PRORATA."
-                  : "Contoh: Harga pertanggungan sebelumnya Rp 223.500.000 menjadi Rp 200.000.000."
+                  ? "Example: Effective 22 May 2026, this policy is CANCELLED on a pro-rata basis."
+                  : "Example: The sum insured is amended from IDR 223,500,000 to IDR 200,000,000."
               }
             />
             <FieldDescription>
-              Dicetak di slip setelah kalimat &ldquo;Dengan ini dicatat dan disetujui…&rdquo;.
+              Slip dicetak dalam bahasa Inggris, jadi tulis uraian dalam bahasa Inggris. Dicetak
+              setelah kalimat &ldquo;It is hereby noted and agreed…&rdquo;.
             </FieldDescription>
           </Field>
         </div>
