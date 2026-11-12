@@ -137,16 +137,20 @@ export function DocumentFooter({
   printedAt,
   isPrintFixed = false,
   variant = "lch",
+  compact = false,
 }: {
   printedAt?: string
   isPrintFixed?: boolean
   variant?: LetterheadVariant
+  /** Kartu dokumen berpadding lebih kecil (dokumen slip); margin footer layar ikut. */
+  compact?: boolean
 }) {
   const band = LETTERHEADS[variant].band
 
   if (isPrintFixed) {
+    // Padding mengikuti margin isi cetak (--print-x dari .doc-slip, default 18mm).
     return (
-      <footer className={cn("w-full px-[18mm] py-2.5 text-white", band)}>
+      <footer className={cn("w-full px-[var(--print-x,18mm)] py-2.5 text-white", band)}>
         <FooterContent variant={variant} printedAt={printedAt} />
       </footer>
     )
@@ -155,7 +159,11 @@ export function DocumentFooter({
   return (
     <footer
       className={cn(
-        "avoid-break mt-12 -mx-8 -mb-8 md:-mx-12 md:-mb-12 w-[calc(100%+4rem)] md:w-[calc(100%+6rem)] rounded-b-2xl rounded-t-none px-8 py-4 md:px-12 text-white shadow-sm print:hidden",
+        "avoid-break mt-12 rounded-b-2xl rounded-t-none py-4 text-white shadow-sm print:hidden",
+        // Negative margin harus sama dengan padding kartu di DocumentShell.
+        compact
+          ? "-mx-6 -mb-6 md:-mx-8 md:-mb-8 w-[calc(100%+3rem)] md:w-[calc(100%+4rem)] px-6 md:px-8"
+          : "-mx-8 -mb-8 md:-mx-12 md:-mb-12 w-[calc(100%+4rem)] md:w-[calc(100%+6rem)] px-8 md:px-12",
         band
       )}
     >

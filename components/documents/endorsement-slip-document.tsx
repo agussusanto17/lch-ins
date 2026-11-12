@@ -127,7 +127,7 @@ export function EndorsementSlipDocument({ data }: { data: EndorsementSlipPrint }
     ) : undefined
 
   return (
-    <DocumentShell backHref={`/placement/edit/${slip.id}`} variant={kop} notice={notice}>
+    <DocumentShell slip backHref={`/placement/edit/${slip.id}`} variant={kop} notice={notice}>
       <Letterhead variant={kop} />
       <DocTitle
         title={cancellation ? "CANCELLATION SLIP" : "ENDORSEMENT SLIP"}

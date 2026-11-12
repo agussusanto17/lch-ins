@@ -13,9 +13,11 @@ function noopSubscribe() {
 export function PrintedAt({
   isPrintFixed = false,
   variant = "lch",
+  compact = false,
 }: {
   isPrintFixed?: boolean
   variant?: LetterheadVariant
+  compact?: boolean
 } = {}) {
   const label = React.useSyncExternalStore(
     noopSubscribe,
@@ -31,6 +33,7 @@ export function PrintedAt({
     <DocumentFooter
       isPrintFixed={isPrintFixed}
       variant={variant}
+      compact={compact}
       printedAt={label ? `${label} WIB` : "—"}
     />
   )

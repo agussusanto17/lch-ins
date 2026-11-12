@@ -23,6 +23,7 @@ export function DocumentShell({
   letterhead = true,
   variant = "lch",
   notice,
+  slip = false,
 }: {
   backHref: string
   children: React.ReactNode
@@ -34,6 +35,11 @@ export function DocumentShell({
   variant?: LetterheadVariant
   /** Keterangan di atas dokumen yang tidak ikut tercetak. */
   notice?: React.ReactNode
+  /**
+   * Dokumen slip ke asuransi: Arial, margin cetak kiri-kanan 10mm (default
+   * 18mm), dan padding kartu layar lebih kecil, supaya tidak banyak ruang kosong.
+   */
+  slip?: boolean
 }) {
   // Server dan render pertama menganggap browser mendukung, jadi tidak ada
   // hydration mismatch; peringatan baru muncul setelah user agent terbaca.
@@ -96,7 +102,12 @@ export function DocumentShell({
         </div>
       ) : null}
 
-      <article className="print-sheet rounded-2xl border bg-card p-8 text-card-foreground shadow-sm md:p-12 overflow-x-auto print:overflow-visible">
+      <article
+        className={cn(
+          "print-sheet rounded-2xl border bg-card text-card-foreground shadow-sm overflow-x-auto print:overflow-visible",
+          slip ? "doc-slip p-6 md:p-8" : "p-8 md:p-12"
+        )}
+      >
         {/* Header berulang di setiap halaman cetak */}
         {letterhead ? (
           <div className="print-header-fixed hidden print:block">
@@ -124,7 +135,7 @@ export function DocumentShell({
           </tfoot>
           <tbody className="print:table-row-group">
             <tr>
-              <td className="border-0 p-0 align-top print:px-[18mm]">
+              <td className="border-0 p-0 align-top print:px-[var(--print-x,18mm)]">
                 {children}
               </td>
             </tr>
@@ -132,7 +143,7 @@ export function DocumentShell({
         </table>
 
         {/* Screen footer sits outside the table so it always spans the full card width. */}
-        <PrintedAt variant={variant} />
+        <PrintedAt variant={variant} compact={slip} />
       </article>
 
       <p className="no-print pb-6 text-center text-xs text-muted-foreground">

@@ -177,6 +177,16 @@
 }
 
 /* ---------- Print ---------- */
+/*
+ * Dokumen slip (placing, quotation, cover note, closing instruction,
+ * endorsement) memakai Arial dan margin kiri-kanan cetak 10mm, bukan 18mm.
+ * --print-x dibaca isi, kop, dan footer cetak supaya ketiganya tetap sejajar.
+ */
+.doc-slip {
+  font-family: Arial, Helvetica, sans-serif;
+  --print-x: 10mm;
+}
+
 @page {
   size: A4;
   margin: 0;
@@ -222,8 +232,8 @@
   .print-header-fixed {
     position: fixed;
     top: 10mm;
-    left: 18mm;
-    right: 18mm;
+    left: var(--print-x, 18mm);
+    right: var(--print-x, 18mm);
     z-index: 1000;
   }
   .print-footer-fixed {
