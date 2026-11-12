@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `fix/status-polis-cancelled`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** [#223](https://github.com/agussusanto17/lch-ins/pull/223)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
