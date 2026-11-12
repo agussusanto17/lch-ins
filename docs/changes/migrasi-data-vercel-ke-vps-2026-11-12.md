@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `chore/migrasi-data-vercel-ke-vps`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #222
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
