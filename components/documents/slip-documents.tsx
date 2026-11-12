@@ -244,7 +244,7 @@ export function PlacingSlipDocument(props: DocProps) {
   const date = slipDocumentDate(slip, "placing")
   const kop = letterheadFor(date)
   return (
-    <DocumentShell backHref={`/placement/edit/${slip.id}`} variant={kop}>
+    <DocumentShell slip backHref={`/placement/edit/${slip.id}`} variant={kop}>
       <Letterhead variant={kop} />
       <DocTitle
         title="PLACING SLIP"
@@ -298,7 +298,7 @@ export function QuotationSlipDocument(props: DocProps) {
   const kop = letterheadFor(date)
 
   return (
-    <DocumentShell backHref={`/placement/quotation/edit/${slip.id}`} variant={kop}>
+    <DocumentShell slip backHref={`/placement/quotation/edit/${slip.id}`} variant={kop}>
       <Letterhead variant={kop} />
       <DocTitle
         title="QUOTATION SLIP"
@@ -353,6 +353,7 @@ export function CoverNoteDocument(props: DocProps) {
     // tanpa brokerage dan tanpa instruksi ke asuransi, seperti contoh CN 728 dan
     // CN 743 (meeting LCH, 10 November 2026).
     <DocumentShell
+      slip
       backHref={`/placement/closing/edit/${slip.id}`}
       letterhead={false}
       variant={letterheadFor(date)}
@@ -408,6 +409,7 @@ export function ClosingInstructionDocument(props: DocProps) {
 
   return (
     <DocumentShell
+      slip
       backHref={`/placement/closing/edit/${slip.id}`}
       variant={kop}
       notice={
