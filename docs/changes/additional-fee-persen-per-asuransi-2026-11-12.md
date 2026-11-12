@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `feat/additional-fee-persen-per-asuransi`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#230](https://github.com/agussusanto17/lch-ins/pull/230)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
