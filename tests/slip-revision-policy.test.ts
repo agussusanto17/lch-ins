@@ -4,6 +4,8 @@ import test from "node:test"
 import { emptySlip, recalc, switchCob } from "../components/underwriting/slip-model"
 import {
   additionalFeeFor,
+  additionalFeePanelText,
+  additionalFeeVatFor,
   feeVatInside,
   insurerAdditionalFee,
   weightedFeePct,
@@ -61,12 +63,60 @@ test("an additional fee percent filled after the CI reaches the policy", () => {
   assert.equal(changes.insurers?.[0].additionalFeePct, 15)
 })
 
-test("the policy copies the VAT switches of brokerage and additional fee", () => {
-  const slip = { ...closedMvSlip(), includeVat: true, additionalFeeIncludeVat: true }
+test("the policy copies the brokerage VAT switch and the fee VAT of each insurer", () => {
+  const base = closedMvSlip()
+  const slip = {
+    ...base,
+    includeVat: true,
+    securityPanel: base.securityPanel!.map((r) => ({
+      ...r,
+      additionalFeePct: 15,
+      additionalFeeIncludeVat: true,
+    })),
+  }
   const f = fields(slip)
   assert.equal(f.includeVat, true)
+  assert.equal(f.insurers[0].additionalFeeIncludeVat, true)
+  // Polis satu asuransi: isian form ikut status PPN asuransinya.
   assert.equal(f.additionalFeeIncludeVat, true)
-  assert.equal(fields(closedMvSlip()).additionalFeeIncludeVat, false)
+  assert.equal(fields(base).additionalFeeIncludeVat, false)
+})
+
+// Status PPN fee bisa berbeda per asuransi (Harry, 12 November 2026).
+test("the fee VAT is counted only for insurers whose fee includes VAT", () => {
+  const rows = [
+    { insurer: "PT A", share: 60, additionalFeePct: 12.5, additionalFeeIncludeVat: true },
+    { insurer: "PT B", share: 40, additionalFeePct: 10, additionalFeeIncludeVat: false },
+  ]
+  const premium = 7_862_500
+  // Fee PT A = 7.862.500 × 60% × 12,5% = 589.687,50; PPN di dalamnya 12.693,86.
+  assert.equal(insurerAdditionalFee(premium, rows[0]), 589_687.5)
+  assert.equal(additionalFeeVatFor(premium, rows), feeVatInside(589_687.5, true))
+  assert.equal(additionalFeeVatFor(premium, rows), 12_693.86)
+  assert.equal(
+    additionalFeeVatFor(premium, rows.map((r) => ({ ...r, additionalFeeIncludeVat: false }))),
+    0
+  )
+  assert.equal(additionalFeePanelText(rows), "PT A 12.5% termasuk PPN · PT B 10%")
+})
+
+test("a fee VAT change on one insurer reaches the policy", () => {
+  const before = {
+    ...closedMvSlip(),
+    securityPanel: [
+      { id: "a", insurer: "PT A", share: 60, role: "As Leader" as const, additionalFeePct: 12.5 },
+      { id: "b", insurer: "PT B", share: 40, role: "As Member" as const, additionalFeePct: 10 },
+    ],
+  }
+  const after = {
+    ...before,
+    securityPanel: before.securityPanel.map((r) =>
+      r.id === "b" ? { ...r, additionalFeeIncludeVat: true } : r
+    ),
+  }
+  const changes = changedSlipFields(fields(before), fields(after))
+  assert.deepEqual(Object.keys(changes), ["insurers"])
+  assert.equal(changes.insurers?.[1].additionalFeeIncludeVat, true)
 })
 
 test("only the slip fields that changed are copied", () => {

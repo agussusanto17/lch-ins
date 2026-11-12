@@ -342,11 +342,42 @@ export function feeVatInside(fee: number, includeVat: boolean | undefined) {
 }
 
 /**
- * PPN di dalam additional fee kalau fee diisi termasuk PPN, dengan tarif yang
- * sama seperti brokerage (permintaan LCH, 10 November 2026).
+ * PPN di dalam additional fee: dihitung per asuransi, hanya untuk asuransi yang
+ * fee-nya termasuk PPN, dengan tarif yang sama seperti brokerage. Status PPN
+ * tiap asuransi bisa berbeda (Harry, 12 November 2026).
  */
+export function additionalFeeVatFor(
+  premium: number,
+  rows:
+    | readonly Pick<SecurityPanelRow, "share" | "additionalFeePct" | "additionalFeeIncludeVat">[]
+    | undefined
+) {
+  return roundCents(
+    (rows ?? []).reduce(
+      (sum, r) => sum + feeVatInside(insurerAdditionalFee(premium, r), r.additionalFeeIncludeVat),
+      0
+    )
+  )
+}
+
+/** PPN di dalam additional fee slip, dari status PPN tiap asuransi di panel. */
 export function additionalFeeVatAmount(slip: PlacingSlip) {
-  return feeVatInside(additionalFeeAmount(slip), slip.additionalFeeIncludeVat)
+  return additionalFeeVatFor(totalPremium(slip), slip.securityPanel)
+}
+
+/**
+ * Ringkasan additional fee per asuransi untuk audit trail, misalnya
+ * "PT A 12.5% termasuk PPN · PT B 10%". Asuransi tanpa fee tidak ditulis.
+ */
+export function additionalFeePanelText(
+  rows:
+    | readonly Pick<SecurityPanelRow, "insurer" | "additionalFeePct" | "additionalFeeIncludeVat">[]
+    | undefined
+) {
+  return (rows ?? [])
+    .filter((r) => r.insurer && (r.additionalFeePct ?? 0) > 0)
+    .map((r) => `${r.insurer} ${r.additionalFeePct}%${r.additionalFeeIncludeVat ? " termasuk PPN" : ""}`)
+    .join(" · ")
 }
 
 export function slipRateBasis(slip: PlacingSlip) {

@@ -35,8 +35,9 @@ export type PolicySlipFields = Pick<
 /**
  * Isian polis dari slip. Slip PAR + EQVET menjadi satu polis per bagian:
  * premi per bagian, dan polis EQVET memakai type of cover kedua. Additional
- * fee setiap polis = premi polis itu × fee (%) per asuransi di panel, dengan
- * status PPN brokerage dan fee dari slip (Harry, 12 November 2026). Slip open
+ * fee setiap polis = premi polis itu × fee (%) per asuransi di panel. Status
+ * PPN brokerage dari slip, status PPN fee per asuransi dari panel (Harry,
+ * 12 November 2026). Slip open
  * cover: nilai dan premi diisi per deklarasi. Nama tertanggung mengikuti nama
  * klien kalau klien slip diketahui.
  */
@@ -66,7 +67,8 @@ export function policyFieldsFromSlip(
     includeVat: slip.includeVat,
     additionalFee: additionalFeeFor(premium, panel),
     additionalFeePct: weightedFeePct(panel),
-    additionalFeeIncludeVat: slip.additionalFeeIncludeVat ?? false,
+    // Isian form polis satu asuransi; co-insurance memakai status per asuransi.
+    additionalFeeIncludeVat: panel.length === 1 ? Boolean(panel[0].additionalFeeIncludeVat) : false,
     riskLocation: slip.riskLocation ?? "",
     insurer: leader?.insurer ?? "",
     insurers: panel,
@@ -86,7 +88,13 @@ export function changedSlipFields(
   const comparable = (fields: PolicySlipFields, key: keyof PolicySlipFields) =>
     JSON.stringify(
       key === "insurers"
-        ? fields.insurers.map((r) => [r.insurer, r.share, r.role, r.additionalFeePct ?? 0])
+        ? fields.insurers.map((r) => [
+            r.insurer,
+            r.share,
+            r.role,
+            r.additionalFeePct ?? 0,
+            r.additionalFeeIncludeVat ?? false,
+          ])
         : fields[key]
     )
   const changes: Partial<PolicySlipFields> = {}

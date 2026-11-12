@@ -46,6 +46,7 @@ const policyInputSchema = z
         role: z.enum(["As Leader", "As Member"]),
         // Additional fee (%) per asuransi (Harry, 12 November 2026).
         additionalFeePct: z.number().min(0, "Additional fee tidak boleh negatif").max(100, "Additional fee maksimal 100%").optional(),
+        additionalFeeIncludeVat: z.boolean().optional(),
       })
     ),
     // Daftar COB ada di master data; server menolak nama yang tidak ada di sana.

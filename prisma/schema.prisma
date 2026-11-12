@@ -1180,7 +1180,9 @@ model PlacingSlip {
   /// asuransi di panel Security (`slip_security_panel.additional_fee_pct`),
   /// nominalnya dihitung dari premi. Kolom dibiarkan sebagai isian lama.
   additionalFee Decimal @default(0) @map("additional_fee") @db.Decimal(18, 2)
-  /// Additional fee sudah termasuk PPN 2,2%, seperti Include VAT di brokerage.
+  /// Tidak dipakai lagi sejak 12 Nov 2026: status PPN additional fee per
+  /// asuransi (`slip_security_panel.additional_fee_include_vat`). Kolom
+  /// dibiarkan supaya kode versi sebelumnya tetap jalan selama deploy.
   additionalFeeIncludeVat Boolean @default(false) @map("additional_fee_include_vat")
 
   /// Tidak dipakai lagi sejak 5 Nov 2026: loss limit menjadi persentase per
@@ -1390,6 +1392,9 @@ model SlipSecurityPanel {
   /// Additional fee (%) dari premi bagian asuransi ini, diisi saat closing
   /// (Harry, 12 November 2026). Hanya slip Property dan Motor Vehicle.
   additionalFeePct Decimal @default(0) @map("additional_fee_pct") @db.Decimal(12, 6)
+  /// Additional fee asuransi ini sudah termasuk PPN 2,2%. Status PPN tiap
+  /// asuransi bisa berbeda (Harry, 12 November 2026).
+  additionalFeeIncludeVat Boolean @default(false) @map("additional_fee_include_vat")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1514,7 +1519,9 @@ model Policy {
   /// asuransi (`policy_insurers.additional_fee_pct`), dihitung server. Negatif
   /// pada pembatalan atau pengurangan premi.
   additionalFee       Decimal  @default(0) @map("additional_fee") @db.Decimal(18, 2)
-  /// Additional fee sudah termasuk PPN 2,2%, mengikuti slip.
+  /// Tidak dipakai lagi sejak 12 Nov 2026: status PPN additional fee per
+  /// asuransi (`policy_insurers.additional_fee_include_vat`). Kolom dibiarkan
+  /// supaya kode versi sebelumnya tetap jalan selama deploy.
   additionalFeeIncludeVat Boolean @default(false) @map("additional_fee_include_vat")
   /// Rate (%) endorsement: premi = sum insured × rate × hari prorata / 365,
   /// hari prorata dari tanggal efektif s/d tanggal berakhir (Harry, 11 November
@@ -1666,6 +1673,8 @@ model PolicyInsurer {
   positionId String  @map("position_id") @db.Uuid
   /// Additional fee (%) dari premi bagian asuransi ini, dari panel slip.
   additionalFeePct Decimal @default(0) @map("additional_fee_pct") @db.Decimal(12, 6)
+  /// Additional fee asuransi ini sudah termasuk PPN 2,2%, dari panel slip.
+  additionalFeeIncludeVat Boolean @default(false) @map("additional_fee_include_vat")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)

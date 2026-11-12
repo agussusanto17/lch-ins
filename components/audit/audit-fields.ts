@@ -105,6 +105,7 @@ const FIELD_LABELS: Record<string, string> = {
   additionalFee: "Additional fee",
   additionalFeePct: "Additional fee (%)",
   additionalFeeIncludeVat: "Additional fee termasuk PPN",
+  additionalFeePanel: "Additional fee per asuransi",
   adminCost: "Biaya admin",
   stampDuty: "Bea meterai",
   periodStart: "Periode mulai",
