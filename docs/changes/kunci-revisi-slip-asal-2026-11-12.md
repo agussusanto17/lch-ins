@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `feat/kunci-revisi-slip-asal`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** [#224](https://github.com/agussusanto17/lch-ins/pull/224)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
