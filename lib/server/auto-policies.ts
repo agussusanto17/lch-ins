@@ -14,6 +14,7 @@ import {
 import { prisma } from "@/lib/prisma"
 import { getPlacingSlipById, type PlacingSlipRecord } from "@/lib/server/placing-slips"
 import { createPolicy, getPolicyById, updatePolicy } from "@/lib/server/policies"
+import { slipEndorsementAdjustment } from "@/lib/endorsement-calc"
 
 /** Nomor polis yang berasal dari slip ini, untuk keterangan di dokumen CI. */
 export async function policyNosForSlip(slipId: string): Promise<string[]> {
@@ -158,4 +159,58 @@ export async function syncPoliciesFromSlipRevision(
     updated.push(saved.policyNo)
   }
   return updated
+}
+
+/**
+ * Endorsement atau cancellation slip yang Closed tercatat di Policy Database
+ * sebagai Endorsement atau Cancellation polis induknya (Harry, 11 November
+ * 2026). Selisih sum insured dan premi dihitung dari perhitungan sebelum dan
+ * sesudah slip. Nomornya sementara memakai nomor ES/CS; petugas polis
+ * menggantinya dengan nomor endorsement dari asuransi saat mengunggahnya.
+ */
+export async function recordEndorsementFromSlip(
+  slipId: string,
+  userId: string
+): Promise<AutoPolicyResult> {
+  const slip = await getPlacingSlipById(slipId)
+  if (!slip || slip.status !== "Closed" || !slip.kind || slip.kind === "Placing") {
+    return { created: [], skipped: null }
+  }
+  const recorded = await prisma.policy.findFirst({
+    where: { placingSlipId: slip.dbId },
+    select: { id: true },
+  })
+  if (recorded) return { created: [], skipped: null }
+  const parent = slip.parentPolicyId ? await getPolicyById(slip.parentPolicyId) : null
+  if (!parent) {
+    return { created: [], skipped: "Polis induk endorsement slip ini tidak ditemukan di Policy Database." }
+  }
+  const adjustment = slipEndorsementAdjustment(slip)
+  if (!adjustment || !slip.effectiveDate) {
+    return { created: [], skipped: "Tanggal efektif endorsement slip belum diisi." }
+  }
+  const policy = await createPolicy(
+    {
+      ...parent,
+      policyNo: slip.slipNo ?? slip.dbId,
+      type: slip.kind,
+      parentPolicyId: parent.id,
+      previousPolicyNo: null,
+      placingSlipId: slip.dbId,
+      slipPart: null,
+      inceptionDate: slip.effectiveDate,
+      expiryDate: parent.expiryDate,
+      sumInsured: adjustment.sumInsuredChange,
+      premium: adjustment.premium,
+      additionalFee: 0,
+      rate: null,
+      premiumBasis: null,
+      adminCost: slip.adminCost ?? 0,
+      stampDuty: slip.stampDuty ?? 0,
+      premiumPaidDate: null,
+      remarks: slip.changeDescription ?? null,
+    },
+    userId
+  )
+  return { created: [policy.policyNo], skipped: null }
 }

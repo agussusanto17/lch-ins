@@ -957,9 +957,14 @@ export function rateLineName(slip: PlacingSlip, line: RateLine) {
  * 19 Oktober 2026). 002/LCH-PLCMT/PS-MV/XI/2026 menjadi QS-MV, CN-MV, dan
  * CI-MV dengan nomor urut, bulan, dan tahun yang sama.
  */
+/**
+ * Nomor dokumen turunan dari nomor placing slip: QS, CN, dan CI untuk slip
+ * yang sama, serta ES dan CS untuk endorsement dan cancellation slip yang
+ * memakai urutan nomor placing slip.
+ */
 export function derivedDocNumber(
   slipNo: string | null,
-  kind: "QS" | "CN" | "CI"
+  kind: "QS" | "CN" | "CI" | "ES" | "CS"
 ) {
   if (!slipNo) return null
   const parts = slipNo.split("/")

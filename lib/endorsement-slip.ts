@@ -84,7 +84,8 @@ export function endorsementBody(type: PolicyType, remarks: string | null | undef
 /** Label baris premi: tambahan premi, pengembalian premi (negatif), atau nihil. */
 export function premiumAdjustmentLabel(amount: number) {
   if (amount > 0) return { id: "Premi Tambahan", en: "Additional Premium" }
-  if (amount < 0) return { id: "Pengembalian Premi", en: "Return Premium" }
+  // Istilah Harry: premi tambahan atau refund premi (11 November 2026).
+  if (amount < 0) return { id: "Refund Premi", en: "Return Premium" }
   return { id: "Penyesuaian Premi", en: "Premium Adjustment" }
 }
 

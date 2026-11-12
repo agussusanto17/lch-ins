@@ -5,12 +5,19 @@ import { unstable_rethrow } from "next/navigation"
 import { z } from "zod"
 
 import type { SlipStatus } from "@/lib/generated/prisma/client"
-import { MAX_DEDUCTIBLES, type PlacingSlip, type SlipAttachment } from "@/lib/data/types"
+import {
+  MAX_DEDUCTIBLES,
+  type PlacingSlip,
+  type SlipAttachment,
+  type SlipKind,
+} from "@/lib/data/types"
 import { participantListSchema } from "@/lib/participant-schema"
 import { brokerageLimitIssue, rateUnitFor } from "@/lib/calc"
-import { rateLineName } from "@/components/underwriting/slip-model"
+import { derivedDocNumber, rateLineName } from "@/components/underwriting/slip-model"
 import {
   coverUsesOjkTariff,
+  copySlipInput,
+  createEndorsementSlip,
   createPlacingSlip,
   deletePlacingSlip,
   getPlacingSlipById,
@@ -22,6 +29,7 @@ import {
 } from "@/lib/server/placing-slips"
 import { validatePlacingSlipForRelease } from "@/lib/server/tariffs"
 import {
+  recordEndorsementFromSlip,
   recordPoliciesFromClosing,
   syncPoliciesFromSlipRevision,
 } from "@/lib/server/auto-policies"
@@ -60,6 +68,61 @@ async function autoPolicyNotice(slipId: string, userId: string) {
     unstable_rethrow(err)
     const message = err instanceof Error ? err.message : "kesalahan tidak dikenal"
     return `Polis belum tercatat otomatis: ${message} Catat manual di Policy Database.`
+  }
+}
+
+const isPlacingSlip = (slip: Pick<PlacingSlip, "kind">) => !slip.kind || slip.kind === "Placing"
+
+/**
+ * Endorsement atau cancellation slip yang Closed tercatat di Policy Database
+ * (Harry, 11 November 2026). Gagal mencatat tidak membatalkan slip; alasannya
+ * dikembalikan sebagai info.
+ */
+async function endorsementNotice(slipId: string, userId: string) {
+  try {
+    const { created, skipped } = await recordEndorsementFromSlip(slipId, userId)
+    if (created.length) {
+      revalidatePath("/policies")
+      return `Tercatat di Policy Database sebagai ${created.join(", ")}. Ganti nomornya dengan nomor endorsement dari asuransi saat mengunggahnya.`
+    }
+    return skipped ?? undefined
+  } catch (err) {
+    unstable_rethrow(err)
+    const message = err instanceof Error ? err.message : "kesalahan tidak dikenal"
+    return `Endorsement belum tercatat di Policy Database: ${message}`
+  }
+}
+
+/** Slip yang baru Closed: placing slip mencatat polis, endorsement slip mencatat endorsement. */
+function closedNotice(slip: PlacingSlipRecord, userId: string) {
+  return isPlacingSlip(slip) ? autoPolicyNotice(slip.id, userId) : endorsementNotice(slip.id, userId)
+}
+
+/**
+ * Buat endorsement atau cancellation slip dari slip polis yang sudah Closed
+ * (Harry, 11 November 2026).
+ */
+export async function createEndorsementSlipAction(
+  baseSlipId: string,
+  kind: "Endorsement" | "Cancellation"
+): Promise<ActionResponse<PlacingSlipRecord>> {
+  try {
+    const user = await requireManage("/placement")
+    if (!z.uuid().safeParse(baseSlipId).success) {
+      return { ok: false, error: "Slip asal tidak valid." }
+    }
+    if (kind !== "Endorsement" && kind !== "Cancellation") {
+      return { ok: false, error: "Jenis slip tidak valid." }
+    }
+    const created = await createEndorsementSlip(baseSlipId, kind, user.id)
+    revalidateUnderwritingPaths(created.id)
+    return { ok: true, data: created }
+  } catch (err) {
+    unstable_rethrow(err)
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal membuat endorsement slip.",
+    }
   }
 }
 
@@ -353,6 +416,9 @@ const placingSlipSchema = z.object({
   subjectivity: z.string().nullish(),
   closingInstruction: z.string().nullish(),
   coverNoteRemarks: z.string().nullish(),
+  // Endorsement dan cancellation slip (Harry, 11 November 2026).
+  effectiveDate: documentDateSchema,
+  changeDescription: z.string().max(4000, "Uraian perubahan maksimal 4000 karakter").nullish(),
 })
 
 const attachmentIdSchema = z.uuid()
@@ -502,8 +568,8 @@ export async function savePlacingSlipAction(
     // sesudahnya ikut ke polis yang masih bernomor sementara.
     const notice =
       result.status === "Closed" && previousStatus !== "Closed"
-        ? await autoPolicyNotice(result.id, user.id)
-        : closedBefore && result.status === "Closed"
+        ? await closedNotice(result, user.id)
+        : closedBefore && result.status === "Closed" && isPlacingSlip(result)
           ? await revisionPolicyNotice(closedBefore, user.id)
           : undefined
     return { ok: true, data: result, notice }
@@ -571,11 +637,16 @@ export async function releasePlacingSlipAction(
 
 /** Estimated slip number for release confirmation dialog, fetched from DB sequence. */
 export async function previewSlipNumberAction(
-  coverCode: string | null
+  coverCode: string | null,
+  kind: SlipKind = "Placing"
 ): Promise<ActionResponse<string | null>> {
   try {
     await requireManage("/placement")
     const slipNo = await previewDocumentNumber(prisma, { code: "PS", coverCode })
+    // Endorsement dan cancellation slip memakai urutan nomor placing slip.
+    if (kind !== "Placing" && slipNo) {
+      return { ok: true, data: derivedDocNumber(slipNo, kind === "Endorsement" ? "ES" : "CS") }
+    }
     return { ok: true, data: slipNo }
   } catch (err: unknown) {
     const message =
@@ -603,7 +674,7 @@ export async function togglePlacingSlipStatusAction(
     revalidateUnderwritingPaths(updated.id)
     const notice =
       status === "Closed" && target.status !== "Closed"
-        ? await autoPolicyNotice(updated.id, user.id)
+        ? await closedNotice(updated, user.id)
         : undefined
     return { ok: true, data: updated, notice }
   } catch (err: unknown) {
@@ -653,68 +724,7 @@ export async function duplicatePlacingSlipAction(
       return { ok: false, error: "Placing Slip sumber tidak ditemukan." }
     }
 
-    const duplicateInput: PlacingSlipInput = {
-      clientId: source.clientId || "",
-      cob: source.cob,
-      typeOfCover: source.typeOfCover,
-      typeOfCover2: source.typeOfCover2,
-      typeOfCoverLabel: source.typeOfCoverLabel,
-      typeOfCover2Label: source.typeOfCover2Label,
-      coverCode: source.coverCode,
-      insuredName: source.insuredName,
-      correspondenceAddress: source.correspondenceAddress,
-      currency: source.currency,
-      status: "Draft",
-      periodTba: source.periodTba,
-      inceptionDate: source.inceptionDate,
-      expiryDate: source.expiryDate,
-      periodNote: source.periodNote,
-      periodLabel: source.periodLabel,
-      periodEndText: source.periodEndText,
-      periodText: source.periodText,
-      insuredDescription: source.insuredDescription,
-      usesSections: source.usesSections,
-      openCover: source.openCover,
-      openCoverRates: source.openCoverRates,
-      detailRows: source.detailRows,
-      occupation: source.occupation,
-      occupationLabel: source.occupationLabel,
-      riskLocation: source.riskLocation,
-      locations: source.locations,
-      coverage: source.coverage,
-      constructionClass: source.constructionClass,
-      indemnityPeriod: source.indemnityPeriod,
-      interestSection1: source.interestSection1,
-      interestSection2: source.interestSection2,
-      specialConditions: source.specialConditions,
-      deductibleIntro: source.deductibleIntro,
-      exclusions: source.exclusions,
-      interestItems: source.interestItems,
-      sumInsuredSection1: source.sumInsuredSection1,
-      sumInsuredSection2: source.sumInsuredSection2,
-      clauseIds: source.clauseIds,
-      clauseOverrides: source.clauseOverrides,
-      clauseGroups: source.clauseGroups,
-      participants: source.participants,
-      paBenefitLimits: source.paBenefitLimits,
-      clauseIdsSection2: source.clauseIdsSection2,
-      clauseOverridesSection2: source.clauseOverridesSection2,
-      clauseIdsGeneral: source.clauseIdsGeneral,
-      clauseOverridesGeneral: source.clauseOverridesGeneral,
-      wordingForms: source.wordingForms,
-      rateLines: source.rateLines,
-      tplLines: source.tplLines,
-      paLines: source.paLines,
-      rateExceptions: source.rateExceptions,
-      securityPanel: source.securityPanel,
-      discountPct: source.discountPct,
-      adminCost: source.adminCost,
-      stampDuty: source.stampDuty,
-      brokeragePct: source.brokeragePct,
-      includeVat: source.includeVat,
-      additionalFee: source.additionalFee,
-      additionalFeeIncludeVat: source.additionalFeeIncludeVat,
-    }
+    const duplicateInput = copySlipInput(source)
 
     const created = await createPlacingSlip(duplicateInput, user.id)
     revalidateUnderwritingPaths(created.id)

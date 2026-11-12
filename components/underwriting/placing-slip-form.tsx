@@ -39,6 +39,7 @@ import {
   TotalBar,
 } from "@/components/underwriting/line-items"
 import { InsuredPicker } from "@/components/underwriting/insured-picker"
+import { EndorsementSection } from "@/components/underwriting/endorsement-section"
 import { InsurerCombobox } from "@/components/underwriting/insurer-combobox"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
 import { SlipLocations } from "@/components/underwriting/slip-locations"
@@ -338,6 +339,10 @@ function SlipEditor({
 
   const isQuotation = mode === "quotation"
   const isClosing = mode === "closing"
+  // Endorsement dan cancellation slip (Harry, 11 November 2026): terbit lalu
+  // ditutup setelah dikonfirmasi asuransi, tanpa quotation dan closing.
+  const changeSlip = slip.kind === "Endorsement" || slip.kind === "Cancellation"
+  const changeSlipLabel = slip.kind === "Cancellation" ? "Cancellation Slip" : "Endorsement Slip"
   const showQuotationSections = isQuotation || isClosing || slip.status !== "Draft"
 
   const availableKeys = React.useMemo(() => {
@@ -365,6 +370,7 @@ function SlipEditor({
   const previewSeqRef = React.useRef(0)
   const [confirmDestroy, setConfirmDestroy] = React.useState(false)
   const [confirmClose, setConfirmClose] = React.useState(false)
+  const [confirmCloseChange, setConfirmCloseChange] = React.useState(false)
   const [masterClauses, setMasterClauses] = React.useState<ClausePickerItem[]>([])
 
   React.useEffect(() => {
@@ -693,8 +699,48 @@ function SlipEditor({
     })
   }
 
+  /** Endorsement atau cancellation slip dikonfirmasi asuransi: Closed lalu tercatat di Policy Database. */
+  function closeChangeSlip() {
+    setConfirmCloseChange(false)
+    startTransition(async () => {
+      const withBounds = rateLinesWithBounds(slip)
+      const exceptions = Object.fromEntries(
+        Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
+          withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
+        )
+      )
+      const toSend: PlacingSlip = {
+        ...slip,
+        status: "Closed",
+        rateLines: withBounds,
+        rateExceptions: exceptions,
+        securityPanel: prepareSecurityPanel(slip.securityPanel),
+        updatedAt: today,
+      }
+      const res = await savePlacingSlipAction(toSend, "edit")
+      if (!res.ok || !res.data) {
+        toast.error(`Gagal menutup ${changeSlipLabel.toLowerCase()}`, { description: res.error })
+        return
+      }
+      const record = res.data
+      store.upsert("slips", record)
+      setSlip(record)
+      setSavedJson(JSON.stringify(record))
+      toast.success(`${changeSlipLabel} ditutup`, {
+        description: res.notice ?? record.slipNo ?? undefined,
+        duration: 10000,
+      })
+      router.push(`/placement/endorsement/${record.id}`)
+    })
+  }
+
   function startRelease() {
-    const found = releaseIssues(slip)
+    const found = [
+      ...releaseIssues(slip),
+      ...(changeSlip && !slip.effectiveDate
+        ? ["Isi tanggal efektif di bagian " + (slip.kind === "Cancellation" ? "Cancellation." : "Endorsement.")]
+        : []),
+    ]
     if (found.length) {
       setIssues(found)
       return
@@ -702,7 +748,7 @@ function SlipEditor({
     const seq = ++previewSeqRef.current
     setReleaseNoPreview(null)
     setConfirmRelease(true)
-    previewSlipNumberAction(slip.coverCode).then((res) => {
+    previewSlipNumberAction(slip.coverCode, slip.kind ?? "Placing").then((res) => {
       if (seq !== previewSeqRef.current) return
       if (res.ok) setReleaseNoPreview(res.data ?? null)
     })
@@ -852,7 +898,9 @@ function SlipEditor({
     <PageShell className="gap-0 p-0">
       <SlipFormToolbar
         title={
-          isClosing
+          changeSlip
+            ? changeSlipLabel
+            : isClosing
             ? "Closing Instruction"
             : isQuotation
               ? "Quotation Slip"
@@ -914,7 +962,9 @@ function SlipEditor({
         {slip.status === "Closed" ? (
           <p className="flex items-start gap-2 rounded-xl bg-info/10 border border-info/20 px-4 py-3 text-sm text-foreground">
             <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-            Closing instruction sudah diterbitkan. Anda tetap dapat melakukan revisi dan menyimpan perubahan di sini jika diperlukan.
+            {changeSlip
+              ? `${changeSlipLabel} sudah dikonfirmasi asuransi dan tercatat di Policy Database. Revisi di sini tidak mengubah record di Policy Database.`
+              : "Closing instruction sudah diterbitkan. Anda tetap dapat melakukan revisi dan menyimpan perubahan di sini jika diperlukan."}
           </p>
         ) : null}
         {locked ? (
@@ -925,6 +975,7 @@ function SlipEditor({
         ) : null}
 
         <fieldset disabled={locked} className="contents">
+          {changeSlip ? <EndorsementSection slip={slip} set={set} /> : null}
           <SectionCard
             title="Informasi Dasar"
             {...sectionProps("basic")}
@@ -2583,7 +2634,11 @@ function SlipEditor({
               {mode === "edit" ? (
                 <Button
                   variant="outline"
-                  onClick={() => goTo((id) => `/placement/slip/${id}`)}
+                  onClick={() =>
+                    goTo((id) =>
+                      changeSlip ? `/placement/endorsement/${id}` : `/placement/slip/${id}`
+                    )
+                  }
                 >
                   <Eye data-icon="inline-start" />
                   Lihat Dokumen
@@ -2608,8 +2663,19 @@ function SlipEditor({
               {slip.status === "Draft" ? (
                 <Button onClick={startRelease} disabled={isPending}>
                   <Send data-icon="inline-start" />
-                  {isPending ? "Memproses…" : "Release & Generate No. Slip"}
+                  {isPending
+                    ? "Memproses…"
+                    : changeSlip
+                      ? `Terbitkan ${changeSlipLabel}`
+                      : "Release & Generate No. Slip"}
                 </Button>
+              ) : changeSlip ? (
+                slip.status === "Released" ? (
+                  <Button onClick={() => setConfirmCloseChange(true)} disabled={isPending}>
+                    <FileCheck2 data-icon="inline-start" />
+                    Tutup, Dikonfirmasi Asuransi
+                  </Button>
+                ) : null
               ) : slip.status === "Released" ||
                 slip.status === "Quoted" ||
                 slip.status === "Closed" ? (
@@ -2646,6 +2712,25 @@ function SlipEditor({
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Endorsement atau cancellation slip dikonfirmasi asuransi */}
+      <AlertDialog open={confirmCloseChange} onOpenChange={setConfirmCloseChange}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tutup {changeSlipLabel.toLowerCase()} {slip.slipNo}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Status menjadi Closed dan perubahan ini tercatat di Policy Database sebagai{" "}
+              {slip.kind === "Cancellation" ? "Cancellation" : "Endorsement"} polis{" "}
+              {slip.parentPolicyNo ?? ""}, dengan nomor sementara {slip.slipNo}. Nomor itu diganti
+              dengan nomor endorsement dari asuransi saat mengunggahnya.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={closeChangeSlip}>Tutup &amp; Buka Dokumen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Hal yang harus dilengkapi sebelum release */}
       <AlertDialog
         open={issues != null}
@@ -2675,7 +2760,9 @@ function SlipEditor({
       <AlertDialog open={confirmRelease} onOpenChange={setConfirmRelease}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Release placing slip?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {changeSlip ? `Terbitkan ${changeSlipLabel.toLowerCase()}?` : "Release placing slip?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               Nomor slip dibuat sekarang dan tidak bisa diubah
               {releaseNoPreview ? (
@@ -2686,12 +2773,16 @@ function SlipEditor({
                   </span>
                 </>
               ) : null}
-              . Setelah release, slip bisa dilanjutkan ke Quotation Slip.
+              {changeSlip
+                ? ". Setelah terbit, slip bisa dicetak lalu ditutup setelah dikonfirmasi asuransi."
+                : ". Setelah release, slip bisa dilanjutkan ke Quotation Slip."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={doRelease}>Release</AlertDialogAction>
+            <AlertDialogAction onClick={doRelease}>
+              {changeSlip ? "Terbitkan" : "Release"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

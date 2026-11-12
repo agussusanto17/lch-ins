@@ -10,6 +10,7 @@ import {
   MAX_DEDUCTIBLES,
   type ClassOfBusiness as CobType,
   type ClauseOverride,
+  type EndorsementCalc,
   type LineItem,
   type PlacingSlip,
   type RateException,
@@ -25,6 +26,7 @@ import { SLIPS as MOCK_SLIPS } from "@/lib/data/slips"
 import { CLIENTS } from "@/lib/data/clients"
 import {
   coverCodeFor,
+  derivedDocNumber,
   joinCoverCodes,
   slipSectionTitles,
   usesAdditionalFee,
@@ -50,6 +52,7 @@ import {
 } from "@/lib/data/ojk-motor"
 import { nextDocumentNumber } from "@/server/services/number-generator"
 import { recordAudit } from "@/server/services/audit"
+import { slipCalc } from "@/lib/endorsement-calc"
 import { todayIso } from "@/lib/date"
 import {
   documentDatesForStatus,
@@ -152,6 +155,9 @@ export interface PlacingSlipInput {
   subjectivity?: string | null
   closingInstruction?: string | null
   coverNoteRemarks?: string | null
+  /** Endorsement dan cancellation slip: tanggal efektif dan uraian perubahan. */
+  effectiveDate?: string | null
+  changeDescription?: string | null
 }
 
 export interface ListPlacingSlipsParams {
@@ -434,6 +440,8 @@ type PrismaPlacingSlipWithRelations = Prisma.PlacingSlipGetPayload<{
     constructionClass: { select: { id: true; code: true; name: true } }
     currency: { select: { code: true } }
     creator: { select: { id: true; name: true } }
+    parentPolicy: { select: { policyNo: true } }
+    baseSlip: { select: { slipNo: true } }
     locations: typeof SLIP_LOCATIONS
     items: {
       include: { vehicleBrand: { select: { name: true } }; vehicleType: { select: { name: true } } }
@@ -736,6 +744,15 @@ function toPlacingSlipRecord(
     releaseDate: dateOnly(raw.releaseDate),
     quotedDate: dateOnly(raw.quotedDate),
     closingDate: dateOnly(raw.closingDate),
+    // Endorsement dan cancellation slip (Harry, 11 November 2026).
+    kind: raw.kind,
+    parentPolicyId: raw.parentPolicyId,
+    parentPolicyNo: raw.parentPolicy?.policyNo ?? null,
+    baseSlipId: raw.baseSlipId,
+    baseSlipNo: raw.baseSlip?.slipNo ?? null,
+    effectiveDate: dateOnly(raw.effectiveDate),
+    changeDescription: raw.changeDescription ?? null,
+    beforeCalc: (raw.beforeCalc as EndorsementCalc | null) ?? null,
     clientName: raw.client.name,
     cobName: raw.cob.name,
     coverTypeName: raw.coverType?.name || null,
@@ -802,6 +819,8 @@ export async function listPlacingSlips(
       constructionClass: { select: { id: true, code: true, name: true } },
       currency: { select: { code: true } },
       creator: { select: { id: true, name: true } },
+      parentPolicy: { select: { policyNo: true } },
+      baseSlip: { select: { slipNo: true } },
       locations: SLIP_LOCATIONS,
       items: { include: SLIP_ITEM_VEHICLE, orderBy: { sortOrder: "asc" } },
       rateLines: {
@@ -834,6 +853,159 @@ export async function listPlacingSlips(
 /**
  * Mengambil detail satu Placing Slip berdasarkan UUID atau fallback legacy ID.
  */
+/**
+ * Isi slip baru yang disalin dari slip lain, berstatus Draft. Dipakai duplikat
+ * slip dan pembuatan endorsement/cancellation slip.
+ */
+export function copySlipInput(source: PlacingSlipRecord): PlacingSlipInput {
+  return {
+    clientId: source.clientId || "",
+    cob: source.cob,
+    typeOfCover: source.typeOfCover,
+    typeOfCover2: source.typeOfCover2,
+    typeOfCoverLabel: source.typeOfCoverLabel,
+    typeOfCover2Label: source.typeOfCover2Label,
+    coverCode: source.coverCode,
+    insuredName: source.insuredName,
+    correspondenceAddress: source.correspondenceAddress,
+    currency: source.currency,
+    status: "Draft",
+    periodTba: source.periodTba,
+    inceptionDate: source.inceptionDate,
+    expiryDate: source.expiryDate,
+    periodNote: source.periodNote,
+    periodLabel: source.periodLabel,
+    periodEndText: source.periodEndText,
+    periodText: source.periodText,
+    insuredDescription: source.insuredDescription,
+    usesSections: source.usesSections,
+    openCover: source.openCover,
+    openCoverRates: source.openCoverRates,
+    detailRows: source.detailRows,
+    occupation: source.occupation,
+    occupationLabel: source.occupationLabel,
+    riskLocation: source.riskLocation,
+    locations: source.locations,
+    coverage: source.coverage,
+    constructionClass: source.constructionClass,
+    indemnityPeriod: source.indemnityPeriod,
+    interestSection1: source.interestSection1,
+    interestSection2: source.interestSection2,
+    specialConditions: source.specialConditions,
+    deductibleIntro: source.deductibleIntro,
+    exclusions: source.exclusions,
+    interestItems: source.interestItems,
+    sumInsuredSection1: source.sumInsuredSection1,
+    sumInsuredSection2: source.sumInsuredSection2,
+    clauseIds: source.clauseIds,
+    clauseOverrides: source.clauseOverrides,
+    clauseGroups: source.clauseGroups,
+    participants: source.participants,
+    paBenefitLimits: source.paBenefitLimits,
+    clauseIdsSection2: source.clauseIdsSection2,
+    clauseOverridesSection2: source.clauseOverridesSection2,
+    clauseIdsGeneral: source.clauseIdsGeneral,
+    clauseOverridesGeneral: source.clauseOverridesGeneral,
+    wordingForms: source.wordingForms,
+    rateLines: source.rateLines,
+    tplLines: source.tplLines,
+    paLines: source.paLines,
+    rateExceptions: source.rateExceptions,
+    securityPanel: source.securityPanel,
+    discountPct: source.discountPct,
+    adminCost: source.adminCost,
+    stampDuty: source.stampDuty,
+    brokeragePct: source.brokeragePct,
+    includeVat: source.includeVat,
+    additionalFee: source.additionalFee,
+    additionalFeeIncludeVat: source.additionalFeeIncludeVat,
+  }
+}
+
+/**
+ * Endorsement atau cancellation slip dari slip polis yang sudah Closed (Harry,
+ * 11 November 2026). Isinya salinan slip asal, jadi user tinggal mengubah yang
+ * berubah. Kondisi sebelum perubahan disimpan sebagai dasar perhitungan premi.
+ * Slip asal bisa placing slip, atau endorsement slip sebelumnya yang sudah
+ * Closed untuk endorsement berikutnya.
+ */
+export async function createEndorsementSlip(
+  baseSlipId: string,
+  kind: "Endorsement" | "Cancellation",
+  userId: string
+): Promise<PlacingSlipRecord> {
+  const base = await getPlacingSlipById(baseSlipId)
+  if (!base) throw new Error("Slip asal tidak ditemukan.")
+  if (base.status !== "Closed") {
+    throw new Error("Endorsement dan cancellation dibuat dari slip yang sudah Closed.")
+  }
+  if (base.kind === "Cancellation") {
+    throw new Error("Slip ini adalah cancellation slip; polisnya sudah dibatalkan.")
+  }
+  const parentPolicyId =
+    base.kind === "Endorsement"
+      ? base.parentPolicyId
+      : (
+          await prisma.policy.findFirst({
+            where: {
+              placingSlipId: base.dbId,
+              policyType: { code: { in: ["new", "renewal"] } },
+            },
+            orderBy: [{ slipPart: "asc" }, { createdAt: "asc" }],
+            select: { id: true },
+          })
+        )?.id
+  if (!parentPolicyId) {
+    throw new Error(
+      "Polis dari slip ini belum tercatat di Policy Database. Catat polisnya dulu dari dokumen Closing Instruction."
+    )
+  }
+  const cancelled = await prisma.policy.findFirst({
+    where: { parentPolicyId, policyType: { code: "cancellation" } },
+    select: { policyNo: true },
+  })
+  if (cancelled) throw new Error(`Polis ini sudah dibatalkan (${cancelled.policyNo}).`)
+  // Satu perubahan polis diproses sampai selesai dulu, supaya perhitungan
+  // sebelum dan sesudahnya tidak tumpang tindih.
+  const open = await prisma.placingSlip.findFirst({
+    where: {
+      parentPolicyId,
+      kind: { in: ["Endorsement", "Cancellation"] },
+      status: { in: ["Draft", "Released", "Quoted"] },
+    },
+    select: { slipNo: true, kind: true },
+  })
+  if (open) {
+    throw new Error(
+      `Masih ada ${open.kind === "Cancellation" ? "cancellation" : "endorsement"} slip ${open.slipNo ?? "(draft)"} untuk polis ini yang belum ditutup.`
+    )
+  }
+  // Kondisi sebelum perubahan adalah endorsement terakhir yang sudah Closed,
+  // dari baris slip mana pun user memulai.
+  const latest = await prisma.placingSlip.findFirst({
+    where: { parentPolicyId, kind: "Endorsement", status: "Closed" },
+    orderBy: [{ closingDate: "desc" }, { updatedAt: "desc" }],
+    select: { id: true },
+  })
+  const source = latest && latest.id !== base.dbId ? await getPlacingSlipById(latest.id) : base
+  if (!source) throw new Error("Slip asal tidak ditemukan.")
+
+  const created = await createPlacingSlip(copySlipInput(source), userId)
+  await prisma.placingSlip.update({
+    where: { id: created.dbId },
+    data: {
+      kind,
+      parentPolicyId,
+      baseSlipId: source.dbId,
+      effectiveDate: dbDate(todayIso()),
+      beforeCalc: slipCalc(source) as unknown as Prisma.InputJsonValue,
+    },
+  })
+  const full = await getPlacingSlipById(created.dbId)
+  if (!full) throw new Error("Gagal mengambil endorsement slip yang baru dibuat.")
+  return full
+}
+
 export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord | null> {
   await seedInitialSlipsIfEmpty()
 
@@ -858,6 +1030,8 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
       constructionClass: { select: { id: true, code: true, name: true } },
       currency: { select: { code: true } },
       creator: { select: { id: true, name: true } },
+      parentPolicy: { select: { policyNo: true } },
+      baseSlip: { select: { slipNo: true } },
       locations: SLIP_LOCATIONS,
       items: { include: SLIP_ITEM_VEHICLE, orderBy: { sortOrder: "asc" } },
       rateLines: {
@@ -1666,6 +1840,13 @@ export async function updatePlacingSlip(
         subjectivity: input.subjectivity?.trim() || null,
         closingInstruction: input.closingInstruction?.trim() || null,
         coverNoteRemarks: input.coverNoteRemarks?.trim() || null,
+        // Endorsement dan cancellation slip: tanggal efektif dan uraian perubahan.
+        ...(existing.kind !== "Placing"
+          ? {
+              effectiveDate: input.effectiveDate ? dbDate(input.effectiveDate) : null,
+              changeDescription: input.changeDescription?.trim() || null,
+            }
+          : {}),
       },
     })
 
@@ -2013,6 +2194,12 @@ export async function releasePlacingSlip(
         existing.coverType2?.abbreviation
       )
       slipNo = await nextDocumentNumber(tx, { code: "PS", coverCode })
+      // Endorsement dan cancellation slip memakai urutan yang sama dengan
+      // placing slip supaya semua slip tercatat dalam satu urutan (Harry,
+      // 11 November 2026): 008/LCH-PLCMT/ES-MV/XI/2026.
+      if (existing.kind !== "Placing") {
+        slipNo = derivedDocNumber(slipNo, existing.kind === "Endorsement" ? "ES" : "CS") ?? slipNo
+      }
     }
 
     // Tanggal Placing Slip: tanggal release, kecuali sudah diisi manual.

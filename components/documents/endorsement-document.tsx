@@ -27,10 +27,10 @@ import { dateLong, moneyCents, num } from "@/lib/format"
 import type { EndorsementSlipData } from "@/lib/server/endorsement-slip"
 import type { DeductibleGroupText } from "@/lib/slip-deductibles"
 
-type Row = { id: string; en: string; value: React.ReactNode }
+export type Row = { id: string; en: string; value: React.ReactNode }
 
 /** Label dua bahasa seperti contoh EDM: Indonesia di atas, Inggris di bawahnya. */
-function BilingualTable({ rows }: { rows: Row[] }) {
+export function BilingualTable({ rows }: { rows: Row[] }) {
   return (
     <table className="mb-6 w-full text-[13px]">
       <tbody>
@@ -49,7 +49,7 @@ function BilingualTable({ rows }: { rows: Row[] }) {
   )
 }
 
-function Deductibles({ groups }: { groups: DeductibleGroupText[] }) {
+export function Deductibles({ groups }: { groups: DeductibleGroupText[] }) {
   return (
     <span className="flex flex-col gap-1">
       {groups.map((g, i) => (

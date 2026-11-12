@@ -41,6 +41,13 @@ enum SlipStatus {
   Cancelled
 }
 
+/// Jenis slip di menu Placement (Harry, 11 November 2026).
+enum SlipKind {
+  Placing
+  Endorsement
+  Cancellation
+}
+
 /// Status SPPA.
 enum SppaStatus {
   Draft
@@ -1201,6 +1208,21 @@ model PlacingSlip {
   quotedDate  DateTime? @map("quoted_date") @db.Date
   closingDate DateTime? @map("closing_date") @db.Date
 
+  /// Placing slip, endorsement slip, atau cancellation slip (Harry, 11 November
+  /// 2026). Endorsement dan cancellation dibuat dari slip polis yang sudah
+  /// Closed; nomornya ES/CS dari urutan nomor placing slip.
+  kind              SlipKind  @default(Placing)
+  /// Polis yang di-endorse atau dibatalkan.
+  parentPolicyId    String?   @map("parent_policy_id") @db.Uuid
+  /// Slip asal: kondisi sebelum perubahan.
+  baseSlipId        String?   @map("base_slip_id") @db.Uuid
+  /// Tanggal efektif endorsement atau pembatalan.
+  effectiveDate     DateTime? @map("effective_date") @db.Date
+  /// Uraian perubahan yang dicetak di endorsement slip.
+  changeDescription String?   @map("change_description")
+  /// Baris premi slip asal saat endorsement dibuat: dasar perhitungan "sebelum".
+  beforeCalc        Json?     @map("before_calc") @db.JsonB
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1217,6 +1239,8 @@ model PlacingSlip {
   biScale                     BiScale?        @relation(fields: [indemnityMonths], references: [indemnityMonths])
   releaser                    User?           @relation("slipReleasedBy", fields: [releasedBy], references: [id])
   creator                     User            @relation("slipCreatedBy", fields: [createdBy], references: [id])
+  parentPolicy                Policy?         @relation("slipParentPolicy", fields: [parentPolicyId], references: [id], onDelete: SetNull)
+  baseSlip                    PlacingSlip?    @relation("slipBase", fields: [baseSlipId], references: [id], onDelete: SetNull)
 
   locations     SlipLocation[]
   items         SlipItem[]
@@ -1227,9 +1251,12 @@ model PlacingSlip {
   files         SlipFile[]
   wordingForms  SlipWordingForm[]
   policies      Policy[]
+  /// Endorsement dan cancellation slip yang dibuat dari slip ini.
+  derivedSlips  PlacingSlip[] @relation("slipBase")
 
   @@index([clientId])
   @@index([status])
+  @@index([parentPolicyId])
   @@map("placing_slips")
 }
 
@@ -1531,6 +1558,8 @@ model Policy {
   parentPolicy      Policy?         @relation("policyParent", fields: [parentPolicyId], references: [id])
 
   childPolicies Policy[]        @relation("policyParent")
+  /// Endorsement dan cancellation slip di Placement untuk polis ini.
+  endorsementSlips PlacingSlip[] @relation("slipParentPolicy")
   insurers      PolicyInsurer[]
   files         PolicyFile[]
   claims        Claim[]

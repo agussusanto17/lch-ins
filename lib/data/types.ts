@@ -16,6 +16,28 @@ export type KnownClassOfBusiness =
 export type ClassOfBusiness = KnownClassOfBusiness | (string & {})
 
 /** Cancelled dipakai untuk slip bernomor yang dibatalkan, supaya nomor tidak bolong. */
+/** Jenis slip di menu Placement (Harry, 11 November 2026). */
+export type SlipKind = "Placing" | "Endorsement" | "Cancellation"
+
+/** Satu baris perhitungan endorsement: nilai × rate = premi setahun. */
+export interface EndorsementCalcLine {
+  label: string
+  /** Nilai yang dikalikan rate; kosong untuk premi flat. */
+  basis: number | null
+  rate: number | null
+  /** Satuan rate: "%" atau "‰". */
+  unit: string
+  /** Premi setahun baris ini, sebelum prorata. */
+  premium: number
+}
+
+/** Kondisi pertanggungan slip pada satu waktu, dasar perhitungan endorsement. */
+export interface EndorsementCalc {
+  lines: EndorsementCalcLine[]
+  sumInsured: number
+  premium: number
+}
+
 export type SlipStatus =
   "Draft" | "Released" | "Quoted" | "Closed" | "Cancelled"
 /** Dihitung dari tanggal berakhir polis, tidak disimpan (PRD A-17). */
@@ -462,6 +484,20 @@ export interface PlacingSlip {
   releaseDate?: string | null
   quotedDate?: string | null
   closingDate?: string | null
+  /** Jenis slip; kosong berarti placing slip biasa. */
+  kind?: SlipKind
+  /** Polis yang di-endorse atau dibatalkan, dan nomornya untuk tampilan. */
+  parentPolicyId?: string | null
+  parentPolicyNo?: string | null
+  /** Slip asal endorsement: kondisi sebelum perubahan. */
+  baseSlipId?: string | null
+  baseSlipNo?: string | null
+  /** Tanggal efektif endorsement atau pembatalan "YYYY-MM-DD". */
+  effectiveDate?: string | null
+  /** Uraian perubahan yang dicetak di endorsement slip. */
+  changeDescription?: string | null
+  /** Baris premi slip asal saat endorsement dibuat. */
+  beforeCalc?: EndorsementCalc | null
   /** Nama pengguna yang membuat slip, dari server; untuk kolom dan filter di daftar Placement. */
   createdByName?: string
   /* pasca-release */

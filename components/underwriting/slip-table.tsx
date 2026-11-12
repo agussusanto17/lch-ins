@@ -2,7 +2,18 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Ban, Copy, Eye, FileCheck2, FileText, Pencil, Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import {
+  Ban,
+  Copy,
+  Eye,
+  FileCheck2,
+  FilePlus2,
+  FileText,
+  FileX2,
+  Pencil,
+  Trash2,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -43,6 +54,7 @@ import { isMultiItem } from "@/lib/slip-items"
 import { newId, store, useCollection } from "@/lib/store"
 import type { PlacingSlipRecord } from "@/lib/server/placing-slips"
 import {
+  createEndorsementSlipAction,
   deletePlacingSlipAction,
   duplicatePlacingSlipAction,
   togglePlacingSlipStatusAction,
@@ -59,14 +71,25 @@ const STATUS_ITEMS = [
 function actionsFor(
   slip: PlacingSlip,
   today: string,
-  canManage: boolean
+  canManage: boolean,
+  open: (path: string) => void
 ): RowAction[] {
+  // Endorsement dan cancellation slip (Harry, 11 November 2026) tidak punya
+  // quotation, closing instruction, atau cover note.
+  const changeSlip = slip.kind === "Endorsement" || slip.kind === "Cancellation"
   const actions: RowAction[] = [
-    {
-      label: "Lihat placing slip",
-      icon: Eye,
-      render: <Link href={`/placement/slip/${slip.id}`} />,
-    },
+    changeSlip
+      ? {
+          label:
+            slip.kind === "Cancellation" ? "Lihat cancellation slip" : "Lihat endorsement slip",
+          icon: Eye,
+          render: <Link href={`/placement/endorsement/${slip.id}`} />,
+        }
+      : {
+          label: "Lihat placing slip",
+          icon: Eye,
+          render: <Link href={`/placement/slip/${slip.id}`} />,
+        },
   ]
   if (!canManage) {
     return actions
@@ -76,70 +99,100 @@ function actionsFor(
     icon: Pencil,
     render: <Link href={`/placement/edit/${slip.id}`} />,
   })
-  if (
-    slip.status === "Released" ||
-    slip.status === "Quoted" ||
-    slip.status === "Closed"
-  ) {
-    actions.push({
-      label: "Draft quotation slip",
-      icon: FileText,
-      render: <Link href={`/placement/quotation/edit/${slip.id}`} />,
-    })
+  // Perubahan polis dibuat dari slip yang sudah Closed: endorsement slip, atau
+  // cancellation slip kalau polisnya dibatalkan.
+  if (slip.status === "Closed" && slip.kind !== "Cancellation") {
+    for (const kind of ["Endorsement", "Cancellation"] as const) {
+      actions.push({
+        label: kind === "Endorsement" ? "Buat endorsement slip" : "Buat cancellation slip",
+        icon: kind === "Endorsement" ? FilePlus2 : FileX2,
+        onSelect: async () => {
+          const res = await createEndorsementSlipAction(slip.id, kind)
+          if (!res.ok || !res.data) {
+            toast.error(
+              kind === "Endorsement"
+                ? "Gagal membuat endorsement slip"
+                : "Gagal membuat cancellation slip",
+              { description: res.error }
+            )
+            return
+          }
+          store.upsert("slips", res.data)
+          toast.success(
+            kind === "Endorsement" ? "Endorsement slip dibuat" : "Cancellation slip dibuat",
+            { description: `Polis ${res.data.parentPolicyNo ?? ""}` }
+          )
+          open(`/placement/edit/${res.data.id}`)
+        },
+      })
+    }
   }
-  if (slip.status === "Quoted" || slip.status === "Closed") {
+  if (!changeSlip) {
+    if (
+      slip.status === "Released" ||
+      slip.status === "Quoted" ||
+      slip.status === "Closed"
+    ) {
+      actions.push({
+        label: "Draft quotation slip",
+        icon: FileText,
+        render: <Link href={`/placement/quotation/edit/${slip.id}`} />,
+      })
+    }
+    if (slip.status === "Quoted" || slip.status === "Closed") {
+      actions.push({
+        label: "Closing instruction",
+        icon: FileCheck2,
+        render: <Link href={`/placement/closing/edit/${slip.id}`} />,
+      })
+    }
+    if (slip.status === "Closed") {
+      actions.push({
+        label: "Lihat closing instruction",
+        icon: Eye,
+        render: <Link href={`/placement/closing/${slip.id}`} />,
+      })
+      // Draft Cover Note terbit setelah Closing Instruction (meeting LCH, 10 November 2026).
+      actions.push({
+        label: "Lihat draft cover note",
+        icon: Eye,
+        render: <Link href={`/placement/cover-note/${slip.id}`} />,
+      })
+    }
     actions.push({
-      label: "Closing instruction",
-      icon: FileCheck2,
-      render: <Link href={`/placement/closing/edit/${slip.id}`} />,
-    })
-  }
-  if (slip.status === "Closed") {
-    actions.push({
-      label: "Lihat closing instruction",
-      icon: Eye,
-      render: <Link href={`/placement/closing/${slip.id}`} />,
-    })
-    // Draft Cover Note terbit setelah Closing Instruction (meeting LCH, 10 November 2026).
-    actions.push({
-      label: "Lihat draft cover note",
-      icon: Eye,
-      render: <Link href={`/placement/cover-note/${slip.id}`} />,
-    })
-  }
-  actions.push({
-    label: "Duplikat jadi draft baru",
-    icon: Copy,
-    onSelect: async () => {
-      const res = await duplicatePlacingSlipAction(slip.id)
-      if (res.ok && res.data) {
-        store.upsert("slips", res.data)
-        toast.success("Slip diduplikasi", {
-          description: `Draft baru untuk ${res.data.insuredName}`,
-        })
-      } else {
-        // Fallback local memory jika id belum sync ke DB
-        const copy: PlacingSlip = {
-          ...slip,
-          id: newId("s"),
-          slipNo: null,
-          seq: 0,
-          status: "Draft",
-          sppaId: null,
-          subjectivity: undefined,
-          securityPanel: undefined,
-          closingInstruction: undefined,
-          coverNoteRemarks: undefined,
-          createdAt: today,
-          updatedAt: today,
+      label: "Duplikat jadi draft baru",
+      icon: Copy,
+      onSelect: async () => {
+        const res = await duplicatePlacingSlipAction(slip.id)
+        if (res.ok && res.data) {
+          store.upsert("slips", res.data)
+          toast.success("Slip diduplikasi", {
+            description: `Draft baru untuk ${res.data.insuredName}`,
+          })
+        } else {
+          // Fallback local memory jika id belum sync ke DB
+          const copy: PlacingSlip = {
+            ...slip,
+            id: newId("s"),
+            slipNo: null,
+            seq: 0,
+            status: "Draft",
+            sppaId: null,
+            subjectivity: undefined,
+            securityPanel: undefined,
+            closingInstruction: undefined,
+            coverNoteRemarks: undefined,
+            createdAt: today,
+            updatedAt: today,
+          }
+          store.insert("slips", copy)
+          toast.success("Slip diduplikasi", {
+            description: `Draft baru untuk ${slip.insuredName}`,
+          })
         }
-        store.insert("slips", copy)
-        toast.success("Slip diduplikasi", {
-          description: `Draft baru untuk ${slip.insuredName}`,
-        })
-      }
-    },
-  })
+      },
+    })
+  }
   if (slip.status === "Draft") {
     actions.push({
       label: "Hapus draft",
@@ -196,6 +249,7 @@ export function SlipTable({
   initialSlips?: PlacingSlipRecord[]
 }) {
   const today = useToday()
+  const router = useRouter()
   const cobItems = useCobFilterItems()
 
   React.useEffect(() => {
@@ -376,7 +430,9 @@ export function SlipTable({
               paginatedRows.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className={ACTION_COL_CLASS}>
-                    <RowActions actions={actionsFor(s, today, canManage)} />
+                    <RowActions
+                      actions={actionsFor(s, today, canManage, (path) => router.push(path))}
+                    />
                   </TableCell>
                   <TableCell>
                     {s.slipNo ? (
@@ -388,6 +444,12 @@ export function SlipTable({
                         Belum di-release
                       </span>
                     )}
+                    {s.kind === "Endorsement" || s.kind === "Cancellation" ? (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {s.kind === "Endorsement" ? "Endorsement" : "Cancellation"}
+                        {s.parentPolicyNo ? ` · polis ${s.parentPolicyNo}` : null}
+                      </p>
+                    ) : null}
                   </TableCell>
                   <TableCell className="w-[16%] max-w-0">
                     <p className="truncate font-medium" title={s.insuredName}>

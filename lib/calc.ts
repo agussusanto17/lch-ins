@@ -468,6 +468,31 @@ export function recalcSlip(input: PlacingSlip): PlacingSlip {
 }
 
 /**
+ * Nilai yang dikalikan rate pada tiap baris, dengan aturan yang sama seperti
+ * recalcSlip: Property memakai sum insured section lokasinya (BI memakai
+ * Section 2), COB lain memakai nilai objeknya, TPL dan PA memakai limitnya.
+ * Dipakai perhitungan endorsement untuk mencetak "TSI × rate".
+ */
+export function rateLineBasis(input: PlacingSlip): Map<string, number> {
+  const slip = withItemRates(withLocations(input))
+  const bases = locationBases(slip)
+  const owner = locationOwner(slip)
+  const itemOf = itemOwner(slip)
+  const itemValue = new Map(slip.interestItems.map((v) => [v.id, v.amount || 0]))
+  const out = new Map<string, number>()
+  for (const l of slip.rateLines) {
+    if (slip.cob === "Property") {
+      const location = bases.get(owner(l.locationId))
+      if (location) out.set(l.id, BI_RATE_LABELS.includes(l.label) ? location.bi : location.md)
+    } else {
+      out.set(l.id, itemValue.get(itemOf(l.vehicleId) ?? "") ?? 0)
+    }
+  }
+  for (const l of [...slip.tplLines, ...slip.paLines]) out.set(l.id, Number(l.basis ?? 0))
+  return out
+}
+
+/**
  * Rate dibulatkan ke enam desimal seperti kolom numeric(12,6), setengah ke
  * atas. toPrecision membuang galat floating point dulu: 1,0963305 tersimpan
  * sebagai 1,09633049…, yang tanpa itu dibulatkan ke bawah.
