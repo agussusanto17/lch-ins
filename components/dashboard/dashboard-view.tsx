@@ -25,10 +25,10 @@ import {
   monthlyProduction,
   premiumByCob,
   premiumIdr,
-  upcomingRenewals,
 } from "@/lib/data"
 import { daysBetween, yearMonth } from "@/lib/date"
 import { compactMoney, dateShort, monthLabel, rupiah } from "@/lib/format"
+import { renewalCandidates } from "@/lib/renewal"
 import type { ClaimRecord } from "@/lib/server/claims"
 import type { ClientRecord } from "@/lib/server/clients"
 import type { PlacingSlipRecord } from "@/lib/server/placing-slips"
@@ -96,7 +96,8 @@ export function DashboardView({
   const slips = initialSlips
 
   const totals = computeTotals({ clients, policies, claims, slips }, today)
-  const renewals = upcomingRenewals(policies, today, 60)
+  // Sama dengan Renewal Notice ("Lihat semua"), hanya jendelanya 60 hari.
+  const renewals = renewalCandidates(policies, today, 60, "all")
   const cob = premiumByCob(policies, today)
   const { year, month } = yearMonth(today)
   const monthPrefix = today.slice(0, 7)

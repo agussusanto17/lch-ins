@@ -241,7 +241,7 @@ export function RenewalNotice({
                       {rupiah(premiumIdr(p))}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={policyStatus(p.expiryDate, today)} />
+                      <StatusBadge status={policyStatus(p, today)} />
                     </TableCell>
                   </TableRow>
                 )

@@ -490,7 +490,7 @@ export function ReportView({
                 },
                 {
                   header: "Status",
-                  value: (p) => policyStatus(p.expiryDate, today),
+                  value: (p) => policyStatus(p, today),
                 },
               ],
             }}
@@ -540,9 +540,7 @@ export function ReportView({
                         {rupiah(feeIdr(p))}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge
-                          status={policyStatus(p.expiryDate, today)}
-                        />
+                        <StatusBadge status={policyStatus(p, today)} />
                       </TableCell>
                     </TableRow>
                   ))

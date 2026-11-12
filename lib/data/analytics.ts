@@ -1,5 +1,4 @@
 import { toIdr } from "../calc"
-import { daysBetween } from "../date"
 import { policyStatus } from "./policy-status"
 import { OPEN_CLAIM_STATUSES } from "./reference"
 import type { Claim, Client, PlacingSlip, Policy } from "./types"
@@ -27,9 +26,12 @@ export function feeIdr(p: { additionalFee?: number; currency: string }) {
   return toIdr(p.additionalFee ?? 0, p.currency)
 }
 
-/** Polis yang masih berjalan pada tanggal tertentu. */
+/** Polis yang masih berjalan pada tanggal tertentu: belum berakhir dan tidak dibatalkan. */
 export function inForcePolicies(policies: Policy[], today: string) {
-  return policies.filter((p) => policyStatus(p.expiryDate, today) !== "Expired")
+  return policies.filter((p) => {
+    const status = policyStatus(p, today)
+    return status === "Active" || status === "Expiring"
+  })
 }
 
 export function isOpenClaim(claim: Pick<Claim, "status">) {
@@ -162,16 +164,6 @@ export function breakdownByInsurer(policies: Policy[]) {
 /** Porsi premium portofolio yang masih berjalan. */
 export function premiumByCob(policies: Policy[], today: string) {
   return breakdownByCob(inForcePolicies(policies, today))
-}
-
-/** Polis yang jatuh tempo dalam N hari ke depan. */
-export function upcomingRenewals(policies: Policy[], today: string, days = 60) {
-  return policies
-    .filter((p) => {
-      const diff = daysBetween(today, p.expiryDate)
-      return diff >= 0 && diff <= days
-    })
-    .sort((a, b) => a.expiryDate.localeCompare(b.expiryDate))
 }
 
 export function claimsByStatus(claims: Claim[]) {

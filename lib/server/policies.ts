@@ -35,11 +35,12 @@ import { PARTICIPANT_LIMITS, usesParticipants } from "@/lib/slip-participants"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
 import { storedPreviousPolicyNo } from "@/lib/policy-parent"
 import { endorsementPremium } from "@/lib/endorsement-premium"
+import { loadCancelledPolicies } from "@/lib/server/cancelled-policies"
 
 export type PolicyRecord = Policy
 export type PolicyInput = Omit<
   Policy,
-  "id" | "files" | "endorsementSeq" | "placingSlipNo" | "participantCount"
+  "id" | "files" | "endorsementSeq" | "placingSlipNo" | "participantCount" | "cancelled"
 > & {
   /** Perubahan peserta PA grup, hanya untuk endorsement baru. */
   participantChanges?: ParticipantChanges
@@ -75,7 +76,10 @@ type PolicyRow = Prisma.PolicyGetPayload<{ include: typeof policyInclude }>
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10)
 
-function toPolicyRecord(row: PolicyRow): PolicyRecord {
+function toPolicyRecord(
+  row: PolicyRow,
+  cancelled: ReadonlyMap<string, string>
+): PolicyRecord {
   const insurers: SecurityPanelRow[] = row.insurers.map((i) => ({
     id: i.id,
     insurer: i.insurer.name,
@@ -127,6 +131,7 @@ function toPolicyRecord(row: PolicyRow): PolicyRecord {
       url: storedFileUrl(f.filePath),
     })),
     participantCount: row._count?.participants ?? 0,
+    cancelled: cancelled.has(row.id),
   }
 }
 
@@ -325,6 +330,31 @@ async function endorsementSeqFor(
   return (_max.endorsementSeq ?? 0) + 1
 }
 
+/**
+ * Polis yang sudah dibatalkan tidak bisa di-renew, di-endorse, atau dibatalkan
+ * lagi, sama dengan endorsement slip di Placement. Record yang sudah tersimpan
+ * dengan induk itu, termasuk pembatalannya sendiri, tetap bisa diedit selama
+ * induknya tidak diganti.
+ */
+async function assertParentNotCancelled(
+  tx: Tx,
+  parentPolicyId: string | null,
+  selfId?: string
+) {
+  if (!parentPolicyId) return
+  if (selfId) {
+    const current = await tx.policy.findUnique({
+      where: { id: selfId },
+      select: { parentPolicyId: true },
+    })
+    if (current?.parentPolicyId === parentPolicyId) return
+  }
+  const cancellationNo = (await loadCancelledPolicies(tx)).get(parentPolicyId)
+  if (cancellationNo) {
+    throw new Error(`Polis yang dipilih sudah dibatalkan (${cancellationNo}).`)
+  }
+}
+
 /** Data dari form: klien dan polis induk yang dipilih harus sudah ada di database. */
 async function checkedPolicyData(tx: Tx, input: PolicyInput, selfId?: string) {
   const data = await policyData(tx, input)
@@ -337,6 +367,7 @@ async function checkedPolicyData(tx: Tx, input: PolicyInput, selfId?: string) {
   if (selfId && data.parentPolicyId === selfId) {
     throw new Error("Polis tidak bisa menjadi induk dirinya sendiri.")
   }
+  await assertParentNotCancelled(tx, data.parentPolicyId, selfId)
   const duplicate = await tx.policy.findUnique({
     where: { policyNo: data.policyNo },
     select: { id: true },
@@ -433,7 +464,8 @@ async function writeInsurers(tx: Tx, policyId: string, input: PolicyInput) {
 
 async function readPolicy(tx: Tx, id: string) {
   return toPolicyRecord(
-    await tx.policy.findUniqueOrThrow({ where: { id }, include: policyInclude })
+    await tx.policy.findUniqueOrThrow({ where: { id }, include: policyInclude }),
+    await loadCancelledPolicies(tx)
   )
 }
 
@@ -442,28 +474,35 @@ export async function listPolicies(
   params: { clientId?: string } = {}
 ): Promise<PolicyRecord[]> {
   await seedInitialPoliciesIfEmpty()
-  const rows = await prisma.policy.findMany({
-    where: params.clientId ? { clientId: params.clientId } : undefined,
-    include: policyInclude,
-    orderBy: { expiryDate: "desc" },
-  })
-  return rows.map(toPolicyRecord)
+  const [rows, cancelled] = await Promise.all([
+    prisma.policy.findMany({
+      where: params.clientId ? { clientId: params.clientId } : undefined,
+      include: policyInclude,
+      orderBy: { expiryDate: "desc" },
+    }),
+    loadCancelledPolicies(),
+  ])
+  return rows.map((row) => toPolicyRecord(row, cancelled))
 }
 
 /** Polis yang berakhir dalam periode renewal terpanjang, supaya Marketing tidak memuat seluruh tabel. */
 export async function listRenewalPolicies(today: string): Promise<PolicyRecord[]> {
   await seedInitialPoliciesIfEmpty()
-  const rows = await prisma.policy.findMany({
-    where: {
-      expiryDate: {
-        gte: new Date(today),
-        lte: new Date(addDays(today, MAX_RENEWAL_DAYS)),
+  const [rows, cancelled] = await Promise.all([
+    prisma.policy.findMany({
+      where: {
+        expiryDate: {
+          gte: new Date(today),
+          lte: new Date(addDays(today, MAX_RENEWAL_DAYS)),
+        },
       },
-    },
-    include: policyInclude,
-    orderBy: { expiryDate: "asc" },
-  })
-  return rows.map(toPolicyRecord)
+      include: policyInclude,
+      orderBy: { expiryDate: "asc" },
+    }),
+    // Dari seluruh tabel: record Cancellation bisa berakhir di luar periode ini.
+    loadCancelledPolicies(),
+  ])
+  return rows.map((row) => toPolicyRecord(row, cancelled))
 }
 
 export async function listPolicyFormOptions(): Promise<PolicyFormOptions> {
@@ -504,7 +543,7 @@ export async function listPolicyFormOptions(): Promise<PolicyFormOptions> {
 export async function getPolicyById(id: string): Promise<PolicyRecord | null> {
   if (!UUID_RE.test(id)) return null
   const row = await prisma.policy.findUnique({ where: { id }, include: policyInclude })
-  return row ? toPolicyRecord(row) : null
+  return row ? toPolicyRecord(row, await loadCancelledPolicies()) : null
 }
 
 /** Polis pemilik daftar peserta: naik ke polis induk selama polisnya endorsement atau pembatalan. */
@@ -842,7 +881,7 @@ export async function deletePolicy(id: string, userId: string): Promise<void> {
       entity: "policies",
       entityId: id,
       action: "Delete",
-      before: auditSnapshot(toPolicyRecord(existing)),
+      before: auditSnapshot(toPolicyRecord(existing, new Map())),
       after: null,
     })
   })

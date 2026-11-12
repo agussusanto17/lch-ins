@@ -36,6 +36,7 @@ import { normalizeCob } from "@/lib/format"
 import { cleanDetailRows } from "@/lib/slip-details"
 import { cleanOpenCoverRates } from "@/lib/open-cover"
 import { cleanPaBenefitLimits } from "@/lib/pa-benefits"
+import { loadCancelledPolicies } from "@/lib/server/cancelled-policies"
 import { slipFilesOrder, toSlipAttachment } from "@/lib/server/slip-files"
 import { deleteStoredFiles } from "@/lib/server/stored-files"
 import { PARTICIPANT_LIMITS } from "@/lib/slip-participants"
@@ -960,11 +961,9 @@ export async function createEndorsementSlip(
       "Polis dari slip ini belum tercatat di Policy Database. Catat polisnya dulu dari dokumen Closing Instruction."
     )
   }
-  const cancelled = await prisma.policy.findFirst({
-    where: { parentPolicyId, policyType: { code: "cancellation" } },
-    select: { policyNo: true },
-  })
-  if (cancelled) throw new Error(`Polis ini sudah dibatalkan (${cancelled.policyNo}).`)
+  // Termasuk pembatalan dari Policy Database yang menunjuk endorsement polis ini.
+  const cancellationNo = (await loadCancelledPolicies()).get(parentPolicyId)
+  if (cancellationNo) throw new Error(`Polis ini sudah dibatalkan (${cancellationNo}).`)
   // Satu perubahan polis diproses sampai selesai dulu, supaya perhitungan
   // sebelum dan sesudahnya tidak tumpang tindih.
   const open = await prisma.placingSlip.findFirst({

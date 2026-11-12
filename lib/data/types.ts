@@ -40,8 +40,11 @@ export interface EndorsementCalc {
 
 export type SlipStatus =
   "Draft" | "Released" | "Quoted" | "Closed" | "Cancelled"
-/** Dihitung dari tanggal berakhir polis, tidak disimpan (PRD A-17). */
-export type PolicyStatus = "Active" | "Expiring" | "Expired"
+/**
+ * Dihitung, tidak disimpan: dari tanggal berakhir polis (PRD A-17), atau
+ * Cancelled bila polis sudah punya record Cancellation.
+ */
+export type PolicyStatus = "Active" | "Expiring" | "Expired" | "Cancelled"
 export type PolicyType = "Baru" | "Renewal" | "Endorsement" | "Cancellation"
 /** Kelompok perhitungan slip PAR + EQVET yang masing-masing terbit sebagai polis. */
 export type SlipPart = "PAR" | "EQVET"
@@ -581,6 +584,12 @@ export interface Policy {
   files: PolicyFile[]
   /** Peserta PA grup yang masih aktif di daftar polis ini. */
   participantCount?: number
+  /**
+   * Polis ini, atau polis asal endorsement dan pembatalan ini, sudah punya
+   * record Cancellation. Dihitung server dari seluruh tabel polis, tidak
+   * disimpan (lihat `cancelledPolicies`).
+   */
+  cancelled?: boolean
 }
 
 export interface Claim {
