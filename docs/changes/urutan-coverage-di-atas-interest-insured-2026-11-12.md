@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `fix/urutan-coverage-di-atas-interest-insured`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #238
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
