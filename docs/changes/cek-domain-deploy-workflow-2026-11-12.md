@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `fix/cek-domain-deploy-workflow`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #225
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
