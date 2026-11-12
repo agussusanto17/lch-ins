@@ -47,6 +47,7 @@ import {
   itemOwner,
   itemSection,
   coverNameIssues,
+  isLimitOnlyItem,
   missingRateIssue,
   usesItemRates,
 } from "@/lib/slip-items"
@@ -148,21 +149,155 @@ const MOTOR_EXTRA_COVERS: {
 /** Extra motor rows follow this cover; without it they go last. */
 const MOTOR_EXTRA_AFTER = "Terrorism & Sabotage"
 
-/** Motor PA and TPL covers this slip has, i.e. whose table has a line. */
-export function extraDeductibleCovers(slip: PlacingSlip) {
-  if (slip.cob !== "Motor Vehicle") return []
-  const source = deductibleSource(slip)
-  return MOTOR_EXTRA_COVERS.filter((c) => source[c.group].length > 0)
+type UnitLines = Pick<PlacingSlip, "rateLines" | "tplLines" | "paLines">
+
+/**
+ * Lokasi, kendaraan, atau objek yang punya deductible sendiri (Agus, 13
+ * November 2026). Sebelumnya satu daftar deductible per cover berlaku untuk
+ * semua lokasi dan objek (Harry, 5 November 2026).
+ */
+export interface DeductibleUnit {
+  /** Id lokasi atau baris Interest; "slip" untuk slip tanpa unit. */
+  id: string
+  /** Nomor lokasi, kendaraan, atau objek di form dan dokumen, mulai 1. */
+  no: number
+  location?: SlipLocation
+  item?: LineItem
+  /** Baris rate, TPL, dan PA milik unit ini; deductible disimpan di sana. */
+  lines: UnitLines
 }
 
 /**
- * Deductible rows in form and print order: one per rate line, with motor PA
- * and TPL after Terrorism & Sabotage once they hold deductibles or were added
- * from the form (`added`).
+ * Unit deductible slip: lokasi Property, kendaraan Motor Vehicle, atau objek
+ * COB lain. Objek "limit saja" bukan risiko tersendiri, jadi tidak punya
+ * deductible. Slip ber-section (CAR, EAR) tetap satu daftar per section dan
+ * slip tanpa objek memakai baris slipnya, jadi keduanya satu unit.
+ */
+export function deductibleUnits(slip: PlacingSlip): DeductibleUnit[] {
+  if (slip.cob === "Property") {
+    return locationGroups(slip).map((g) => ({
+      id: g.location.id,
+      no: g.no,
+      location: g.location,
+      lines: { rateLines: g.rateLines, tplLines: [], paLines: [] },
+    }))
+  }
+  if (
+    usesItemRates(slip.cob) &&
+    slip.interestItems.length &&
+    slipSectionTitles(slip) === null
+  ) {
+    const groups = itemGroups(slip)
+    const priced = groups.filter((g) => !isLimitOnlyItem(slip.cob, g.item))
+    return (priced.length ? priced : groups.slice(0, 1)).map((g) => ({
+      id: g.item.id,
+      no: g.no,
+      item: g.item,
+      lines: g,
+    }))
+  }
+  return [{ id: "slip", no: 1, lines: slip }]
+}
+
+/**
+ * Baris penyimpan deductible satu unit, dengan kunci cover untuk mencocokkan
+ * baris antarunit: label baris rate beserta urutannya bila labelnya kembar,
+ * lalu TPL dan PA yang deductible-nya di baris pertama tabelnya.
+ */
+function deductibleLines(lines: UnitLines): Map<string, RateLine> {
+  const out = new Map<string, RateLine>()
+  const seen = new Map<string, number>()
+  for (const line of lines.rateLines) {
+    const n = seen.get(line.label) ?? 0
+    seen.set(line.label, n + 1)
+    out.set(`rate:${line.label}#${n}`, line)
+  }
+  if (lines.tplLines[0]) out.set("tpl", lines.tplLines[0])
+  if (lines.paLines[0]) out.set("pa", lines.paLines[0])
+  return out
+}
+
+const filledDeductibles = (deductibles?: string[]) =>
+  (deductibles ?? []).map((t) => t.trim()).filter(Boolean)
+
+/**
+ * Semua lokasi, kendaraan, atau objek memakai deductible yang sama untuk
+ * setiap cover. Form lalu cukup menampilkan satu daftar.
+ */
+export function unitsShareDeductibles(slip: PlacingSlip) {
+  const [first, ...rest] = deductibleUnits(slip).map((u) => deductibleLines(u.lines))
+  return rest.every((lines) =>
+    [...new Set([...first.keys(), ...lines.keys()])].every((key) => {
+      const a = filledDeductibles(first.get(key)?.deductibles)
+      const b = filledDeductibles(lines.get(key)?.deductibles)
+      return a.length === b.length && a.every((t, i) => t === b[i])
+    })
+  )
+}
+
+/**
+ * Deductible satu cover diubah di semua unit sekaligus, selama deductible
+ * sama untuk semua lokasi, kendaraan, atau objek. Unit tanpa cover itu
+ * dilewati. `row` berasal dari unit pertama.
+ */
+export function setDeductiblesAllUnits(
+  slip: PlacingSlip,
+  row: Pick<DeductibleRow, "group" | "lineId">,
+  deductibles: string[]
+): Partial<PlacingSlip> {
+  const units = deductibleUnits(slip).map((u) => deductibleLines(u.lines))
+  const key = [...units[0]].find(([, line]) => line.id === row.lineId)?.[0]
+  const ids = new Set(
+    key
+      ? units.flatMap((lines) => lines.get(key)?.id ?? [])
+      : [row.lineId]
+  )
+  return {
+    [row.group]: slip[row.group].map((l) =>
+      ids.has(l.id) ? { ...l, deductibles } : l
+    ),
+  }
+}
+
+/**
+ * Samakan deductible semua unit dengan unit pertama, cover demi cover. Cover
+ * yang tidak ada di unit pertama dikosongkan.
+ */
+export function shareDeductiblesPatch(slip: PlacingSlip): Partial<PlacingSlip> {
+  const [first, ...rest] = deductibleUnits(slip).map((u) => deductibleLines(u.lines))
+  const next = new Map<string, string[]>()
+  for (const lines of rest) {
+    for (const [key, line] of lines) {
+      next.set(line.id, [...(first.get(key)?.deductibles ?? [])])
+    }
+  }
+  const apply = (list: RateLine[]) =>
+    list.map((l) => (next.has(l.id) ? { ...l, deductibles: next.get(l.id) } : l))
+  return {
+    rateLines: apply(slip.rateLines),
+    tplLines: apply(slip.tplLines),
+    paLines: apply(slip.paLines),
+  }
+}
+
+/** Motor PA and TPL covers a unit has, i.e. whose table has a line. */
+export function extraDeductibleCovers(
+  slip: PlacingSlip,
+  unit: DeductibleUnit = deductibleUnits(slip)[0]
+) {
+  if (slip.cob !== "Motor Vehicle") return []
+  return MOTOR_EXTRA_COVERS.filter((c) => unit.lines[c.group].length > 0)
+}
+
+/**
+ * Deductible rows of one unit (default the first) in form and print order:
+ * one per rate line, with motor PA and TPL after Terrorism & Sabotage once
+ * they hold deductibles or were added from the form (`added`).
  */
 export function deductibleRows(
   slip: PlacingSlip,
-  added: DeductibleGroup[] = []
+  added: DeductibleGroup[] = [],
+  unit: DeductibleUnit = deductibleUnits(slip)[0]
 ): DeductibleRow[] {
   // Slip ber-section (CAR, EAR): satu daftar per section, disimpan di baris
   // rate objek pertama section itu.
@@ -184,7 +319,7 @@ export function deductibleRows(
         : []
     })
   }
-  const source = deductibleSource(slip)
+  const source = unit.lines
   const lines = source.rateLines
   const rows: DeductibleRow[] = lines.map((l) => ({
     group: "rateLines",
@@ -193,7 +328,7 @@ export function deductibleRows(
     deductibles: l.deductibles ?? [],
     extra: false,
   }))
-  const extras = extraDeductibleCovers(slip).flatMap((c): DeductibleRow[] => {
+  const extras = extraDeductibleCovers(slip, unit).flatMap((c): DeductibleRow[] => {
     const line = source[c.group][0]
     const deductibles = line.deductibles ?? []
     return deductibles.length || added.includes(c.group)
@@ -211,24 +346,6 @@ export function deductibleRows(
   const after = lines.findIndex((l) => l.label === MOTOR_EXTRA_AFTER)
   rows.splice(after < 0 ? rows.length : after + 1, 0, ...extras)
   return rows
-}
-
-/**
- * Baris yang menyimpan deductible per cover. Satu daftar deductible per cover
- * berlaku untuk semua lokasi, kendaraan, atau objek (Harry, 5 November 2026),
- * disimpan di baris lokasi atau objek pertama; yang beda per lokasi atau
- * objek ditulis di teksnya.
- */
-function deductibleSource(
-  slip: PlacingSlip
-): Pick<PlacingSlip, "rateLines" | "tplLines" | "paLines"> {
-  if (slip.cob === "Property") {
-    return { rateLines: locationGroups(slip)[0].rateLines, tplLines: [], paLines: [] }
-  }
-  if (usesItemRates(slip.cob) && slip.interestItems.length) {
-    return itemGroups(slip)[0]
-  }
-  return slip
 }
 
 /**
@@ -479,11 +596,23 @@ export function propertyRateLinesPatch(
 
 /**
  * Lokasi baru di akhir daftar: isian kosong, satu baris sum insured per
- * section, dan baris rate dengan cover yang sama seperti lokasi pertama.
+ * section, dan baris rate dengan cover dan deductible yang sama seperti
+ * lokasi pertama. Deductible-nya bisa diubah per lokasi.
  */
 export function addLocationPatch(slip: PlacingSlip): Partial<PlacingSlip> {
   const locationId = uid("loc")
-  const labels = locationGroups(slip)[0].rateLines.map((l) => l.label)
+  const firstLines = locationGroups(slip)[0].rateLines
+  const template: Pick<RateLine, "label" | "deductibles">[] = firstLines.length
+    ? firstLines
+    : PROPERTY_RATE_LINES.map((label) => ({ label }))
+  const newLines: RateLine[] = template.map((l) => ({
+    id: uid("r"),
+    label: l.label,
+    rate: null,
+    premium: 0,
+    locationId,
+    ...(l.deductibles?.length ? { deductibles: [...l.deductibles] } : {}),
+  }))
   return {
     locations: [...slipLocations(slip), { id: locationId, riskLocation: "" }],
     sumInsuredSection1: [
@@ -494,23 +623,13 @@ export function addLocationPatch(slip: PlacingSlip): Partial<PlacingSlip> {
       ...slip.sumInsuredSection2,
       { id: uid("b"), description: "", amount: 0, locationId },
     ],
-    rateLines: [
-      ...slip.rateLines,
-      ...(labels.length ? labels : PROPERTY_RATE_LINES).map((label) => ({
-        id: uid("r"),
-        label,
-        rate: null,
-        premium: 0,
-        locationId,
-      })),
-    ],
+    rateLines: [...slip.rateLines, ...newLines],
   }
 }
 
 /**
- * Hapus lokasi beserta sum insured, baris rate, dan alasan rate-nya. Saat
- * lokasi pertama dihapus, deductible per cover pindah ke lokasi yang menjadi
- * pertama supaya tidak hilang.
+ * Hapus lokasi beserta sum insured, baris rate, deductible, dan alasan
+ * rate-nya. Lokasi lain memakai deductible-nya sendiri.
  */
 export function removeLocationPatch(
   slip: PlacingSlip,
@@ -523,24 +642,12 @@ export function removeLocationPatch(
   const keep = (row: { locationId?: string | null }) =>
     owner(row.locationId) !== locationId
 
-  let rateLines = slip.rateLines.filter(keep)
-  if (removed.no === 1) {
-    const next = groups[1].location.id
-    const carried = new Map(
-      removed.rateLines.map((l) => [l.label, l.deductibles ?? []])
-    )
-    rateLines = rateLines.map((l) =>
-      owner(l.locationId) === next && carried.get(l.label)?.length
-        ? { ...l, deductibles: carried.get(l.label) }
-        : l
-    )
-  }
   const removedLines = new Set(removed.rateLines.map((l) => l.id))
   return {
     locations: slipLocations(slip).filter((l) => l.id !== locationId),
     sumInsuredSection1: slip.sumInsuredSection1.filter(keep),
     sumInsuredSection2: slip.sumInsuredSection2.filter(keep),
-    rateLines,
+    rateLines: slip.rateLines.filter(keep),
     rateExceptions: Object.fromEntries(
       Object.entries(slip.rateExceptions ?? {}).filter(
         ([lineId]) => !removedLines.has(lineId)

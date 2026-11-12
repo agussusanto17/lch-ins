@@ -18,12 +18,36 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from "@/components/ui/field"
+import { Switch } from "@/components/ui/switch"
+import {
   deductibleRows,
+  deductibleUnits,
   extraDeductibleCovers,
+  setDeductiblesAllUnits,
+  shareDeductiblesPatch,
+  unitsShareDeductibles,
   type DeductibleGroup,
   type DeductibleRow,
+  type DeductibleUnit,
 } from "@/components/underwriting/slip-model"
 import { MAX_DEDUCTIBLES, type PlacingSlip } from "@/lib/data/types"
+import { oneLineAddress } from "@/lib/slip-locations"
+import { vehicleTitle } from "@/lib/slip-vehicles"
 
 /**
  * Isian deductible satu cover. Tombol Pilih mengisi teks dari Master Data >
@@ -162,31 +186,42 @@ export function DeductibleList({
 }
 
 /**
- * Kotak "Deductible per cover": satu baris per cover dengan isian deductible
- * di kanan. Slip Motor Vehicle punya tombol Tambah cover di kiri untuk baris
- * Personal Accident dan Third Party Liability (permintaan 4 November 2026).
+ * Kotak "Deductible per cover" satu unit: satu baris per cover dengan isian
+ * deductible di kanan. Slip Motor Vehicle punya tombol Tambah cover di kiri
+ * untuk baris Personal Accident dan Third Party Liability (permintaan 4
+ * November 2026). Dengan `shared`, perubahan berlaku untuk cover yang sama di
+ * semua lokasi, kendaraan, atau objek.
  */
 export function DeductiblePerCover({
   slip,
+  unit,
+  shared = false,
   choices,
   onChange,
 }: {
   slip: PlacingSlip
+  /** Lokasi, kendaraan, atau objek yang ditampilkan; bawaan unit pertama. */
+  unit?: DeductibleUnit
+  shared?: boolean
   choices: string[]
   onChange: (patch: Partial<PlacingSlip>) => void
 }) {
   const [added, setAdded] = React.useState<DeductibleGroup[]>([])
-  const rows = deductibleRows(slip, added)
-  const addable = extraDeductibleCovers(slip).filter(
+  const rows = deductibleRows(slip, added, unit)
+  const addable = extraDeductibleCovers(slip, unit).filter(
     (c) => !rows.some((r) => r.group === c.group)
   )
 
   const setDeductibles = (row: DeductibleRow, deductibles: string[]) =>
-    onChange({
-      [row.group]: slip[row.group].map((l) =>
-        l.id === row.lineId ? { ...l, deductibles } : l
-      ),
-    })
+    onChange(
+      shared
+        ? setDeductiblesAllUnits(slip, row, deductibles)
+        : {
+            [row.group]: slip[row.group].map((l) =>
+              l.id === row.lineId ? { ...l, deductibles } : l
+            ),
+          }
+    )
 
   return (
     <div className="overflow-hidden rounded-xl border">
@@ -264,6 +299,136 @@ export function DeductiblePerCover({
           </DropdownMenu>
         </div>
       ) : null}
+    </div>
+  )
+}
+
+/** Sebutan unit di form: lokasi, kendaraan, atau objek. */
+function unitWord(slip: PlacingSlip) {
+  return slip.cob === "Property"
+    ? "lokasi"
+    : slip.cob === "Motor Vehicle"
+      ? "kendaraan"
+      : "objek"
+}
+
+/** Judul dan ringkasan satu unit: alamat lokasi, nama kendaraan, atau uraian objek. */
+function unitHeading(slip: PlacingSlip, unit: DeductibleUnit) {
+  const word = unitWord(slip)
+  const title = `${word[0].toUpperCase()}${word.slice(1)} ${unit.no}`
+  const summary = unit.location
+    ? oneLineAddress(unit.location.riskLocation)
+    : unit.item
+      ? slip.cob === "Motor Vehicle"
+        ? vehicleTitle(unit.item)
+        : unit.item.description.split("\n")[0].trim()
+      : ""
+  return { title, summary }
+}
+
+/**
+ * Deductible slip. Slip dengan beberapa lokasi, kendaraan, atau objek bisa
+ * mengisi deductible per unit (Agus, 13 November 2026). Selama deductible
+ * semua unit sama, form cukup menampilkan satu daftar yang berlaku untuk
+ * semua unit; saklar "berbeda per lokasi" membuka satu daftar per unit.
+ */
+export function SlipDeductibles({
+  slip,
+  choices,
+  locked,
+  onChange,
+}: {
+  slip: PlacingSlip
+  choices: string[]
+  locked: boolean
+  onChange: (patch: Partial<PlacingSlip>) => void
+}) {
+  const units = deductibleUnits(slip)
+  const multi = units.length > 1
+  const [perUnit, setPerUnit] = React.useState(
+    () => !unitsShareDeductibles(slip)
+  )
+  const [confirming, setConfirming] = React.useState(false)
+  const word = unitWord(slip)
+  const firstTitle = unitHeading(slip, units[0]).title
+
+  function share() {
+    onChange(shareDeductiblesPatch(slip))
+    setPerUnit(false)
+  }
+
+  if (!multi) {
+    return <DeductiblePerCover slip={slip} choices={choices} onChange={onChange} />
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Field orientation="horizontal">
+        <Switch
+          id="deductible-per-unit"
+          checked={perUnit}
+          disabled={locked}
+          onCheckedChange={(on) => {
+            if (on) setPerUnit(true)
+            else if (unitsShareDeductibles(slip)) setPerUnit(false)
+            else setConfirming(true)
+          }}
+        />
+        <FieldContent>
+          <FieldLabel htmlFor="deductible-per-unit" className="font-normal">
+            Deductible berbeda per {word}
+          </FieldLabel>
+          <FieldDescription>
+            {perUnit
+              ? `Isi deductible tiap ${word}. Dokumen mencetak deductible per ${word} bila isinya berbeda.`
+              : `Satu daftar berlaku untuk semua ${units.length} ${word}. Nyalakan bila deductible tiap ${word} berbeda.`}
+          </FieldDescription>
+        </FieldContent>
+      </Field>
+
+      {perUnit ? (
+        units.map((unit, index) => {
+          const { title, summary } = unitHeading(slip, unit)
+          return (
+            <div key={`${index}-${unit.id}`} className="flex flex-col gap-1.5">
+              <p className="flex min-w-0 items-baseline gap-2 text-sm">
+                <span className="shrink-0 font-medium">{title}</span>
+                {summary ? (
+                  <span className="min-w-0 truncate text-xs text-muted-foreground" title={summary}>
+                    {summary}
+                  </span>
+                ) : null}
+              </p>
+              <DeductiblePerCover
+                slip={slip}
+                unit={unit}
+                choices={choices}
+                onChange={onChange}
+              />
+            </div>
+          )
+        })
+      ) : (
+        <DeductiblePerCover slip={slip} shared choices={choices} onChange={onChange} />
+      )}
+
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Samakan deductible semua {word} dengan {firstTitle}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Deductible {word} lain yang berbeda diganti dengan deductible{" "}
+              {firstTitle}, cover demi cover.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={share}>Samakan</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

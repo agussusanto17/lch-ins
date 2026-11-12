@@ -33,7 +33,7 @@ import {
   SlipFormToolbar,
 } from "@/components/underwriting/slip-form-chrome"
 import { ClausePicker } from "@/components/underwriting/clause-picker"
-import { DeductiblePerCover } from "@/components/underwriting/deductible-input"
+import { SlipDeductibles } from "@/components/underwriting/deductible-input"
 import {
   LineItemList,
   StringList,
@@ -1795,7 +1795,8 @@ function SlipEditor({
                * Deductible per cover untuk tiap baris rate (instruksi LCH 29
                * Oktober 2026), sampai lima isian per cover. Slip Motor Vehicle
                * bisa menambah baris Personal Accident dan Third Party Liability
-               * (keduanya 4 November 2026).
+               * (keduanya 4 November 2026). Slip multi lokasi, kendaraan, atau
+               * objek bisa mengisi deductible per unit (13 November 2026).
                */}
               <Field>
                 <FieldLabel htmlFor="deductible-intro">
@@ -1825,17 +1826,11 @@ function SlipEditor({
                         ? "Klik Pilih untuk mengisi dari master data, lalu ubah teksnya bila perlu."
                         : `Belum ada pilihan deductible untuk ${slip.typeOfCover}. Tambahkan di Master Data > Deductible.`}
                   </p>
-                  {locationCount > 1 ? (
-                    <p className="text-xs text-muted-foreground">
-                      Berlaku untuk semua lokasi. Deductible yang beda per
-                      lokasi ditulis sebagai isian terpisah dengan lokasinya,
-                      misalnya &quot;Nil (for Location 1)&quot;.
-                    </p>
-                  ) : null}
                 </div>
-                <DeductiblePerCover
+                <SlipDeductibles
                   slip={slip}
                   choices={deductibleChoices}
+                  locked={locked}
                   onChange={set}
                 />
               </div>
