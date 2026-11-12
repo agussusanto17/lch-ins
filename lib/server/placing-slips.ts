@@ -8,6 +8,7 @@ import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 
 import {
   MAX_DEDUCTIBLES,
+  type ChangeSlipLock,
   type ClassOfBusiness as CobType,
   type ClauseOverride,
   type EndorsementCalc,
@@ -53,6 +54,7 @@ import {
 import { nextDocumentNumber } from "@/server/services/number-generator"
 import { recordAudit } from "@/server/services/audit"
 import { slipCalc } from "@/lib/endorsement-calc"
+import { changeSlipLockText } from "@/lib/endorsement-slip"
 import { todayIso } from "@/lib/date"
 import {
   documentDatesForStatus,
@@ -72,6 +74,31 @@ const SLIP_LOCATIONS = {
   },
   orderBy: { sortOrder: "asc" },
 } satisfies Prisma.SlipLocationFindManyArgs
+
+/**
+ * Endorsement atau cancellation slip yang dibuat dari slip ini dan belum
+ * dibatalkan. Selama ada, slip ini tidak bisa direvisi (kunci revisi slip
+ * asal, Agus 12 November 2026): kondisi sebelum perubahan sudah disimpan di
+ * slip perubahan itu, jadi revisi slip asal tidak akan ikut ke sana.
+ */
+const SLIP_CHANGE_LOCK = {
+  where: { kind: { in: ["Endorsement", "Cancellation"] }, status: { not: "Cancelled" } },
+  select: { id: true, slipNo: true, kind: true, status: true },
+  orderBy: { createdAt: "desc" },
+  take: 1,
+} satisfies Prisma.PlacingSlipFindManyArgs
+
+function toChangeSlipLock(
+  row: { id: string; slipNo: string | null; kind: string; status: SlipStatus } | undefined | null
+): ChangeSlipLock | null {
+  if (!row) return null
+  return {
+    id: row.id,
+    slipNo: row.slipNo,
+    kind: row.kind === "Cancellation" ? "Cancellation" : "Endorsement",
+    status: row.status,
+  }
+}
 
 export interface PlacingSlipRecord extends PlacingSlip {
   dbId: string
@@ -442,6 +469,7 @@ type PrismaPlacingSlipWithRelations = Prisma.PlacingSlipGetPayload<{
     creator: { select: { id: true; name: true } }
     parentPolicy: { select: { policyNo: true } }
     baseSlip: { select: { slipNo: true } }
+    derivedSlips: typeof SLIP_CHANGE_LOCK
     locations: typeof SLIP_LOCATIONS
     items: {
       include: { vehicleBrand: { select: { name: true } }; vehicleType: { select: { name: true } } }
@@ -753,6 +781,7 @@ function toPlacingSlipRecord(
     effectiveDate: dateOnly(raw.effectiveDate),
     changeDescription: raw.changeDescription ?? null,
     beforeCalc: (raw.beforeCalc as EndorsementCalc | null) ?? null,
+    changeSlipLock: toChangeSlipLock(raw.derivedSlips[0]),
     clientName: raw.client.name,
     cobName: raw.cob.name,
     coverTypeName: raw.coverType?.name || null,
@@ -821,6 +850,7 @@ export async function listPlacingSlips(
       creator: { select: { id: true, name: true } },
       parentPolicy: { select: { policyNo: true } },
       baseSlip: { select: { slipNo: true } },
+      derivedSlips: SLIP_CHANGE_LOCK,
       locations: SLIP_LOCATIONS,
       items: { include: SLIP_ITEM_VEHICLE, orderBy: { sortOrder: "asc" } },
       rateLines: {
@@ -1032,6 +1062,7 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
       creator: { select: { id: true, name: true } },
       parentPolicy: { select: { policyNo: true } },
       baseSlip: { select: { slipNo: true } },
+      derivedSlips: SLIP_CHANGE_LOCK,
       locations: SLIP_LOCATIONS,
       items: { include: SLIP_ITEM_VEHICLE, orderBy: { sortOrder: "asc" } },
       rateLines: {
@@ -1734,6 +1765,17 @@ export async function updatePlacingSlip(
   if (existing.status === "Cancelled") {
     throw new Error("Placing Slip berstatus Cancelled tidak dapat diubah.")
   }
+
+  // Kunci revisi slip asal: setelah ada endorsement atau cancellation slip,
+  // perubahan polis dibuat lewat slip perubahan.
+  const lock = toChangeSlipLock(
+    await prisma.placingSlip.findFirst({
+      where: { ...SLIP_CHANGE_LOCK.where, baseSlipId: id },
+      select: SLIP_CHANGE_LOCK.select,
+      orderBy: SLIP_CHANGE_LOCK.orderBy,
+    })
+  )
+  if (lock) throw new Error(changeSlipLockText(lock))
 
   const resolvedClientId = await resolveClientId(input.clientId, input.insuredName)
   const resolvedCob = await resolveCob(input.cob)
