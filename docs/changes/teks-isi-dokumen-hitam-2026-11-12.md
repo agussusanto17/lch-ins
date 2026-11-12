@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-12
 - **Branch:** `fix/teks-isi-dokumen-hitam`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** [#234](https://github.com/agussusanto17/lch-ins/pull/234)
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
