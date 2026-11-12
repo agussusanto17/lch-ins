@@ -137,7 +137,8 @@ export function EndorsementDocument({ data }: { data: EndorsementSlipData }) {
       <DocTitle title={endorsementTitle(policy.type)} number={`No. ${policy.policyNo}`} />
       <DetailTable rows={rows} />
 
-      <div className="mb-6 text-[13px] leading-relaxed">
+      {/* Garis atas dan bawah memisahkan kalimat perubahan dari data polis dan perhitungan premi (Harry, 12 November 2026). */}
+      <div className="mb-6 border-y py-4 text-[13px] leading-relaxed">
         <p className="mb-3 text-justify">{endorsementOpening(policy.type, policy.inceptionDate)}</p>
         {body ? (
           <div className="mb-3 pl-4">
