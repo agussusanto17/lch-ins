@@ -51,8 +51,8 @@ jobs:
       - name: Cek situs publik
         run: |
           for i in $(seq 1 10); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" https://lch-ins.adhinugroho.tech/login || true)
-            [ "$code" = "200" ] && echo "https://lch-ins.adhinugroho.tech/login -> 200" && exit 0
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://apps.lch.co.id/login || true)
+            [ "$code" = "200" ] && echo "https://apps.lch.co.id/login -> 200" && exit 0
             sleep 5
           done
           echo "Situs publik tidak merespons 200 (terakhir: $code)"
