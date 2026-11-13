@@ -5,7 +5,6 @@ import Link from "next/link"
 import {
   AlertCircle,
   Calendar,
-  CalendarDays,
   CheckCircle2,
   Clock,
   ExternalLink,
@@ -60,6 +59,7 @@ import { dateShort, money } from "@/lib/format"
 import { CLAIM_STATUS_CODES, fixedLookupLabel } from "@/lib/form-options"
 import { paClaimWarnings } from "@/lib/pa-benefits"
 import type { ClaimDocumentRecord, ClaimFollowupRecord } from "@/lib/server/claims"
+import { cn } from "@/lib/utils"
 import { compressImage } from "@/lib/image-compress"
 import { UPLOAD_ACCEPT, UPLOAD_HINT, uploadProblem } from "@/lib/uploads"
 
@@ -774,49 +774,64 @@ export function ClaimDetailSheet({
                       </p>
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-3">
-                      {followups.map((item) => {
+                    // Timeline dengan garis vertikal di kiri, terbaru di atas
+                    // (Agus, 13 November 2026). Polanya sama dengan Timeline di
+                    // tab Ringkasan.
+                    <ol aria-label="Riwayat tindak lanjut" className="flex flex-col">
+                      {followups.map((item, i) => {
                         const isDeleting = deletingFollowupId === item.id
+                        const isLast = i === followups.length - 1
                         return (
-                          <div
-                            key={item.id}
-                            className="flex flex-col gap-1.5 rounded-lg border bg-card p-3.5 text-sm transition-colors"
-                          >
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                                <CalendarDays className="size-3.5 text-primary" />
-                                {dateShort(item.followupDate)}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <span className="flex items-center gap-1 text-[11px]">
-                                  <User className="size-3" />
-                                  {item.createdByName || "Staf Klaim"}
-                                </span>
-                                {canManage && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    aria-label="Hapus catatan tindak lanjut"
-                                    disabled={isDeleting}
-                                    onClick={() => handleDeleteFollowup(item.id)}
-                                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                  >
-                                    {isDeleting ? (
-                                      <Loader2 className="size-3 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="size-3" />
-                                    )}
-                                  </Button>
+                          <li key={item.id} className="flex gap-3">
+                            <div className="flex w-2.5 shrink-0 flex-col items-center" aria-hidden>
+                              <span className={cn("h-[7px] w-0.5", i > 0 && "bg-primary/25")} />
+                              <span
+                                className={cn(
+                                  "size-2.5 shrink-0 rounded-full bg-primary",
+                                  i === 0 && "ring-4 ring-primary/15"
                                 )}
-                              </div>
+                              />
+                              {isLast ? null : <span className="w-0.5 flex-1 bg-primary/25" />}
                             </div>
-                            <p className="text-xs leading-relaxed text-foreground/90 whitespace-pre-wrap">
-                              {item.note}
-                            </p>
-                          </div>
+                            <div className={cn("flex min-w-0 flex-1 flex-col gap-1", !isLast && "pb-5")}>
+                              <div className="flex min-h-6 items-center justify-between gap-2">
+                                <time
+                                  dateTime={item.followupDate}
+                                  className="tabular text-sm font-semibold text-foreground"
+                                >
+                                  {dateShort(item.followupDate)}
+                                </time>
+                                <div className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <User className="size-3" />
+                                    {item.createdByName || "Staf Klaim"}
+                                  </span>
+                                  {canManage && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      aria-label="Hapus catatan tindak lanjut"
+                                      disabled={isDeleting}
+                                      onClick={() => handleDeleteFollowup(item.id)}
+                                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                    >
+                                      {isDeleting ? (
+                                        <Loader2 className="size-3 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="size-3" />
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
+                                {item.note}
+                              </p>
+                            </div>
+                          </li>
                         )
                       })}
-                    </div>
+                    </ol>
                   )}
                 </TabsContent>
               </Tabs>
