@@ -3,7 +3,12 @@ import "server-only"
 import { coverCodeFor } from "@/components/underwriting/slip-model"
 import type { Claim, ClaimStage, ClaimStatus } from "@/lib/data/types"
 import { todayIso } from "@/lib/date"
-import { CLAIM_STATUS_CODES, systemValueFromRow } from "@/lib/form-options"
+import { CLAIM_STATUS_CODES, POLICY_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
+import {
+  isPolicyChange,
+  policyFamilyFiles,
+  type ClaimPolicyFile,
+} from "@/lib/claim-policy-files"
 import { dateShort, normalizeCob } from "@/lib/format"
 import { Prisma } from "@/lib/generated/prisma/client"
 import { effectivePaBenefitLimits, type PaBenefitOption } from "@/lib/pa-benefits"
@@ -334,7 +339,7 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
 
 /**
  * Info polis untuk form dan detail klaim (meeting LCH, 10 November 2026):
- * status premi, deductible dari placing slip asal polis, dan file polis
+ * status premi, deductible dari placing slip asal polis, dan berkas polis
  * terakhir yang diunggah di Policy Database.
  */
 export interface ClaimPolicyInfo {
@@ -344,7 +349,11 @@ export interface ClaimPolicyInfo {
   fromSlip: boolean
   deductibleIntro: string | null
   deductibles: DeductibleGroupText[]
-  policyFile: { url: string; fileName: string; version: number } | null
+  /**
+   * Berkas Polis polis induk beserta endorsement dan pembatalannya, sudah
+   * tampil saat polis dipilih di form klaim (Agus, 13 November 2026).
+   */
+  policyFiles: ClaimPolicyFile[]
 }
 
 export async function getClaimPolicyInfo(policyId: string): Promise<ClaimPolicyInfo | null> {
@@ -354,12 +363,8 @@ export async function getClaimPolicyInfo(policyId: string): Promise<ClaimPolicyI
       premiumPaidDate: true,
       placingSlipId: true,
       slipPart: true,
-      files: {
-        where: { kind: "Policy" },
-        orderBy: { version: "desc" },
-        take: 1,
-        select: { fileName: true, filePath: true, version: true },
-      },
+      parentPolicyId: true,
+      policyType: { select: { code: true, name: true } },
     },
   })
   if (!policy) return null
@@ -368,8 +373,44 @@ export async function getClaimPolicyInfo(policyId: string): Promise<ClaimPolicyI
   // Slip PAR + EQVET terbit sebagai dua polis; deductible ikut bagian polisnya.
   const part =
     policy.slipPart === "PAR" || policy.slipPart === "EQVET" ? policy.slipPart : null
-  const file = policy.files[0]
-  const fileUrl = file ? storedFileUrl(file.filePath) : undefined
+
+  // Keluarga polis: endorsement dan pembatalan menunjuk polis induknya.
+  const type = systemValueFromRow(POLICY_TYPE_CODES, policy.policyType, "Baru")
+  const rootId =
+    isPolicyChange(type) && policy.parentPolicyId ? policy.parentPolicyId : policyId
+  const family = await prisma.policy.findMany({
+    where: { OR: [{ id: rootId }, { parentPolicyId: rootId }] },
+    select: {
+      id: true,
+      policyNo: true,
+      endorsementSeq: true,
+      inceptionDate: true,
+      policyType: { select: { code: true, name: true } },
+      files: {
+        where: { kind: "Policy" },
+        orderBy: { version: "desc" },
+        take: 1,
+        select: { fileName: true, filePath: true, version: true },
+      },
+    },
+  })
+  const policyFiles = policyFamilyFiles(
+    family.map((r) => {
+      const file = r.files[0]
+      const url = file ? storedFileUrl(file.filePath) : undefined
+      return {
+        id: r.id,
+        policyNo: r.policyNo,
+        type: systemValueFromRow(POLICY_TYPE_CODES, r.policyType, "Baru"),
+        endorsementSeq: r.endorsementSeq,
+        inceptionDate: r.inceptionDate.toISOString().slice(0, 10),
+        file: file && url ? { url, fileName: file.fileName, version: file.version } : null,
+      }
+    }),
+    rootId,
+    policyId
+  )
+
   return {
     premiumPaidDate: policy.premiumPaidDate
       ? policy.premiumPaidDate.toISOString().slice(0, 10)
@@ -377,10 +418,7 @@ export async function getClaimPolicyInfo(policyId: string): Promise<ClaimPolicyI
     fromSlip: slip !== null,
     deductibleIntro: slip?.deductibleIntro?.trim() || null,
     deductibles: slip ? deductibleGroups(slip, part) : [],
-    policyFile:
-      file && fileUrl
-        ? { url: fileUrl, fileName: file.fileName, version: file.version }
-        : null,
+    policyFiles,
   }
 }
 
