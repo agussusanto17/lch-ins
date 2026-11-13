@@ -35,7 +35,7 @@ import {
 } from "@/app/(app)/claims/actions"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
 import {
-  PolicyFileLink,
+  PolicyFilesList,
   PremiumStatusBadge,
   useClaimPolicyInfo,
 } from "@/components/claims/claim-policy-info"
@@ -476,7 +476,7 @@ export function ClaimDetailSheet({
                           />
                           <Row
                             label="Berkas polis"
-                            value={<PolicyFileLink file={policyInfo.policyFile} />}
+                            value={<PolicyFilesList files={policyInfo.policyFiles} />}
                           />
                         </>
                       ) : null}

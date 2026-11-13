@@ -1,16 +1,18 @@
 "use client"
 
 import * as React from "react"
+import { ExternalLink } from "lucide-react"
 
 import { getClaimPolicyInfoAction } from "@/app/(app)/claims/actions"
 import { ToneBadge } from "@/components/shared/status-badge"
+import { policyFileLinkText, type ClaimPolicyFile } from "@/lib/claim-policy-files"
 import { deductiblesByUnit } from "@/lib/deductible-text"
 import { dateShort } from "@/lib/format"
 import type { ClaimPolicyInfo } from "@/lib/server/claims"
 
 /**
  * Info polis untuk klaim (meeting LCH, 10 November 2026): status premi,
- * deductible dari placing slip asal polis, dan file polis dari Policy
+ * deductible dari placing slip asal polis, dan berkas polis dari Policy
  * Database. Dimuat per polis karena datanya hanya perlu saat polis dipilih.
  */
 export function useClaimPolicyInfo(policyId: string | null | undefined) {
@@ -42,18 +44,41 @@ export function PremiumStatusBadge({ date }: { date: string | null }) {
   )
 }
 
-export function PolicyFileLink({ file }: { file: ClaimPolicyInfo["policyFile"] }) {
-  if (!file) return <span className="text-muted-foreground">Belum diunggah</span>
+/**
+ * Berkas Polis polis induk beserta endorsement dan pembatalannya (Agus, 13
+ * November 2026). Tampil di form klaim sebelum disimpan dan di detail klaim.
+ */
+export function PolicyFilesList({ files }: { files: ClaimPolicyFile[] }) {
+  if (!files.length) return <span className="text-muted-foreground">Belum diunggah</span>
   return (
-    <a
-      href={file.url}
-      target="_blank"
-      rel="noreferrer"
-      title={file.fileName}
-      className="font-medium text-primary underline-offset-2 hover:underline"
-    >
-      Lihat polis{file.version > 1 ? ` (versi ${file.version})` : ""}
-    </a>
+    <ul className="flex flex-col gap-1.5">
+      {files.map((f) => (
+        <li
+          key={f.policyId}
+          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5"
+        >
+          <span className="flex min-w-0 flex-wrap items-center gap-x-1.5">
+            <span className="font-medium text-foreground">{f.label}</span>
+            <span className="tabular text-muted-foreground">{f.policyNo}</span>
+            {f.selected ? <ToneBadge tone="info">Dipilih</ToneBadge> : null}
+          </span>
+          {f.file ? (
+            <a
+              href={f.file.url}
+              target="_blank"
+              rel="noreferrer"
+              title={f.file.fileName}
+              className="inline-flex shrink-0 items-center gap-1 font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {policyFileLinkText(f.file)}
+              <ExternalLink className="size-3" aria-hidden />
+            </a>
+          ) : (
+            <span className="shrink-0 text-muted-foreground">Belum diunggah</span>
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -80,6 +105,11 @@ export function ClaimPolicyInfoPanel({
             Tanggal bayar diisi di Policy Database.
           </span>
         )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-muted-foreground">Berkas polis</span>
+        <PolicyFilesList files={info.policyFiles} />
       </div>
 
       <div className="flex flex-col gap-1.5">
