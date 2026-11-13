@@ -76,6 +76,16 @@ import { isRenewable } from "@/lib/renewal"
 import type { PolicyFormOptions } from "@/lib/server/policies"
 import { store } from "@/lib/store"
 
+/**
+ * Renewal dan endorsement diproses di Placement (Agus, 13 November 2026):
+ * slip dengan Existing Policy No. tercatat sebagai Renewal saat Closing
+ * Instruction terbit, dan endorsement/cancellation slip dibuat dari slip yang
+ * sudah Closed, lalu masuk Policy Database otomatis. Aksi pintas Buat renewal
+ * dan Buat endorsement di menu baris disembunyikan, belum dihapus, kalau LCH
+ * memintanya lagi. Polis di luar sistem tetap lewat Tambah Polis.
+ */
+const SHOW_RENEWAL_ENDORSEMENT_ACTIONS = false
+
 const STATUS_ITEMS = [
   { label: "Semua status", value: "all" },
   { label: "Active", value: "Active" },
@@ -227,7 +237,7 @@ export function PolicyDatabase({
     const childCount = policies.filter((x) => x.parentPolicyId === p.id).length
     const blocked = claimCount > 0 || childCount > 0
     // Polis yang sudah dibatalkan tidak di-renew atau di-endorse lagi.
-    const renewable = isRenewable(p)
+    const renewable = SHOW_RENEWAL_ENDORSEMENT_ACTIONS && isRenewable(p)
     const actions: RowAction[] = [
       { label: "Edit polis", icon: Pencil, onSelect: () => openForm(p) },
       ...printAction,
