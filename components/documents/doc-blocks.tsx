@@ -50,7 +50,11 @@ import {
   locationsShareRates,
   type LocationGroup,
 } from "@/lib/slip-locations"
-import { isExistingPolicyLabel, printedDetailRows } from "@/lib/slip-details"
+import {
+  isBusinessLabel,
+  isExistingPolicyLabel,
+  printedDetailRows,
+} from "@/lib/slip-details"
 import { clauseGroupBlocks } from "@/lib/clause-groups"
 import {
   participantAge,
@@ -142,6 +146,14 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
         ? wordingForms.map((w) => `- ${w}`).join("\n")
         : wordingForms[0],
     ])
+  // Detail tambahan, misalnya Retroactive Date, Voyage, atau Vessels (analisa
+  // 26 contoh slip LCH, 6 November 2026). Baris tanpa isi tidak dicetak.
+  // Existing Policy No. dicetak di sisi kanan atas tabel detail, bukan
+  // sebagai baris tabel (Harry, 6 November 2026). The Business dicetak tepat
+  // di bawah Correspondence Address (LCH, 13 November 2026).
+  const details = printedDetailRows(slip.detailRows)
+  const existing = details.find((r) => isExistingPolicyLabel(r.label))
+  const business = details.filter((r) => isBusinessLabel(r.label))
   rows.push(
     [
       "Insured Name",
@@ -151,6 +163,7 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
         .join("\n"),
     ],
     ["Correspondence Address", slip.correspondenceAddress || "—"],
+    ...business.map((r): InfoRow => [r.label, r.value]),
     period
   )
   // PA dengan satu peserta dicetak di sini, bukan sebagai lampiran tabel,
@@ -174,14 +187,8 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
   }
   if (slip.cob === "Property" && slip.indemnityPeriod)
     rows.push(["Indemnity Period", slip.indemnityPeriod])
-  // Detail tambahan, misalnya Retroactive Date, Voyage, atau Vessels (analisa
-  // 26 contoh slip LCH, 6 November 2026). Baris tanpa isi tidak dicetak.
-  // Existing Policy No. dicetak di sisi kanan atas tabel detail, bukan
-  // sebagai baris tabel (Harry, 6 November 2026).
-  const details = printedDetailRows(slip.detailRows)
-  const existing = details.find((r) => isExistingPolicyLabel(r.label))
   for (const r of details)
-    if (r !== existing) rows.push([r.label || "—", r.value])
+    if (r !== existing && !business.includes(r)) rows.push([r.label || "—", r.value])
 
   return (
     <>

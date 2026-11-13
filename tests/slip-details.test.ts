@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  isBusinessLabel,
   isExistingPolicyLabel,
   cleanDetailLabels,
   cleanDetailRows,
@@ -82,4 +83,11 @@ test("label Existing Policy No. dikenali dengan beberapa penulisan", () => {
   for (const label of ["Policy No.", "Existing Policy Holder", "Retroactive Date"]) {
     assert.equal(isExistingPolicyLabel(label), false, label)
   }
+})
+
+test("label The Business dikenali, dengan atau tanpa The", () => {
+  for (const label of ["The Business", "Business", " the business ", "BUSINESS"])
+    assert.equal(isBusinessLabel(label), true, label)
+  for (const label of ["Business Interruption", "Nature of Business", "Businesses", ""])
+    assert.equal(isBusinessLabel(label), false, label)
 })
