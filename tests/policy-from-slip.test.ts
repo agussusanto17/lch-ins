@@ -35,7 +35,9 @@ test("policy fields follow the slip and its insurer panel", () => {
   const fields = policyFieldsFromSlip(closedSlip(), null, { id: "client-1", name: "PT Contoh" })
   assert.equal(fields.placingSlipId, "slip-1")
   assert.equal(fields.slipPart, null)
-  assert.equal(fields.insuredName, "PT Contoh")
+  // Nama tertanggung dari isian slip, bukan nama klien (13 November 2026).
+  assert.equal(fields.insuredName, "PT Contoh and/or Subsidiaries")
+  assert.equal(fields.clientId, "client-1")
   assert.equal(fields.inceptionDate, "2026-12-01")
   assert.equal(fields.expiryDate, "2027-12-01")
   assert.equal(fields.brokeragePct, 15)
@@ -50,6 +52,12 @@ test("without a known client the slip insured name is kept", () => {
   const fields = policyFieldsFromSlip(closedSlip(), null, null)
   assert.equal(fields.clientId, "client-1")
   assert.equal(fields.insuredName, "PT Contoh and/or Subsidiaries")
+})
+
+test("the client name is only a fallback when the slip insured name is empty", () => {
+  const blank = { ...closedSlip(), insuredName: "  " }
+  assert.equal(policyFieldsFromSlip(blank, null, { id: "client-1", name: "PT Contoh" }).insuredName, "PT Contoh")
+  assert.equal(policyFieldsFromSlip(blank, null, null).insuredName, "")
 })
 
 test("Existing Policy No. marks a renewal", () => {

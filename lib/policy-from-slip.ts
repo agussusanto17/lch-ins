@@ -54,7 +54,11 @@ export function policyFieldsFromSlip(
     placingSlipId: slip.id,
     slipPart: part,
     clientId: client?.id ?? slip.clientId,
-    insuredName: client?.name ?? slip.insuredName,
+    // Nama tertanggung polis = isian Nama Tertanggung slip, bukan nama klien di
+    // Data Klien (Agus, 13 November 2026: slip klien D'BEST GROUP dengan
+    // tertanggung PT Margamas tercatat sebagai D'BEST GROUP). Nama klien hanya
+    // cadangan bila isian slip kosong.
+    insuredName: slip.insuredName?.trim() || client?.name || "",
     cob: slip.cob,
     typeOfCover:
       part === "EQVET" && slip.typeOfCover2 ? slip.typeOfCover2 : slip.typeOfCover,
