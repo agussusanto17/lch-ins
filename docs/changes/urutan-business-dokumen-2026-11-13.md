@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-13
 - **Branch:** `fix/urutan-business-dokumen`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #245
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
