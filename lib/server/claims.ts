@@ -6,8 +6,11 @@ import { todayIso } from "@/lib/date"
 import { CLAIM_STATUS_CODES, POLICY_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
 import {
   isPolicyChange,
+  policyFamilies,
   policyFamilyFiles,
   type ClaimPolicyFile,
+  type PolicyChangeTerms,
+  type PolicyFamily,
 } from "@/lib/claim-policy-files"
 import { dateShort, normalizeCob } from "@/lib/format"
 import { Prisma } from "@/lib/generated/prisma/client"
@@ -85,14 +88,20 @@ export interface ClaimInput {
 }
 
 export interface ClaimFormOptions {
-  policies: Array<{
-    id: string
-    policyNo: string
-    insuredName: string
-    insurer: string
-    cob: Claim["cob"]
-    currency: string
-  }>
+  /**
+   * Semua polis beserta keluarganya. Form klaim menampilkan polis induk saja;
+   * endorsement dan pembatalan digabung ke polis induknya (13 November 2026).
+   */
+  policies: Array<
+    PolicyFamily & {
+      id: string
+      policyNo: string
+      insuredName: string
+      insurer: string
+      cob: Claim["cob"]
+      currency: string
+    }
+  >
   adjusters: Array<{
     id: string
     name: string
@@ -297,6 +306,7 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
     prisma.policy.findMany({
       include: {
         cob: { select: { name: true } },
+        policyType: { select: { code: true, name: true } },
         insurers: {
           include: {
             insurer: { select: { name: true } },
@@ -319,6 +329,13 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
     }),
   ])
 
+  const families = policyFamilies(
+    policies.map((p) => ({
+      id: p.id,
+      type: systemValueFromRow(POLICY_TYPE_CODES, p.policyType, "Baru"),
+      parentPolicyId: p.parentPolicyId,
+    }))
+  )
   return {
     policies: policies.map((p) => {
       const leader = p.insurers.find((i) => i.position.code === "leader")?.insurer.name
@@ -330,6 +347,7 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
         insurer: leader || first,
         cob: normalizeCob(p.cob.name),
         currency: p.currencyCode,
+        ...(families.get(p.id) ?? { rootId: p.id, endorsements: 0, cancelled: false }),
       }
     }),
     adjusters,
@@ -340,7 +358,8 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
 /**
  * Info polis untuk form dan detail klaim (meeting LCH, 10 November 2026):
  * status premi, deductible dari placing slip asal polis, dan berkas polis
- * terakhir yang diunggah di Policy Database.
+ * terakhir yang diunggah di Policy Database. Semuanya milik polis induk, karena
+ * endorsement dan pembatalan hanya perubahan atas polis itu (13 November 2026).
  */
 export interface ClaimPolicyInfo {
   /** "YYYY-MM-DD"; kosong berarti premi belum dibayar. */
@@ -350,74 +369,136 @@ export interface ClaimPolicyInfo {
   deductibleIntro: string | null
   deductibles: DeductibleGroupText[]
   /**
+   * Deductible dari endorsement slip yang sudah tercatat, urut tanggal
+   * efektif. Form klaim memakai yang berlaku pada tanggal kejadian.
+   */
+  deductibleChanges: PolicyChangeTerms[]
+  /** Pembatalan polis, untuk peringatan bila tanggal kejadian sesudahnya. */
+  cancellation: { policyNo: string; effectiveDate: string } | null
+  /**
    * Berkas Polis polis induk beserta endorsement dan pembatalannya, sudah
    * tampil saat polis dipilih di form klaim (Agus, 13 November 2026).
    */
   policyFiles: ClaimPolicyFile[]
 }
 
+const familySelect = {
+  id: true,
+  policyNo: true,
+  endorsementSeq: true,
+  inceptionDate: true,
+  premiumPaidDate: true,
+  placingSlipId: true,
+  slipPart: true,
+  policyType: { select: { code: true, name: true } },
+  files: {
+    where: { kind: "Policy" },
+    orderBy: { version: "desc" },
+    take: 1,
+    select: { fileName: true, filePath: true, version: true },
+  },
+} satisfies Prisma.PolicySelect
+
+type FamilyPolicy = Prisma.PolicyGetPayload<{ select: typeof familySelect }>
+
+/**
+ * Polis induk beserta endorsement dan pembatalannya, termasuk endorsement atas
+ * endorsement dari Policy Database. Renewal tidak ikut karena berdiri sendiri.
+ */
+async function policyFamily(rootId: string): Promise<FamilyPolicy[]> {
+  const family = await prisma.policy.findMany({ where: { id: rootId }, select: familySelect })
+  const seen = new Set(family.map((p) => p.id))
+  let parents = [rootId]
+  for (let depth = 0; depth < 20 && parents.length; depth++) {
+    const children = (
+      await prisma.policy.findMany({
+        where: { parentPolicyId: { in: parents } },
+        select: familySelect,
+      })
+    ).filter(
+      (p) =>
+        !seen.has(p.id) &&
+        isPolicyChange(systemValueFromRow(POLICY_TYPE_CODES, p.policyType, "Baru"))
+    )
+    children.forEach((p) => seen.add(p.id))
+    family.push(...children)
+    parents = children.map((p) => p.id)
+  }
+  return family
+}
+
 export async function getClaimPolicyInfo(policyId: string): Promise<ClaimPolicyInfo | null> {
-  const policy = await prisma.policy.findUnique({
-    where: { id: policyId },
-    select: {
-      premiumPaidDate: true,
-      placingSlipId: true,
-      slipPart: true,
-      parentPolicyId: true,
-      policyType: { select: { code: true, name: true } },
-    },
-  })
-  if (!policy) return null
+  const exists = await prisma.policy.findUnique({ where: { id: policyId }, select: { id: true } })
+  if (!exists) return null
 
-  const slip = policy.placingSlipId ? await getPlacingSlipById(policy.placingSlipId) : null
-  // Slip PAR + EQVET terbit sebagai dua polis; deductible ikut bagian polisnya.
-  const part =
-    policy.slipPart === "PAR" || policy.slipPart === "EQVET" ? policy.slipPart : null
+  const rootId = await rosterPolicyId(prisma, policyId)
+  const family = await policyFamily(rootId)
+  const root = family.find((p) => p.id === rootId)
+  if (!root) return null
 
-  // Keluarga polis: endorsement dan pembatalan menunjuk polis induknya.
-  const type = systemValueFromRow(POLICY_TYPE_CODES, policy.policyType, "Baru")
-  const rootId =
-    isPolicyChange(type) && policy.parentPolicyId ? policy.parentPolicyId : policyId
-  const family = await prisma.policy.findMany({
-    where: { OR: [{ id: rootId }, { parentPolicyId: rootId }] },
-    select: {
-      id: true,
-      policyNo: true,
-      endorsementSeq: true,
-      inceptionDate: true,
-      policyType: { select: { code: true, name: true } },
-      files: {
-        where: { kind: "Policy" },
-        orderBy: { version: "desc" },
-        take: 1,
-        select: { fileName: true, filePath: true, version: true },
-      },
-    },
-  })
+  const typed = family.map((p) => ({
+    ...p,
+    type: systemValueFromRow(POLICY_TYPE_CODES, p.policyType, "Baru"),
+    effectiveDate: p.inceptionDate.toISOString().slice(0, 10),
+  }))
   const policyFiles = policyFamilyFiles(
-    family.map((r) => {
+    typed.map((r) => {
       const file = r.files[0]
       const url = file ? storedFileUrl(file.filePath) : undefined
       return {
         id: r.id,
         policyNo: r.policyNo,
-        type: systemValueFromRow(POLICY_TYPE_CODES, r.policyType, "Baru"),
+        type: r.type,
         endorsementSeq: r.endorsementSeq,
-        inceptionDate: r.inceptionDate.toISOString().slice(0, 10),
+        inceptionDate: r.effectiveDate,
         file: file && url ? { url, fileName: file.fileName, version: file.version } : null,
       }
     }),
     rootId,
     policyId
   )
+  const labelOf = new Map(policyFiles.map((f) => [f.policyId, f.label]))
+
+  const slip = root.placingSlipId ? await getPlacingSlipById(root.placingSlipId) : null
+  // Slip PAR + EQVET terbit sebagai dua polis; deductible ikut bagian polisnya.
+  const part = root.slipPart === "PAR" || root.slipPart === "EQVET" ? root.slipPart : null
+
+  const deductibleChanges: PolicyChangeTerms[] = []
+  const endorsements = typed
+    .filter((r) => r.type === "Endorsement" && r.placingSlipId)
+    .sort(
+      (a, b) =>
+        a.effectiveDate.localeCompare(b.effectiveDate) ||
+        (a.endorsementSeq ?? 0) - (b.endorsementSeq ?? 0)
+    )
+  for (const r of endorsements) {
+    const es = r.placingSlipId ? await getPlacingSlipById(r.placingSlipId) : null
+    if (!es) continue
+    deductibleChanges.push({
+      policyId: r.id,
+      label: labelOf.get(r.id) ?? "Endorsement",
+      policyNo: r.policyNo,
+      effectiveDate: r.effectiveDate,
+      deductibleIntro: es.deductibleIntro?.trim() || null,
+      deductibles: deductibleGroups(es, part),
+    })
+  }
+  const cancellation =
+    typed
+      .filter((r) => r.type === "Cancellation")
+      .sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))[0] ?? null
 
   return {
-    premiumPaidDate: policy.premiumPaidDate
-      ? policy.premiumPaidDate.toISOString().slice(0, 10)
+    premiumPaidDate: root.premiumPaidDate
+      ? root.premiumPaidDate.toISOString().slice(0, 10)
       : null,
     fromSlip: slip !== null,
     deductibleIntro: slip?.deductibleIntro?.trim() || null,
     deductibles: slip ? deductibleGroups(slip, part) : [],
+    deductibleChanges,
+    cancellation: cancellation
+      ? { policyNo: cancellation.policyNo, effectiveDate: cancellation.effectiveDate }
+      : null,
     policyFiles,
   }
 }
@@ -491,15 +572,18 @@ export async function createClaim(
   userId: string
 ): Promise<ClaimRecord> {
   return prisma.$transaction(async (tx) => {
+    // Klaim dicatat ke polis induk (13 November 2026). Form yang dibuka
+    // sebelum pilihan polis digabung masih bisa mengirim endorsement.
+    const policyId = await rosterPolicyId(tx, input.policyId)
     let claimNo = input.claimNo?.trim()
     if (!claimNo) {
       claimNo = await nextDocumentNumber(tx, {
         code: "CLM",
-        coverCode: await policyCoverCode(tx, input.policyId),
+        coverCode: await policyCoverCode(tx, policyId),
       })
     }
 
-    const { participantId, paBenefitId } = await checkedPaClaim(tx, input)
+    const { participantId, paBenefitId } = await checkedPaClaim(tx, { ...input, policyId })
     const [statusId, stageId, adjusterId] = await Promise.all([
       input.status ? resolveStatusId(input.status) : (input.statusId ? Promise.resolve(input.statusId) : resolveStatusId("Outstanding")),
       input.stage ? resolveStageId(input.stage) : (input.stageId ? Promise.resolve(input.stageId) : resolveStageId("Tunggu Dokumen")),
@@ -509,7 +593,7 @@ export async function createClaim(
     const record = await tx.claim.create({
       data: {
         claimNo,
-        policyId: input.policyId,
+        policyId,
         adjusterId,
         lossDate: new Date(input.lossDate),
         reportedDate: input.reportedDate ? new Date(input.reportedDate) : null,

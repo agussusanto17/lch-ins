@@ -22,6 +22,7 @@ import {
   TextField,
 } from "@/components/shared/form-fields"
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
+import { claimPolicyChoices, claimPolicyLabel } from "@/lib/claim-policy-files"
 import {
   CLAIM_STAGES,
   type Claim,
@@ -167,8 +168,10 @@ export function ClaimForm({
   const { info: policyInfo, loading: policyInfoLoading } = useClaimPolicyInfo(
     policy?.id
   )
-  const policyItems = policies.map((p) => ({
-    label: `${p.policyNo} — ${p.insuredName}`,
+  // Satu baris per polis: endorsement dan pembatalan digabung ke polis
+  // induknya, karena klaim dicatat ke polis (Agus, 13 November 2026).
+  const policyItems = claimPolicyChoices(policies, draft.policyId).map((p) => ({
+    label: claimPolicyLabel(p),
     value: p.id,
   }))
 
@@ -405,7 +408,11 @@ export function ClaimForm({
             </div>
           ) : null}
           {policy ? (
-            <ClaimPolicyInfoPanel info={policyInfo} loading={policyInfoLoading} />
+            <ClaimPolicyInfoPanel
+              info={policyInfo}
+              loading={policyInfoLoading}
+              lossDate={draft.lossDate}
+            />
           ) : null}
           {rosterLoading || needsParticipant ? (
             <SearchSelect
