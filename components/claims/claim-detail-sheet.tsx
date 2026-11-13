@@ -60,6 +60,7 @@ import { dateShort, money } from "@/lib/format"
 import { CLAIM_STATUS_CODES, fixedLookupLabel } from "@/lib/form-options"
 import { paClaimWarnings } from "@/lib/pa-benefits"
 import type { ClaimDocumentRecord, ClaimFollowupRecord } from "@/lib/server/claims"
+import { compressImage } from "@/lib/image-compress"
 import { UPLOAD_ACCEPT, UPLOAD_HINT, uploadProblem } from "@/lib/uploads"
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
@@ -218,10 +219,11 @@ export function ClaimDetailSheet({
     fileInputRef.current?.click()
   }
 
-  async function handleUploadFile(file: File) {
+  async function handleUploadFile(picked: File) {
     const doc = uploadTargetRef.current
     uploadTargetRef.current = null
     if (!doc) return
+    const file = await compressImage(picked)
     const problem = uploadProblem(file)
     if (problem) {
       toast.error(problem, { description: file.name })

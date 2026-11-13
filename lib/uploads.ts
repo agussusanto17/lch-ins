@@ -46,7 +46,8 @@ export function sizeLimitMessage(maxBytes: number) {
 /** Jenis berkas yang diterima. SVG sengaja tidak, karena bisa berisi skrip. */
 export const UPLOAD_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp"
 
-export const UPLOAD_HINT = "PDF, JPG, PNG, atau WebP, maksimal 4 MB."
+export const UPLOAD_HINT =
+  "PDF, JPG, PNG, atau WebP, maksimal 4 MB. Foto yang lebih besar diperkecil otomatis."
 
 export const POLICY_FILE_HINT = "PDF, JPG, PNG, atau WebP, maksimal 25 MB."
 
@@ -58,7 +59,7 @@ export const XLSX_MIME =
 export const ATTACHMENT_ACCEPT = `${UPLOAD_ACCEPT},${XLSX_MIME},.xlsx`
 
 export const ATTACHMENT_HINT =
-  "PDF, JPG, PNG, WebP, atau Excel (.xlsx), maksimal 4 MB."
+  "PDF, JPG, PNG, WebP, atau Excel (.xlsx), maksimal 4 MB. Foto yang lebih besar diperkecil otomatis."
 
 /** Pemeriksaan lampiran slip di browser; server memeriksa ulang dari isinya. */
 export function attachmentUploadProblem(file: {

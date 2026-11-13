@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import type { SlipAttachment } from "@/lib/data/types"
 import { dateShort } from "@/lib/format"
+import { compressImage } from "@/lib/image-compress"
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_HINT,
@@ -62,7 +63,8 @@ export function SlipAttachments({
   const [toggling, setToggling] = React.useState<string | null>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
-  async function upload(file: File) {
+  async function upload(picked: File) {
+    const file = await compressImage(picked)
     const problem = attachmentUploadProblem(file)
     if (problem) {
       toast.error(problem)

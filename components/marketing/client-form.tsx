@@ -41,6 +41,7 @@ import {
   type FormOptions,
 } from "@/lib/form-options"
 import { newId, store } from "@/lib/store"
+import { compressImage } from "@/lib/image-compress"
 import { UPLOAD_ACCEPT, UPLOAD_HINT, uploadProblem } from "@/lib/uploads"
 import {
   email,
@@ -639,10 +640,11 @@ export function ClientForm({
                   type="file"
                   accept={UPLOAD_ACCEPT}
                   className="peer sr-only"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
+                  onChange={async (e) => {
+                    const picked = e.target.files?.[0]
                     e.target.value = ""
-                    if (!file) return
+                    if (!picked) return
+                    const file = await compressImage(picked)
                     const problem = uploadProblem(file)
                     if (problem) {
                       toast.error(`${file.name} tidak bisa diunggah`, {
