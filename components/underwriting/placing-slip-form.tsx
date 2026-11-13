@@ -33,6 +33,7 @@ import {
   SlipFormToolbar,
 } from "@/components/underwriting/slip-form-chrome"
 import { ClausePicker } from "@/components/underwriting/clause-picker"
+import { ClosingSummaryPanel } from "@/components/underwriting/closing-summary"
 import { SlipDeductibles } from "@/components/underwriting/deductible-input"
 import {
   LineItemList,
@@ -158,6 +159,7 @@ import {
   itemSection,
 } from "@/lib/slip-items"
 import type { InsuredOption } from "@/lib/server/clients"
+import { closingSummary } from "@/lib/closing-summary"
 import { newId, store, useRecord } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
@@ -175,6 +177,7 @@ const SECTION_KEYS = [
   "brokerage",
   "subjectivity",
   "security",
+  "closingSummary",
   "closing",
   "coverNote",
   "documentDates",
@@ -351,15 +354,23 @@ function SlipEditor({
   const changeSlip = slip.kind === "Endorsement" || slip.kind === "Cancellation"
   const changeSlipLabel = slip.kind === "Cancellation" ? "Cancellation Slip" : "Endorsement Slip"
   const showQuotationSections = isQuotation || isClosing || slip.status !== "Draft"
+  // Premi − brokerage − additional fee sebelum CI diterbitkan (Agus, 13
+  // November 2026). Endorsement/cancellation slip dan open cover tidak punya
+  // premi penutupan yang utuh, jadi tanpa ringkasan.
+  const showClosingSummary =
+    (isClosing || slip.status === "Closed") && !changeSlip && !usesOpenCover(slip)
 
   const availableKeys = React.useMemo(() => {
+    const keys = showClosingSummary
+      ? SECTION_KEYS
+      : SECTION_KEYS.filter((k) => k !== "closingSummary")
     if (showQuotationSections) {
-      return SECTION_KEYS
+      return keys
     }
-    return SECTION_KEYS.filter(
-      (k) => !["subjectivity", "security", "closing", "coverNote"].includes(k)
+    return keys.filter(
+      (k) => !["subjectivity", "security", "closingSummary", "closing", "coverNote"].includes(k)
     )
-  }, [showQuotationSections])
+  }, [showQuotationSections, showClosingSummary])
 
   const [openSections, setOpenSections] = React.useState<
     Record<string, boolean>
@@ -2501,6 +2512,17 @@ function SlipEditor({
                 </div>
               </SectionCard>
 
+              {showClosingSummary ? (
+                <SectionCard
+                  title="Ringkasan Penutupan"
+                  description="Net premi ke asuransi dan pendapatan LCH sebelum Closing Instruction diterbitkan."
+                  {...sectionProps("closingSummary")}
+                  summary={`Net ke asuransi ${money(closingSummary(slip).net, slip.currency)}`}
+                >
+                  <ClosingSummaryPanel slip={slip} />
+                </SectionCard>
+              ) : null}
+
               <SectionCard
                 title="Closing Instruction"
                 description="Instruksi penutupan untuk insurer saat slip di-close."
@@ -2801,6 +2823,7 @@ function SlipEditor({
               Penutupan akan di-close (status Closed) dan dokumen Closing Instruction siap dicetak. Detail penutupan tetap dapat diedit kembali jika membutuhkan revisi.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {showClosingSummary ? <ClosingSummaryPanel slip={slip} compact /> : null}
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction onClick={issueClosing}>
