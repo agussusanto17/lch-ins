@@ -1,11 +1,16 @@
 "use client"
 
 import * as React from "react"
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, TriangleAlert } from "lucide-react"
 
 import { getClaimPolicyInfoAction } from "@/app/(app)/claims/actions"
 import { ToneBadge } from "@/components/shared/status-badge"
-import { policyFileLinkText, type ClaimPolicyFile } from "@/lib/claim-policy-files"
+import {
+  deductiblesOn,
+  policyFileLinkText,
+  type ClaimPolicyFile,
+} from "@/lib/claim-policy-files"
+import { todayIso } from "@/lib/date"
 import { deductiblesByUnit } from "@/lib/deductible-text"
 import { dateShort } from "@/lib/format"
 import type { ClaimPolicyInfo } from "@/lib/server/claims"
@@ -14,6 +19,7 @@ import type { ClaimPolicyInfo } from "@/lib/server/claims"
  * Info polis untuk klaim (meeting LCH, 10 November 2026): status premi,
  * deductible dari placing slip asal polis, dan berkas polis dari Policy
  * Database. Dimuat per polis karena datanya hanya perlu saat polis dipilih.
+ * Endorsement dan pembatalan ikut polis induknya (13 November 2026).
  */
 export function useClaimPolicyInfo(policyId: string | null | undefined) {
   const [loaded, setLoaded] = React.useState<{
@@ -82,21 +88,60 @@ export function PolicyFilesList({ files }: { files: ClaimPolicyFile[] }) {
   )
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** Dari dokumen mana deductible diambil, bila polisnya punya endorsement. */
+function deductibleSourceText(
+  terms: ReturnType<typeof deductiblesOn>,
+  onLossDate: boolean
+) {
+  const when = onLossDate ? "tanggal kejadian" : "hari ini"
+  const source = terms.applied
+    ? `${terms.applied.label} (efektif ${dateShort(terms.applied.effectiveDate)})`
+    : "polis"
+  const next = terms.next
+    ? ` ${terms.next.label} baru efektif ${dateShort(terms.next.effectiveDate)}.`
+    : ""
+  return `Sesuai ${source}, yang berlaku pada ${when}.${next}`
+}
+
 /** Panel di bawah pilihan polis pada form klaim. */
 export function ClaimPolicyInfoPanel({
   info,
   loading,
+  lossDate,
 }: {
   info: ClaimPolicyInfo | null
   loading: boolean
+  /** Tanggal kejadian di form; kosong berarti hari ini. */
+  lossDate?: string
 }) {
   if (loading) {
     return <p className="text-xs text-muted-foreground">Memuat info polis…</p>
   }
   if (!info) return null
 
+  const lossDay = lossDate && ISO_DATE.test(lossDate) ? lossDate : null
+  // Deductible endorsement yang berlaku pada tanggal kejadian (13 November 2026).
+  const terms = deductiblesOn(info, info.deductibleChanges, lossDay ?? todayIso())
+  const cancelledOnLoss =
+    info.cancellation && lossDay ? lossDay >= info.cancellation.effectiveDate : false
+
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-3 text-xs">
+      {cancelledOnLoss && info.cancellation ? (
+        <p
+          role="status"
+          className="flex items-start gap-2 rounded-md bg-warning/10 px-2.5 py-2 text-warning"
+        >
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <span>
+            Tanggal kejadian jatuh pada atau sesudah pembatalan polis, efektif{" "}
+            {dateShort(info.cancellation.effectiveDate)} ({info.cancellation.policyNo}).
+          </span>
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-muted-foreground">Status premi</span>
         <PremiumStatusBadge date={info.premiumPaidDate} />
@@ -114,11 +159,16 @@ export function ClaimPolicyInfoPanel({
 
       <div className="flex flex-col gap-1.5">
         <span className="text-muted-foreground">Deductible polis</span>
-        {info.deductibleIntro ? (
-          <p className="whitespace-pre-line text-foreground">{info.deductibleIntro}</p>
+        {info.deductibleChanges.length ? (
+          <p className="text-muted-foreground">
+            {deductibleSourceText(terms, lossDay !== null)}
+          </p>
         ) : null}
-        {info.deductibles.length ? (
-          deductiblesByUnit(info.deductibles).map((block) => {
+        {terms.intro ? (
+          <p className="whitespace-pre-line text-foreground">{terms.intro}</p>
+        ) : null}
+        {terms.deductibles.length ? (
+          deductiblesByUnit(terms.deductibles).map((block) => {
             const list = block.groups.map((group) => (
               <div key={group.heading ?? "deductible"} className="flex flex-col gap-1">
                 {group.heading ? (
@@ -146,11 +196,13 @@ export function ClaimPolicyInfoPanel({
               list
             )
           })
-        ) : info.deductibleIntro ? null : (
+        ) : terms.intro ? null : (
           <p className="text-muted-foreground">
-            {info.fromSlip
-              ? "Placing slip polis ini tidak mencantumkan deductible."
-              : "Polis ini tidak dibuat dari placing slip, jadi deductible-nya tidak tercatat."}
+            {terms.applied
+              ? `${terms.applied.label} tidak mencantumkan deductible.`
+              : info.fromSlip
+                ? "Placing slip polis ini tidak mencantumkan deductible."
+                : "Polis ini tidak dibuat dari placing slip, jadi deductible-nya tidak tercatat."}
           </p>
         )}
       </div>
