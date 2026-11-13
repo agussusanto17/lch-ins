@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-13
 - **Branch:** `fix/dockerfile-next-config`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #243
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
