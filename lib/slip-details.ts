@@ -40,7 +40,6 @@ export function missingDetailLabels(
   return cleanDetailLabels(labels).filter((l) => !present.has(keyOf(l)))
 }
 
-/** Baris yang dicetak di dokumen: isi kosong dilewati. */
 /**
  * Baris Existing Policy No. (nomor polis tahun lalu untuk renewal). Dokumen
  * mencetaknya di sisi kanan atas, bukan di tabel detail (Harry, 6 November
@@ -50,6 +49,16 @@ export function isExistingPolicyLabel(label: string) {
   return /^existing\s+policy(\s+no\.?|\s+number)?$/i.test(label.trim())
 }
 
+/**
+ * Baris The Business (atau Business). Dokumen mencetaknya tepat di bawah
+ * Correspondence Address, bukan bersama detail tambahan lain (LCH, slip GPA
+ * PT. Salam Pacific, 13 November 2026).
+ */
+export function isBusinessLabel(label: string) {
+  return /^(the\s+)?business$/i.test(label.trim())
+}
+
+/** Baris yang dicetak di dokumen: isi kosong dilewati. */
 export function printedDetailRows(rows: readonly SlipDetailRow[] | undefined) {
   return (rows ?? [])
     .map((r) => ({ label: r.label.trim(), value: r.value.trim() }))
