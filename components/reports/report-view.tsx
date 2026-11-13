@@ -18,6 +18,7 @@ import { ExportButtons } from "@/components/shared/table-toolbar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -50,6 +51,7 @@ import {
 import { yearMonth } from "@/lib/date"
 import { exportXlsx, type ExportColumn } from "@/lib/export"
 import { RECAP_COLUMNS, recapRows } from "@/lib/production-recap"
+import { customRange, rangeDays } from "@/lib/report-range"
 import {
   compactMoney,
   dateShort,
@@ -59,12 +61,14 @@ import {
 } from "@/lib/format"
 import { store, useCollection } from "@/lib/store"
 
-type Period = "monthly" | "quarterly" | "yearly"
+type Period = "monthly" | "quarterly" | "yearly" | "custom"
 
 const PERIOD_ITEMS: { label: string; value: Period }[] = [
   { label: "Bulanan", value: "monthly" },
   { label: "Kuartalan", value: "quarterly" },
   { label: "Tahunan", value: "yearly" },
+  // Tanggal awal dan akhir bebas (Agus, 13 November 2026).
+  { label: "Rentang tanggal", value: "custom" },
 ]
 
 /** 12 bulan terakhir sampai bulan berjalan, sebagai titik acuan periode. */
@@ -81,8 +85,8 @@ function monthOptions(today: string) {
   })
 }
 
-/** Rentang tanggal [awal, akhir] untuk periode yang dipilih. */
-function periodRange(period: Period, anchor: string) {
+/** Rentang tanggal [awal, akhir] untuk periode bulanan, kuartalan, atau tahunan. */
+function periodRange(period: Exclude<Period, "custom">, anchor: string) {
   const [y, m] = anchor.split("-").map(Number)
   const pad = (n: number) => String(n).padStart(2, "0")
   const lastDay = (yy: number, mm: number) =>
@@ -209,9 +213,21 @@ export function ReportView({
 
   const [period, setPeriod] = React.useState<Period>("yearly")
   const [anchor, setAnchor] = React.useState(months[0].value)
+  // Isian rentang tanggal mulai dari periode yang sedang dilihat.
+  const [from, setFrom] = React.useState(() => periodRange("yearly", months[0].value).start)
+  const [to, setTo] = React.useState(() => periodRange("yearly", months[0].value).end)
 
-  const range = periodRange(period, anchor)
+  const range =
+    period === "custom" ? customRange(from, to, today) : periodRange(period, anchor)
   const inRange = (date: string) => date >= range.start && date <= range.end
+
+  function changePeriod(next: Period) {
+    if (next === "custom" && period !== "custom") {
+      setFrom(range.start)
+      setTo(range.end)
+    }
+    setPeriod(next)
+  }
 
   // Rekap produksi format LCH (contoh Excel Harry): satu baris per polis per
   // asuransi, untuk periode yang sama dengan report ini.
@@ -298,17 +314,19 @@ export function ReportView({
     ],
   ]
 
-  const periodSlug = `${period}-${anchor}`
+  const periodSlug =
+    period === "custom" ? `${range.start}-sd-${range.end}` : `${period}-${anchor}`
+  const trendYear = Number(range.end.slice(0, 4))
 
   return (
     <div className="flex flex-col gap-5">
       <div className="no-print flex flex-wrap items-end gap-3">
-        <Field className="w-37.5">
+        <Field className="w-41">
           <FieldLabel>Periode</FieldLabel>
           <Select
             items={PERIOD_ITEMS}
             value={period}
-            onValueChange={(v) => setPeriod(v as Period)}
+            onValueChange={(v) => changePeriod(v as Period)}
           >
             <SelectTrigger size="sm">
               <SelectValue />
@@ -324,30 +342,59 @@ export function ReportView({
             </SelectContent>
           </Select>
         </Field>
-        <Field className="w-45">
-          <FieldLabel>Bulan acuan</FieldLabel>
-          <Select
-            items={months}
-            value={anchor}
-            onValueChange={(v) => setAnchor(v as string)}
-          >
-            <SelectTrigger size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {months.map((i) => (
-                  <SelectItem key={i.value} value={i.value}>
-                    {i.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
-        <p className="pb-2 text-sm text-muted-foreground">
-          {range.label} · {dateShort(range.start)} s/d {dateShort(range.end)}
-        </p>
+        {period === "custom" ? (
+          <>
+            <Field className="w-41">
+              <FieldLabel htmlFor="report-from">Dari tanggal</FieldLabel>
+              <Input
+                id="report-from"
+                type="date"
+                max={to || undefined}
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+              />
+            </Field>
+            <Field className="w-41">
+              <FieldLabel htmlFor="report-to">Sampai tanggal</FieldLabel>
+              <Input
+                id="report-to"
+                type="date"
+                min={from || undefined}
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+              />
+            </Field>
+            {/* Tanggalnya sudah terlihat di isian dan kartu Polis Diproduksi. */}
+            <p className="pb-2 text-sm text-muted-foreground">{rangeDays(range)} hari</p>
+          </>
+        ) : (
+          <>
+            <Field className="w-45">
+              <FieldLabel>Bulan acuan</FieldLabel>
+              <Select
+                items={months}
+                value={anchor}
+                onValueChange={(v) => setAnchor(v as string)}
+              >
+                <SelectTrigger size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {months.map((i) => (
+                      <SelectItem key={i.value} value={i.value}>
+                        {i.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <p className="pb-2 text-sm text-muted-foreground">
+              {range.label} · {dateShort(range.start)} s/d {dateShort(range.end)}
+            </p>
+          </>
+        )}
         <Button
           variant="outline"
           size="sm"
@@ -432,12 +479,12 @@ export function ReportView({
 
         <TabsContent value="production" className="flex flex-col gap-4">
           <SectionCard
-            title={`Trend Produksi ${anchor.slice(0, 4)}`}
+            title={`Trend Produksi ${trendYear}`}
             description="Premium & brokerage per bulan mulai polis (juta IDR)"
             contentClassName="px-2"
           >
             <ProductionTrend
-              data={monthlyProduction(allPolicies, Number(anchor.slice(0, 4)))}
+              data={monthlyProduction(allPolicies, trendYear)}
             />
           </SectionCard>
 
