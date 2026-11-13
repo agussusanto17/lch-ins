@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-13
 - **Branch:** `feat/kompres-gambar-upload`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #246
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
