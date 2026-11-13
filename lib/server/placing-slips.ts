@@ -58,6 +58,7 @@ import { slipCalc } from "@/lib/endorsement-calc"
 import { changeSlipLockText } from "@/lib/endorsement-slip"
 import { todayIso } from "@/lib/date"
 import { additionalFeePanelText } from "@/lib/calc"
+import { slipAuditSummary, type SlipClauseTitle } from "@/lib/slip-audit"
 import {
   documentDatesForStatus,
   type SlipDocumentDates,
@@ -455,47 +456,50 @@ async function resolveSppaId(sppaId?: string | null): Promise<string | null> {
   return sppa?.dbId ?? null
 }
 
+/**
+ * Relasi yang dibaca `toPlacingSlipRecord`: daftar slip, detail slip (ditambah
+ * peserta dan lampiran), dan isi slip sebelum revisi untuk audit trail.
+ */
+const SLIP_RECORD_INCLUDE = {
+  client: { select: { id: true, name: true } },
+  cob: { select: { id: true, code: true, name: true } },
+  coverType: {
+    select: { id: true, code: true, name: true, abbreviation: true, ojkTariff: true },
+  },
+  coverType2: { select: { id: true, code: true, name: true, abbreviation: true } },
+  occupation: { select: { id: true, code: true, name: true } },
+  constructionClass: { select: { id: true, code: true, name: true } },
+  currency: { select: { code: true } },
+  creator: { select: { id: true, name: true } },
+  parentPolicy: { select: { policyNo: true } },
+  baseSlip: { select: { slipNo: true } },
+  derivedSlips: SLIP_CHANGE_LOCK,
+  locations: SLIP_LOCATIONS,
+  items: { include: SLIP_ITEM_VEHICLE, orderBy: { sortOrder: "asc" } },
+  rateLines: {
+    include: { kind: { select: { id: true, code: true, name: true } } },
+    orderBy: { sortOrder: "asc" },
+  },
+  securityPanel: {
+    include: {
+      insurer: { select: { id: true, name: true } },
+      position: { select: { id: true, code: true, name: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  },
+  clauses: {
+    orderBy: { sortOrder: "asc" },
+  },
+  wordingForms: {
+    include: { wordingForm: { select: { id: true, name: true } } },
+  },
+  _count: {
+    select: { policies: true },
+  },
+} satisfies Prisma.PlacingSlipInclude
+
 type PrismaPlacingSlipWithRelations = Prisma.PlacingSlipGetPayload<{
-  include: {
-    client: { select: { id: true; name: true } }
-    cob: { select: { id: true; code: true; name: true } }
-    coverType: {
-      select: { id: true; code: true; name: true; abbreviation: true; ojkTariff: true }
-    }
-    coverType2: { select: { id: true; code: true; name: true; abbreviation: true } }
-    occupation: { select: { id: true; code: true; name: true } }
-    constructionClass: { select: { id: true; code: true; name: true } }
-    currency: { select: { code: true } }
-    creator: { select: { id: true; name: true } }
-    parentPolicy: { select: { policyNo: true } }
-    baseSlip: { select: { slipNo: true } }
-    derivedSlips: typeof SLIP_CHANGE_LOCK
-    locations: typeof SLIP_LOCATIONS
-    items: {
-      include: { vehicleBrand: { select: { name: true } }; vehicleType: { select: { name: true } } }
-      orderBy: { sortOrder: "asc" }
-    }
-    rateLines: {
-      include: { kind: { select: { id: true; code: true; name: true } } }
-      orderBy: { sortOrder: "asc" }
-    }
-    securityPanel: {
-      include: {
-        insurer: { select: { id: true; name: true } }
-        position: { select: { id: true; code: true; name: true } }
-      }
-      orderBy: { createdAt: "asc" }
-    }
-    clauses: {
-      orderBy: { sortOrder: "asc" }
-    }
-    wordingForms: {
-      include: { wordingForm: { select: { id: true; name: true } } }
-    }
-    _count: {
-      select: { policies: true }
-    }
-  }
+  include: typeof SLIP_RECORD_INCLUDE
 }>
 
 /** Baris peserta dari database; hanya dimuat oleh detail slip. */
@@ -837,43 +841,7 @@ export async function listPlacingSlips(
 
   const records = await prisma.placingSlip.findMany({
     where: whereAnd.length > 0 ? { AND: whereAnd } : undefined,
-    include: {
-      client: { select: { id: true, name: true } },
-      cob: { select: { id: true, code: true, name: true } },
-      coverType: {
-        select: { id: true, code: true, name: true, abbreviation: true, ojkTariff: true },
-      },
-      coverType2: { select: { id: true, code: true, name: true, abbreviation: true } },
-      occupation: { select: { id: true, code: true, name: true } },
-      constructionClass: { select: { id: true, code: true, name: true } },
-      currency: { select: { code: true } },
-      creator: { select: { id: true, name: true } },
-      parentPolicy: { select: { policyNo: true } },
-      baseSlip: { select: { slipNo: true } },
-      derivedSlips: SLIP_CHANGE_LOCK,
-      locations: SLIP_LOCATIONS,
-      items: { include: SLIP_ITEM_VEHICLE, orderBy: { sortOrder: "asc" } },
-      rateLines: {
-        include: { kind: { select: { id: true, code: true, name: true } } },
-        orderBy: { sortOrder: "asc" },
-      },
-      securityPanel: {
-        include: {
-          insurer: { select: { id: true, name: true } },
-          position: { select: { id: true, code: true, name: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      },
-      clauses: {
-        orderBy: { sortOrder: "asc" },
-      },
-      wordingForms: {
-        include: { wordingForm: { select: { id: true, name: true } } },
-      },
-      _count: {
-        select: { policies: true },
-      },
-    },
+    include: SLIP_RECORD_INCLUDE,
     orderBy: [{ createdAt: "desc" }],
   })
 
@@ -1046,43 +1014,9 @@ export async function getPlacingSlipById(id: string): Promise<PlacingSlipRecord 
   const record = await prisma.placingSlip.findUnique({
     where: whereClause,
     include: {
-      client: { select: { id: true, name: true } },
-      cob: { select: { id: true, code: true, name: true } },
-      coverType: {
-        select: { id: true, code: true, name: true, abbreviation: true, ojkTariff: true },
-      },
-      coverType2: { select: { id: true, code: true, name: true, abbreviation: true } },
-      occupation: { select: { id: true, code: true, name: true } },
-      constructionClass: { select: { id: true, code: true, name: true } },
-      currency: { select: { code: true } },
-      creator: { select: { id: true, name: true } },
-      parentPolicy: { select: { policyNo: true } },
-      baseSlip: { select: { slipNo: true } },
-      derivedSlips: SLIP_CHANGE_LOCK,
-      locations: SLIP_LOCATIONS,
-      items: { include: SLIP_ITEM_VEHICLE, orderBy: { sortOrder: "asc" } },
-      rateLines: {
-        include: { kind: { select: { id: true, code: true, name: true } } },
-        orderBy: { sortOrder: "asc" },
-      },
-      securityPanel: {
-        include: {
-          insurer: { select: { id: true, name: true } },
-          position: { select: { id: true, code: true, name: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      },
-      clauses: {
-        orderBy: { sortOrder: "asc" },
-      },
+      ...SLIP_RECORD_INCLUDE,
       participants: { orderBy: { sortOrder: "asc" } },
       files: { orderBy: slipFilesOrder },
-      wordingForms: {
-        include: { wordingForm: { select: { id: true, name: true } } },
-      },
-      _count: {
-        select: { policies: true },
-      },
     },
   })
 
@@ -1142,6 +1076,19 @@ function panelFeePct(cobName: string, pct: number | undefined) {
  */
 function panelFeeVat(cobName: string, includeVat: boolean | undefined) {
   return usesAdditionalFee(normalizeCob(cobName)) && (includeVat ?? false)
+}
+
+/**
+ * Additional fee per asuransi untuk audit trail, urut share terbesar. Share
+ * yang sama diurutkan menurut nama asuransi, jadi teks sebelum dan sesudah
+ * tidak berbeda hanya karena urutan baris panel.
+ */
+function feePanelText(rows: readonly SecurityPanelRow[] | undefined) {
+  return additionalFeePanelText(
+    [...(rows ?? [])].sort(
+      (a, b) => (b.share || 0) - (a.share || 0) || a.insurer.localeCompare(b.insurer)
+    )
+  )
 }
 
 interface SavedLocation {
@@ -1261,6 +1208,7 @@ function savedLocationId(
  * Copies selected clauses to slip_clauses with wording from slip override or master.
  * The general group (section 0) and Section 2 are stored only for slips with
  * sections: Property, and CAR/EAR-style slips with sections switched on.
+ * Returns the stored titles in insert order, for the audit trail.
  */
 async function insertSlipClauses(
   tx: Prisma.TransactionClient,
@@ -1277,7 +1225,7 @@ async function insertSlipClauses(
     | "clauseOverridesGeneral"
     | "usesSections"
   >
-) {
+): Promise<SlipClauseTitle[]> {
   // Satu klausula hanya di satu kelompok: tanpa section, Section 1, atau Section 2.
   const cob = normalizeCob(cobName)
   const sectioned =
@@ -1319,6 +1267,7 @@ async function insertSlipClauses(
       }
     )
   }
+  const saved: SlipClauseTitle[] = []
   for (const { section, ids, overrides } of sections) {
     let clIdx = 0
     for (const clId of new Set(ids ?? [])) {
@@ -1329,21 +1278,25 @@ async function insertSlipClauses(
 
       if (clause) {
         const override = overrides?.[clId]
+        const title = override?.title || clause.title
+        const groupTitle = section === 1 ? (groups?.[clause.id] ?? null) : null
         await tx.slipClause.create({
           data: {
             slipId,
             section,
             clauseId: clause.id,
-            title: override?.title || clause.title,
+            title,
             wordingHtml: override?.wording || clause.wordingHtml,
             isEdited: Boolean(override),
-            groupTitle: section === 1 ? (groups?.[clause.id] ?? null) : null,
+            groupTitle,
             sortOrder: clIdx++,
           },
         })
+        saved.push({ section, title, groupTitle })
       }
     }
   }
+  return saved
 }
 
 /**
@@ -1755,25 +1708,16 @@ export async function updatePlacingSlip(
   userId: string
 ): Promise<PlacingSlipRecord> {
   const cache = await getLookupsCache()
+  // Seluruh isi slip sebelum revisi, untuk ringkasan audit trail.
   const existing = await prisma.placingSlip.findUnique({
     where: { id },
-    include: {
-      cob: true,
-      // Additional fee per asuransi sebelum revisi, untuk audit trail.
-      securityPanel: {
-        select: {
-          additionalFeePct: true,
-          additionalFeeIncludeVat: true,
-          insurer: { select: { name: true } },
-        },
-        orderBy: { sharePct: "desc" },
-      },
-    },
+    include: SLIP_RECORD_INCLUDE,
   })
 
   if (!existing) {
     throw new Error("Placing slip tidak ditemukan.")
   }
+  const before = toPlacingSlipRecord(existing)
 
   if (existing.status === "Cancelled") {
     throw new Error("Placing Slip berstatus Cancelled tidak dapat diubah.")
@@ -2140,7 +2084,7 @@ export async function updatePlacingSlip(
 
     // Refresh clauses
     await tx.slipClause.deleteMany({ where: { slipId: id } })
-    await insertSlipClauses(tx, id, resolvedCob.name, input)
+    const savedClauses = await insertSlipClauses(tx, id, resolvedCob.name, input)
     // Peserta hanya diganti bila dikirim; slip dari daftar tidak memuatnya.
     if (input.participants !== undefined) {
       await replaceParticipants(tx, id, input.participants)
@@ -2171,6 +2115,29 @@ export async function updatePlacingSlip(
       }
     }
 
+    // Isi slip sesudah revisi seperti yang tersimpan: objek yang tidak
+    // disimpan karena kosong, beserta baris rate miliknya, tidak ikut.
+    const savedLines = (lines: RateLine[] | undefined) =>
+      (lines ?? []).filter(
+        (rl) => !itemRates || savedItemId(itemIds, rl.vehicleId) !== undefined
+      )
+    const savedRows = (rows: LineItem[] | undefined) =>
+      (rows ?? []).filter((it) => it.description.trim())
+    const after: PlacingSlip = {
+      ...before,
+      cob: normalizeCob(resolvedCob.name as CobType),
+      currency: currencyCode,
+      usesSections: input.usesSections === true,
+      locations: input.locations,
+      interestItems: (input.interestItems ?? []).filter((it) => itemIds.has(it.id)),
+      sumInsuredSection1: savedRows(input.sumInsuredSection1),
+      sumInsuredSection2: savedRows(input.sumInsuredSection2),
+      rateLines: savedLines(input.rateLines),
+      tplLines: savedLines(input.tplLines),
+      paLines: savedLines(input.paLines),
+      specialConditions: input.specialConditions?.trim() || undefined,
+    }
+
     await recordAudit(tx, {
       userId,
       entity: "placing_slips",
@@ -2180,15 +2147,12 @@ export async function updatePlacingSlip(
         insuredName: existing.insuredName,
         status: existing.status,
         ...previousDates,
+        inceptionDate: dateOnly(existing.inceptionDate),
+        expiryDate: dateOnly(existing.expiryDate),
+        ...slipAuditSummary(before, existing.clauses),
         brokeragePct: Number(existing.brokeragePct),
         includeVat: existing.includeVat,
-        additionalFeePanel: additionalFeePanelText(
-          existing.securityPanel.map((sp) => ({
-            insurer: sp.insurer.name,
-            additionalFeePct: Number(sp.additionalFeePct),
-            additionalFeeIncludeVat: sp.additionalFeeIncludeVat,
-          }))
-        ),
+        additionalFeePanel: feePanelText(before.securityPanel),
       },
       after: {
         insuredName: input.insuredName,
@@ -2196,12 +2160,13 @@ export async function updatePlacingSlip(
         releaseDate: documentDates.releaseDate ?? null,
         quotedDate: documentDates.quotedDate ?? null,
         closingDate: documentDates.closingDate ?? null,
+        inceptionDate: dateOnly(inceptionDate),
+        expiryDate: dateOnly(expiryDate),
+        ...slipAuditSummary(after, savedClauses),
         brokeragePct: input.brokeragePct ?? 0,
         includeVat: input.includeVat ?? false,
         additionalFeePanel: usesAdditionalFee(normalizeCob(resolvedCob.name))
-          ? additionalFeePanelText(
-              [...(input.securityPanel ?? [])].sort((a, b) => (b.share || 0) - (a.share || 0))
-            )
+          ? feePanelText(input.securityPanel)
           : "",
       },
     })
