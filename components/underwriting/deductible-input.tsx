@@ -352,9 +352,11 @@ export function SlipDeductibles({
   const word = unitWord(slip)
   const firstTitle = unitHeading(slip, units[0]).title
 
+  // AlertDialogAction di proyek ini tombol biasa, jadi dialog ditutup sendiri.
   function share() {
     onChange(shareDeductiblesPatch(slip))
     setPerUnit(false)
+    setConfirming(false)
   }
 
   if (!multi) {
