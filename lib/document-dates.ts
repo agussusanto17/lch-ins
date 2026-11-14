@@ -1,15 +1,6 @@
 /**
- * Tanggal dan kop dokumen slip.
- *
- * Disetujui Harry, 10 November 2026 (pertanyaan no. 10 dan 11):
- * - Placing Slip memakai tanggal release.
- * - Quotation Slip memakai tanggal quoted.
- * - Closing Instruction memakai tanggal closing.
- * - Tanggal bisa diubah manual untuk dokumen lama, dan dokumen bertanggal
- *   sebelum 1 September 2025 memakai kop Lestari Cipta Hokindo.
- *
- * Draft Cover Note terbit setelah Closing Instruction (meeting LCH,
- * 10 November 2026), jadi memakai tanggal closing seperti CI.
+ * Placing Slip bertanggal release, Quotation Slip quoted, CI dan Draft Cover Note closing.
+ * Tanggal bisa diubah manual untuk dokumen lama (Harry, 10 November 2026).
  */
 
 import { todayIso } from "@/lib/date"
@@ -27,9 +18,8 @@ export interface SlipDocumentDates {
 }
 
 /**
- * Hari pertama kop PT. LCH Insurance Brokers. Nama baru berlaku lewat
- * KEP-474/PD.02/2025 tanggal 29 Agustus 2025, dan LCH memakai kop baru mulai
- * 1 September 2025. Sebelumnya kop Lestari Cipta Hokindo.
+ * Hari pertama kop PT. LCH Insurance Brokers (KEP-474/PD.02/2025).
+ * Dokumen sebelumnya memakai kop Lestari Cipta Hokindo.
  */
 export const LCH_LETTERHEAD_FROM = "2025-09-01"
 
@@ -47,9 +37,8 @@ export function letterheadFor(date: string): LetterheadVariant {
 }
 
 /**
- * Tanggal yang dicetak di dokumen, format "YYYY-MM-DD" (WIB). Slip yang belum
- * sampai tahap dokumennya, misalnya draft yang dibuka sebagai Placing Slip,
- * memakai tanggal terakhir disimpan seperti sebelumnya.
+ * Tanggal cetak dokumen ("YYYY-MM-DD", WIB). Slip yang belum sampai tahap dokumennya, misalnya
+ * draft yang dibuka sebagai Placing Slip, memakai tanggal terakhir disimpan.
  */
 export function slipDocumentDate(
   slip: SlipDocumentDates & { updatedAt: string },
@@ -77,9 +66,8 @@ const REACHED: Record<SlipStatus, (keyof SlipDocumentDates)[]> = {
 }
 
 /**
- * Tanggal yang terisi otomatis saat status berpindah. Hanya tanggal yang
- * masih kosong yang diisi, jadi tanggal yang diketik manual tetap dipakai.
- * Mengembalikan hanya kolom yang perlu diisi.
+ * Tanggal yang terisi otomatis saat status berpindah, hanya kolom yang masih kosong, jadi
+ * tanggal yang diketik manual tetap dipakai.
  */
 export function documentDatesForStatus(
   dates: SlipDocumentDates,

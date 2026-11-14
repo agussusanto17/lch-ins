@@ -93,7 +93,6 @@ export function SppaTable({
 
   // Slip yang dibuat dari SPPA ini. Tautan dari database didahulukan; store
   // sesi hanya cadangan untuk slip yang baru dibuat dan belum dimuat ulang.
-  // Dulu hanya store yang dibaca, sehingga slip dari database tidak terlihat.
   function linkedSlipOf(s: Sppa) {
     const fromDb = (s as Partial<SppaRecord>).linkedSlip
     if (fromDb) return { id: fromDb.id, slipNo: fromDb.slipNo }

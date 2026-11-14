@@ -19,9 +19,7 @@ export function LoginForm({ next }: { next: string }) {
   const [pending, setPending] = React.useState(false)
   const [checkingSession, setCheckingSession] = React.useState(false)
 
-  // Tangani Back-Forward Cache (BFCache) dan verifikasi sesi client-side.
-  // Jika peramban kembali ke /login lewat tombol Back saat sesi masih aktif,
-  // segera alihkan pengguna ke rute yang sesuai tanpa menampilkan form login.
+  // Kembali ke /login lewat Back (BFCache) saat sesi aktif: alihkan langsung tanpa form login.
   React.useEffect(() => {
     let active = true
 
@@ -75,10 +73,8 @@ export function LoginForm({ next }: { next: string }) {
     const { data, error } = await signIn.email({ email, password })
 
     if (error) {
-      // Better Auth error messages are in English and distinguish between
-      // non-existent email and invalid password. Normalize to a single generic
-      // message to prevent user enumeration. ACCOUNT_INACTIVE only comes back
-      // after the password matched (lib/auth.ts), so it can be named.
+      // Normalize Better Auth errors to one generic message to prevent user enumeration.
+      // ACCOUNT_INACTIVE only follows a matched password (lib/auth.ts), so it can be named.
       setError(
         error.code === "ACCOUNT_INACTIVE"
           ? INACTIVE_MESSAGE

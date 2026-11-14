@@ -9,7 +9,6 @@ test("globals.css defines top-level @page and synchronized 18mm print margins", 
     "utf-8"
   )
 
-  // Verify @page is declared at root level before @media print
   const pageIndex = css.indexOf("@page")
   const mediaPrintIndex = css.indexOf("@media print")
   assert.ok(pageIndex !== -1, "@page should exist")
@@ -19,21 +18,18 @@ test("globals.css defines top-level @page and synchronized 18mm print margins", 
     "@page should be placed before @media print at root level"
   )
 
-  // Verify full-bleed footer with exact print colors
   assert.match(
     css,
     /\.print-footer-fixed\s*\{[^}]*left:\s*0;[^}]*right:\s*0;[^}]*width:\s*100%;[^}]*print-color-adjust:\s*exact;/,
     "print-footer-fixed should bleed 100% full width with exact print colors"
   )
 
-  // Verify html and body overflow reset in @media print
   assert.match(
     css,
     /@media print\s*\{[^}]*html,\s*body\s*\{[^}]*overflow:\s*visible !important;/,
     "html and body should reset overflow to visible in @media print"
   )
 
-  // Verify 18mm header margin
   assert.match(
     css,
     /\.print-header-fixed\s*\{[^}]*left:\s*18mm;[^}]*right:\s*18mm;/,
@@ -63,13 +59,11 @@ test("letterhead footer applies full-width bleed on screen and 18mm print paddin
     "utf-8"
   )
 
-  // Print footer internal content padding
   assert.ok(
     letterhead.includes('px-[18mm] py-2.5 text-white'),
     "print fixed footer should use 18mm padding to align with document content"
   )
 
-  // On-screen footer card breakout
   assert.ok(
     letterhead.includes('-mx-8 -mb-8 md:-mx-12 md:-mb-12'),
     "on-screen footer should break out to card boundary"
@@ -176,7 +170,7 @@ test("globals.css configures natural left alignment for headings and justified t
 test("parseBulletLine parses bullet markers and numbered list items correctly", async () => {
   const { parseBulletLine } = await import("../lib/document-format.js")
 
-  // Hyphen bullet (such as Wording Form list item in screenshot)
+  // Hyphen bullet, as in Wording Form list items
   assert.deepEqual(
     parseBulletLine(
       "- Munich-Re Wording Amended with Riot, Strike, Malicious Damage and Civil Commotion Endorsement (Code 4.1B/2007)"

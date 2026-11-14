@@ -136,15 +136,12 @@ export interface ClauseInput {
   packageOrder?: number | null
 }
 
-/** Rapikan dan validasi isian sebelum disimpan. */
 function normalize(input: ClauseInput) {
   const title = input.title.trim()
   if (!title) throw new Error("Judul clause wajib diisi.")
 
-  // Wording datang dari rich text editor, jadi HTML-nya disanitasi lagi di
-  // server. Sanitasi di klien hanya lapis render, bukan pengaman.
-  // Wording boleh kosong: banyak klausul marine dan liability di CI LCH hanya
-  // dicetak judulnya (analisa contoh slip, 6 November 2026).
+  // HTML dari rich text editor disanitasi lagi di server; sanitasi di klien hanya lapis render.
+  // Boleh kosong: banyak klausul marine/liability di CI LCH hanya judul (contoh slip, 6 November 2026).
   const sanitized = sanitizeHtml(input.wordingHtml).trim()
   const wordingHtml = wordingText(sanitized) ? sanitized : ""
 

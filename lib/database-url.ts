@@ -1,15 +1,6 @@
 /**
- * Connection string Postgres untuk Prisma.
- *
- * `DATABASE_URL` dipakai lebih dulu (lokal dan server sendiri). Kalau kosong,
- * pakai variabel yang dibuat integrasi Prisma Postgres di Vercel. Integrasi di
- * project ini memakai prefix `lch_`, jadi namanya `lch_POSTGRES_URL` dan
- * `lch_PRISMA_DATABASE_URL`, bukan `DATABASE_URL`. Tanpa fallback ini halaman
- * yang membaca database gagal di Vercel walaupun databasenya sudah tersambung.
- *
- * Hanya URL `postgres://` atau `postgresql://` yang diterima, karena client
- * memakai driver adapter PrismaPg yang tersambung langsung lewat TCP. URL
- * Accelerate (`prisma+postgres://`) dilewati.
+ * Fallback ke variabel integrasi Prisma Postgres Vercel (prefix `lch_`) bila DATABASE_URL kosong.
+ * Hanya `postgres(ql)://` diterima karena PrismaPg tersambung lewat TCP; Accelerate dilewati.
  */
 
 const CANDIDATES = [
@@ -21,12 +12,7 @@ const CANDIDATES = [
 
 const DIRECT_URL = /^postgres(ql)?:\/\//i
 
-/**
- * `sslmode=require` (bawaan URL integrasi Vercel) saat ini diperlakukan driver
- * `pg` sebagai `verify-full`, tapi di pg v9 akan melemah jadi mode libpq yang
- * tidak memverifikasi sertifikat. Dikunci ke `verify-full` supaya koneksi ke
- * database cloud tetap memeriksa sertifikat server.
- */
+/** Kunci sslmode ke `verify-full`; mulai pg v9, `require` tidak lagi memverifikasi sertifikat. */
 function withVerifiedSsl(url: string) {
   return url.replace(
     /([?&]sslmode=)(require|prefer|verify-ca)(?=&|$)/i,

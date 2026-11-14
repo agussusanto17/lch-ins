@@ -11,9 +11,8 @@ async function bytesOf(data: Uint8Array | ReadableStream) {
 }
 
 /**
- * Isi lampiran slip yang dicetak di dokumen. Jenisnya dari isi berkas yang
- * dibaca saat unggah, bukan dari nama file. Excel diurai di server menjadi
- * tabel; gambar dan PDF dibuka browser lewat /api/files saat dokumen dibuka.
+ * Isi lampiran slip yang dicetak di dokumen; jenisnya dari isi berkas saat unggah, bukan nama file.
+ * Excel diurai di server menjadi tabel; gambar dan PDF dibuka browser lewat /api/files.
  */
 export async function slipAttachmentPrints(slipId: string): Promise<AttachmentPrints> {
   const rows = await prisma.slipFile.findMany({

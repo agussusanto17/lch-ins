@@ -185,9 +185,8 @@ const SECTION_KEYS = [
 type SectionKey = (typeof SECTION_KEYS)[number]
 
 /**
- * Tanggal yang dicetak di baris "Jakarta, …" tiap dokumen (Harry, 10 November
- * 2026). Draft Cover Note terbit setelah Closing Instruction, jadi ikut tanggal
- * closing (meeting LCH, 10 November 2026).
+ * Tanggal di baris "Jakarta, …" tiap dokumen (Harry, 10 November 2026).
+ * Draft Cover Note terbit setelah Closing Instruction, jadi ikut tanggal closing (LCH).
  */
 const DOCUMENT_DATE_FIELDS = [
   { key: "releaseDate", label: "Placing Slip", hint: "Tanggal release" },
@@ -254,8 +253,7 @@ const emptySecurityRow = (): SecurityPanelRow => ({
 })
 
 // Isian putih di panel abu ringkasan premi hanya 1,04:1 tanpa garis tepi.
-// Garis muted-foreground/80 memberi 3,32:1 (terang) dan 4,09:1 (gelap)
-// terhadap panel, memenuhi 3:1 untuk batas komponen (WCAG 1.4.11).
+// Garis muted-foreground/80 memberi minimal 3,32:1, memenuhi WCAG 1.4.11 (3:1).
 const PANEL_INPUT = "border-muted-foreground/80 bg-background"
 
 /**
@@ -354,9 +352,8 @@ function SlipEditor({
   const changeSlip = slip.kind === "Endorsement" || slip.kind === "Cancellation"
   const changeSlipLabel = slip.kind === "Cancellation" ? "Cancellation Slip" : "Endorsement Slip"
   const showQuotationSections = isQuotation || isClosing || slip.status !== "Draft"
-  // Premi − brokerage − additional fee sebelum CI diterbitkan (Agus, 13
-  // November 2026). Endorsement/cancellation slip dan open cover tidak punya
-  // premi penutupan yang utuh, jadi tanpa ringkasan.
+  // Premi − brokerage − additional fee sebelum CI diterbitkan (Agus, 13 November 2026).
+  // Endorsement/cancellation slip dan open cover tidak punya premi penutupan utuh.
   const showClosingSummary =
     (isClosing || slip.status === "Closed") && !changeSlip && !usesOpenCover(slip)
 
@@ -616,8 +613,7 @@ function SlipEditor({
 
   /**
    * Isi satu baris rate dari panel referensi OJK, sekaligus catat batasnya.
-   * Slip Property dan Motor Vehicle mengisi baris lokasi atau kendaraan yang
-   * panelnya dipakai.
+   * Slip Property dan Motor Vehicle mengisi baris lokasi atau kendaraan panelnya.
    */
   function applyOjkRate(
     label: string,
@@ -1148,9 +1144,8 @@ function SlipEditor({
               </Field>
 
               {/*
-               * CI LCH sering mencetak type of cover dengan nama panjang,
-               * misalnya "PROPERTY ALL RISKS + RIOTS, STRIKES, ... INSURANCE."
-               * (contoh SISKA RAHARJA, 5 November 2026). Master tidak berubah.
+               * CI LCH sering mencetak type of cover dengan nama panjang, misalnya
+               * "PROPERTY ALL RISKS + RIOTS, STRIKES, ... INSURANCE." Master tidak berubah.
                */}
               <Field className="md:col-span-2">
                 <FieldLabel htmlFor="toc-label">
@@ -1267,9 +1262,8 @@ function SlipEditor({
                       onChange={(e) =>
                         set({
                           inceptionDate: e.target.value || null,
-                          // Tanggal akhir ikut tanggal mulai bila type of
-                          // cover punya lama periode bawaan dan tanggal
-                          // akhirnya belum diubah sendiri.
+                          // Tanggal akhir ikut tanggal mulai bila type of cover punya lama
+                          // periode bawaan dan tanggal akhirnya belum diubah sendiri.
                           expiryDate: autoExpiryDate({
                             inception: e.target.value || null,
                             previousInception: slip.inceptionDate,
@@ -1405,9 +1399,8 @@ function SlipEditor({
                     />
                   </Field>
                   {/*
-                   * Nama okupasi OJK bisa sangat panjang (29371 berisi syarat
-                   * gudang). Seperti override klausul, teks ini hanya untuk
-                   * dokumen slip ini dan tidak mengubah master okupasi.
+                   * Nama okupasi OJK bisa sangat panjang. Seperti override klausul, teks ini
+                   * hanya untuk slip ini dan tidak mengubah master okupasi.
                    */}
                   <Field className="md:col-span-2">
                     <FieldLabel htmlFor="occupation-label">
@@ -1803,11 +1796,8 @@ function SlipEditor({
           >
             <div className="flex flex-col gap-5">
               {/*
-               * Deductible per cover untuk tiap baris rate (instruksi LCH 29
-               * Oktober 2026), sampai lima isian per cover. Slip Motor Vehicle
-               * bisa menambah baris Personal Accident dan Third Party Liability
-               * (keduanya 4 November 2026). Slip multi lokasi, kendaraan, atau
-               * objek bisa mengisi deductible per unit (13 November 2026).
+               * Deductible per cover tiap baris rate, sampai lima isian (LCH, 29 Oktober 2026).
+               * Slip multi lokasi, kendaraan, atau objek bisa mengisi per unit (13 November 2026).
                */}
               <Field>
                 <FieldLabel htmlFor="deductible-intro">

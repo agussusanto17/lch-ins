@@ -7,10 +7,8 @@ import {
 import type { LineItem, PlacingSlip } from "./data/types"
 
 /**
- * Baris rate yang memakai batas casco OJK. Loading Rate Comprehensive bukan
- * rate casco: OJK mengatur loading sebagai tambahan dari rate dasar, jadi
- * tidak dibandingkan dengan batas casco walaupun namanya memuat
- * "Comprehensive".
+ * Baris rate yang memakai batas casco OJK. Loading Rate Comprehensive bukan rate casco
+ * (OJK mengaturnya sebagai tambahan rate dasar), jadi tidak dibandingkan dengan batas casco.
  */
 export function isCascoLine(label: string) {
   const name = label.toLowerCase()
@@ -48,9 +46,8 @@ export function vehicleTitle(vehicle: LineItem) {
 }
 
 /**
- * Kategori, wilayah, dan batas casco OJK satu kendaraan. Kategori ditebak dari
- * merek, tipe, dan uraian kendaraan beserta TSI-nya; wilayah dari domisili
- * slip, atau nomor polisi kendaraan bila domisili kosong.
+ * Kategori, wilayah, dan batas casco OJK satu kendaraan. Kategori ditebak dari merek, tipe,
+ * uraian, dan TSI; wilayah dari domisili slip, atau nomor polisi bila domisili kosong.
  */
 export function vehicleTariff(
   slip: Pick<PlacingSlip, "riskLocation" | "typeOfCover" | "coverage">,

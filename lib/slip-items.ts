@@ -14,18 +14,16 @@ const LINE_GROUPS: LineGroup[] = ["rateLines", "tplLines", "paLines"]
 export const GENERIC_RATE_LABEL = "Rate (%)"
 
 /**
- * COB yang rate-nya per baris Interest Insured: Motor Vehicle per kendaraan
- * (Harry, 5 November 2026) dan COB lain per objek, misalnya peserta PA, unit
- * mesin MB, atau alat CPM (Agus, 5 November 2026). Property memakai lokasi.
+ * Rate per baris Interest Insured: Motor Vehicle per kendaraan (Harry, 5 November 2026),
+ * COB lain per objek (Agus, 5 November 2026). Property memakai lokasi.
  */
 export function usesItemRates(cob: ClassOfBusiness) {
   return cob !== "Property"
 }
 
 /**
- * COB yang objeknya boleh memakai premi flat (premi diisi langsung, tanpa
- * rate), seperti Liability dan Machinery Breakdown di contoh slip LCH. Motor
- * Vehicle tetap per rate karena dicek terhadap tarif OJK.
+ * COB yang objeknya boleh memakai premi flat tanpa rate, seperti Liability dan MB di contoh
+ * slip LCH. Motor Vehicle tetap per rate karena dicek terhadap tarif OJK.
  */
 export function allowsFlatPremium(cob: ClassOfBusiness) {
   return usesItemRates(cob) && cob !== "Motor Vehicle"
@@ -37,9 +35,8 @@ export function itemSection(item: Pick<LineItem, "section">): 1 | 2 {
 }
 
 /**
- * Objek yang nilainya hanya batas (limit): tidak ikut total sum insured dan
- * premi, misalnya limit any one carrying CIT di samping estimasi carrying
- * tahunan. COB-nya sama dengan premi flat.
+ * Objek yang nilainya hanya limit, tidak ikut TSI dan premi, misalnya limit any one carrying
+ * CIT di samping estimasi carrying tahunan. COB-nya sama dengan premi flat.
  */
 export function isLimitOnlyItem(
   cob: ClassOfBusiness,
@@ -68,10 +65,8 @@ export function missingRateIssue(slip: Pick<PlacingSlip, "cob" | "rateLines">) {
 }
 
 /**
- * Baris Interest pemilik sebuah baris rate, TPL, atau PA. Field-nya bernama
- * `vehicleId` karena mula-mula dipakai untuk kendaraan; di COB lain isinya
- * objek. Baris tanpa pemilik (slip lama) ikut baris Interest pertama; baris
- * milik objek yang sudah dihapus tidak punya pemilik (null).
+ * Baris Interest pemilik baris rate, TPL, atau PA (`vehicleId` berisi objek di COB lain).
+ * Baris tanpa pemilik ikut objek pertama; baris milik objek yang sudah dihapus mendapat null.
  */
 export function itemOwner(slip: Pick<PlacingSlip, "interestItems">) {
   const ids = new Set(slip.interestItems.map((v) => v.id))
@@ -107,10 +102,8 @@ export function itemGroups(
 }
 
 /**
- * Tambah satu cover (baris rate) ke sebuah objek, misalnya War di samping
- * ICC "A" pada CI single shipment LCH (contoh 02). Nama cover diisi setelah
- * baris ditambahkan. Baris baru menyusul baris objek itu, jadi urutannya per
- * objek tetap.
+ * Tambah satu cover (baris rate) ke objek, misalnya War di samping ICC "A" (CI LCH contoh 02).
+ * Baris baru menyusul baris objek itu, jadi urutan per objek tetap.
  */
 export function addItemCover(
   slip: Pick<PlacingSlip, "interestItems" | "rateLines">,
@@ -127,10 +120,8 @@ export function addItemCover(
 }
 
 /**
- * Hapus satu cover objek. Objek tetap punya minimal satu cover. Deductible
- * cover yang dihapus pindah ke cover pertama yang tersisa di objek itu,
- * karena deductible per cover dan per section disimpan di baris objek
- * pertama.
+ * Objek tetap punya minimal satu cover. Deductible cover yang dihapus pindah ke cover pertama
+ * yang tersisa, karena deductible per cover dan per section disimpan di baris objek pertama.
  */
 export function removeItemCover(
   slip: Pick<PlacingSlip, "interestItems" | "rateLines">,
@@ -151,8 +142,7 @@ export function removeItemCover(
 }
 
 /**
- * Objek yang punya lebih dari satu cover wajib memberi nama setiap cover
- * tambahannya sebelum release, karena nama itu yang tercetak di dokumen.
+ * Cover tambahan sebuah objek wajib diberi nama sebelum release karena nama itu tercetak.
  * Cover pertama boleh tanpa nama; dokumen mencetak type of cover slip.
  */
 export function coverNameIssues(
@@ -174,10 +164,8 @@ export function isMultiItem(slip: Pick<PlacingSlip, "cob" | "interestItems">) {
 }
 
 /**
- * Baris standar objek yang belum punya rate. Kendaraan mendapat format slip
- * satu kendaraan: casco dan perluasan, dua limit TPL, serta PA Driver dan
- * Passenger. Objek COB lain cukup satu rate. Id diturunkan dari id objek
- * supaya hitung ulang selalu menghasilkan slip yang sama.
+ * Baris standar objek tanpa rate: kendaraan dapat casco, perluasan, dua TPL, PA Driver dan
+ * Passenger; COB lain satu rate. Id diturunkan dari id objek supaya hitung ulang stabil.
  */
 function standardLines(
   cob: ClassOfBusiness,
@@ -217,10 +205,8 @@ function standardLines(
 }
 
 /**
- * Deductible baris objek baru, disalin dari objek berpremi pertama supaya
- * kendaraan atau objek yang ditambah memakai deductible yang sama (bisa
- * diubah per objek). Baris rate dicocokkan dengan label dan urutannya; TPL
- * dan PA menyimpan deductible di baris pertama tabelnya.
+ * Deductible objek baru disalin dari objek berpremi pertama (bisa diubah per objek). Baris rate
+ * dicocokkan per label dan urutan; TPL dan PA menyimpan deductible di baris pertama tabelnya.
  */
 function copyDeductibles(
   source: Pick<PlacingSlip, LineGroup>,
@@ -247,10 +233,8 @@ function copyDeductibles(
 }
 
 /**
- * Setiap baris rate, TPL, dan PA menunjuk baris Interest-nya, dan setiap
- * objek punya baris rate sendiri. Baris objek yang dihapus ikut hilang,
- * termasuk deductible-nya: sejak 13 November 2026 tiap objek punya
- * deductible sendiri. Property tidak memakai ini.
+ * Tiap objek punya baris rate, TPL, dan PA sendiri; baris objek yang dihapus ikut hilang,
+ * termasuk deductible-nya (per objek sejak 13 November 2026). Property tidak memakai ini.
  */
 export function withItemRates(slip: PlacingSlip): PlacingSlip {
   if (!usesItemRates(slip.cob) || !slip.interestItems.length) return slip

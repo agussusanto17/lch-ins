@@ -79,10 +79,8 @@ const SLIP_LOCATIONS = {
 } satisfies Prisma.SlipLocationFindManyArgs
 
 /**
- * Endorsement atau cancellation slip yang dibuat dari slip ini dan belum
- * dibatalkan. Selama ada, slip ini tidak bisa direvisi (kunci revisi slip
- * asal, Agus 12 November 2026): kondisi sebelum perubahan sudah disimpan di
- * slip perubahan itu, jadi revisi slip asal tidak akan ikut ke sana.
+ * Endorsement atau cancellation slip dari slip ini yang belum dibatalkan. Selama ada, slip ini tidak
+ * bisa direvisi karena kondisi sebelumnya sudah disimpan di slip perubahan (Agus, 12 November 2026).
  */
 const SLIP_CHANGE_LOCK = {
   where: { kind: { in: ["Endorsement", "Cancellation"] }, status: { not: "Cancelled" } },
@@ -198,9 +196,8 @@ export interface ListPlacingSlipsParams {
 let hasCheckedSeed = false
 
 /**
- * Peta master data untuk menyimpan slip. Dibungkus `cache` supaya hanya
- * berlaku selama satu request: COB, cover, atau mata uang yang baru ditambah
- * di Master Data harus langsung dikenali, tanpa menunggu server restart.
+ * Peta master data untuk menyimpan slip, hanya per request supaya COB, cover, atau mata uang yang
+ * baru ditambah di Master Data langsung dikenali.
  */
 const getLookupsCache = cache(async () => {
   const [
@@ -303,9 +300,7 @@ const getLookupsCache = cache(async () => {
   }
 })
 
-/**
- * Resolusi UUID klien berdasarkan UUID langsung atau fallback mapping ID mock / nama klien.
- */
+/** UUID klien dari UUID langsung, atau fallback ID mock / nama klien. */
 async function resolveClientId(clientIdOrMock: string, fallbackInsuredName?: string): Promise<string> {
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     clientIdOrMock
@@ -344,17 +339,13 @@ async function resolveCob(cobNameOrCode: string) {
     const hit = cache.cobsByName.get(key) ?? cache.cobsByCode.get(key)
     if (hit) return hit
   }
-  // Dulu jatuh ke COB pertama, sehingga slip COB yang tidak dikenal diam-diam
-  // tersimpan sebagai PROPERTY. Lebih baik ditolak dengan pesan yang jelas.
+  // COB yang tidak dikenal ditolak, bukan diam-diam disimpan sebagai PROPERTY.
   throw new Error(
     `Class of business "${cobNameOrCode}" tidak ada di master data.`
   )
 }
 
-/**
- * Type of cover kedua hanya untuk slip Property; COB lain dan isian kosong
- * disimpan null.
- */
+/** Type of cover kedua hanya untuk slip Property; COB lain dan isian kosong disimpan null. */
 async function slipCoverType2(
   cob: { id: string; name: string },
   typeOfCover2?: string | null
@@ -366,9 +357,8 @@ async function slipCoverType2(
 }
 
 /**
- * Cover type master untuk type of cover slip, hanya di dalam COB yang sama.
- * Label lama yang tidak ada di master (misalnya "PAR + EQVET") tidak punya
- * padanan dan tetap disimpan sebagai teks saja.
+ * Cover type master untuk type of cover slip, hanya di dalam COB yang sama. Label lama tanpa padanan
+ * di master (misalnya "PAR + EQVET") tetap disimpan sebagai teks saja.
  */
 async function resolveCoverType(cobId: string, typeOfCover?: string | null) {
   if (!typeOfCover || !typeOfCover.trim()) return null
@@ -378,9 +368,8 @@ async function resolveCoverType(cobId: string, typeOfCover?: string | null) {
 }
 
 /**
- * Tarif OJK type of cover slip menurut Master Data. Dipakai saat menyimpan,
- * supaya batas brokerage tidak bergantung pada flag kiriman browser. COB atau
- * type of cover yang tidak dikenal memakai tarif OJK.
+ * Tarif OJK type of cover slip menurut Master Data, supaya batas brokerage tidak bergantung pada
+ * flag kiriman browser. COB atau type of cover yang tidak dikenal memakai tarif OJK.
  */
 export async function coverUsesOjkTariff(
   cob: string,
@@ -395,7 +384,6 @@ export async function coverUsesOjkTariff(
   return cache.coverTypesByName.get(key)?.ojkTariff !== false
 }
 
-/** "12 months" -> 12. */
 /** Kolom DATE dari Prisma (tengah malam UTC) menjadi "YYYY-MM-DD". */
 function dateOnly(value: Date | null | undefined): string | null {
   return value ? value.toISOString().slice(0, 10) : null
@@ -407,9 +395,8 @@ function dbDate(value: string | null | undefined): Date | null {
 }
 
 /**
- * Tanggal dokumen setelah status berpindah dari `from` ke `to`: tanggal yang
- * sudah ada (termasuk yang diketik manual) dipakai, yang masih kosong diisi
- * hari ini (WIB).
+ * Tanggal dokumen setelah status berpindah dari `from` ke `to`: tanggal yang sudah ada (termasuk
+ * isian manual) dipakai, yang masih kosong diisi hari ini (WIB).
  */
 function withStatusDates(
   dates: SlipDocumentDates,
@@ -438,9 +425,7 @@ function parseIndemnityMonths(val?: string | null): number | null {
   return m ? parseInt(m[0], 10) : null
 }
 
-/**
- * Resolusi UUID SPPA. Mendukung UUID database langsung maupun legacy mock ID (misal sp-001).
- */
+/** UUID SPPA dari UUID database langsung atau legacy mock ID (misal sp-001). */
 async function resolveSppaId(sppaId?: string | null): Promise<string | null> {
   if (!sppaId || !sppaId.trim()) return null
   const trimmed = sppaId.trim()
@@ -528,7 +513,6 @@ function toPlacingSlipRecord(
 ): PlacingSlipRecord {
   const normCob = normalizeCob(raw.cob.name as CobType)
 
-  // Items grouping
   const interestItems: LineItem[] = []
   const sumInsuredSection1: LineItem[] = []
   const sumInsuredSection2: LineItem[] = []
@@ -570,7 +554,6 @@ function toPlacingSlipRecord(
     }
   }
 
-  // Rate lines grouping
   const rateLines: RateLine[] = []
   const tplLines: RateLine[] = []
   const paLines: RateLine[] = []
@@ -615,7 +598,6 @@ function toPlacingSlipRecord(
     }
   }
 
-  // Security Panel
   const securityPanel: SecurityPanelRow[] = raw.securityPanel.map((sp) => ({
     id: sp.id,
     insurer: sp.insurer.name,
@@ -655,7 +637,6 @@ function toPlacingSlipRecord(
   const clauses1 = clauseSet(1)
   const clauses2 = clauseSet(2)
 
-  // Wording forms
   const wordingForms = raw.wordingForms.map((wf) => wf.wordingForm.name)
 
   // Lokasi slip Property. Slip tanpa baris lokasi (data contoh) dibaca sebagai
@@ -672,7 +653,6 @@ function toPlacingSlipRecord(
       }))
     : undefined
 
-  // Inception & Expiry formatting
   const inceptionDate = raw.inceptionDate
     ? raw.inceptionDate.toISOString().slice(0, 10)
     : null
@@ -849,9 +829,6 @@ export async function listPlacingSlips(
 }
 
 /**
- * Mengambil detail satu Placing Slip berdasarkan UUID atau fallback legacy ID.
- */
-/**
  * Isi slip baru yang disalin dari slip lain, berstatus Draft. Dipakai duplikat
  * slip dan pembuatan endorsement/cancellation slip.
  */
@@ -919,11 +896,8 @@ export function copySlipInput(source: PlacingSlipRecord): PlacingSlipInput {
 }
 
 /**
- * Endorsement atau cancellation slip dari slip polis yang sudah Closed (Harry,
- * 11 November 2026). Isinya salinan slip asal, jadi user tinggal mengubah yang
- * berubah. Kondisi sebelum perubahan disimpan sebagai dasar perhitungan premi.
- * Slip asal bisa placing slip, atau endorsement slip sebelumnya yang sudah
- * Closed untuk endorsement berikutnya.
+ * Endorsement atau cancellation slip dari slip Closed (Harry, 11 November 2026), berisi salinan slip
+ * asal dan kondisi sebelum perubahan sebagai dasar premi. Slip asal boleh endorsement slip Closed.
  */
 export async function createEndorsementSlip(
   baseSlipId: string,
@@ -1079,9 +1053,8 @@ function panelFeeVat(cobName: string, includeVat: boolean | undefined) {
 }
 
 /**
- * Additional fee per asuransi untuk audit trail, urut share terbesar. Share
- * yang sama diurutkan menurut nama asuransi, jadi teks sebelum dan sesudah
- * tidak berbeda hanya karena urutan baris panel.
+ * Additional fee per asuransi untuk audit trail, urut share lalu nama asuransi, supaya teks sebelum
+ * dan sesudah tidak berbeda hanya karena urutan baris panel.
  */
 function feePanelText(rows: readonly SecurityPanelRow[] | undefined) {
   return additionalFeePanelText(
@@ -1103,9 +1076,8 @@ interface SavedLocation {
 }
 
 /**
- * Lokasi slip Property yang akan disimpan, dengan id baru. Input tanpa daftar
- * lokasi menjadi satu lokasi dari isian okupasi, risk location, dan kelas
- * slip. COB lain tidak punya lokasi.
+ * Lokasi slip Property yang akan disimpan, dengan id baru. Input tanpa daftar lokasi menjadi satu
+ * lokasi dari isian okupasi, risk location, dan kelas slip; COB lain tidak punya lokasi.
  */
 async function resolveSlipLocations(
   input: PlacingSlipInput,
@@ -1180,9 +1152,8 @@ async function insertSlipLocations(
 }
 
 /**
- * Baris Interest tersimpan (kendaraan atau objek) untuk baris rate, TPL, atau
- * PA. Baris tanpa objek ikut objek pertama. undefined berarti objeknya tidak
- * tersimpan karena kosong, jadi barisnya ikut dibuang.
+ * Baris Interest tersimpan untuk baris rate, TPL, atau PA; baris tanpa objek ikut objek pertama.
+ * undefined berarti objeknya tidak tersimpan karena kosong, jadi barisnya ikut dibuang.
  */
 function savedItemId(
   itemIds: Map<string, string>,
@@ -1205,10 +1176,8 @@ function savedLocationId(
 }
 
 /**
- * Copies selected clauses to slip_clauses with wording from slip override or master.
- * The general group (section 0) and Section 2 are stored only for slips with
- * sections: Property, and CAR/EAR-style slips with sections switched on.
- * Returns the stored titles in insert order, for the audit trail.
+ * Copies selected clauses with wording from the slip override or master; section 0 and 2 only for
+ * sectioned slips (Property, CAR/EAR with sections on). Returns stored titles for the audit trail.
  */
 async function insertSlipClauses(
   tx: Prisma.TransactionClient,
@@ -1423,7 +1392,6 @@ export async function createPlacingSlip(
 
     await insertSlipLocations(tx, slip.id, locations)
 
-    // Insert items
     let sortIdx = 0
     const itemIds = new Map<string, string>()
     const itemsToCreate: {
@@ -1509,7 +1477,6 @@ export async function createPlacingSlip(
       await tx.slipItem.createMany({ data: itemsToCreate })
     }
 
-    // Insert rate lines
     let rateSortIdx = 0
     const rateKindId = cache.rateLineKinds.get("rate")!
     const tplKindId = cache.rateLineKinds.get("tpl")!
@@ -1618,7 +1585,6 @@ export async function createPlacingSlip(
       await tx.slipRateLine.createMany({ data: rateLinesToCreate })
     }
 
-    // Insert security panel
     if (input.securityPanel && input.securityPanel.length > 0) {
       const leaderRoleId = cache.securityRoles.get("leader")!
       const memberRoleId = cache.securityRoles.get("member")!
@@ -1652,13 +1618,11 @@ export async function createPlacingSlip(
       }
     }
 
-    // Insert clauses
     await insertSlipClauses(tx, slip.id, resolvedCob.name, input)
     if (input.participants?.length) {
       await replaceParticipants(tx, slip.id, input.participants)
     }
 
-    // Insert wording forms
     if (input.wordingForms && input.wordingForms.length > 0) {
       for (const wf of input.wordingForms) {
         if (!wf.trim()) continue
@@ -1851,7 +1815,6 @@ export async function updatePlacingSlip(
     await tx.slipLocation.deleteMany({ where: { slipId: id } })
     await insertSlipLocations(tx, id, locations)
 
-    // Refresh items
     await tx.slipItem.deleteMany({ where: { slipId: id } })
     let sortIdx = 0
     const itemIds = new Map<string, string>()
@@ -1938,7 +1901,6 @@ export async function updatePlacingSlip(
       await tx.slipItem.createMany({ data: itemsToCreate })
     }
 
-    // Refresh rate lines
     await tx.slipRateLine.deleteMany({ where: { slipId: id } })
     let rateSortIdx = 0
     const rateKindId = cache.rateLineKinds.get("rate")!
@@ -2048,7 +2010,6 @@ export async function updatePlacingSlip(
       await tx.slipRateLine.createMany({ data: rateLinesToCreate })
     }
 
-    // Refresh security panel
     await tx.slipSecurityPanel.deleteMany({ where: { slipId: id } })
     if (input.securityPanel && input.securityPanel.length > 0) {
       const leaderRoleId = cache.securityRoles.get("leader")!
@@ -2082,7 +2043,6 @@ export async function updatePlacingSlip(
       }
     }
 
-    // Refresh clauses
     await tx.slipClause.deleteMany({ where: { slipId: id } })
     const savedClauses = await insertSlipClauses(tx, id, resolvedCob.name, input)
     // Peserta hanya diganti bila dikirim; slip dari daftar tidak memuatnya.
@@ -2090,7 +2050,6 @@ export async function updatePlacingSlip(
       await replaceParticipants(tx, id, input.participants)
     }
 
-    // Refresh wording forms
     await tx.slipWordingForm.deleteMany({ where: { slipId: id } })
     if (input.wordingForms && input.wordingForms.length > 0) {
       for (const wf of input.wordingForms) {
@@ -2177,9 +2136,7 @@ export async function updatePlacingSlip(
   return full
 }
 
-/**
- * Release Placing Slip dan terbitkan nomor resmi dokumen (PRD A-16).
- */
+/** Release Placing Slip dan terbitkan nomor resmi dokumen (PRD A-16). */
 export async function releasePlacingSlip(
   id: string,
   userId: string
@@ -2222,9 +2179,8 @@ export async function releasePlacingSlip(
         existing.coverType2?.abbreviation
       )
       slipNo = await nextDocumentNumber(tx, { code: "PS", coverCode })
-      // Endorsement dan cancellation slip memakai urutan yang sama dengan
-      // placing slip supaya semua slip tercatat dalam satu urutan (Harry,
-      // 11 November 2026): 008/LCH-PLCMT/ES-MV/XI/2026.
+      // Endorsement dan cancellation slip memakai urutan placing slip supaya semua slip satu urutan,
+      // misalnya 008/LCH-PLCMT/ES-MV/XI/2026 (Harry, 11 November 2026).
       if (existing.kind !== "Placing") {
         slipNo = derivedDocNumber(slipNo, existing.kind === "Endorsement" ? "ES" : "CS") ?? slipNo
       }
@@ -2263,9 +2219,7 @@ export async function releasePlacingSlip(
   return full
 }
 
-/**
- * Mengubah status Placing Slip (misal: "Draft", "Quoted", "Closed", "Cancelled").
- */
+/** Mengubah status Placing Slip (misal: "Draft", "Quoted", "Closed", "Cancelled"). */
 export async function togglePlacingSlipStatus(
   id: string,
   status: SlipStatus,
@@ -2324,9 +2278,7 @@ export async function togglePlacingSlipStatus(
   return full
 }
 
-/**
- * Menghapus Placing Slip secara permanen jika masih berstatus Draft dan tidak memiliki polis.
- */
+/** Hapus permanen Placing Slip yang masih Draft dan belum punya polis. */
 export async function deletePlacingSlip(id: string, userId: string): Promise<void> {
   const existing = await prisma.placingSlip.findUnique({
     where: { id },
@@ -2388,9 +2340,7 @@ function coverCodeOfSlipNo(slipNo: string) {
   return slipNo.split("/")[2]?.replace(/^PS-?/, "") || null
 }
 
-/**
- * Pembenihan data awal 3 Placing Slip mock LCH jika tabel placing_slips masih kosong.
- */
+/** Seed 3 Placing Slip mock LCH jika tabel placing_slips masih kosong. */
 export async function seedInitialSlipsIfEmpty(): Promise<number> {
   if (!shouldSeedMockData()) return 0
   if (hasCheckedSeed) return 0
@@ -2433,9 +2383,8 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
       const expiryDate = mock.expiryDate ? new Date(mock.expiryDate) : null
 
       await prisma.$transaction(async (tx) => {
-        // Nomor contoh diambil dari counter bulan berjalan seperti slip yang
-        // di-release, bukan nomor tulisan tangan di data contoh, supaya tidak
-        // terlihat kembar dengan nomor bulan lain (Agus, 9 November 2026).
+        // Nomor contoh dari counter bulan berjalan seperti slip yang di-release, supaya tidak kembar
+        // dengan nomor bulan lain (Agus, 9 November 2026).
         const slipNo = mock.slipNo
           ? await nextDocumentNumber(tx, {
               code: "PS",
@@ -2479,7 +2428,6 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
           },
         })
 
-        // Items
         let itIdx = 0
         const itemsData: {
           slipId: string
@@ -2524,7 +2472,6 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
           await tx.slipItem.createMany({ data: itemsData })
         }
 
-        // Rate Lines
         let rIdx = 0
         const rateKindId = cache.rateLineKinds.get("rate")!
         const tplKindId = cache.rateLineKinds.get("tpl")!
@@ -2595,7 +2542,6 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
           await tx.slipRateLine.createMany({ data: rateData })
         }
 
-        // Security Panel
         if (mock.securityPanel) {
           const leaderRoleId = cache.securityRoles.get("leader")!
           const memberRoleId = cache.securityRoles.get("member")!
@@ -2638,7 +2584,6 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
           })
         }
 
-        // Wording Forms
         for (const wf of mock.wordingForms || []) {
           let form = await tx.wordingForm.findFirst({
             where: { name: { equals: wf.trim(), mode: "insensitive" } },

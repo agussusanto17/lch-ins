@@ -1,8 +1,6 @@
 /**
  * Apakah browser mengulang header dan footer cetak di setiap halaman.
- * Engine WebKit (Safari, dan semua browser di iOS) mencetak elemen fixed
- * hanya sekali dan tidak mengulang thead/tfoot; Chromium dan Firefox
- * mengulangnya.
+ * WebKit (Safari, semua browser iOS) tidak mengulang elemen fixed maupun thead/tfoot.
  */
 export function repeatsPrintHeaderFooter(userAgent: string) {
   const webkitOnly =

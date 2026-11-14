@@ -1,7 +1,6 @@
 /**
- * Bentuk teks deductible yang dicetak dokumen slip, endorsement, dan form
- * klaim. Dipisah dari lib/slip-deductibles supaya komponen klien cukup
- * memuat modul kecil ini.
+ * Teks deductible untuk dokumen slip, endorsement, dan form klaim. Dipisah dari
+ * lib/slip-deductibles supaya komponen klien cukup memuat modul kecil ini.
  */
 
 export interface DeductibleGroupText {

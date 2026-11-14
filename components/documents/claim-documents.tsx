@@ -22,10 +22,7 @@ function summarizeFilters(filters: ClaimFilterParams, today: string): string {
   return parts.join(" · ")
 }
 
-/**
- * Full claim list report for print/PDF (wide container).
- * Shows all matching rows without screen pagination.
- */
+/** Full claim list for print/PDF: all matching rows, without screen pagination. */
 export function ClaimListDocument({
   rows,
   filters,
@@ -156,10 +153,7 @@ export function ClaimListDocument({
   )
 }
 
-/**
- * Detailed claim sheet for print/PDF (A4 portrait).
- * Displays policy data, incident chronology, claim values, document checklist, and follow-ups.
- */
+/** Detailed claim sheet for print/PDF (A4 portrait). */
 export function ClaimDetailDocument({
   claim,
   documents,

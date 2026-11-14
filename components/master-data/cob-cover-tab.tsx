@@ -46,9 +46,8 @@ export interface CobCoverTabProps {
 }
 
 /**
- * COB hanya bisa diaktifkan atau dinonaktifkan di sini. Tambah, ubah, dan
- * hapus COB lewat developer (lihat app/(app)/master-data/actions.ts). Type of
- * cover tetap dikelola penuh oleh LCH.
+ * COB hanya bisa diaktifkan atau dinonaktifkan di sini; tambah, ubah, dan hapus lewat developer
+ * (app/(app)/master-data/actions.ts). Type of cover tetap dikelola penuh oleh LCH.
  */
 export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
   const permission = usePermission()
@@ -437,7 +436,6 @@ export function CobCoverTab({ initialCobs }: CobCoverTabProps) {
                       </TableCell>
                     </TableRow>
 
-                    {/* Sub-Cover Rows */}
                     {isExpanded && (
                       <TableRow className="bg-muted/15 hover:bg-muted/20">
                         <TableCell colSpan={canManage ? 8 : 7} className="p-0 pl-12 pr-4 py-3">

@@ -9,14 +9,8 @@ import { listPolicies } from "@/lib/server/policies"
 export const metadata: Metadata = { title: "Dashboard — LCH Insurance Brokers" }
 
 export default async function DashboardPage() {
-  // Dashboard menjumlahkan keempat koleksi yang sama dengan halaman
-  // operasional, jadi sumbernya harus sama persis. Kalau tidak, angka di sini
-  // berbeda dari isi tabel yang dirujuknya.
-  //
-  // listClients, listPolicies, dan listPlacingSlips mengisi data awal sendiri
-  // saat tabelnya kosong; klaim perlu dipanggil terpisah. Tanpa itu Dashboard
-  // menulis 0 klaim di database baru, lalu angkanya berubah begitu halaman
-  // Klaim dibuka — padahal tidak ada yang menambah klaim.
+  // Sumbernya harus sama persis dengan halaman operasional supaya angkanya cocok dengan tabel.
+  // Hanya klaim yang tidak mengisi data awal sendiri saat tabel kosong, jadi di-seed di sini.
   await seedInitialClaimsIfEmpty()
 
   const [initialClients, initialPolicies, initialClaims, initialSlips] =

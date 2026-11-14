@@ -36,10 +36,7 @@ export function LineItemList({
   multiline?: boolean
   addLabel?: string
   vehicleOptions?: VehicleBrandOption[]
-  /**
-   * Centang "Limit saja" per baris. Dipakai slip open cover, yang tidak
-   * menampilkan tabel rate per objek tempat pilihan Dasar biasanya diatur.
-   */
+  /** Centang "Limit saja" per baris, untuk slip open cover yang tidak punya tabel rate per objek. */
   limitToggle?: boolean
 }) {
   const hasVehicleMaster = Boolean(vehicleOptions && vehicleOptions.length > 0)

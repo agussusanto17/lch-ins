@@ -1,11 +1,5 @@
 /**
- * Cari objek di bucket yang tidak punya baris stored_files, lalu hapus.
- *
- * Objek seperti ini muncul kalau aplikasi mati di tengah unggahan, atau kalau
- * berkas dihapus dari skrip (di luar request, objeknya tidak dihapus
- * otomatis). Objek yang lebih muda dari satu jam dilewati karena bisa jadi
- * unggahannya masih berjalan.
- *
+ * Hapus objek bucket tanpa baris stored_files; objek di bawah satu jam dilewati (masih diunggah).
  * Tanpa --apply hanya menampilkan daftar.
  *
  *   node -r ./scripts/mock-server-only.cjs --import tsx --env-file=.env \

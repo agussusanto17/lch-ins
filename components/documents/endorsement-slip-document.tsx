@@ -61,11 +61,8 @@ function CalcRows({
 }
 
 /**
- * Cetak endorsement dan cancellation slip dari Placement (Harry, 11 November
- * 2026), dalam bahasa Inggris saja (Harry, 12 November 2026). Bagian atas
- * mengikuti contoh EDM 01. Perhitungan premi memuat perhitungan sebelum
- * (dikembalikan) dan sesudah (ditagihkan), prorata dari tanggal efektif, lalu
- * premi tambahan atau refund premi.
+ * Cetak endorsement/cancellation slip Placement, bahasa Inggris saja (Harry, 11-12 November 2026).
+ * Premi sebelum (dikembalikan) dan sesudah (ditagihkan) dihitung prorata dari tanggal efektif.
  */
 export function EndorsementSlipDocument({ data }: { data: EndorsementSlipPrint }) {
   const { slip } = data
@@ -136,7 +133,7 @@ export function EndorsementSlipDocument({ data }: { data: EndorsementSlipPrint }
       />
       <DetailTable rows={rows} />
 
-      {/* Garis atas dan bawah memisahkan kalimat perubahan dari data polis dan perhitungan premi (Harry, 12 November 2026). */}
+      {/* Garis atas dan bawah memisahkan kalimat perubahan (Harry, 12 November 2026). */}
       <div className="mb-6 border-y py-4 text-[13px] leading-relaxed">
         <p className="mb-3 text-justify">
           {slip.effectiveDate

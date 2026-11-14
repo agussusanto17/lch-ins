@@ -33,9 +33,8 @@ export default async function ClientDetailPage({
   const { id } = await params
   const client = await getClientById(id)
 
-  // Tautan lama memakai id data contoh (c-005). Arahkan ke UUID database
-  // supaya seluruh halaman, termasuk tabel SPPA yang menyaring per klien,
-  // memakai id yang sama dengan data di database.
+  // Tautan lama memakai id data contoh (c-005); arahkan ke UUID database supaya seluruh
+  // halaman, termasuk tabel SPPA yang menyaring per klien, memakai id yang sama.
   if (client && client.id !== id) {
     redirect(`/marketing/clients/${client.id}`)
   }

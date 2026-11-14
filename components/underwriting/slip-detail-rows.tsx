@@ -9,10 +9,8 @@ import type { SlipDetailRow } from "@/lib/data/types"
 import { DETAIL_LIMITS, missingDetailLabels } from "@/lib/slip-details"
 
 /**
- * Detail tambahan slip: baris "label : isi" yang dicetak di tabel detail
- * dokumen, misalnya Retroactive Date (Liability), Voyage (Marine Cargo), atau
- * Vessels (Marine Hull). Label bawaan datang dari type of cover di Master
- * Data; label lain boleh diketik sendiri.
+ * Baris "label : isi" di tabel detail dokumen, misalnya Retroactive Date atau Voyage.
+ * Label bawaan dari type of cover di Master Data; label lain boleh diketik sendiri.
  */
 export function SlipDetailRows({
   rows,

@@ -33,9 +33,8 @@ let seq = 0
 const newId = () => `oc-${Date.now().toString(36)}-${seq++}`
 
 /**
- * Rate open cover per kategori (MOP Rukma Padaya Trans: DRY 0,075% dan REEFER
- * 0,0975%; container Salam Pacific: IDR per container). Tidak ada TSI dan
- * premi di slip; premi dihitung per deklarasi saat polis dibuat.
+ * Rate open cover per kategori, dalam persen (DRY, REEFER) atau IDR per container.
+ * Slip tanpa TSI dan premi; premi dihitung per deklarasi saat polis dibuat.
  */
 export function OpenCoverRates({
   rates,

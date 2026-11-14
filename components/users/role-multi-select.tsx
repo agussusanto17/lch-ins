@@ -119,7 +119,6 @@ export function RoleMultiSelect({
       </div>
 
       <PopoverContent align="start" className="w-80 p-2" sideOffset={6}>
-        {/* Header & Quick Actions */}
         <div className="flex items-center justify-between border-b px-1 pb-2 text-xs text-muted-foreground">
           <span>
             {count} dari {CANONICAL_ROLES.length} dipilih

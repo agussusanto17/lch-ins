@@ -6,9 +6,8 @@ import {
 import { UPLOAD_PART_BYTES, type FilePurpose } from "@/lib/uploads"
 
 /**
- * Unggah berkas per potongan 3 MB, lalu gabungkan di server menjadi satu
- * berkas tersimpan. Dipakai untuk berkas yang bisa lebih besar dari batas satu
- * request Vercel (4,5 MB). Hasilnya id berkas untuk ditautkan ke datanya.
+ * Unggah per potongan 3 MB lalu digabung di server, untuk berkas di atas batas request Vercel
+ * (4,5 MB). Hasilnya id berkas untuk ditautkan ke datanya.
  */
 export async function uploadInParts(
   file: File,

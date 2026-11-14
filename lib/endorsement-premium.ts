@@ -1,12 +1,6 @@
 /**
- * Premi endorsement prorata hari (Harry, 11 November 2026; rumus di
- * `documents/Rumus Prorate Hari.xlsx`):
- *
- *   hari prorata = tanggal efektif s/d tanggal berakhir (DATEDIF "D")
- *   premi        = sum insured × rate (%) × hari prorata / 365
- *   total premi  = premi + admin cost + stamp duty
- *
- * Contoh Harry: 525.000.000 × rate × 14/365.
+ * Premi endorsement = sum insured × rate (%) × hari prorata / 365, hari dari tanggal efektif s/d
+ * berakhir (`documents/Rumus Prorate Hari.xlsx`, Harry, 11 November 2026).
  */
 
 import type { PolicyType } from "@/lib/data/types"
@@ -52,7 +46,6 @@ export function premiumBasis(p: { sumInsured: number; premiumBasis?: number | nu
   return p.premiumBasis ?? p.sumInsured
 }
 
-/** Total premi: premi ditambah admin cost dan stamp duty. */
 export function totalPremium(p: { premium: number; adminCost?: number; stampDuty?: number }) {
   return cents(p.premium + (p.adminCost ?? 0) + (p.stampDuty ?? 0))
 }

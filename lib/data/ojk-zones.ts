@@ -1,7 +1,6 @@
 /**
  * Zona gempa per kabupaten dan kota (SE OJK 6/SEOJK.05/2017 Lampiran III).
- * Dipisah dari tabel tarif supaya ±35 KB data ini hanya dimuat saat panel
- * referensi tarif dibuka.
+ * Dipisah dari tabel tarif supaya ±35 KB data ini hanya dimuat saat panel referensi dibuka.
  */
 
 /** Zona gempa per kabupaten dan kota, Lampiran III Tabel III.D. */
@@ -530,10 +529,8 @@ const hasWord = (text: string, term: string) =>
   new RegExp(`(^|[^a-z0-9])${escapeRegExp(term)}($|[^a-z0-9])`).test(text)
 
 /**
- * Cari zona gempa dari teks lokasi risiko, dicocokkan ke nama kabupaten atau
- * kota. Nama lengkap ("Kota Bandung") menang atas nama tanpa awalan
- * ("Bandung"), lalu nama yang lebih panjang menang. Tanpa urutan ini Kota
- * Bandung jatuh ke Kab. Bandung, dan "Kab. Bungo, Jambi" ke Kota Jambi.
+ * Zona gempa dari nama kabupaten atau kota di teks lokasi risiko. Nama lengkap ("Kota Bandung")
+ * menang atas nama tanpa awalan, lalu nama terpanjang ("Kab. Bungo, Jambi" bukan Kota Jambi).
  */
 export function matchEqZone(location: string): EqZoneEntry | null {
   const q = location

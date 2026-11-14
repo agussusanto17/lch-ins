@@ -8,9 +8,8 @@ export interface PolicyFileKindInfo {
 }
 
 /**
- * Berkas polis terdiri dari tiga jenis (Agus, 9 November 2026), masing-masing
- * dengan riwayat versinya sendiri. Jenis Slip menampung dokumen slip untuk
- * polis yang slipnya dibuat di luar sistem LCH (meeting LCH, 10 November 2026).
+ * Tiga jenis berkas polis, masing-masing dengan riwayat versi (Agus, 9 November 2026).
+ * Slip menampung dokumen slip yang dibuat di luar sistem LCH (meeting LCH, 10 November 2026).
  */
 export const POLICY_FILE_KINDS: PolicyFileKindInfo[] = [
   { kind: "Policy", label: "Polis" },
@@ -23,8 +22,7 @@ export const POLICY_FILE_KINDS: PolicyFileKindInfo[] = [
 export const MAIN_POLICY_FILE_KINDS = POLICY_FILE_KINDS.filter((k) => !k.extra)
 
 /**
- * Jenis berkas yang tampil untuk sebuah polis. Slip hanya untuk polis yang
- * tidak tertaut ke placing slip di sistem, karena slip di sistem sudah bisa
+ * Slip hanya tampil untuk polis tanpa placing slip di sistem, karena slip sistem sudah bisa
  * dicetak; file Slip yang sudah terunggah tetap tampil.
  */
 export function policyFileKindsFor(policy: {
@@ -43,7 +41,6 @@ export function policyFileKindLabel(kind: PolicyFileKind) {
   return POLICY_FILE_KINDS.find((k) => k.kind === kind)?.label ?? kind
 }
 
-/** Versi terakhir berkas satu jenis. */
 export function latestPolicyFile(files: PolicyFile[], kind: PolicyFileKind) {
   let latest: PolicyFile | undefined
   for (const f of files) {

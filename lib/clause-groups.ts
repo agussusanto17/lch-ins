@@ -1,10 +1,6 @@
 /**
- * Kelompok klausul berjudul di slip tanpa section, misalnya EXTENSIONS dan
- * GENERAL CONDITIONS pada CI Cendanawati, atau "Major Condition and
- * Extension" dan "Compulsory Clauses" pada CI CGL Orela (analisa 26 contoh
- * slip LCH, 6 November 2026). Judul kelompok disimpan per klausul; klausul
- * sekelompok selalu berdampingan, dan kelompok diurutkan menurut kemunculan
- * pertamanya. Nomor klausul mulai dari 1 di tiap kelompok.
+ * Kelompok klausul berjudul di slip tanpa section, misalnya EXTENSIONS (analisa contoh slip LCH,
+ * 6 November 2026). Klausul sekelompok selalu berdampingan, nomornya mulai 1 di tiap kelompok.
  */
 
 /** Judul kelompok yang sering dipakai contoh slip LCH, sebagai saran. */
@@ -162,9 +158,8 @@ export interface PackageClause {
 }
 
 /**
- * Klausul paket yang belum terpasang di slip, menurut urutan paket lalu
- * judul. `fitting` adalah klausul master yang cocok dengan COB dan type of
- * cover slip; `exclude` klausul yang sudah dipilih di kelompok mana pun.
+ * Klausul paket yang belum terpasang, urut paket lalu judul. `fitting`: master yang cocok dengan
+ * COB dan type of cover slip; `exclude`: klausul yang sudah dipilih di kelompok mana pun.
  */
 export function packageToInstall<T extends PackageClause>(
   fitting: T[],

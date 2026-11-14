@@ -1,11 +1,6 @@
 /**
- * Kompres foto di browser sebelum diunggah. Foto dari kamera HP biasanya
- * 4–8 MB, di atas batas 4 MB berkas klien, klaim, dan lampiran slip. Setelah
- * diperkecil sisi terpanjangnya dan disimpan ulang sebagai JPEG, ukurannya
- * biasanya di bawah 1 MB dan teks di foto dokumen tetap terbaca.
- *
- * PDF dan Excel tidak disentuh: PDF umumnya sudah terkompres, dan
- * mengompresnya berarti menurunkan kualitas cap atau tanda tangan.
+ * Foto HP (4–8 MB) dikompres di browser supaya lolos batas unggah 4 MB.
+ * PDF dan Excel tidak disentuh, supaya kualitas cap dan tanda tangan tidak turun.
  */
 
 /** Gambar di bawah ukuran ini dikirim apa adanya. */
@@ -14,7 +9,6 @@ export const COMPRESS_MIN_BYTES = 1024 * 1024
 /** Sisi terpanjang hasil kompres, cukup untuk dicetak di A4 (~240 dpi). */
 export const COMPRESS_MAX_SIDE = 2000
 
-/** Kualitas JPEG hasil kompres. */
 export const COMPRESS_QUALITY = 0.8
 
 const COMPRESSIBLE = ["image/jpeg", "image/png", "image/webp"]
@@ -39,9 +33,8 @@ export function shouldCompress(file: { size: number; type: string }) {
 }
 
 /**
- * Foto besar diperkecil dan disimpan ulang sebagai JPEG. Berkas lain, atau
- * kalau hasilnya tidak lebih kecil atau browser gagal membaca gambarnya,
- * dikembalikan apa adanya supaya unggahan tetap jalan.
+ * Berkas lain, hasil yang tidak lebih kecil, atau gambar yang gagal dibaca dikembalikan apa
+ * adanya supaya unggahan tetap jalan.
  */
 export async function compressImage(file: File): Promise<File> {
   if (!shouldCompress(file)) return file

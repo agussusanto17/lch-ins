@@ -39,11 +39,8 @@ const fileSize = (bytes: number) =>
 const isExcel = (name: string) => /\.xlsx$/i.test(name)
 
 /**
- * Lampiran placing slip: vessel schedule, daftar unit, atau klausul hasil scan
- * (analisa contoh slip LCH, Tahap 3 nomor 19). Berkas langsung tersimpan saat
- * diunggah, terpisah dari Simpan Draft. Cetakan slip mencetak daftarnya, dan
- * isi lampiran yang dicentang Cetak isi ikut tercetak di halaman akhir
- * (jawaban Harry, 9 November 2026).
+ * Lampiran placing slip, langsung tersimpan saat diunggah, terpisah dari Simpan Draft.
+ * Isi lampiran yang dicentang Cetak isi ikut tercetak di halaman akhir (Harry, 9 November 2026).
  */
 export function SlipAttachments({
   slipId,

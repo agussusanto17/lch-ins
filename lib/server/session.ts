@@ -21,13 +21,8 @@ export interface CurrentUser {
 }
 
 /**
- * Currently authenticated user, or null.
- *
- * Wrapped in React `cache` so session and roles are queried once per render,
- * even when called across multiple server components.
- *
- * Active status is verified here on each request, ensuring deactivated accounts
- * lose access immediately without waiting for session expiration.
+ * Current user or null, cached per render. Active status is checked on every request so
+ * deactivated accounts lose access immediately, not at session expiry.
  */
 export const currentUser = cache(async (): Promise<CurrentUser | null> => {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -95,14 +90,11 @@ export async function requireUser(path?: string): Promise<CurrentUser> {
 export async function requireAccess(path: string): Promise<CurrentUser> {
   const user = await requireUser(path)
 
-  // If user must change password (e.g. newly created or reset accounts),
-  // block business module access and enforce navigation to /change-password.
+  // New or reset accounts must change their password before opening any module.
   if (user.mustChangePassword && path !== "/change-password") {
     redirect("/change-password")
   }
 
-  // If user has already changed password but navigates to /change-password,
-  // redirect to dashboard.
   if (!user.mustChangePassword && path === "/change-password") {
     redirect("/")
   }
@@ -119,11 +111,8 @@ export async function requireAccess(path: string): Promise<CurrentUser> {
 }
 
 /**
- * Wajib login, boleh membuka path ini, dan rolenya bertingkat Kelola.
- *
- * Dipakai di Server Action yang mengubah data. `requireAccess` saja tidak
- * cukup: banyak role diberi Lihat pada menu di luar bidangnya, jadi tanpa
- * pemeriksaan ini mereka bisa membuka halaman sekaligus mengubah isinya.
+ * Wajib login, boleh membuka path ini, dan rolenya bertingkat Kelola, untuk Server Action yang
+ * mengubah data. `requireAccess` saja tidak cukup karena banyak role diberi Lihat di luar bidangnya.
  */
 export async function requireManage(path: string): Promise<CurrentUser> {
   const user = await requireAccess(path)

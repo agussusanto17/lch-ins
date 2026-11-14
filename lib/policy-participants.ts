@@ -1,8 +1,6 @@
 /**
- * Peserta PA grup di polis (jawaban Harry, 6 November 2026): daftar disalin
- * dari slip saat polis dibuat, lalu endorsement menambah atau mengurangi
- * peserta dengan tanggal berlakunya, supaya klaim bisa menunjuk peserta yang
- * dijamin pada tanggal kejadian.
+ * Peserta PA grup disalin dari slip saat polis dibuat, lalu endorsement menambah atau mengurangi
+ * dengan tanggal berlaku, supaya klaim menunjuk peserta yang dijamin (Harry, 6 November 2026).
  */
 import type { SlipParticipant } from "./data/types"
 
@@ -30,10 +28,8 @@ export interface ParticipantChanges {
 }
 
 /**
- * Polis pemilik daftar peserta: naik ke polis induk selama polisnya
- * endorsement atau pembatalan, sama dengan server. Endorsement boleh dipilih
- * sebagai induk endorsement berikutnya, tapi daftar dan rate tetap milik
- * polis asalnya.
+ * Polis pemilik daftar peserta: naik ke induk selama endorsement atau pembatalan, sama dengan
+ * server. Endorsement bisa jadi induk, tapi daftar dan rate tetap milik polis asalnya.
  */
 export function rosterPolicy<
   P extends { id: string; type: string; parentPolicyId?: string | null },
@@ -63,10 +59,8 @@ export function participantActiveOn(
 }
 
 /**
- * Usulan Total Sum Insured dan premi endorsement dari perubahan peserta:
- * perubahan UP × rate polis induk × sisa periode, pro-rata harian. Rate polis
- * induk = premi ÷ total sum insured, karena PA grup LCH memakai satu rate
- * untuk semua peserta. Premi bisa negatif untuk pengurangan peserta.
+ * Usulan premi = perubahan UP × rate induk × sisa periode prorata harian; rate induk = premi ÷ TSI
+ * karena PA grup LCH memakai satu rate. Premi negatif untuk pengurangan peserta.
  */
 export function endorsementSuggestion({
   parent,

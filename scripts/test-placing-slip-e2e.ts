@@ -1,5 +1,5 @@
 /**
- * Comprehensive End-to-End Integration Test for Placing Slip Module & PostgreSQL Relational Layer.
+ * End-to-end test for the Placing Slip module against PostgreSQL.
  * Run with: node -r ./scripts/mock-server-only.cjs --import tsx --env-file=.env scripts/test-placing-slip-e2e.ts
  */
 

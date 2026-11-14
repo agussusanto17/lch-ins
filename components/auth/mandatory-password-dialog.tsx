@@ -18,9 +18,8 @@ interface MandatoryPasswordDialogProps {
 }
 
 /**
- * Modal wajib ganti kata sandi yang tidak bisa ditutup (tombol X, Escape,
- * klik backdrop) sampai kata sandi berhasil diganti. Overlay abu-abu tanpa
- * blur, jadi dashboard dan sidebar di belakang tetap tampak tapi nonaktif.
+ * Modal wajib ganti kata sandi; tidak bisa ditutup (X, Escape, backdrop) sampai berhasil.
+ * Overlay abu-abu tanpa blur, jadi dashboard di belakang tetap tampak tapi nonaktif.
  */
 export function MandatoryPasswordDialog({
   userEmail,

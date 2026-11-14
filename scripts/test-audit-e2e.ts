@@ -1,5 +1,5 @@
 /**
- * End-to-End Integration Test for Audit Trail Module & Activity Logging
+ * End-to-end test for the audit trail and activity logging.
  * Run with: node -r ./scripts/mock-server-only.cjs --import tsx --env-file=.env scripts/test-audit-e2e.ts
  */
 

@@ -1,9 +1,8 @@
 import type { Client } from "./types"
 
 /**
- * Kelengkapan KYC mengikuti form LCH. Daftar field wajib final masih menunggu
- * konfirmasi LCH (Checklist minggu 2), jadi kekurangan ditampilkan sebagai
- * peringatan, bukan menolak penyimpanan.
+ * Field wajib KYC mengikuti form LCH dan masih menunggu konfirmasi LCH, jadi kekurangan
+ * tampil sebagai peringatan, bukan menolak penyimpanan.
  */
 export function kycMissing(client: Client) {
   const missing: string[] = []

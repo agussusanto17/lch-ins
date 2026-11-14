@@ -13,11 +13,8 @@ import { normalizeCob } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 
 /**
- * Pilihan dropdown form dari master data, hanya yang berstatus aktif.
- *
- * Dibungkus `cache` supaya beberapa komponen dalam satu request memakai hasil
- * yang sama, tanpa menyimpannya antar-request: isian master yang baru
- * ditambah harus langsung muncul di form berikutnya.
+ * Pilihan dropdown form dari master data yang aktif. `cache` hanya berlaku per request, supaya
+ * isian master yang baru ditambah langsung muncul di form berikutnya.
  */
 export const getFormOptions = cache(async (): Promise<FormOptions> => {
   const [cobs, insurers, currencies, wordingForms, lookupRows, paBenefits, systemRows] =

@@ -40,9 +40,8 @@ function boundsLabel(line: RateLine) {
 }
 
 /**
- * Dialog alasan rate di luar batas OJK. Rate boleh di bawah batas bawah bila
- * ada potongan sesuai nilai pertanggungan, dan di atas batas atas bila ada
- * perluasan jaminan (SE OJK 6/2017), dengan alasan yang dicatat.
+ * Dialog alasan rate di luar batas OJK (SE OJK 6/2017); alasannya dicatat.
+ * Boleh di bawah batas bila ada potongan nilai pertanggungan, di atas bila ada perluasan jaminan.
  */
 function RateExceptionDialog({
   line,

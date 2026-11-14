@@ -49,14 +49,8 @@ const BASIS_ITEMS = [
 ]
 
 /**
- * Rate slip COB selain Property dan Motor Vehicle per objek (Agus, 5 November
- * 2026), misalnya peserta PA, unit MB, alat CPM, atau CIT dan CIS. Objek dan
- * nilainya diisi di Interest Insured; premi = nilai objek × rate. Objek bisa
- * memakai premi flat yang diisi langsung, seperti Liability dan MB di contoh
- * slip LCH (6 November 2026), atau menjadi "limit saja" yang tidak ikut TSI
- * dan premi, misalnya limit any one carrying CIT. Satu objek boleh punya
- * beberapa cover dengan rate masing-masing, misalnya ICC "A" dan War pada CI
- * single shipment (contoh 02).
+ * Rate per objek untuk COB selain Property dan Motor Vehicle (Agus, 5 November 2026).
+ * Premi = nilai × rate, flat, atau nol untuk "limit saja"; satu objek boleh beberapa cover.
  */
 export function SlipItemRates({
   slip,

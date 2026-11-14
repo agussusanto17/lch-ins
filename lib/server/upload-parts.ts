@@ -11,10 +11,8 @@ import {
 } from "@/lib/uploads"
 
 /*
- * Unggahan besar dikirim per potongan karena Vercel menolak body request di
- * atas 4,5 MB. Potongan disimpan sementara di upload_parts, lalu digabung
- * menjadi satu stored_files saat unggahan selesai. Alurnya sama di Vercel dan
- * VPS, jadi tidak bergantung pada batas request server.
+ * Unggahan besar dikirim per potongan karena Vercel menolak body request di atas 4,5 MB.
+ * Potongan disimpan sementara di upload_parts lalu digabung menjadi satu stored_files.
  */
 
 const UUID_RE =

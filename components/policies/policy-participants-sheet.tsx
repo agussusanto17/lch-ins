@@ -40,9 +40,8 @@ import { participantsTotal } from "@/lib/slip-participants"
 const PAGE_SIZE = 25
 
 /**
- * Daftar peserta PA grup sebuah polis: peserta awal dari slip, ditambah dan
- * dikurangi endorsement (jawaban Harry, 6 November 2026). Endorsement
- * menampilkan daftar polis induknya.
+ * Peserta PA grup sebuah polis: peserta awal dari slip, ditambah dan dikurangi endorsement
+ * (jawaban Harry, 6 November 2026). Endorsement menampilkan daftar polis induknya.
  */
 export function PolicyParticipantsSheet({
   policy,

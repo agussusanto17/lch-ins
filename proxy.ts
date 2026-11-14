@@ -4,12 +4,8 @@ import { getSessionCookie } from "better-auth/cookies"
 import { PUBLIC_ROUTES } from "@/lib/access"
 
 /**
- * Di Next 16 berkas ini menggantikan middleware.
- *
- * Isinya sengaja hanya pemeriksaan optimistis: ada tidaknya cookie sesi.
- * Proxy berjalan di setiap rute, termasuk yang di-prefetch, jadi tidak boleh
- * menyentuh database. Pemeriksaan yang sebenarnya, termasuk status aktif dan
- * hak akses role, ada di lib/server/session.ts.
+ * Pengganti middleware di Next 16. Hanya cek optimistis cookie sesi karena berjalan di setiap
+ * rute termasuk prefetch; pemeriksaan sebenarnya (status aktif, role) ada di lib/server/session.ts.
  */
 export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname
@@ -23,13 +19,11 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Jangan redirect /login ke / hanya karena cookie ada. Cookie kedaluwarsa
-  // membuat layout melempar balik ke /login sehingga terjadi loop redirect.
-  // Sesi di /login dicek oleh app/login/page.tsx lewat currentUser().
+  // Jangan redirect /login ke / hanya karena cookie ada: cookie kedaluwarsa memicu loop redirect.
+  // Sesi di /login dicek oleh app/login/page.tsx.
 
-  // Layout aplikasi perlu tahu path yang diminta untuk memeriksa hak akses,
-  // dan Next tidak memberikannya ke layout. Jadi path dititipkan lewat header.
-  // `set` menimpa nilai yang mungkin dikirim klien, jadi tidak bisa dipalsukan.
+  // Next tidak memberi path ke layout, padahal perlu untuk hak akses, jadi dititipkan lewat header.
+  // `set` menimpa nilai kiriman klien, jadi tidak bisa dipalsukan.
   const forwarded = new Headers(req.headers)
   forwarded.set("x-pathname", path)
   return NextResponse.next({ request: { headers: forwarded } })

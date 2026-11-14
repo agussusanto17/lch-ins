@@ -225,7 +225,6 @@ export function UserTable({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Search and filter toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <SearchInput

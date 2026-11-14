@@ -208,8 +208,7 @@ function KycIndividualRows({ client }: { client: KycClient }) {
       <KycRow no={6} label="Sumber Penghasilan" en="Source of Income">
         <div className="flex flex-col gap-1">
           {INCOME_OPTIONS.map((o) => {
-            // Sumber penghasilan di luar kotak cetak masuk Lain-lain, sama
-            // seperti tujuan asuransi.
+            // Sumber penghasilan di luar kotak cetak masuk Lain-lain, sama seperti tujuan asuransi.
             const income = client.incomeSource?.trim()
             const other =
               Boolean(income) && !INCOME_OPTIONS.some((x) => same(income, x.value))

@@ -15,7 +15,6 @@ export type KnownClassOfBusiness =
  */
 export type ClassOfBusiness = KnownClassOfBusiness | (string & {})
 
-/** Cancelled dipakai untuk slip bernomor yang dibatalkan, supaya nomor tidak bolong. */
 /** Jenis slip di menu Placement (Harry, 11 November 2026). */
 export type SlipKind = "Placing" | "Endorsement" | "Cancellation"
 
@@ -38,6 +37,7 @@ export interface EndorsementCalc {
   premium: number
 }
 
+/** Cancelled dipakai untuk slip bernomor yang dibatalkan, supaya nomor tidak bolong. */
 export type SlipStatus =
   "Draft" | "Released" | "Quoted" | "Closed" | "Cancelled"
 /**
@@ -162,9 +162,8 @@ export interface LineItem {
   description: string
   amount: number
   /**
-   * Nilai yang hanya batas (limit), misalnya limit any one carrying CIT atau
-   * limit TPL: tidak ikut total sum insured dan premi. Hanya COB selain
-   * Property dan Motor Vehicle.
+   * Nilai yang hanya limit (misalnya limit any one carrying CIT atau limit TPL), tidak ikut
+   * TSI dan premi. Hanya COB selain Property dan Motor Vehicle.
    */
   limitOnly?: boolean
   /**
@@ -213,17 +212,15 @@ export interface RateLine {
   /** Lokasi slip Property untuk baris rate. TPL, PA, dan COB lain kosong. */
   locationId?: string | null
   /**
-   * Baris Interest pemilik baris rate, TPL, atau PA: kendaraan di Motor
-   * Vehicle, objek di COB lain selain Property. Namanya tetap `vehicleId`
-   * karena mula-mula dipakai untuk kendaraan.
+   * Baris Interest pemilik baris rate, TPL, atau PA: kendaraan di Motor Vehicle, objek di COB
+   * lain selain Property. Namanya `vehicleId` karena mula-mula dipakai untuk kendaraan.
    */
   vehicleId?: string | null
 }
 
 /**
- * Lokasi risiko slip Property (Harry, 5 November 2026). Tiap lokasi punya
- * okupasi, kelas konstruksi, sum insured, dan rate sendiri; baris sum insured
- * dan rate menunjuk lokasinya lewat `locationId`.
+ * Lokasi risiko slip Property dengan okupasi, kelas konstruksi, sum insured, dan rate sendiri;
+ * baris sum insured dan rate menunjuk lokasinya lewat `locationId` (Harry, 5 November 2026).
  */
 export interface SlipLocation {
   id: string
@@ -269,10 +266,6 @@ export interface SecurityPanelRow {
 }
 
 /**
- * Satu peserta PA grup: data per orang yang dicetak di lampiran slip dan
- * nantinya dipakai klaim dan endorsement tambah/kurang peserta.
- */
-/**
  * Rate open cover per kategori: persen dari nilai deklarasi (MOP dry 0,075%)
  * atau tarif per unit (container 20 ft IDR 150.000 per container).
  */
@@ -301,6 +294,10 @@ export interface SlipAttachment {
   uploadedAt: string
 }
 
+/**
+ * Satu peserta PA grup: data per orang yang dicetak di lampiran slip dan
+ * nantinya dipakai klaim dan endorsement tambah/kurang peserta.
+ */
 export interface SlipParticipant {
   id: string
   name: string
@@ -335,9 +332,8 @@ export interface PlacingSlip {
    */
   typeOfCover2?: string
   /**
-   * Nama type of cover yang dicetak di dokumen bila berbeda dari master,
-   * misalnya "PROPERTY ALL RISKS + RIOTS, STRIKES, ... INSURANCE." seperti CI
-   * LCH. Kosong berarti nama master.
+   * Nama type of cover yang dicetak bila berbeda dari master, misalnya "PROPERTY ALL RISKS +
+   * RIOTS, STRIKES, ... INSURANCE." seperti CI LCH. Kosong berarti nama master.
    */
   typeOfCoverLabel?: string
   typeOfCover2Label?: string
@@ -362,33 +358,28 @@ export interface PlacingSlip {
   /** Keterangan di bawah periode asuransi di dokumen, seperti CI LCH. */
   periodNote?: string
   /**
-   * Label periode di dokumen, misalnya "Estimated Time of Departure (ETD)"
-   * atau "Date of Tournament". Kosong berarti "Period of Insurance". Nilai
-   * awalnya dari type of cover di Master Data.
+   * Label periode di dokumen, misalnya "Date of Tournament"; kosong berarti "Period of
+   * Insurance". Nilai awalnya dari type of cover di Master Data.
    */
   periodLabel?: string
   /**
-   * Teks periode di dokumen yang menggantikan tanggal dan keterangannya,
-   * misalnya ETD single shipment atau periode proyek T.B.A. Tanggal tetap
-   * disimpan untuk polis.
+   * Teks periode di dokumen pengganti tanggal dan keterangannya, misalnya ETD single shipment
+   * atau periode proyek T.B.A. Tanggal tetap disimpan untuk polis.
    */
   periodText?: string
   /**
-   * Teks pengganti tanggal akhir di dokumen, misalnya "until final
-   * destination" untuk single shipment. Tanggal akhir tetap disimpan untuk
-   * polis. Nilai awalnya dari type of cover di Master Data.
+   * Teks pengganti tanggal akhir di dokumen, misalnya "until final destination". Tanggal akhir
+   * tetap disimpan untuk polis; nilai awalnya dari type of cover di Master Data.
    */
   periodEndText?: string
   /**
-   * Detail tambahan yang dicetak di tabel detail dokumen setelah baris
-   * bawaan, misalnya Retroactive Date atau Voyage. Label bawaannya datang dari
-   * type of cover di Master Data.
+   * Detail tambahan di tabel detail dokumen setelah baris bawaan, misalnya Retroactive Date
+   * atau Voyage. Label bawaannya dari type of cover di Master Data.
    */
   detailRows?: SlipDetailRow[]
   /**
-   * Slip COB selain Property dan Motor Vehicle yang dibagi Section 1 (Material
-   * Damage) dan Section 2 (Third Party Liability), seperti CAR dan EAR. Nilai
-   * awalnya dari type of cover di Master Data.
+   * Slip COB selain Property dan Motor Vehicle yang dibagi Section 1 (MD) dan Section 2 (TPL),
+   * seperti CAR dan EAR. Nilai awalnya dari type of cover di Master Data.
    */
   usesSections?: boolean
   occupation?: string
@@ -396,9 +387,8 @@ export interface PlacingSlip {
   occupationLabel?: string
   riskLocation?: string
   /**
-   * Lokasi risiko slip Property, paling sedikit satu. Okupasi, risk location,
-   * dan kelas konstruksi slip diisi dari lokasi: lokasi pertama, dan semua
-   * alamat bernomor di risk location bila lokasinya lebih dari satu.
+   * Lokasi risiko slip Property, minimal satu. Okupasi dan kelas konstruksi slip dari lokasi
+   * pertama; risk location memuat semua alamat bernomor bila lokasinya lebih dari satu.
    */
   locations?: SlipLocation[]
   wordingForms: string[]
@@ -425,9 +415,8 @@ export interface PlacingSlip {
    */
   clauseOverrides?: Record<string, ClauseOverride>
   /**
-   * Salinan judul dan wording setiap clause saat dipilih (tabel slip_clauses).
-   * Dokumen cetak memakai salinan ini, jadi perubahan master clause sesudahnya
-   * tidak mengubah slip yang sudah ada.
+   * Salinan judul dan wording clause saat dipilih (tabel slip_clauses), dipakai dokumen cetak
+   * supaya perubahan master clause sesudahnya tidak mengubah slip yang sudah ada.
    */
   clauseCopies?: Record<string, ClauseOverride>
   /**
@@ -443,17 +432,11 @@ export interface PlacingSlip {
   openCover?: boolean
   openCoverRates?: OpenCoverRate[]
   /**
-   * false bila type of cover slip tidak memakai tarif OJK, misalnya Heavy
-   * Equipment (Harry, 9 November 2026): rate tanpa batas OJK dan brokerage
-   * tanpa batas biaya akuisisi. Dibaca dari Master Data, tidak disimpan di
-   * slip; kosong berarti memakai tarif OJK.
+   * false bila type of cover tidak memakai tarif OJK (tanpa batas rate dan brokerage), misalnya
+   * Heavy Equipment (Harry, 9 November 2026). Dibaca dari Master Data; kosong berarti tarif OJK.
    */
   ojkTariff?: boolean
-  /**
-   * Judul kelompok per klausul di `clauseIds`, untuk slip tanpa section,
-   * misalnya "Extensions" dan "General Conditions". Klausul tanpa judul
-   * masuk kelompok tanpa judul.
-   */
+  /** Judul kelompok per klausul di `clauseIds` untuk slip tanpa section, misalnya "Extensions". */
   clauseGroups?: Record<string, string>
   /**
    * Klausula Section 2 (Business Interruption) slip Property. Field `clause*`
@@ -463,9 +446,8 @@ export interface PlacingSlip {
   clauseOverridesSection2?: Record<string, ClauseOverride>
   clauseCopiesSection2?: Record<string, ClauseOverride>
   /**
-   * Klausula slip Property tanpa section, berlaku untuk seluruh polis. Dicetak
-   * paling atas tanpa judul, sebelum Section 1, seperti CI LCH. Disimpan di
-   * slip_clauses sebagai section 0.
+   * Klausula slip Property untuk seluruh polis, dicetak paling atas tanpa judul seperti CI LCH.
+   * Disimpan di slip_clauses sebagai section 0.
    */
   clauseIdsGeneral?: string[]
   clauseOverridesGeneral?: Record<string, ClauseOverride>
@@ -483,9 +465,8 @@ export interface PlacingSlip {
   createdAt: string
   updatedAt: string
   /**
-   * Tanggal dokumen "YYYY-MM-DD": Placing Slip (release), Quotation Slip dan
-   * Draft Cover Note (quoted), Closing Instruction (closing). Terisi otomatis
-   * saat status berpindah, bisa diubah manual. Lihat `lib/document-dates.ts`.
+   * Tanggal dokumen "YYYY-MM-DD": Placing Slip (release), Quotation Slip dan Draft Cover Note
+   * (quoted), Closing Instruction (closing). Terisi otomatis; lihat `lib/document-dates.ts`.
    */
   releaseDate?: string | null
   quotedDate?: string | null
@@ -519,10 +500,8 @@ export interface PlacingSlip {
 }
 
 /**
- * Slip perubahan yang mengunci slip asalnya (Agus, 12 November 2026). Revisi
- * slip asal tidak ikut ke endorsement slip yang sudah dibuat, karena kondisi
- * sebelum perubahan disimpan saat endorsement slip dibuat. Jadi perubahan polis
- * berikutnya harus lewat endorsement slip.
+ * Slip perubahan yang mengunci slip asalnya (Agus, 12 November 2026): kondisi sebelum perubahan
+ * disimpan saat endorsement dibuat, jadi perubahan polis berikutnya harus lewat endorsement slip.
  */
 export interface ChangeSlipLock {
   id: string
@@ -574,9 +553,8 @@ export interface Policy {
   /** Brokerage sudah termasuk PPN 2,2%, mengikuti slip. */
   includeVat?: boolean
   /**
-   * Nominal fee di luar brokerage dalam mata uang polis, ikut report
-   * produksi: premi × fee (%) per asuransi, dihitung server. Kosong sama
-   * dengan 0; negatif pada pembatalan atau pengurangan premi.
+   * Nominal fee di luar brokerage dalam mata uang polis, ikut report produksi: premi × fee (%)
+   * per asuransi, dihitung server. Negatif pada pembatalan atau pengurangan premi.
    */
   additionalFee?: number
   /**
@@ -619,9 +597,8 @@ export interface Policy {
   /** Peserta PA grup yang masih aktif di daftar polis ini. */
   participantCount?: number
   /**
-   * Polis ini, atau polis asal endorsement dan pembatalan ini, sudah punya
-   * record Cancellation. Dihitung server dari seluruh tabel polis, tidak
-   * disimpan (lihat `cancelledPolicies`).
+   * Polis ini, atau polis asal endorsement dan pembatalan ini, sudah punya record Cancellation.
+   * Dihitung server dari seluruh tabel polis, tidak disimpan (lihat `cancelledPolicies`).
    */
   cancelled?: boolean
 }

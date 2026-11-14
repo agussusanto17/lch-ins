@@ -1,12 +1,8 @@
 import type { Clause, ClauseOverride } from "./types"
 
 /**
- * Catatan migrasi. Master Clauses sudah pindah ke database, sumber sebenarnya
- * ada di `lib/server/clauses.ts` berisi 595 klausul asli LCH.
- *
- * Data di bawah tinggal dipakai dua tempat yang belum dipindah, yaitu pemilih
- * klausula di placing slip dan dokumen cetaknya. Keduanya ikut dipindah saat
- * modul placing slip disambungkan ke database. Jangan menambah klausul di sini.
+ * Master Clauses sudah pindah ke database (`lib/server/clauses.ts`); data ini tinggal untuk
+ * pemilih klausula placing slip dan dokumen cetaknya. Jangan menambah klausul di sini.
  */
 export const CLAUSES: Clause[] = [
   {
@@ -266,9 +262,8 @@ export interface ResolvedClause {
 }
 
 /**
- * Klausula satu slip: isi master, lalu ditimpa override slip bila ada.
+ * Klausula satu slip: isi master (`pool` dari database, fallback CLAUSES), ditimpa override slip.
  * Dipakai form maupun dokumen cetak supaya hasilnya selalu sama.
- * Mendukung master pool dinamis dari database PostgreSQL dan fallback ke CLAUSES.
  */
 export function resolveSlipClauses(
   slip: {

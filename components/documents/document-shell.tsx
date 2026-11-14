@@ -35,10 +35,7 @@ export function DocumentShell({
   variant?: LetterheadVariant
   /** Keterangan di atas dokumen yang tidak ikut tercetak. */
   notice?: React.ReactNode
-  /**
-   * Dokumen slip ke asuransi: Arial, margin cetak kiri-kanan 10mm (default
-   * 18mm), dan padding kartu layar lebih kecil, supaya tidak banyak ruang kosong.
-   */
+  /** Dokumen slip: Arial, margin cetak kiri-kanan 10mm (default 18mm), padding kartu lebih kecil. */
   slip?: boolean
 }) {
   // Server dan render pertama menganggap browser mendukung, jadi tidak ada

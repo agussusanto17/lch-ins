@@ -1,7 +1,6 @@
 /**
- * Deductible slip per kelompok, sama dengan blok DEDUCTIBLE & CONDITIONS di
- * dokumen slip. Dipakai juga form klaim untuk menampilkan deductible polis
- * (meeting LCH, 10 November 2026).
+ * Deductible slip per kelompok, sama dengan blok DEDUCTIBLE & CONDITIONS di dokumen slip.
+ * Dipakai juga form klaim untuk deductible polis (meeting LCH, 10 November 2026).
  */
 
 import { BI_RATE_LABELS } from "@/lib/calc"
@@ -30,20 +29,8 @@ function unitTitle(slip: PlacingSlip, unit: DeductibleUnit) {
 }
 
 /**
- * Teks deductible tidak lagi mencetak kolom cover karena sudah menyebut
- * perilnya; teks yang sama dari beberapa cover tampil sekali.
- * - Property mengikuti CI LCH (contoh SISKA RAHARJA): per section, cover BI
- *   masuk Section 2.
- * - Slip ber-section (CAR, EAR): satu kelompok per section.
- * - COB lain: satu daftar.
- *
- * Slip multi lokasi, kendaraan, atau objek yang deductible-nya berbeda
- * dicetak per unit, masing-masing dengan kelompok di atas (Agus, 13 November
- * 2026). Deductible yang sama di semua unit tetap dicetak sekali.
- *
- * `part` membatasi slip PAR + EQVET ke bagian yang menjadi polis itu, dengan
- * aturan yang sama seperti premi per bagian: baris rate berlabel EQVET masuk
- * polis EQVET, sisanya polis PAR.
+ * Teks yang sama dari beberapa cover tampil sekali; unit dengan deductible berbeda dicetak per
+ * unit (Agus, 13 November 2026). `part` memisah PAR + EQVET: baris rate EQVET ke polis EQVET.
  */
 export function deductibleGroups(
   slip: PlacingSlip,

@@ -90,9 +90,8 @@ function participantsSheet(
 }
 
 /**
- * Daftar peserta PA grup (jawaban Harry, 6 November 2026): data per orang,
- * diisi langsung atau diimpor dari Excel, lalu dicetak sebagai lampiran slip.
- * Interest Insured slip ikut terisi dari jumlah peserta dan total UP-nya.
+ * Peserta PA grup, diisi langsung atau diimpor dari Excel, dicetak sebagai lampiran slip.
+ * Interest Insured ikut terisi dari jumlah peserta dan total UP (Harry, 6 November 2026).
  */
 export function SlipParticipants({
   participants,

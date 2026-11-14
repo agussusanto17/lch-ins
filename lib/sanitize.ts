@@ -1,13 +1,6 @@
 /**
- * Sanitizer allowlist untuk wording klausula yang diketik lewat rich text editor.
- *
- * Cakupannya sengaja sempit: hanya tag yang bisa dihasilkan TipTap StarterKit,
- * seluruh atribut dibuang kecuali `href` pada `<a>` (http/https/mailto saja) dan
- * `style` berisi `text-align` saja pada paragraf dan sub-judul.
- *
- * CATATAN untuk fase backend: sanitasi tetap harus dilakukan di server dengan
- * pustaka matang (DOMPurify / sanitize-html) sebelum wording disimpan. Fungsi
- * ini adalah pertahanan lapis render, bukan pengganti validasi di server.
+ * Allowlist wording klausula: hanya tag TipTap StarterKit, `href` aman di `<a>`, dan text-align.
+ * Ini lapis render; server tetap perlu sanitizer matang (DOMPurify/sanitize-html) sebelum simpan.
  */
 
 const ALLOWED_TAGS = new Set([

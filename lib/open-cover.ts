@@ -1,8 +1,6 @@
 /**
- * Open cover (analisa contoh slip LCH, Tahap 3 nomor 15): MOP Rukma Padaya
- * Trans dan container open cover Salam Pacific. Slip berisi rate per kategori
- * tanpa TSI dan premi; premi dicatat per deklarasi sebagai polis (jawaban
- * Harry, 6 November 2026).
+ * Open cover (Tahap 3 nomor 15): slip berisi rate per kategori tanpa TSI dan premi; premi
+ * dicatat per deklarasi sebagai polis (Harry, 6 November 2026).
  */
 import type { OpenCoverRate, PlacingSlip } from "./data/types"
 import { money, num } from "./format"

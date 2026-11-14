@@ -17,9 +17,8 @@ import { normalizeCob } from "@/lib/format"
 import { store } from "@/lib/store"
 
 /**
- * Slip baru, bisa terisi dari SPPA (`?sppa=`) atau dari halaman klien
- * (`?client=`). Data dibaca dari store sesi supaya SPPA atau klien yang baru
- * dibuat juga bisa dipakai.
+ * Slip baru, bisa terisi dari SPPA (`?sppa=`) atau dari halaman klien (`?client=`).
+ * Data dibaca dari store sesi supaya SPPA atau klien yang baru dibuat ikut terbaca.
  */
 export function NewSlip({
   sppaId,

@@ -39,8 +39,7 @@ export function isRenewable(p: Pick<Policy, "type" | "cancelled">) {
 
 /**
  * Polis yang berakhir dalam `days` hari ke depan, urut dari yang paling dekat.
- * Dipakai layar Renewal Notice, halaman cetaknya, dan Dashboard supaya isinya
- * selalu sama.
+ * Dipakai Renewal Notice, halaman cetaknya, dan Dashboard supaya isinya sama.
  */
 export function renewalCandidates(
   policies: Policy[],

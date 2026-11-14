@@ -410,9 +410,8 @@ export function SlipTable({
               </TableHead>
               <TableHead>No. Slip</TableHead>
               {/*
-               * Dua kolom teks ini mengikuti lebar layar (persen, isinya
-               * dipotong), supaya kolom Dibuat oleh tetap muat di kartu tanpa
-               * digeser ke samping.
+               * Dua kolom teks ini mengikuti lebar layar (persen, isinya dipotong) supaya
+               * kolom Dibuat oleh tetap muat di kartu tanpa digeser ke samping.
                */}
               <TableHead className="w-[16%]">Nama Tertanggung</TableHead>
               <TableHead className="w-[13%]">Type of Cover</TableHead>

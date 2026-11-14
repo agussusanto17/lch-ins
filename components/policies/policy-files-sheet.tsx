@@ -32,9 +32,8 @@ import {
 } from "@/lib/uploads"
 
 /**
- * Berkas polis (PRD A-17): Polis, Premium Note, dan Commission Note (Agus,
- * 9 November 2026). Setiap upload menambah versi baru per jenis, versi lama
- * tetap tersimpan. Berkas sampai 25 MB diunggah per potongan.
+ * Berkas polis (PRD A-17): Polis, Premium Note, dan Commission Note (Agus, 9 November 2026).
+ * Tiap upload menambah versi baru per jenis tanpa menghapus yang lama; sampai 25 MB per potongan.
  */
 export function PolicyFilesSheet({
   policy,

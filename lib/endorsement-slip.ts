@@ -1,7 +1,6 @@
 /**
- * Isi cetak endorsement dari Policy Database, mengikuti contoh endorsement
- * asuransi yang dikirim Harry (`documents/45020126015995 - EDM 01.pdf` dan
- * `45020126008633 - CANCELLATION.pdf`, 10 November 2026).
+ * Isi cetak endorsement dari Policy Database, mengikuti contoh EDM 01 dan CANCELLATION asuransi
+ * di `documents/` (Harry, 10 November 2026).
  */
 
 import type { ChangeSlipLock, PolicyType } from "@/lib/data/types"
@@ -24,9 +23,8 @@ export interface SiblingEndorsement {
 }
 
 /**
- * Nomor lampiran. Endorsement memakai urutannya sendiri. Pembatalan tidak
- * punya urutan di Policy Database, jadi memakai nomor sesudah endorsement
- * terakhir, seperti contoh CANCELLATION asuransi yang tetap bernomor lampiran.
+ * Nomor lampiran. Pembatalan tidak punya urutan di Policy Database, jadi memakai nomor sesudah
+ * endorsement terakhir, seperti contoh CANCELLATION asuransi.
  */
 export function attachmentSeq(
   type: PolicyType,
@@ -39,9 +37,8 @@ export function attachmentSeq(
 }
 
 /**
- * Nilai pertanggungan sebelum perubahan ini: polis induk ditambah endorsement
- * sebelumnya. Pembatalan berlaku atas pertanggungan yang berjalan, jadi semua
- * endorsement ikut dihitung, sama seperti usulan premi pembatalan.
+ * Pertanggungan sebelum perubahan ini: polis induk plus endorsement sebelumnya. Pembatalan
+ * menghitung semua endorsement, sama seperti usulan premi pembatalan.
  */
 export function sumInsuredBefore(
   type: PolicyType,
@@ -64,9 +61,7 @@ export function endorsementNo(seq: number | null | undefined) {
 }
 
 /**
- * Kalimat pembuka perubahan, dalam bahasa Inggris: endorsement dan
- * cancellation slip cukup satu bahasa (Harry, 12 November 2026). Strukturnya
- * tetap seperti kedua contoh asuransi: endorsement menyebut "amended as
+ * Pembuka cukup bahasa Inggris (Harry, 12 November 2026): endorsement menyebut "amended as
  * follows", pembatalan hanya tanggal efektifnya.
  */
 export function endorsementOpening(type: PolicyType, effectiveDate: string) {
@@ -87,9 +82,8 @@ export function endorsementBody(type: PolicyType, remarks: string | null | undef
 }
 
 /**
- * Label baris premi: premi tambahan, refund premi (negatif), atau nihil.
- * Istilah Harry "premi tambahan" dan "refund premi" (11 November 2026),
- * dicetak dengan istilah asuransi berbahasa Inggris.
+ * Label baris premi: premi tambahan, refund premi (negatif), atau nihil, dicetak dengan istilah
+ * asuransi berbahasa Inggris (Harry, 11 November 2026).
  */
 export function premiumAdjustmentLabel(amount: number) {
   if (amount > 0) return "Additional Premium"
@@ -112,9 +106,8 @@ export function changeSlipName(lock: Pick<ChangeSlipLock, "kind" | "slipNo">) {
 }
 
 /**
- * Alasan slip asal tidak bisa direvisi: sudah ada endorsement atau cancellation
- * slip dari slip ini. Slip perubahan yang belum ditutup masih bisa dihapus
- * (draft) atau dibatalkan (sudah terbit), lalu slip asal bisa direvisi lagi.
+ * Alasan slip asal tidak bisa direvisi: sudah ada slip perubahan darinya. Slip perubahan bisa
+ * dihapus (draft) atau dibatalkan (terbit), lalu slip asal bisa direvisi lagi.
  */
 export function changeSlipLockText(lock: Pick<ChangeSlipLock, "kind" | "slipNo" | "status">) {
   const name = changeSlipName(lock)

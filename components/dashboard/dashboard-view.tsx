@@ -81,10 +81,8 @@ export function DashboardView({
   initialSlips,
 }: DashboardViewProps) {
   /*
-   * Dihitung dari data server, bukan store sesi. Store dimuati data contoh saat
-   * modul diimpor, jadi render pertama sempat menampilkan angka contoh sampai
-   * efek hidrasi jalan. Tabel tetap butuh store supaya hasil edit langsung
-   * terlihat; dashboard tidak, karena Next mengambil ulang datanya setiap dibuka.
+   * Dihitung dari data server, bukan store sesi: store berisi data contoh sampai hidrasi jalan.
+   * Dashboard tidak butuh store karena Next mengambil ulang datanya setiap dibuka.
    */
   const today = useToday()
   const { canAccess } = usePermission()

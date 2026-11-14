@@ -68,9 +68,7 @@ export function parseClaimFilters(input: RawFilterInput): ClaimFilterParams {
   }
 }
 
-/**
- * Build URL search params from active claim filters, omitting default values.
- */
+/** Build URL search params from active claim filters, omitting default values. */
 export function claimFilterQuery(filters: ClaimFilterParams): string {
   const params = new URLSearchParams()
   if (filters.status !== "all") params.set("status", filters.status)
@@ -92,10 +90,7 @@ export function claimBackHref(filters: ClaimFilterParams): string {
   return query ? `/claims?${query}` : "/claims"
 }
 
-/**
- * Filter claim records by status, stage, COB, and search query.
- * Keeps table screen and print report row sets identical.
- */
+/** Shared by the claims table and print report so both show the same rows. */
 export function filterClaims<T extends FilterableClaim>(
   items: T[],
   filters: ClaimFilterParams

@@ -1,7 +1,6 @@
 /**
- * Data polis yang mengikuti placing slip. Dipakai form polis ("polis dari
- * slip") dan pencatatan polis otomatis saat Closing Instruction terbit
- * (meeting LCH, 10 November 2026), supaya keduanya menyalin data yang sama.
+ * Data polis dari placing slip, dipakai form "polis dari slip" dan pencatatan otomatis saat CI
+ * terbit (meeting LCH, 10 November 2026), supaya keduanya menyalin data yang sama.
  */
 
 import { additionalFeeFor, slipPolicyPremium, totalSumInsured, weightedFeePct } from "@/lib/calc"
@@ -33,13 +32,8 @@ export type PolicySlipFields = Pick<
 >
 
 /**
- * Isian polis dari slip. Slip PAR + EQVET menjadi satu polis per bagian:
- * premi per bagian, dan polis EQVET memakai type of cover kedua. Additional
- * fee setiap polis = premi polis itu × fee (%) per asuransi di panel. Status
- * PPN brokerage dari slip, status PPN fee per asuransi dari panel (Harry,
- * 12 November 2026). Slip open
- * cover: nilai dan premi diisi per deklarasi. Nama tertanggung mengikuti nama
- * klien kalau klien slip diketahui.
+ * PAR + EQVET jadi satu polis per bagian; EQVET memakai type of cover kedua. Fee dan PPN fee
+ * per asuransi dari panel, PPN brokerage dari slip (Harry, 12 November 2026).
  */
 export function policyFieldsFromSlip(
   slip: PlacingSlip,
@@ -54,10 +48,8 @@ export function policyFieldsFromSlip(
     placingSlipId: slip.id,
     slipPart: part,
     clientId: client?.id ?? slip.clientId,
-    // Nama tertanggung polis = isian Nama Tertanggung slip, bukan nama klien di
-    // Data Klien (Agus, 13 November 2026: slip klien D'BEST GROUP dengan
-    // tertanggung PT Margamas tercatat sebagai D'BEST GROUP). Nama klien hanya
-    // cadangan bila isian slip kosong.
+    // Nama tertanggung dari isian slip, bukan nama klien; nama klien hanya cadangan bila kosong
+    // (Agus, 13 November 2026).
     insuredName: slip.insuredName?.trim() || client?.name || "",
     cob: slip.cob,
     typeOfCover:
@@ -80,9 +72,7 @@ export function policyFieldsFromSlip(
 }
 
 /**
- * Isian polis dari slip yang berubah antara dua versi slip. Dipakai untuk
- * meneruskan revisi slip setelah CI terbit ke polisnya: hanya yang berubah
- * yang disalin, jadi isian yang diubah petugas polis tidak tertimpa. Panel
+ * Revisi slip setelah CI terbit diteruskan ke polis tanpa menimpa isian petugas polis. Panel
  * asuransi dibandingkan dari nama, share, dan peran, bukan id barisnya.
  */
 export function changedSlipFields(
@@ -119,9 +109,8 @@ export function slipExistingPolicyNo(slip: PlacingSlip): string | null {
 }
 
 /**
- * Nomor sementara polis yang dicatat otomatis: nomor Closing Instruction,
- * ditambah bagiannya untuk slip PAR + EQVET. Petugas polis menggantinya dengan
- * nomor polis dari asuransi saat mengunggah polis.
+ * Nomor sementara polis otomatis: nomor CI, plus bagiannya untuk PAR + EQVET. Petugas polis
+ * menggantinya dengan nomor dari asuransi saat mengunggah polis.
  */
 export function provisionalPolicyNo(ciNo: string, part: SlipPart | null) {
   return part ? `${ciNo} (${part})` : ciNo

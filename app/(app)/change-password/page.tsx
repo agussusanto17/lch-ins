@@ -18,11 +18,8 @@ export default async function ChangePasswordPage() {
     redirect("/")
   }
 
-  // Dashboard di sini cuma latar di belakang dialog ganti kata sandi yang
-  // wajib. Datanya sengaja kosong: orang yang belum menyelesaikan login tidak
-  // perlu melihat angka produksi, dan kuerinya pun mubazir karena halamannya
-  // tidak bisa dipakai. Setelah kata sandi diganti, redirect ke "/" merender
-  // Dashboard yang sebenarnya.
+  // Dashboard di sini cuma latar dialog ganti kata sandi wajib, jadi datanya sengaja kosong:
+  // yang belum selesai login tidak perlu melihat angka produksi.
   return (
     <DashboardView
       initialClients={[]}

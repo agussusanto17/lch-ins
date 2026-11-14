@@ -5,9 +5,8 @@ import type { PlacingSlip } from "@/lib/data/types"
 export type FieldErrors = Record<string, string>
 
 /**
- * Validate form data against a zod schema and collect field-level errors
- * (dot-delimited path, e.g. "addresses.0.value"). Shared with Server Actions
- * for defense-in-depth two-tier validation.
+ * Validate form data with a zod schema, keying field errors by dot path ("addresses.0.value").
+ * Server Actions reuse it as the second validation tier.
  */
 export function validate<T extends z.ZodType>(
   schema: T,
@@ -24,8 +23,6 @@ export function validate<T extends z.ZodType>(
   }
   return { ok: false, data: null, errors }
 }
-
-/* Reusable schema fragments across forms. */
 
 export const requiredText = (label: string) =>
   z.string().trim().min(1, `${label} wajib diisi`)

@@ -37,10 +37,7 @@ export interface ListUsersParams {
  */
 const DEFAULT_USER_PASSWORD = "Default1234"
 
-/**
- * Mengambil daftar pengguna dengan filter dan pencarian.
- * Wajib Admin.
- */
+/** Daftar pengguna dengan filter dan pencarian. Wajib Admin. */
 export async function listUsers(
   params: ListUsersParams = {}
 ): Promise<UserSummary[]> {
@@ -98,10 +95,7 @@ export async function listUsers(
   }))
 }
 
-/**
- * Mengambil detail satu pengguna berdasarkan ID.
- * Wajib Admin.
- */
+/** Wajib Admin. */
 export async function getUserById(id: string): Promise<UserSummary | null> {
   await requireAdmin("/users")
 
@@ -136,10 +130,7 @@ export interface CreateUserInput {
   isActive?: boolean
 }
 
-/**
- * Membuat akun pengguna baru, kredensial Better Auth, dan kata sandi sementara.
- * Wajib Admin.
- */
+/** Membuat akun pengguna, kredensial Better Auth, dan kata sandi sementara. Wajib Admin. */
 export async function createUser(data: CreateUserInput): Promise<{
   user: UserSummary
   temporaryPassword: string
@@ -244,9 +235,8 @@ export interface UpdateUserInput {
 }
 
 /**
- * Memperbarui profil pengguna, jabatan, dan penugasan role.
- * Memastikan proteksi last admin & pencegahan self-demotion/deactivation.
- * Wajib Admin.
+ * Memperbarui profil, jabatan, dan role pengguna. Wajib Admin.
+ * Menjaga last admin dan mencegah admin menurunkan atau menonaktifkan dirinya sendiri.
  */
 export async function updateUser(
   id: string,
@@ -390,10 +380,7 @@ export async function updateUser(
   }
 }
 
-/**
- * Mengubah status aktif/nonaktif akun pengguna.
- * Wajib Admin.
- */
+/** Mengubah status aktif/nonaktif akun pengguna. Wajib Admin. */
 export async function toggleUserStatus(
   id: string,
   isActive: boolean
@@ -469,11 +456,7 @@ export async function toggleUserStatus(
   }
 }
 
-/**
- * Mereset kata sandi pengguna ke sandi awal DEFAULT_USER_PASSWORD,
- * menandai mustChangePassword = true, dan mencabut sesi lama.
- * Wajib Admin.
- */
+/** Reset sandi ke DEFAULT_USER_PASSWORD, wajibkan ganti sandi, dan cabut sesi lama. Wajib Admin. */
 export async function resetUserPassword(id: string): Promise<{
   temporaryPassword: string
 }> {

@@ -19,15 +19,14 @@ test("derivedDocNumber handles null or empty slipNo gracefully", () => {
 
 test("slip locked state only applies to Cancelled status, Closed status remains editable for revisions", () => {
   function isSlipLocked(status: string): boolean {
-    // New rule: only Cancelled is locked; Closed remains editable for revisions
     return status === "Cancelled"
   }
 
   assert.equal(isSlipLocked("Draft"), false)
   assert.equal(isSlipLocked("Released"), false)
   assert.equal(isSlipLocked("Quoted"), false)
-  assert.equal(isSlipLocked("Closed"), false) // Closed MUST be editable
-  assert.equal(isSlipLocked("Cancelled"), true) // Only Cancelled is locked
+  assert.equal(isSlipLocked("Closed"), false)
+  assert.equal(isSlipLocked("Cancelled"), true)
 })
 
 test("revalidateUnderwritingPaths includes closing edit route", () => {

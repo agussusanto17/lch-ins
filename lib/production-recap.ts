@@ -1,8 +1,6 @@
 /**
- * Rekap produksi format LCH (`documents/Contoh Format Rekap Produksi.xlsx`,
- * dikirim Harry 19 Oktober 2026, diminta lagi 12 November 2026): 49 kolom,
- * satu baris per polis per asuransi, nilai uang dalam mata uang asli (OC) dan
- * Rupiah. Pendapatan (komisi dan fee) ditulis negatif seperti di contoh.
+ * Rekap produksi format `documents/Contoh Format Rekap Produksi.xlsx` (Harry, 19 Oktober 2026):
+ * satu baris per polis per asuransi, nilai OC dan Rupiah, pendapatan ditulis negatif.
  */
 
 import { FX, roundCents } from "@/lib/calc"
@@ -121,9 +119,8 @@ const codeName = (code: string | null | undefined, name: string | null | undefin
   code && name ? `${code} - ${name}` : (name ?? code ?? "")
 
 /**
- * Baris rekap: satu per asuransi dengan bagian premi sesuai share. Komisi =
- * premi × brokerage (%), fee = premi × additional fee (%) asuransi itu,
- * keduanya negatif karena pendapatan (konvensi contoh LCH).
+ * Satu baris per asuransi sesuai share. Komisi = premi × brokerage (%), fee = premi × additional
+ * fee (%), keduanya negatif karena pendapatan (konvensi contoh LCH).
  */
 export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = FX): RecapRow[] {
   return policies.flatMap((p) => {

@@ -121,9 +121,8 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
   // satu tanggal turnamen; keterangan periode di baris berikutnya.
   const period = slipPeriodRow(slip)
 
-  // Slip PAR + EQVET dengan dua type of cover dicetak seperti CI LCH: satu
-  // baris per type of cover, masing-masing diawali tanda hubung. Nama di
-  // dokumen yang diisi di slip menggantikan nama master.
+  // Slip PAR + EQVET dicetak seperti CI LCH: satu baris per type of cover, diawali tanda hubung.
+  // Nama di dokumen yang diisi di slip menggantikan nama master.
   const covers = [
     slip.typeOfCover && (slip.typeOfCoverLabel?.trim() || slip.typeOfCover),
     slip.typeOfCover2 && (slip.typeOfCover2Label?.trim() || slip.typeOfCover2),
@@ -146,11 +145,8 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
         ? wordingForms.map((w) => `- ${w}`).join("\n")
         : wordingForms[0],
     ])
-  // Detail tambahan, misalnya Retroactive Date, Voyage, atau Vessels (analisa
-  // 26 contoh slip LCH, 6 November 2026). Baris tanpa isi tidak dicetak.
-  // Existing Policy No. dicetak di sisi kanan atas tabel detail, bukan
-  // sebagai baris tabel (Harry, 6 November 2026). The Business dicetak tepat
-  // di bawah Correspondence Address (LCH, 13 November 2026).
+  // Existing Policy No. dicetak di kanan atas tabel, bukan baris tabel (Harry, 6 November 2026).
+  // The Business tepat di bawah Correspondence Address (LCH, 13 November 2026).
   const details = printedDetailRows(slip.detailRows)
   const existing = details.find((r) => isExistingPolicyLabel(r.label))
   const business = details.filter((r) => isBusinessLabel(r.label))
@@ -205,10 +201,8 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Okupasi, lokasi, dan kelas slip Property multi lokasi di badan dokumen.
- * Okupasi dan kelas konstruksi yang sama di semua lokasi dicetak sekali;
- * selebihnya "As Attached", dengan rincian di lampiran DAFTAR LOKASI (Agus,
- * 9 November 2026).
+ * Okupasi, lokasi, dan kelas Property multi lokasi: yang sama di semua lokasi dicetak sekali,
+ * selebihnya "As Attached" dengan rincian di lampiran DAFTAR LOKASI (Agus, 9 November 2026).
  */
 function attachedLocationRows(slip: PlacingSlip): [string, string][] {
   const groups = locationGroups(slip)
@@ -226,11 +220,8 @@ function attachedLocationRows(slip: PlacingSlip): [string, string][] {
 }
 
 /**
- * Komponen teks dengan tata letak hanging indent (indentasi gantung).
- * Baris berawalan bullet (- • * – —) atau nomor urut (1. 1) a. dll)
- * dirender dengan pemisahan marker (shrink-0) dan isi kalimat (flex-1 min-w-0 text-justify),
- * sehingga saat kalimat membungkus ke baris berikutnya teks sejajar rapi di bawah teks baris pertama,
- * bukan jatuh di bawah simbol bullet/nomor.
+ * Teks hanging indent: baris berawalan bullet (- • * – —) atau nomor (1. 1) a.) memisahkan
+ * marker dari isi, supaya lipatan baris sejajar teks, bukan di bawah marker.
  */
 export function HangingIndentText({
   text,
@@ -278,10 +269,8 @@ export function HangingIndentText({
 }
 
 /**
- * Daftar bernomor yang setiap butirnya bisa beberapa baris, misalnya Risk
- * Location: nama tertanggung, nama lokasi, lalu alamat. Semua baris butir
- * sejajar teks setelah nomor dan antar butir diberi jarak. Teks tanpa nomor
- * dicetak seperti HangingIndentText biasa.
+ * Daftar bernomor dengan butir beberapa baris (Risk Location: tertanggung, lokasi, alamat).
+ * Teks tanpa nomor dicetak seperti HangingIndentText biasa.
  */
 export function NumberedItemsText({ text }: { text: string }) {
   const items = groupNumberedItems(text)
@@ -602,9 +591,7 @@ export function OpenCoverRateBlock({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Coverage dari Detail Coverage & Ketentuan. Awalnya dicetak setelah INTEREST
- * INSURED seperti CI Machinery Breakdown LCH (Agus, 5 November 2026); sejak
- * 12 November 2026 dicetak sebelum INTEREST INSURED atas permintaan LCH.
+ * Coverage dari Detail Coverage & Ketentuan, sebelum INTEREST INSURED (LCH, 12 November 2026).
  * Paragraf dan baris barunya dipertahankan. Motor Vehicle tidak punya isian ini.
  */
 export function CoverageBlock({ slip }: { slip: PlacingSlip }) {
@@ -622,10 +609,8 @@ export function CoverageBlock({ slip }: { slip: PlacingSlip }) {
 }
 
 export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
-  // Deductible texts already name their peril, so the cover column is not
-  // printed. Covers sharing the same text print it once, each as a "-" bullet
-  // like the rate list, with wrapped lines aligned to the text. Grouping per
-  // section lives in lib/slip-deductibles, shared with the claim form.
+  // Deductible texts already name their peril, so no cover column; covers sharing a text print it
+  // once as a "-" bullet. Per-section grouping lives in lib/slip-deductibles, shared with claims.
   const groups = deductibleGroups(slip)
   // Kalimat pengantar diketik user, tidak lagi otomatis (permintaan LCH,
   // 6 November 2026).
@@ -638,9 +623,8 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
       <div className="flex flex-col gap-3 text-[13px]">
         {intro ? <p className="whitespace-pre-line text-justify">{intro}</p> : null}
         {/*
-         * Deductible yang berbeda per lokasi, kendaraan, atau objek dicetak
-         * per unit dengan judul "Location 1" dst. dan kelompoknya menjorok
-         * di bawahnya (Agus, 13 November 2026).
+         * Deductible yang berbeda per unit dicetak per judul "Location 1" dst.,
+         * kelompoknya menjorok di bawahnya (Agus, 13 November 2026).
          */}
         {deductiblesByUnit(groups).map((block) => {
           const list = block.groups.map((g) => (
@@ -682,9 +666,8 @@ export function DeductibleBlock({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Clause slip dicetak dari salinannya di slip_clauses. Master clause sudah di
- * database dan id-nya tidak ada di data contoh, jadi tanpa salinan ini clause
- * yang tidak diedit di slip hilang dari dokumen.
+ * Clause slip dicetak dari salinannya di slip_clauses; id master tidak ada di data contoh,
+ * jadi tanpa salinan, clause yang tidak diedit hilang dari dokumen.
  */
 function resolveClauses(
   clauseIds: string[],
@@ -704,11 +687,8 @@ interface ClauseGroup {
 }
 
 /**
- * Slip Property mencetak klausula tanpa section dulu tanpa judul, lalu per
- * section dengan judul yang sama seperti INTEREST INSURED, sesuai CI LCH. COB
- * lain satu daftar, atau beberapa kelompok berjudul seperti EXTENSIONS dan
- * GENERAL CONDITIONS bila judulnya diisi. Kelompok kosong dilewati. Nomor
- * klausula mulai dari 1 lagi di tiap kelompok (Agus, 5 November 2026).
+ * Property: klausula tanpa section dulu tanpa judul, lalu per section seperti INTEREST INSURED.
+ * COB lain satu daftar atau kelompok berjudul; nomor ulang dari 1 per kelompok (Agus, 5 November 2026).
  */
 function clauseGroups(slip: PlacingSlip): ClauseGroup[] {
   const section1 = resolveClauses(
@@ -745,10 +725,7 @@ function clauseGroups(slip: PlacingSlip): ClauseGroup[] {
   return groups.filter((g) => g.clauses.length > 0)
 }
 
-/**
- * Judul section ikut di dalam butir klausula pertamanya, jadi tidak
- * tertinggal sendirian di bawah halaman.
- */
+/** Judul section ikut di butir klausula pertamanya supaya tidak tertinggal di bawah halaman. */
 function ClauseGroupHeading({
   children,
   first,
@@ -788,9 +765,8 @@ export function ExclusionsBlock({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Daftar judul klausula sebelum tanda tangan. Wording lengkap dicetak di
- * lampiran CLAUSE WORDINGS setelah tanda tangan, di keempat dokumen slip
- * (Harry, 9 November 2026).
+ * Daftar judul klausula sebelum tanda tangan; wording lengkap di lampiran CLAUSE WORDINGS
+ * setelah tanda tangan, di keempat dokumen slip (Harry, 9 November 2026).
  */
 export function ClausesBlock({ slip }: { slip: PlacingSlip }) {
   const groups = clauseGroups(slip)
@@ -823,9 +799,8 @@ export function ClausesBlock({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Daftar lampiran slip, misalnya vessel schedule atau daftar unit (analisa
- * contoh slip LCH, Tahap 3 nomor 19). Isinya dikirim terpisah bersama PDF
- * slip; keterangan dicetak, atau nama file bila keterangan kosong.
+ * Daftar lampiran slip; isinya dikirim terpisah bersama PDF slip.
+ * Keterangan dicetak, atau nama file bila keterangan kosong.
  */
 export function AttachmentList({ slip }: { slip: PlacingSlip }) {
   const list = slip.attachments ?? []
@@ -843,9 +818,8 @@ export function AttachmentList({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Lampiran daftar peserta PA grup, seperti lampiran Placing Slip PA Salam
- * Pacific (1.627 peserta). Kolom tanpa isi di semua baris tidak dicetak; usia
- * dihitung pada tanggal mulai polis.
+ * Lampiran daftar peserta PA grup; kolom yang kosong di semua baris tidak dicetak.
+ * Usia dihitung pada tanggal mulai polis.
  */
 export function ParticipantAppendix({ slip }: { slip: PlacingSlip }) {
   const list = slip.participants ?? []
@@ -913,7 +887,7 @@ export function ParticipantAppendix({ slip }: { slip: PlacingSlip }) {
   )
 }
 
-/** Wording lengkap di akhir dokumen — dipakai Placing Slip dan Quotation Slip. */
+/** Wording lengkap di akhir dokumen, dipakai Placing Slip dan Quotation Slip. */
 export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
   const groups = clauseGroups(slip)
   if (!groups.length) return null
@@ -1270,7 +1244,7 @@ function ParEqvetGroupSection({
   )
 }
 
-/** Grouped PAR and EQVET calculation with open formulas, group deductions, and grand total per Image 4. */
+/** Grouped PAR and EQVET calculation with open formulas, group deductions, and grand total. */
 export function ParEqvetCalculationBlock({ slip }: { slip: PlacingSlip }) {
   const calc = calculateParEqvet(slip)
 
@@ -1315,9 +1289,8 @@ function sectionObject(group: LocationGroup, bi: boolean) {
 }
 
 /**
- * Baris jadwal premi satu polis (PAR atau EQVET). Nomor lokasi tercetak di
- * baris pertama lokasi itu, objek dan sum insured di baris pertama tiap
- * section, karena baris BI memakai Section 2.
+ * Baris jadwal premi satu polis (PAR atau EQVET). Nomor lokasi di baris pertama lokasi,
+ * objek dan sum insured di baris pertama tiap section, karena baris BI memakai Section 2.
  */
 function scheduleRows(lines: ParEqvetLine[], groups: LocationGroup[]) {
   let previous = ""
@@ -1349,10 +1322,8 @@ function AttachedTotal({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Badan dokumen slip Property multi lokasi: bagian RATE bila semua lokasi
- * memakai rate yang sama (seperti CI SISKA RAHARJA), "As Attached" untuk
- * premi, dan Grand Total. Jadwal premi per lokasi (Opsi B, disetujui Harry 5
- * November 2026) dicetak di lampiran DAFTAR LOKASI (Agus, 9 November 2026).
+ * Badan dokumen Property multi lokasi: RATE bila semua lokasi sama, premi "As Attached", Grand Total.
+ * Jadwal premi per lokasi di lampiran DAFTAR LOKASI (Opsi B; Harry 5 dan Agus 9 November 2026).
  */
 export function LocationPremiumAttached({ slip }: { slip: PlacingSlip }) {
   const calc = calculateParEqvet(slip)
@@ -1511,9 +1482,8 @@ function AppendixTitle({ slip, title }: { slip: PlacingSlip; title: string }) {
 }
 
 /**
- * Lampiran DAFTAR LOKASI slip Property multi lokasi: alamat, okupasi, kelas,
- * dan objek per lokasi, lalu jadwal premi per lokasi. Badan dokumen cukup
- * menulis "As Attached" (Agus, 9 November 2026).
+ * Lampiran DAFTAR LOKASI Property multi lokasi: alamat, okupasi, kelas, objek, lalu jadwal premi.
+ * Badan dokumen cukup menulis "As Attached" (Agus, 9 November 2026).
  */
 export function LocationScheduleAppendix({ slip }: { slip: PlacingSlip }) {
   if (!isMultiLocation(slip)) return null
@@ -1636,15 +1606,8 @@ export function VehiclePremiumAttached({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Lampiran DAFTAR UNIT KENDARAAN: satu baris per kendaraan, isinya sama
- * dengan tabel CI LCH Truckindo (Agus, 9 November 2026). Kolom yang
- * berkaitan ditumpuk supaya muat di A4 portrait: Chrome tetap memakai lebar
- * portrait untuk isi halaman landscape, jadi tabel lebar akan terpotong.
- *
- * Lebar kolom mengikuti isi, dan satu angka tidak pernah dipecah ke dua baris;
- * kolom teks yang menyesuaikan. Dengan lebar persen tetap, Sum Insured
- * 250.000.000 sempat tercetak "250.000.00" dengan "0" di baris berikutnya
- * (temuan SIT-089, 9 November 2026).
+ * Lampiran DAFTAR UNIT KENDARAAN (Agus, 9 November 2026), ditumpuk agar muat A4 portrait di Chrome.
+ * Lebar kolom ikut isi supaya angka tidak terpecah ke dua baris (temuan SIT-089, 9 November 2026).
  */
 export function VehicleScheduleAppendix({ slip }: { slip: PlacingSlip }) {
   if (!isMultiVehicle(slip)) return null
@@ -1790,18 +1753,14 @@ export function VehicleScheduleAppendix({ slip }: { slip: PlacingSlip }) {
   )
 }
 
-/** Uraian objek di jadwal premi: baris pertamanya saja, karena uraian lengkap sudah dicetak di INTEREST INSURED. */
+/** Uraian objek di jadwal premi: baris pertamanya saja, uraian lengkap sudah di INTEREST INSURED. */
 function objectName(group: ItemGroup) {
   return group.item.description.split("\n")[0].trim() || `Objek ${group.no}`
 }
 
 /**
- * Rate & premium slip multi objek COB selain Property dan Motor Vehicle
- * (Agus, 5 November 2026), misalnya peserta PA atau unit MB dan CPM: satu
- * baris per objek dengan nilai, rate, dan preminya, lalu Total Premium. Objek
- * dengan beberapa cover mendapat satu baris per cover dengan nama covernya.
- * Diskon, admin cost, stamp duty, dan Total Payable dicetak di bawahnya oleh
- * PayableTable.
+ * Rate & premium multi objek COB selain Property dan Motor Vehicle (Agus, 5 November 2026):
+ * satu baris per objek atau per cover, lalu Total Premium; sisanya dicetak PayableTable.
  */
 export function ObjectPremiumSchedule({ slip }: { slip: PlacingSlip }) {
   const groups = itemGroups(slip)
@@ -1934,16 +1893,8 @@ export function SignatureGrid({
 }
 
 /**
- * Tanda tangan Draft Cover Note mengikuti contoh CN LCH (Agus, 9 November
- * 2026; CN 728 co-insurance dan CN 743 satu asuransi): judul SIGNED, tempat
- * dan tanggal tepat di bawahnya, lalu satu blok per asuransi berisi nama,
- * ruang tanda tangan, dan "( …… )". Co-insurance dicetak kiri-kanan sesuai
- * urutan panel dengan "(25% share as Leader)" di bawah nama; satu asuransi
- * cukup namanya, karena share 100% sudah tertulis di SECURITY.
- *
- * Cover Note ditandatangani bersama semua asuransi. Closing Instruction tidak:
- * dokumen itu dikirim ke masing-masing asuransi, jadi cukup satu kolom
- * penerimaan di sebelah blok LCH.
+ * Tanda tangan Draft Cover Note, satu blok per asuransi seperti CN 728/743 (Agus, 9 November 2026).
+ * Co-insurance mencetak share dan peran di bawah nama; satu asuransi cukup namanya.
  */
 export function CoverNoteSignature({
   slip,
@@ -2006,15 +1957,8 @@ function CoverNoteSignatory({
 }
 
 /**
- * Security tanpa judul kolom (LCH, 3 November 2026). Satu asuransi berarti
- * share 100% tanpa leader atau member, jadi cukup namanya; share dan As Leader
- * / As Member baru dicetak kalau asuransinya lebih dari satu.
- */
-/**
- * Security dari panel asuransi, di Quotation, Cover Note, dan Closing
- * Instruction. Share selalu dicetak; Leader atau Member hanya bila asuransinya
- * lebih dari satu, jadi satu asuransi 100% tercetak tanpa peran (Harry, 6
- * November 2026).
+ * Security dari panel asuransi tanpa judul kolom (LCH, 3 November 2026), di QS, CN, dan CI.
+ * Share selalu dicetak; peran hanya bila asuransinya lebih dari satu (Harry, 6 November 2026).
  */
 export function SecurityPanelBlock({ slip }: { slip: PlacingSlip }) {
   return <SecurityTable rows={slip.securityPanel ?? []} />
@@ -2046,10 +1990,8 @@ export function SecurityTable({ rows: panel }: { rows: SecurityPanelRow[] }) {
 }
 
 /**
- * Brokerage is printed apart from the premium calculation, at the rate entered
- * on the slip, so the document matches the form. Net premium is not printed,
- * per LCH. Only the Placing Slip and Closing Instruction carry this block; the
- * Quotation Slip leaves brokerage out, per LCH's instruction of 29 October 2026.
+ * Brokerage prints apart from the premium calculation at the slip rate; net premium is not printed.
+ * Only Placing Slip and Closing Instruction carry it, not Quotation Slip (LCH, 29 October 2026).
  */
 export function BrokerageBlock({ slip }: { slip: PlacingSlip }) {
   return (

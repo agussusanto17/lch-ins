@@ -212,9 +212,8 @@ function AttachmentContent({
 }
 
 /**
- * Isi lampiran slip di halaman akhir dokumen (jawaban Harry, 9 November
- * 2026). Hanya lampiran yang dicentang Cetak isi; nomornya sama dengan daftar
- * ATTACHMENTS.
+ * Isi lampiran yang dicentang Cetak isi, di halaman akhir dokumen (Harry, 9 November 2026).
+ * Nomornya sama dengan daftar ATTACHMENTS.
  */
 export function AttachmentContents({
   slip,

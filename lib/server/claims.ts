@@ -356,10 +356,8 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
 }
 
 /**
- * Info polis untuk form dan detail klaim (meeting LCH, 10 November 2026):
- * status premi, deductible dari placing slip asal polis, dan berkas polis
- * terakhir yang diunggah di Policy Database. Semuanya milik polis induk, karena
- * endorsement dan pembatalan hanya perubahan atas polis itu (13 November 2026).
+ * Info polis untuk form dan detail klaim: status premi, deductible slip asal, dan berkas polis
+ * terakhir (LCH, 10 November 2026). Semuanya milik polis induk (13 November 2026).
  */
 export interface ClaimPolicyInfo {
   /** "YYYY-MM-DD"; kosong berarti premi belum dibayar. */
@@ -526,9 +524,8 @@ async function policyCoverCode(tx: Prisma.TransactionClient, policyId: string) {
 const isoDay = (d: Date) => d.toISOString().slice(0, 10)
 
 /**
- * Peserta klaim PA grup (jawaban Harry, 6 November 2026): wajib bila daftar
- * peserta polisnya terisi, harus ada di daftar itu, dan dijamin pada tanggal
- * kejadian. Polis tanpa daftar peserta tidak menyimpan peserta.
+ * Peserta klaim PA grup wajib bila daftar peserta polis terisi, harus ada di daftar itu, dan
+ * dijamin pada tanggal kejadian; polis tanpa daftar tidak menyimpan peserta (Harry, 6 November 2026).
  */
 async function checkedPaClaim(
   tx: Prisma.TransactionClient,
@@ -1239,12 +1236,8 @@ export async function updateClaimDocument(
 }
 
 /**
- * Link an uploaded file to a claim document and drop the file it replaces.
- *
- * Tanggal upload adalah tanggal dokumen diterima (catatan meeting LCH,
- * 10 November 2026): upload pertama menandai dokumen diterima hari ini dan
- * memperbarui tanggal dokumen lengkap. Dokumen yang sudah diterima, termasuk
- * yang dicentang manual, tetap memakai tanggal diterimanya saat file diganti.
+ * Link an uploaded file to a claim document and drop the file it replaces. Upload pertama menandai
+ * dokumen diterima hari ini; yang sudah diterima tetap memakai tanggalnya (LCH, 10 November 2026).
  */
 export async function attachClaimDocumentFile(
   documentId: string,

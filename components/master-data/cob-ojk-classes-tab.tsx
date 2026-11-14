@@ -135,8 +135,7 @@ export function CobOjkClassesTab({ initialCobOjkClasses }: CobOjkClassesTabProps
     })
   }
 
-  // Pola baris sama dengan Manajemen Pengguna: aksi di menu kolom pertama,
-  // termasuk aktif/nonaktif yang dulu berupa switch di kolom sendiri.
+  // Pola baris sama dengan Manajemen Pengguna: semua aksi, termasuk aktif/nonaktif, di kolom pertama.
   function actionsFor(item: CobOjkClassRecord): RowAction[] {
     return [
       { label: "Edit klasifikasi", icon: Pencil, onSelect: () => openEdit(item) },

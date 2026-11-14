@@ -53,10 +53,7 @@ const CONSTRUCTION_ITEMS = CONSTRUCTION_CLASSES.map((c) => ({
 
 const isEqvet = (line: RateLine) => /eqvet/i.test(line.label)
 
-/**
- * Keterangan baris BI satu lokasi, yang rate-nya dihitung dari baris lain di
- * lokasi itu.
- */
+/** Keterangan baris BI satu lokasi, yang rate-nya dihitung dari baris lain di lokasi itu. */
 function biRateNote(
   slip: PlacingSlip,
   group: LocationGroup,
@@ -89,10 +86,8 @@ function biRateNote(
 }
 
 /**
- * Daftar lokasi risiko slip Property (Harry, 5 November 2026). Tiap kartu
- * berisi alamat, okupasi, kelas konstruksi, sum insured Section 1 dan 2,
- * referensi tarif OJK, dan rate lokasi itu. Premi tiap lokasi dijumlah per
- * polis PAR dan EQVET.
+ * Daftar lokasi risiko slip Property (Harry, 5 November 2026).
+ * Premi tiap lokasi dijumlah per polis PAR dan EQVET.
  */
 export function SlipLocations({
   slip,
@@ -127,9 +122,8 @@ export function SlipLocations({
       ),
     })
 
-  // Kartu terbuka dicatat per urutan, bukan per id: id lokasi berganti setiap
-  // slip disimpan. Slip yang dibuka dengan beberapa lokasi mulai terlipat;
-  // lokasi yang baru ditambah langsung terbuka.
+  // Kartu terbuka dicatat per urutan, bukan per id, karena id lokasi berganti setiap disimpan.
+  // Slip multi lokasi mulai terlipat; lokasi yang baru ditambah langsung terbuka.
   const [startOpen] = React.useState(() => groups.length <= 1)
   const [openAt, setOpenAt] = React.useState<Record<number, boolean>>({})
   const isOpen = (index: number) => openAt[index] ?? startOpen
@@ -291,9 +285,8 @@ export function SlipLocations({
                 />
               </Field>
               {/*
-               * Nama okupasi OJK bisa sangat panjang (29371 berisi syarat
-               * gudang). Seperti override klausul, teks ini hanya untuk
-               * dokumen slip ini dan tidak mengubah master okupasi.
+               * Nama okupasi OJK bisa sangat panjang. Seperti override klausul, teks ini
+               * hanya untuk slip ini dan tidak mengubah master okupasi.
                */}
               <Field className="md:col-span-2">
                 <FieldLabel htmlFor={`${key}-occupation-label`}>

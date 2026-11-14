@@ -112,11 +112,8 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
 
 function parse(input: string | Date) {
   if (typeof input !== "string") return input
-  // Tanggal saja ditambah T00:00:00 supaya dibaca sebagai tengah malam waktu
-  // lokal. Tanpa itu string polos dibaca sebagai UTC dan tanggalnya bisa mundur
-  // sehari. Nilai yang sudah lengkap dengan jam — updatedAt dari database
-  // dikirim sebagai ISO penuh — harus dipakai apa adanya; menempelkan
-  // T00:00:00 ke belakangnya justru bikin Invalid Date.
+  // Tanggal saja diberi T00:00:00 supaya dibaca waktu lokal, bukan UTC yang bisa mundur sehari.
+  // Nilai yang sudah berjam (updatedAt ISO) dipakai apa adanya agar tidak jadi Invalid Date.
   return new Date(DATE_ONLY.test(input) ? `${input}T00:00:00` : input)
 }
 
@@ -189,9 +186,8 @@ export function slipNumber(
 }
 
 /**
- * Mask PII in table rows (NPWP, phone, ID numbers). Leading and trailing
- * characters remain visible for client verification; full values are restricted
- * to authorized detail views.
+ * Mask PII in table rows (NPWP, phone, ID numbers), keeping the edges visible for verification.
+ * Full values are restricted to authorized detail views.
  */
 export function maskMiddle(
   value: string | null | undefined,
@@ -225,13 +221,8 @@ const COB_ALIASES: Record<string, ClassOfBusiness> = {
 }
 
 /**
- * Nama COB untuk tampilan. Master data menulis nama dengan huruf besar semua
- * ("MARINE CARGO"), aplikasi menampilkannya "Marine Cargo". Nama yang sudah
- * ditulis campuran huruf besar-kecil dipakai apa adanya.
- *
- * Dulu COB di luar delapan nama bawaan jatuh ke "Property". Sekarang COB baru
- * dari master tetap tampil dengan namanya sendiri, supaya tidak tersimpan
- * sebagai Property tanpa disadari.
+ * "MARINE CARGO" dari master tampil "Marine Cargo"; nama huruf campuran dipakai apa adanya.
+ * COB baru dari master tampil dengan namanya sendiri, tidak jatuh ke Property.
  */
 export function normalizeCob(cobStr?: string | null): ClassOfBusiness {
   if (!cobStr) return "Property"

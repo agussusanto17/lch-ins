@@ -83,10 +83,8 @@ export function SectionCard({
     )
   }
 
-  // Judul memakai lebar aslinya, ringkasan mengisi sisa ruang dan dipotong
-  // dengan elipsis. Sebelumnya kolom ringkasan "auto": nama tertanggung yang
-  // panjang memakan seluruh lebar dan menimpa judul (temuan Harry,
-  // 9 November 2026).
+  // Judul memakai lebar aslinya; ringkasan mengisi sisa ruang dan dipotong elipsis supaya
+  // nama tertanggung yang panjang tidak menimpa judul (Harry, 9 November 2026).
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <Card id={id} className={cn("gap-0", className)}>

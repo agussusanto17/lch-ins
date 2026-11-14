@@ -85,10 +85,8 @@ export function getPropertyRateBounds(
     bounds["FLEXAS"] = flexasBounds
   }
 
-  // Lampiran III Tabel III.A: tarif gempa tetap per kategori konstruksi dan
-  // zona. Slip belum mencatat kategori konstruksi gempa (jumlah lantai,
-  // rangka), jadi batasnya rentang semua kategori di zona itu. Rumah tinggal
-  // (okupasi 2976) memakai baris DW, selainnya baris Com.
+  // Lampiran III Tabel III.A: slip belum mencatat kategori konstruksi gempa, jadi batasnya rentang
+  // semua kategori di zona itu. Rumah tinggal (okupasi 2976) memakai baris DW, selainnya Com.
   const eqZone = matchEqZone(riskLocation)
   if (eqZone && eqZone.zone >= 1 && eqZone.zone <= 5) {
     const dwelling = occupationCode.split(/[^0-9A-Za-z]/)[0].startsWith("2976")
@@ -102,9 +100,8 @@ export function getPropertyRateBounds(
     }
   }
 
-  // Lampiran II Tabel II.A dalam persen, baris rate properti dalam per mil.
-  // Zona banjir tidak tercatat di slip dan zona tinggi memakai tarif Zona 1
-  // ditambah loading, jadi hanya batas bawah Zona 1 yang dijaga.
+  // Lampiran II Tabel II.A dalam persen, rate properti dalam per mil. Zona banjir tidak tercatat
+  // di slip dan zona tinggi memakai Zona 1 plus loading, jadi hanya batas bawah Zona 1 dijaga.
   const floodRegion = matchFloodRegion(riskLocation)
   const floodZone1 = FLOOD_TARIFFS.find(
     (t) =>

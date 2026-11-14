@@ -9,10 +9,8 @@ import { completeUpload, saveUploadPart } from "@/lib/server/upload-parts"
 import { FILE_PURPOSES, type FilePurpose } from "@/lib/uploads"
 
 /*
- * Unggahan per potongan untuk berkas di atas batas satu request Vercel
- * (4,5 MB). Klien memanggil uploadFilePartAction untuk tiap potongan, lalu
- * completeFileUploadAction. Hasilnya id stored_files yang ditautkan lewat
- * action modulnya, misalnya attachPolicyFileAction.
+ * Unggahan per potongan untuk berkas di atas batas request Vercel (4,5 MB): uploadFilePartAction
+ * per potongan, lalu completeFileUploadAction; id stored_files-nya ditautkan lewat action modulnya.
  */
 
 export interface ActionResponse<T = unknown> {

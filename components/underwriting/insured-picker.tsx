@@ -12,9 +12,8 @@ import { correspondenceAddress as defaultAddress } from "@/lib/data"
 import type { InsuredOption } from "@/lib/server/clients"
 
 /**
- * Tertanggung dipilih dari data klien (PRD A-08). Nama dan alamat disalin ke
- * slip dan boleh diedit di sini tanpa mengubah data klien, misalnya ditambah
- * "and/or Subsidiary Companies".
+ * Tertanggung dipilih dari data klien (PRD A-08); nama dan alamat disalin ke slip.
+ * Salinan boleh diedit tanpa mengubah data klien, misalnya "and/or Subsidiary Companies".
  */
 export function InsuredPicker({
   clients,
@@ -114,9 +113,8 @@ export function InsuredPicker({
       </Field>
 
       {/*
-       * CI LCH sering menulis tertanggung lebih dari satu baris, misalnya
-       * daftar pihak a), b), c) di CGL Orela. Nama dan uraian dicetak persis
-       * seperti diketik; uraian di bawah nama.
+       * Tertanggung sering lebih dari satu baris, misalnya daftar pihak a), b), c).
+       * Nama dan uraian dicetak persis seperti diketik; uraian di bawah nama.
        */}
       <Field className="md:col-span-2">
         <FieldLabel htmlFor="insured-desc">Uraian tertanggung di dokumen</FieldLabel>

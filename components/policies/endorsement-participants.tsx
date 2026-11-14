@@ -27,10 +27,8 @@ import { participantsTotal } from "@/lib/slip-participants"
 const PAGE_SIZE = 10
 
 /**
- * Perubahan peserta PA grup lewat endorsement (jawaban Harry, 6 November
- * 2026): tambah peserta baru dan hentikan peserta polis induk, berlaku mulai
- * tanggal mulai endorsement. Usulan Total Sum Insured dan premi dihitung
- * pro-rata harian dari rate polis induk.
+ * Endorsement PA grup menambah atau menghentikan peserta mulai tanggal mulai endorsement.
+ * Usulan TSI dan premi pro-rata harian dari rate polis induk (jawaban Harry, 6 November 2026).
  */
 export function EndorsementParticipants({
   parent,

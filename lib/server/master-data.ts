@@ -24,8 +24,6 @@ import { prisma } from "@/lib/prisma"
 import { cleanDetailLabels } from "@/lib/slip-details"
 import { recordAudit } from "@/server/services/audit"
 
-// Interfaces & types
-
 export interface MasterCobRecord extends ClassOfBusiness {
   rateMode: LookupValue
   formVariant: LookupValue
@@ -120,16 +118,8 @@ export interface LookupValueInput {
 }
 
 /*
- * Prisma mengembalikan kolom Decimal sebagai objek Decimal.js, dan React
- * menolak objek berkelas di batas server-ke-client: sekali buka Master Data
- * memunculkan sekitar 1.800 peringatan "Only plain objects can be passed to
- * Client Components", cukup untuk menenggelamkan error yang sesungguhnya.
- *
- * Nilainya sendiri tetap sampai — Decimal.js punya toJSON() sehingga React
- * mengirimnya sebagai string — tapi tipe di sisi client tetap berbunyi
- * Decimal. Artinya `rateMin.toNumber()` lolos pemeriksaan TypeScript lalu
- * gagal saat dijalankan, karena yang diterima string. Tarif dikonversi di
- * sini supaya tipe dan isinya sama-sama jujur: number.
+ * Tarif Decimal dikonversi ke number di sini: React menolak objek Decimal.js ke Client Components,
+ * dan yang tiba di client berupa string walau tipenya masih Decimal.
  */
 export type TariffOccupationRow = Omit<
   TariffOccupation,
@@ -160,8 +150,6 @@ export interface LossLimitScaleRow {
 export interface OccupationRecord extends Occupation {
   tariffs: TariffOccupationRow[]
 }
-
-// Query functions
 
 export async function listMasterCob(): Promise<MasterCobRecord[]> {
   const cobs = await prisma.classOfBusiness.findMany({
@@ -829,9 +817,8 @@ export async function toggleBankAccountStatus(
 }
 
 /**
- * audit_logs.entity_id bertipe UUID, sedangkan kunci mata uang adalah kode ISO.
- * Kode diubah jadi UUID tetap (gaya UUIDv5) supaya semua jejak satu mata uang
- * terkumpul di id yang sama.
+ * audit_logs.entity_id bertipe UUID, jadi kode ISO mata uang diubah jadi UUID tetap (gaya UUIDv5)
+ * supaya semua jejak satu mata uang terkumpul di id yang sama.
  */
 function currencyAuditId(code: string) {
   const h = createHash("sha1").update(`currencies:${code}`).digest("hex")

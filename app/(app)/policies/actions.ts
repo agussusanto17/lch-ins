@@ -179,10 +179,8 @@ export async function deletePolicyAction(id: string): Promise<ActionResponse<voi
 const policyFileKindSchema = z.enum(["Policy", "PremiumNote", "CommissionNote", "Slip"])
 
 /**
- * Tautkan berkas polis yang sudah diunggah per potongan (lib/upload-client.ts)
- * sebagai versi berikutnya dari jenisnya: Polis, Premium Note, atau
- * Commission Note. Berkas sampai 25 MB tidak muat dalam satu request Vercel,
- * jadi isinya tidak dikirim lewat action ini.
+ * Tautkan berkas polis yang sudah diunggah per potongan (lib/upload-client.ts) sebagai versi
+ * berikutnya dari jenisnya. Isinya tidak lewat action ini: 25 MB tak muat satu request Vercel.
  */
 export async function attachPolicyFileAction(
   id: string,

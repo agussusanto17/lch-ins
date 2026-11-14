@@ -19,9 +19,8 @@ export function cleanDetailLabels(labels: readonly string[] | undefined) {
 }
 
 /**
- * Label bawaan type of cover yang baru dipilih masuk ke Detail tambahan.
- * Baris yang sudah berisi tetap; baris kosong (biasanya label bawaan type of
- * cover sebelumnya) dibuang; label bawaan yang belum ada ditambahkan di akhir.
+ * Label bawaan type of cover baru masuk ke Detail tambahan: baris berisi tetap, baris kosong
+ * (biasanya label cover lama) dibuang, label yang belum ada ditambah di akhir.
  */
 export function withDetailLabels(
   rows: readonly SlipDetailRow[] | undefined,
@@ -41,18 +40,16 @@ export function missingDetailLabels(
 }
 
 /**
- * Baris Existing Policy No. (nomor polis tahun lalu untuk renewal). Dokumen
- * mencetaknya di sisi kanan atas, bukan di tabel detail (Harry, 6 November
- * 2026).
+ * Baris Existing Policy No. (nomor polis lama untuk renewal), dicetak di kanan atas dokumen,
+ * bukan di tabel detail (Harry, 6 November 2026).
  */
 export function isExistingPolicyLabel(label: string) {
   return /^existing\s+policy(\s+no\.?|\s+number)?$/i.test(label.trim())
 }
 
 /**
- * Baris The Business (atau Business). Dokumen mencetaknya tepat di bawah
- * Correspondence Address, bukan bersama detail tambahan lain (LCH, slip GPA
- * PT. Salam Pacific, 13 November 2026).
+ * Baris The Business (atau Business), dicetak tepat di bawah Correspondence Address, bukan
+ * bersama detail lain (LCH, 13 November 2026).
  */
 export function isBusinessLabel(label: string) {
   return /^(the\s+)?business$/i.test(label.trim())
@@ -66,9 +63,8 @@ export function printedDetailRows(rows: readonly SlipDetailRow[] | undefined) {
 }
 
 /**
- * Baris dari input atau database (kolom JSON) menjadi daftar {label, value}.
- * Baris yang label dan isinya kosong dibuang; label bawaan tanpa isi tetap
- * disimpan supaya tidak hilang setelah slip dibuka lagi.
+ * Baris input atau kolom JSON menjadi {label, value}; baris kosong dibuang, tapi label bawaan
+ * tanpa isi tetap disimpan supaya tidak hilang saat slip dibuka lagi.
  */
 export function cleanDetailRows(input: unknown): SlipDetailRow[] {
   if (!Array.isArray(input)) return []

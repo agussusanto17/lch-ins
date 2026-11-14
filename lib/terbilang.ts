@@ -1,10 +1,6 @@
 /**
- * Generator Terbilang Bahasa Indonesia presisi sampai sen.
- * Digunakan untuk dokumen resmi keuangan: Debit Note, Credit Note, Kwitansi.
- *
- * Contoh:
- * 13440000.50 -> "tiga belas juta empat ratus empat puluh ribu rupiah lima puluh sen"
- * 1000000 -> "satu juta rupiah"
+ * Terbilang Bahasa Indonesia sampai sen, untuk Debit Note, Credit Note, dan Kwitansi.
+ * Contoh: 13440000.50 -> "tiga belas juta ... rupiah lima puluh sen".
  */
 
 const SATUAN = [
@@ -69,6 +65,5 @@ export function terbilang(nominal: number | string, currency = "IDR"): string {
     hasil = `minus ${hasil}`
   }
 
-  // Huruf kapital di awal kalimat (Sentence case)
   return hasil.charAt(0).toUpperCase() + hasil.slice(1)
 }
