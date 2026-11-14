@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-14
 - **Branch:** `chore/rapikan-komentar-antislop`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #253
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
