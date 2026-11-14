@@ -19,9 +19,8 @@ const PRESETS = {
 export type NumberInputPreset = keyof typeof PRESETS
 
 /**
- * Rate dan persentase tidak pernah butuh pemisah ribuan, jadi titik yang
- * diketik (kebiasaan format Inggris) dianggap koma desimal. Tanpa ini,
- * "0.294" di locale id-ID terbaca 294 dan premi jadi seribu kali lipat.
+ * Rate dan persentase tak butuh pemisah ribuan, jadi titik yang diketik dianggap koma desimal.
+ * Tanpa ini "0.294" di locale id-ID terbaca 294 dan premi jadi seribu kali lipat.
  */
 const DOT_IS_DECIMAL: Record<NumberInputPreset, boolean> = {
   money: false,
@@ -37,11 +36,8 @@ function insertText(text: string) {
 }
 
 /**
- * Input angka berformat Indonesia (titik ribuan, koma desimal).
- *
- * Memakai Base UI NumberField supaya teks yang sedang diketik ("0," atau
- * "12,") tidak ditimpa nilai hasil parse. Versi lama menulis balik
- * `Number(raw)` ke input, sehingga "0.294" berubah jadi "294".
+ * Input angka berformat Indonesia (titik ribuan, koma desimal) berbasis Base UI NumberField,
+ * supaya teks setengah jadi ("0," atau "12,") tidak ditimpa nilai hasil parse.
  */
 export function NumberInput({
   value,

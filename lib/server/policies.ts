@@ -367,10 +367,8 @@ async function endorsementSeqFor(
 }
 
 /**
- * Polis yang sudah dibatalkan tidak bisa di-renew, di-endorse, atau dibatalkan
- * lagi, sama dengan endorsement slip di Placement. Record yang sudah tersimpan
- * dengan induk itu, termasuk pembatalannya sendiri, tetap bisa diedit selama
- * induknya tidak diganti.
+ * Polis yang sudah dibatalkan tidak bisa di-renew, di-endorse, atau dibatalkan lagi. Record yang
+ * sudah tersimpan dengan induk itu tetap bisa diedit selama induknya tidak diganti.
  */
 async function assertParentNotCancelled(
   tx: Tx,
@@ -419,11 +417,8 @@ async function checkedPolicyData(tx: Tx, input: PolicyInput, selfId?: string) {
 }
 
 /**
- * Satu placing slip menjadi satu polis; slip PAR + EQVET satu polis per bagian,
- * dan slip open cover satu polis per deklarasi tanpa batas jumlah.
- * Mencegah produksi dari slip yang sama terhitung dua kali. Tautan yang tidak
- * berubah saat polis diedit tidak diperiksa ulang, jadi polis lama tetap bisa
- * disimpan.
+ * Satu placing slip satu polis (PAR + EQVET per bagian, open cover per deklarasi) supaya produksi
+ * tidak terhitung dua kali. Tautan yang tidak berubah saat polis diedit tidak diperiksa ulang.
  */
 async function checkedSlipPart(
   tx: Tx,
@@ -623,11 +618,8 @@ const participantText = (v?: string | null) =>
   v?.trim().slice(0, PARTICIPANT_LIMITS.text) || null
 
 /**
- * Peserta PA grup polis baru:
- * - polis Baru atau Renewal dari slip menyalin peserta slip, mulai dijamin
- *   pada tanggal mulai polis;
- * - endorsement menambah peserta mulai tanggal endorsement, dan mengurangi
- *   peserta aktif polis induk pada tanggal yang sama.
+ * Polis Baru atau Renewal dari slip menyalin peserta slip mulai tanggal polis; endorsement menambah
+ * dan mengurangi peserta aktif polis induk mulai tanggal endorsement.
  */
 async function writeParticipants(tx: Tx, policyId: string, input: PolicyInput) {
   const startDate = new Date(`${input.inceptionDate}T00:00:00Z`)
@@ -715,9 +707,8 @@ async function writeParticipants(tx: Tx, policyId: string, input: PolicyInput) {
 }
 
 /**
- * Endorsement yang sudah mengubah peserta: tanggal peserta ikut tanggal mulai
- * endorsement yang diedit, sedangkan jenis dan polis induknya dikunci karena
- * pesertanya sudah tercatat di daftar polis induk itu.
+ * Tanggal peserta ikut tanggal mulai endorsement yang diedit; jenis dan polis induknya dikunci
+ * karena pesertanya sudah tercatat di daftar polis induk itu.
  */
 async function syncParticipantChanges(
   tx: Tx,
@@ -891,9 +882,8 @@ export async function deletePolicy(id: string, userId: string): Promise<void> {
       throw new Error("Polis masih menjadi induk renewal, endorsement, atau pembatalan.")
     }
 
-    // Endorsement yang dihapus: peserta yang dikuranginya aktif lagi; peserta
-    // yang ditambahkannya ikut terhapus lewat foreign key, kecuali sudah
-    // dikurangi endorsement lain (catatan pengurangan itu jangan hilang).
+    // Peserta yang dikurangi endorsement ini aktif lagi; peserta tambahannya terhapus lewat foreign
+    // key, kecuali sudah dikurangi endorsement lain supaya catatan pengurangannya tetap ada.
     const removedLater = await tx.policyParticipant.count({
       where: { addedByPolicyId: id, removedByPolicyId: { not: null } },
     })

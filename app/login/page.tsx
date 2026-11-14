@@ -21,9 +21,8 @@ export default async function LoginPage({
   // mengarahkan pengguna ke situs lain setelah login.
   const target = next?.startsWith("/") && !next.startsWith("//") ? next : "/"
 
-  // Jika pengguna sudah memiliki sesi aktif yang valid di database,
-  // langsung arahkan ke tujuan (atau dashboard). Pemeriksaan dilakukan di sini
-  // dan bukan di proxy agar cookie kedaluwarsa/stale tidak memicu infinite redirect.
+  // Sesi aktif langsung diarahkan ke tujuan. Dicek di sini, bukan di proxy, supaya
+  // cookie kedaluwarsa tidak memicu redirect loop.
   const user = await currentUser()
   if (user) {
     if (user.mustChangePassword) {
@@ -34,9 +33,8 @@ export default async function LoginPage({
 
   return (
     <main className="grid min-h-svh bg-background lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-      {/* Panel merek. Indigo dan emas diambil dari logo LCH (#29166E, #F7C303),
-          simpul logo jadi motif besar di belakang. Gradien satu warna hanya
-          memberi kedalaman, terang di kiri atas tempat logo berada. */}
+      {/* Panel merek: indigo dan emas dari logo LCH (#29166E, #F7C303), simpul logo jadi
+          motif besar di belakang. */}
       <section className="relative isolate flex flex-col gap-10 overflow-hidden bg-[radial-gradient(120%_90%_at_0%_0%,#3a28a6_0%,#29166e_55%,#1d0f52_100%)] px-6 py-8 text-white sm:px-10 lg:min-h-svh lg:px-14 lg:py-12">
         <div
           aria-hidden

@@ -9,14 +9,8 @@ import {
 } from "@aws-sdk/client-s3"
 
 /**
- * Object storage untuk isi berkas unggahan (RustFS di lch-server).
- *
- * Dipakai lewat API S3 biasa, jadi tidak terikat ke RustFS: pindah ke
- * SeaweedFS, Cloudflare R2, atau penyedia S3 lain cukup mengganti env.
- *
- * Kalau env belum lengkap (misalnya demo Vercel), object storage dianggap
- * mati dan isi berkas tetap disimpan di kolom stored_files.data seperti
- * sebelumnya.
+ * Object storage isi berkas unggahan lewat API S3 biasa (RustFS di lch-server, bisa diganti via env).
+ * Tanpa env lengkap (demo Vercel) object storage mati dan isi berkas tetap di stored_files.data.
  */
 
 type StorageConfig = {
@@ -57,8 +51,7 @@ function storage() {
             accessKeyId: config.accessKeyId,
             secretAccessKey: config.secretAccessKey,
           },
-          // RustFS dan server S3 self-hosted lain memakai alamat
-          // http://host/bucket/key, bukan subdomain per bucket.
+          // RustFS dan S3 self-hosted lain memakai http://host/bucket/key, bukan subdomain bucket.
           forcePathStyle: true,
           // Checksum tambahan bawaan SDK baru tidak didukung semua server S3.
           requestChecksumCalculation: "WHEN_REQUIRED",

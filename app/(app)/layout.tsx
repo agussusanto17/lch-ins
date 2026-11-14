@@ -23,9 +23,8 @@ export default async function AppLayout({
   await connection()
   const today = todayIso()
 
-  // Seluruh halaman di bawah grup ini wajib login, dan rolenya harus boleh
-  // membuka path yang diminta. Menyaring menu di sidebar saja tidak cukup:
-  // tanpa pemeriksaan di sini, URL-nya masih bisa diketik langsung.
+  // Seluruh halaman grup ini wajib login dan rolenya harus boleh membuka path yang diminta.
+  // Menyaring menu sidebar saja tidak cukup karena URL bisa diketik langsung.
   const pathname = (await headers()).get("x-pathname") ?? "/"
   const user = await requireAccess(pathname)
   const topbarData = await getTopbarData(user, today)
@@ -39,14 +38,8 @@ export default async function AppLayout({
             roles={user.roles}
           />
           {/*
-            Jangan pasang `overflow-hidden` di sini — itu membuat scroll container
-            baru sehingga topbar `sticky top-0` menempel ke container yang tidak
-            pernah scroll. Lebar ditahan lewat `overflow-x: clip` di html/body.
-
-            `min-w-0` wajib: SidebarInset adalah flex item, dan tanpa ini lebarnya
-            ikut lebar minimum tabel (sel `whitespace-nowrap`). Halaman jadi lebih
-            lebar dari viewport lalu terpotong clip, sementara wrapper
-            `overflow-x-auto` di tabel tidak pernah aktif.
+            Jangan `overflow-hidden`: topbar `sticky` lepas; lebar ditahan `overflow-x: clip` html/body.
+            `min-w-0` wajib supaya flex item ini tidak melebar ikut tabel `whitespace-nowrap`.
           */}
           <SidebarInset className="min-w-0">
             <AppTopbar user={user} data={topbarData} />

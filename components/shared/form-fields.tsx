@@ -32,11 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
-/*
- * Controlled form fields with labels, descriptions, and inline error messages.
- * Required fields display an asterisk, and fields failing validation include
- * `aria-invalid` for screen reader accessibility.
- */
+/* Required fields show an asterisk; invalid fields set `aria-invalid` for screen readers. */
 
 interface BaseProps {
   label: string

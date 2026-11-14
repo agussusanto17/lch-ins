@@ -1,8 +1,6 @@
 /**
- * Limit manfaat PA untuk peringatan klaim (Harry, 7 November 2026): klaim PA
- * diberi peringatan bila nilainya melebihi UP peserta atau limit manfaat
- * meninggal, cacat, dan biaya medis. Limit ditulis dalam persen UP per kode
- * lookup pa_benefit di Master Data.
+ * Klaim PA diberi peringatan bila melebihi UP peserta atau limit manfaat (Harry, 7 November 2026).
+ * Limit ditulis dalam persen UP per kode lookup pa_benefit di Master Data.
  */
 import { money, num } from "./format"
 

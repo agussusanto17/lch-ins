@@ -1,7 +1,4 @@
-/**
- * Single source of truth for role definitions, display labels,
- * server authorization validation, and access control matrices for LCH.
- */
+/** Single source of truth for roles, labels, server role validation, and the access matrix. */
 
 export const CANONICAL_ROLES = [
   {
@@ -67,10 +64,7 @@ export function isValidRoleCode(code: string): code is RoleCode {
   return (ALLOWED_ROLE_CODES as readonly string[]).includes(code)
 }
 
-/**
- * Validate roles collection on the server to prevent privilege escalation or
- * invalid role codes from client payloads.
- */
+/** Validate role codes from client payloads to prevent privilege escalation. */
 export function validateRoleCodes(
   roles: unknown
 ): { valid: true; roles: RoleCode[] } | { valid: false; error: string } {
@@ -110,12 +104,7 @@ const COLUMNS = [
   "policy_admin",
 ] as const satisfies readonly RoleCode[]
 
-/**
- * Matriks hak akses per menu berdasarkan Sheet Hak Akses LCH.
- *
- * Kolom: Admin, Marketing, Placement, Klaim, Finance, Accounting, Direksi, Policy Admin.
- * Menggunakan pencocokan awalan terpanjang untuk menentukan hak akses subrute.
- */
+/** Matriks hak akses per menu dari Sheet Hak Akses LCH; subrute ikut awalan terpanjang. */
 export const ACCESS_MATRIX: Record<string, readonly AccessLevel[]> = {
   // Kolom: Admin, Marketing, Placement, Claim, Finance, Accounting, Direksi, Policy Admin
   "/": [K, L, L, L, L, L, L, L],
@@ -130,9 +119,8 @@ export const ACCESS_MATRIX: Record<string, readonly AccessLevel[]> = {
   "/accounting/journal": [K, T, T, T, K, K, L, T],
   "/accounting/statements": [K, T, T, T, L, K, L, T],
   "/master-data": [K, T, T, T, T, T, T, T],
-  // Report Operational: Lihat untuk Marketing, Klaim, dan Direksi disetujui
-  // 10 November 2026. Halamannya tanpa aksi ubah, jadi Lihat sudah mencakup
-  // filter, print, dan export. Bagian Klaim diatur `canSeeReportClaims`.
+  // Lihat sudah mencakup filter, print, dan export karena tanpa aksi ubah (10 November 2026).
+  // Bagian Klaim diatur `canSeeReportClaims`.
   "/reports": [K, L, K, L, T, T, L, T],
   "/users": [K, T, T, T, T, T, L, T],
 
@@ -169,11 +157,8 @@ function matchRow(path: string): readonly AccessLevel[] | null {
 }
 
 /**
- * Tingkat akses tertinggi yang dimiliki pengguna untuk sebuah path.
- *
- * Pengguna bisa memegang lebih dari satu role, misalnya Harry yang bekerja di
- * Marketing sekaligus Teknik. Dalam hal itu yang berlaku adalah yang paling
- * longgar di antara role-rolenya.
+ * Tingkat akses tertinggi pengguna untuk sebuah path. Pengguna berperan ganda (misalnya Harry di
+ * Marketing dan Teknik) mendapat akses paling longgar di antara role-rolenya.
  */
 export function accessLevel(
   roles: string | string[] | undefined,
@@ -220,10 +205,8 @@ export function canManage(
 }
 
 /**
- * Role yang melihat bagian Klaim di Report Operational. Teknik hanya melihat
- * produksi dan polis (permintaan LCH, 4 November 2026, PR #112). Pengguna
- * berperan ganda, misalnya Marketing dan Teknik, mengikuti role yang paling
- * longgar, sama seperti `accessLevel`.
+ * Role yang melihat bagian Klaim di Report Operational; Teknik hanya produksi dan polis
+ * (permintaan LCH, 4 November 2026). Peran ganda mengikuti role paling longgar.
  */
 const REPORT_CLAIM_ROLES: readonly RoleCode[] = [
   "admin",

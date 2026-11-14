@@ -30,10 +30,7 @@ import { deductiblesByUnit, type DeductibleGroupText } from "@/lib/deductible-te
 
 export type Row = { label: string; value: React.ReactNode }
 
-/**
- * Data polis di endorsement dan cancellation slip. Label cukup bahasa Inggris
- * (Harry, 12 November 2026), tidak lagi dua bahasa seperti contoh EDM.
- */
+/** Data polis endorsement dan cancellation slip, label bahasa Inggris saja (Harry, 12 November 2026). */
 export function DetailTable({ rows }: { rows: Row[] }) {
   return (
     <table className="mb-6 w-full text-[13px]">
@@ -60,8 +57,7 @@ export function Deductibles({ groups }: { groups: DeductibleGroupText[] }) {
         ))}
       </span>
     ))
-  // Deductible per lokasi, kendaraan, atau objek: judul unit sekali, lalu
-  // kelompoknya menjorok (13 November 2026).
+  // Deductible per unit: judul unit sekali, lalu kelompoknya menjorok (13 November 2026).
   return (
     <span className="flex flex-col gap-1">
       {deductiblesByUnit(groups).map((block, i) =>
@@ -79,10 +75,8 @@ export function Deductibles({ groups }: { groups: DeductibleGroupText[] }) {
 }
 
 /**
- * Cetak endorsement dan pembatalan dari Policy Database (permintaan LCH,
- * 10 November 2026), mengikuti contoh EDM 01 dari asuransi: data polis yang
- * di-endorse, kalimat perubahan berisi Remarks, perhitungan premi, klausul
- * dari slip, dan tanda tangan LCH.
+ * Cetak endorsement dan pembatalan dari Policy Database, format EDM 01 (LCH, 10 November 2026).
+ * Kalimat perubahan berisi Remarks; klausul diambil dari slip.
  */
 export function EndorsementDocument({ data }: { data: EndorsementSlipData }) {
   const { policy, parent, slip } = data
@@ -93,8 +87,7 @@ export function EndorsementDocument({ data }: { data: EndorsementSlipData }) {
   const adjustment = premiumAdjustmentLabel(policy.premium)
   const insurers = policy.insurers?.length ? policy.insurers : (parent?.insurers ?? [])
   const changesSumInsured = data.sumInsuredBefore !== null && policy.sumInsured !== 0
-  // Admin cost dan stamp duty endorsement, seperti Policy Cost dan Stamp Duty
-  // di rumus prorata LCH (11 November 2026).
+  // Admin cost dan stamp duty endorsement mengikuti rumus prorata LCH (11 November 2026).
   const charges = [
     { label: "Administration Cost", amount: policy.adminCost ?? 0 },
     { label: "Stamp Duty", amount: policy.stampDuty ?? 0 },
@@ -150,7 +143,7 @@ export function EndorsementDocument({ data }: { data: EndorsementSlipData }) {
       <DocTitle title={endorsementTitle(policy.type)} number={`No. ${policy.policyNo}`} />
       <DetailTable rows={rows} />
 
-      {/* Garis atas dan bawah memisahkan kalimat perubahan dari data polis dan perhitungan premi (Harry, 12 November 2026). */}
+      {/* Garis atas dan bawah memisahkan kalimat perubahan (Harry, 12 November 2026). */}
       <div className="mb-6 border-y py-4 text-[13px] leading-relaxed">
         <p className="mb-3 text-justify">{endorsementOpening(policy.type, policy.inceptionDate)}</p>
         {body ? (

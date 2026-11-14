@@ -1,13 +1,6 @@
 /**
- * Ringkasan isi placing slip untuk audit trail. Sebelumnya Update slip hanya
- * mencatat field kepala (nama tertanggung, status, tanggal dokumen, brokerage,
- * PPN, additional fee), jadi perubahan sum insured, premi, deductible,
- * klausul, dan special conditions tercatat sebagai "Ubah" tanpa rincian
- * (temuan uji PR #240, 13 November 2026).
- *
- * Setiap ringkasan berupa teks yang mudah dibaca, dengan susunan seperti
- * dokumen slip. recordAudit hanya menyimpan isian yang teksnya berbeda, jadi
- * ringkasan sebelum dan sesudah harus dibentuk dengan cara yang sama.
+ * Ringkasan isi placing slip untuk audit trail, tersusun seperti dokumen slip. recordAudit hanya
+ * menyimpan isian yang teksnya berbeda, jadi ringkasan sebelum dan sesudah harus dibentuk sama.
  */
 
 import { slipSectionTitles } from "@/components/underwriting/slip-model"
@@ -33,10 +26,8 @@ function block(heading: string | null | undefined, items: string[]) {
 }
 
 /**
- * Deductible seperti blok DEDUCTIBLE & CONDITIONS di dokumen: judul unit
- * ("Location 2", "Vehicle 1") bila deductible-nya berbeda per lokasi,
- * kendaraan, atau objek, lalu judul section, lalu satu butir per teks. Unit
- * dipisah baris kosong.
+ * Deductible seperti blok DEDUCTIBLE & CONDITIONS: judul unit bila berbeda per unit, judul
+ * section, lalu satu butir per teks. Unit dipisah baris kosong.
  */
 export function deductiblesText(slip: PlacingSlip) {
   return deductiblesByUnit(deductibleGroups(slip))
@@ -50,11 +41,8 @@ export function deductiblesText(slip: PlacingSlip) {
 }
 
 /**
- * Judul klausul per kelompok, urut seperti CLAUSES di dokumen. Slip
- * ber-section: klausul tanpa section dulu, lalu Section 1 dan Section 2. Slip
- * lain: per judul kelompok, menurut urutan kemunculan pertamanya. Kelompok
- * dipisah baris kosong, jadi kelompok tanpa judul tidak terbaca sebagai
- * bagian kelompok di atasnya.
+ * Judul klausul per kelompok, urut seperti CLAUSES di dokumen. Kelompok dipisah baris kosong
+ * supaya kelompok tanpa judul tidak terbaca sebagai bagian kelompok di atasnya.
  */
 export function clausesText(
   slip: Pick<PlacingSlip, "cob" | "usesSections">,

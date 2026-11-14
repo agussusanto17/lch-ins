@@ -118,9 +118,8 @@ export function DeductibleInput({
 }
 
 /**
- * Deductible satu cover, paling banyak MAX_DEDUCTIBLES isian (permintaan 4
- * November 2026). Isian pertama selalu tampil dan memakai `id`, supaya label
- * cover tetap menunjuk ke sana. Isian kosong dibuang saat slip disimpan.
+ * Deductible satu cover, paling banyak MAX_DEDUCTIBLES isian (4 November 2026).
+ * Isian pertama selalu tampil dan memakai `id` untuk label cover; isian kosong dibuang saat simpan.
  */
 export function DeductibleList({
   id,
@@ -186,11 +185,8 @@ export function DeductibleList({
 }
 
 /**
- * Kotak "Deductible per cover" satu unit: satu baris per cover dengan isian
- * deductible di kanan. Slip Motor Vehicle punya tombol Tambah cover di kiri
- * untuk baris Personal Accident dan Third Party Liability (permintaan 4
- * November 2026). Dengan `shared`, perubahan berlaku untuk cover yang sama di
- * semua lokasi, kendaraan, atau objek.
+ * Deductible per cover satu unit; Motor Vehicle bisa menambah baris PA dan TPL (4 November 2026).
+ * Dengan `shared`, perubahan berlaku untuk cover yang sama di semua unit.
  */
 export function DeductiblePerCover({
   slip,
@@ -327,10 +323,8 @@ function unitHeading(slip: PlacingSlip, unit: DeductibleUnit) {
 }
 
 /**
- * Deductible slip. Slip dengan beberapa lokasi, kendaraan, atau objek bisa
- * mengisi deductible per unit (Agus, 13 November 2026). Selama deductible
- * semua unit sama, form cukup menampilkan satu daftar yang berlaku untuk
- * semua unit; saklar "berbeda per lokasi" membuka satu daftar per unit.
+ * Deductible slip, bisa diisi per lokasi, kendaraan, atau objek (Agus, 13 November 2026).
+ * Selama semua unit sama cukup satu daftar; saklar "berbeda per lokasi" membuka daftar per unit.
  */
 export function SlipDeductibles({
   slip,

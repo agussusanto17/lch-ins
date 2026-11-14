@@ -77,12 +77,8 @@ import type { PolicyFormOptions } from "@/lib/server/policies"
 import { store } from "@/lib/store"
 
 /**
- * Renewal dan endorsement diproses di Placement (Agus, 13 November 2026):
- * slip dengan Existing Policy No. tercatat sebagai Renewal saat Closing
- * Instruction terbit, dan endorsement/cancellation slip dibuat dari slip yang
- * sudah Closed, lalu masuk Policy Database otomatis. Aksi pintas Buat renewal
- * dan Buat endorsement di menu baris disembunyikan, belum dihapus, kalau LCH
- * memintanya lagi. Polis di luar sistem tetap lewat Tambah Polis.
+ * Renewal dan endorsement diproses di Placement (Agus, 13 November 2026); aksi pintasnya di menu
+ * baris disembunyikan, belum dihapus, kalau LCH memintanya lagi. Polis luar sistem: Tambah Polis.
  */
 const SHOW_RENEWAL_ENDORSEMENT_ACTIONS = false
 

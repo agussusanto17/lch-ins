@@ -1,10 +1,6 @@
 /**
- * Pilihan dropdown form yang diambil dari master data.
- *
- * Datanya dimuat di server (`lib/server/form-options.ts`) lalu dibagikan ke
- * form lewat `FormOptionsProvider`, supaya isian yang ditambah atau
- * dinonaktifkan di Master Data langsung berlaku tanpa ubah kode. File ini
- * hanya berisi tipe dan helper, jadi aman dipakai di client maupun server.
+ * Pilihan dropdown dari master data, dimuat di `lib/server/form-options.ts` dan dibagikan lewat
+ * `FormOptionsProvider`. Hanya tipe dan helper, aman di client maupun server.
  */
 import type { ClaimStatus, ClientType, PolicyType } from "./data/types"
 
@@ -85,9 +81,8 @@ export interface LookupOption {
 }
 
 /**
- * Lookup yang nilainya dipakai logika sistem (klaim terbuka, polis induk, form
- * KYC per tipe klien). Nama dan urutannya diatur di Master Data, tetapi nilai
- * baru ditambah lewat developer, sama seperti COB.
+ * Lookup yang nilainya dipakai logika sistem (klaim terbuka, polis induk, KYC per tipe klien).
+ * Nama dan urutan diatur di Master Data, tapi nilai baru ditambah developer, seperti COB.
  */
 export const FIXED_LOOKUP_TYPES: readonly string[] = [
   "claim_status",
@@ -118,10 +113,8 @@ export const CLIENT_TYPE_CODES: Record<ClientType, string> = {
 }
 
 /**
- * Pilihan daftar tetap: nilai sistem yang baris master-nya aktif, berlabel
- * nama dari Master Data dan berurutan seperti di sana. Nilai tersimpan yang
- * sudah nonaktif tetap ikut supaya tidak hilang saat diedit. Tanpa data
- * master (misalnya di test), semua nilai sistem dengan namanya sendiri.
+ * Nilai sistem yang aktif di master, berlabel dan berurutan seperti Master Data. Nilai tersimpan
+ * yang nonaktif tetap ikut; tanpa data master (test), semua nilai sistem dengan namanya sendiri.
  */
 export function fixedLookupItems<T extends string>(
   rows: readonly LookupOption[],
@@ -141,9 +134,8 @@ export function fixedLookupItems<T extends string>(
 }
 
 /**
- * Nilai sistem dari baris master yang tersimpan: dicocokkan lewat kode supaya
- * nama yang diganti di Master Data tidak mengubah logika, lalu lewat nama
- * untuk data lama tanpa kode yang dikenal.
+ * Dicocokkan lewat kode supaya nama yang diganti di Master Data tidak mengubah logika, lalu lewat
+ * nama untuk data lama tanpa kode yang dikenal.
  */
 export function systemValueFromRow<T extends string>(
   codes: Record<T, string>,
@@ -170,9 +162,8 @@ export function fixedLookupLabel<T extends string>(
 }
 
 /**
- * Pilihan daftar bebas (tahapan klaim, status klien): nama master yang aktif,
- * ditambah nilai tersimpan yang sudah nonaktif. Tanpa data master memakai
- * daftar bawaan.
+ * Pilihan daftar bebas (tahapan klaim, status klien): nama master aktif plus nilai tersimpan yang
+ * nonaktif. Tanpa data master memakai daftar bawaan.
  */
 export function dynamicLookupItems(
   rows: readonly LookupOption[],
@@ -219,9 +210,8 @@ export const EMPTY_FORM_OPTIONS: FormOptions = {
 }
 
 /**
- * Daftar pilihan ditambah nilai yang sedang tersimpan bila nilai itu sudah
- * tidak ada di master (dinonaktifkan atau data lama). Tanpa ini, membuka
- * data lama untuk diedit akan mengosongkan isiannya.
+ * Pilihan plus nilai tersimpan yang sudah tidak ada di master, supaya membuka data lama untuk
+ * diedit tidak mengosongkan isiannya.
  */
 export function withCurrent(values: string[], current?: string | null) {
   if (!current || values.includes(current)) return values
@@ -247,9 +237,8 @@ export function coverAbbreviation(
 }
 
 /**
- * Pilihan deductible untuk type of cover slip (slip Property bisa punya dua):
- * yang khusus type of cover itu lebih dulu, lalu yang berlaku untuk semua type
- * of cover di COB-nya.
+ * Pilihan deductible untuk type of cover slip (Property bisa dua): yang khusus type of cover dulu,
+ * lalu yang berlaku untuk semua cover di COB-nya.
  */
 export function deductibleChoicesFor(
   options: FormOptions,

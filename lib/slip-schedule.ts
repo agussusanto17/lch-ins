@@ -8,11 +8,8 @@ import { isCascoLine, isMultiVehicle } from "./slip-vehicles"
 export const AS_ATTACHED = "As Attached"
 
 /**
- * Slip berisi banyak lokasi atau kendaraan: badan dokumen cukup menulis "As
- * Attached", rinciannya dicetak di tabel lampiran setelah tanda tangan,
- * seperti CI LCH Truckindo dan SBI Fleet (Agus, 9 November 2026). PA grup
- * sudah memakai lampiran DAFTAR PESERTA. COB lain dengan beberapa objek tetap
- * dicetak di badan dokumen, karena isinya biasanya daftar limit.
+ * Banyak lokasi atau kendaraan dicetak "As Attached", rinciannya di tabel lampiran (Agus,
+ * 9 November 2026). COB lain tetap di badan dokumen karena isinya biasanya daftar limit.
  */
 export function printsUnitsAsAttached(
   slip: Pick<PlacingSlip, "cob" | "locations" | "interestItems">
@@ -104,9 +101,8 @@ const sumLimit = (lines: RateLine[]) =>
 const isPassenger = (l: RateLine) => /passenger|penumpang/i.test(l.label)
 
 /**
- * Tabel DAFTAR UNIT KENDARAAN: satu baris per kendaraan dengan cover utama,
- * perluasan, TPL, PA, dan total premi kendaraan itu. Kolom perluasan hanya
- * yang dipakai salah satu kendaraan, sesuai urutan pertama kali muncul.
+ * Tabel DAFTAR UNIT KENDARAAN, satu baris per kendaraan. Kolom perluasan hanya yang dipakai
+ * salah satu kendaraan, urut kemunculan pertama.
  */
 export function vehicleSchedule(
   slip: Pick<PlacingSlip, "interestItems" | "rateLines" | "tplLines" | "paLines">

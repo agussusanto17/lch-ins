@@ -349,7 +349,6 @@ export function ClaimDetailSheet({
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Ringkasan */}
                 <TabsContent value="overview" className="flex flex-col gap-6 pt-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge
@@ -664,7 +663,6 @@ export function ClaimDetailSheet({
                     }}
                   />
 
-                  {/* Add Document Form */}
                   {canManage && (
                     <form
                       onSubmit={handleAddDocument}
@@ -709,7 +707,6 @@ export function ClaimDetailSheet({
 
                 {/* Tindak lanjut klaim (PRD A-18) */}
                 <TabsContent value="followups" className="flex flex-col gap-5 pt-1">
-                  {/* Add Follow-up Form */}
                   {canManage && (
                     <form
                       onSubmit={handleAddFollowup}
@@ -774,9 +771,8 @@ export function ClaimDetailSheet({
                       </p>
                     </div>
                   ) : (
-                    // Timeline dengan garis vertikal di kiri, terbaru di atas
-                    // (Agus, 13 November 2026). Polanya sama dengan Timeline di
-                    // tab Ringkasan.
+                    // Timeline garis vertikal di kiri, terbaru di atas (Agus, 13 November 2026).
+                    // Polanya sama dengan Timeline di tab Ringkasan.
                     <ol aria-label="Riwayat tindak lanjut" className="flex flex-col">
                       {followups.map((item, i) => {
                         const isDeleting = deletingFollowupId === item.id

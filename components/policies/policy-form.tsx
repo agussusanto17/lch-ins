@@ -277,9 +277,8 @@ export function PolicyForm({
         (!p.cancelled || p.id === policy?.parentPolicyId)
     )
     .map((p) => ({ label: `${p.policyNo} — ${p.insuredName}`, value: p.id }))
-  // Slip yang sudah menjadi polis tidak muncul lagi; slip PAR + EQVET muncul
-  // sampai kedua bagiannya punya polis. Polis lama tanpa bagian memakai seluruh
-  // slip. Hasil kosong berarti slip habis; [null] berarti slip utuh tersedia.
+  // Slip yang sudah jadi polis tidak muncul lagi; slip PAR + EQVET muncul sampai kedua bagiannya
+  // berpolis (polis lama tanpa bagian = seluruh slip). Kosong berarti habis; [null] berarti utuh.
   function freeSlipParts(slip: PlacingSlip): (SlipPart | null)[] {
     // Slip open cover menerbitkan satu polis per deklarasi (Harry, 6 November 2026).
     if (usesOpenCover(slip)) return [null]
@@ -331,9 +330,8 @@ export function PolicyForm({
           effectiveDate: draft.inceptionDate,
         })
       : null
-  // Polis dari placing slip: data penempatan mengikuti slip dan dikunci.
-  // Polis baru bisa dilepas dari slip untuk diisi manual; perubahan sesudah
-  // polis terbit lewat endorsement. Periode slip yang TBA tetap diisi di sini.
+  // Polis dari placing slip: data penempatan ikut slip dan dikunci; periode slip TBA diisi di sini.
+  // Polis baru bisa dilepas dari slip untuk diisi manual; setelah terbit, ubah lewat endorsement.
   const linkedSlip = draft.placingSlipId
     ? (slips.find((s) => s.id === draft.placingSlipId) ?? null)
     : null
@@ -666,9 +664,8 @@ export function PolicyForm({
               rows={3}
               value={draft.remarks ?? ""}
               onChange={(v) => set({ remarks: v })}
-              // Kalimat contoh mengikuti dokumen endorsement dan pembatalan asuransi
-              // yang dikirim Harry (10 November 2026). Slip dicetak dalam bahasa
-              // Inggris (Harry, 12 November 2026), jadi contohnya juga.
+              // Kalimat contoh mengikuti dokumen endorsement/pembatalan dari Harry (10 November 2026),
+              // dalam bahasa Inggris seperti cetakan slip (Harry, 12 November 2026).
               placeholder={
                 draft.type === "Endorsement"
                   ? "Example: effective from inception, the sum insured is amended from IDR 223,500,000 to IDR 200,000,000 and the TPL rate from 0.75% to 1.125%."

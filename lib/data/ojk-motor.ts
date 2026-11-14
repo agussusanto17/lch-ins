@@ -377,9 +377,8 @@ export function findMotorExtensionBounds(
     }
   }
 
-  // Kecelakaan diri hanya kalau labelnya menyebut PA. "Theft by Driver"
-  // (penggelapan oleh pengemudi) tidak punya tarif OJK, jadi tidak boleh
-  // terbaca sebagai PA Pengemudi.
+  // Kecelakaan diri hanya kalau labelnya menyebut PA; "Theft by Driver" tidak punya
+  // tarif OJK dan tidak boleh terbaca sebagai PA Pengemudi.
   if (/\b(pa|personal accident|kecelakaan diri)\b/.test(hay)) {
     return findMotorPaBounds(extensionLabel)
   }
@@ -388,9 +387,8 @@ export function findMotorExtensionBounds(
 }
 
 /**
- * Batas OJK kecelakaan diri pengemudi dan penumpang (Lampiran IV.B). Baris di
- * bagian PA slip cukup berlabel "Driver" atau "Passenger", jadi fungsi ini
- * dipakai untuk bagian itu, bukan untuk baris rate utama.
+ * Batas OJK kecelakaan diri pengemudi dan penumpang (Lampiran IV.B), untuk bagian PA slip
+ * yang barisnya cukup berlabel "Driver" atau "Passenger", bukan baris rate utama.
  */
 export function findMotorPaBounds(
   label: string

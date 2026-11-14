@@ -1,5 +1,5 @@
 /**
- * End-to-End Integration Test for Master Data Module
+ * End-to-end test for the Master Data module.
  * Run with: node -r ./scripts/mock-server-only.cjs --import tsx --env-file=.env scripts/test-master-data-e2e.ts
  */
 

@@ -16,10 +16,8 @@ import { dateShort } from "@/lib/format"
 import type { ClaimPolicyInfo } from "@/lib/server/claims"
 
 /**
- * Info polis untuk klaim (meeting LCH, 10 November 2026): status premi,
- * deductible dari placing slip asal polis, dan berkas polis dari Policy
- * Database. Dimuat per polis karena datanya hanya perlu saat polis dipilih.
- * Endorsement dan pembatalan ikut polis induknya (13 November 2026).
+ * Status premi, deductible slip asal, dan berkas polis untuk klaim (meeting LCH, 10 November 2026).
+ * Dimuat per polis saat dipilih; endorsement dan pembatalan ikut polis induknya (13 November 2026).
  */
 export function useClaimPolicyInfo(policyId: string | null | undefined) {
   const [loaded, setLoaded] = React.useState<{

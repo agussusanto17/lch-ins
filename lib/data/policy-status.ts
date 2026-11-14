@@ -5,10 +5,8 @@ import type { PolicyStatus } from "./types"
 export const EXPIRING_WINDOW_DAYS = 60
 
 /**
- * Status polis, dihitung dan tidak disimpan. PRD A-17 menghitungnya dari
- * tanggal berakhir. Polis yang sudah punya record Cancellation berstatus
- * Cancelled apa pun tanggal berakhirnya, begitu juga endorsement dan
- * pembatalannya.
+ * Status polis dihitung dari tanggal berakhir (PRD A-17), tidak disimpan. Polis dengan record
+ * Cancellation, beserta endorsement dan pembatalannya, selalu berstatus Cancelled.
  */
 export function policyStatus(
   policy: { expiryDate: string; cancelled?: boolean },
@@ -33,17 +31,8 @@ const isChange = (p: PolicyLink) =>
   p.type === "Endorsement" || p.type === "Cancellation"
 
 /**
- * Polis yang sudah dibatalkan, dipetakan ke no. record Cancellation-nya.
- * Isinya polis asal setiap record Cancellation beserta semua endorsement dan
- * pembatalannya.
- *
- * Polis asal dicari seperti pemilik daftar peserta (`rosterPolicy`): naik ke
- * polis induk selama polisnya endorsement atau pembatalan. Pembatalan dari
- * Policy Database boleh menunjuk endorsement sebagai induk, jadi induk
- * langsungnya belum tentu polis yang dibatalkan.
- *
- * `links` minimal memuat semua record Endorsement dan Cancellation. Induk yang
- * tidak ada di `links` dianggap polis asal.
+ * Polis asal tiap Cancellation dan endorsementnya dipetakan ke no. Cancellation; induk pembatalan
+ * bisa endorsement, jadi dicari naik. `links` wajib memuat semua Endorsement dan Cancellation.
  */
 export function cancelledPolicies(links: readonly PolicyLink[]): Map<string, string> {
   const byId = new Map(links.map((p) => [p.id, p]))

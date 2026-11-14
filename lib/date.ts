@@ -1,8 +1,6 @@
 /**
- * Utilitas tanggal. Semua tanggal bisnis disimpan sebagai string ISO
- * "YYYY-MM-DD" dan "hari ini" dihitung di zona WIB (PRD bagian 8), bukan zona
- * server, supaya status polis dan jatuh tempo tidak bergeser saat server
- * berjalan di UTC.
+ * Tanggal bisnis disimpan sebagai ISO "YYYY-MM-DD" dan "hari ini" dihitung di WIB (PRD bagian 8),
+ * supaya status polis dan jatuh tempo tidak bergeser saat server berjalan di UTC.
  */
 
 export const APP_TIME_ZONE = "Asia/Jakarta"
@@ -29,7 +27,6 @@ export function daysBetween(from: string, to: string) {
   return dayNumber(to) - dayNumber(from)
 }
 
-/** Tambah atau kurangi hari dari tanggal ISO. */
 export function addDays(iso: string, days: number) {
   const date = new Date((dayNumber(iso) + days) * 86_400_000)
   return date.toISOString().slice(0, 10)

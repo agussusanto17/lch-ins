@@ -24,11 +24,7 @@ export interface NavItem {
   icon: LucideIcon
   /** Modul yang belum dikerjakan, ditandai di sidebar. */
   soon?: boolean
-  /**
-   * Submenu yang muncul di bawah menu ini saat dibuka. Anaknya memakai
-   * ikonnya sendiri atau tidak sama sekali — di sidebar anak ditampilkan
-   * sebagai teks bertakik, mengikuti kebiasaan submenu pada umumnya.
-   */
+  /** Submenu saat menu dibuka; di sidebar anak tampil sebagai teks bertakik, ikonnya opsional. */
   items?: Array<Pick<NavItem, "title" | "href">>
 }
 
@@ -103,11 +99,8 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Master Data",
         href: "/master-data",
         icon: Database,
-        // Bagian-bagian ini dulunya tab di dalam halaman. Dipindah ke submenu
-        // supaya masing-masing punya alamat sendiri: bisa ditautkan,
-        // di-bookmark, dan dibuka tanpa memuat data bagian lain. Wording Form
-        // dipisah dari Rekening & Mata Uang karena tidak berhubungan; letaknya
-        // dekat COB karena sama-sama acuan slip, begitu juga Deductible.
+        // Dulu tab di dalam halaman; jadi submenu supaya tiap bagian punya alamat sendiri.
+        // Wording Form dan Deductible diletakkan dekat COB karena sama-sama acuan slip.
         items: [
           { title: "COB & Cover Type", href: "/master-data/cob" },
           { title: "Wording Form", href: "/master-data/wording-forms" },

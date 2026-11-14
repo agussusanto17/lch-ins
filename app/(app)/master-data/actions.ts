@@ -171,10 +171,8 @@ const lookupValueSchema = z.object({
 
 // COB actions
 
-// Dari aplikasi, COB hanya bisa diaktifkan atau dinonaktifkan. Tambah, ubah,
-// dan hapus COB dikerjakan developer lewat migrasi, sesuai kesepakatan dengan
-// LCH pada 31 Oktober 2026: COB baru perlu penyesuaian form placing slip,
-// satuan rate, tarif, dan dokumen cetak sebelum bisa dipakai.
+// Dari aplikasi COB hanya bisa diaktifkan atau dinonaktifkan; tambah, ubah, dan hapus lewat
+// migrasi karena COB baru perlu penyesuaian form, rate, tarif, dan dokumen (LCH, 31 Oktober 2026).
 
 export async function toggleCobStatusAction(
   id: string,

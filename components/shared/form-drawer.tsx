@@ -16,13 +16,8 @@ import {
 import { cn } from "@/lib/utils"
 
 /**
- * Drawer samping untuk semua form entri data. Menggantikan modal dialog —
- * konteks tabel di belakang tetap terlihat dan form panjang tidak perlu
- * scroll di dalam kotak sempit.
- *
- * Isinya dibungkus `<form>` asli: Enter mengirim form, tombol Simpan
- * dinonaktifkan selama proses, dan `onSubmit` mengembalikan `false` bila
- * validasi gagal supaya drawer tetap terbuka.
+ * Drawer samping untuk semua form entri, dibungkus `<form>` asli supaya Enter mengirim form.
+ * `onSubmit` mengembalikan `false` bila validasi gagal supaya drawer tetap terbuka.
  */
 export function FormDrawer({
   trigger,

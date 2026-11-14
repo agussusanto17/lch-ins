@@ -6,10 +6,7 @@ import type { InsuredOption } from "@/lib/server/clients"
 
 export { panelIssues } from "@/components/underwriting/placing-slip-form"
 
-/**
- * QuotationDraftForm delegating to PlacingSlipForm in quotation mode.
- * Displays full placing slip input menus along with subjectivity and security panel.
- */
+/** PlacingSlipForm in quotation mode, with subjectivity and security panels. */
 export function QuotationDraftForm({
   id,
   initial,

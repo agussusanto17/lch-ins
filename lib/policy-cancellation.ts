@@ -1,8 +1,6 @@
 /**
- * Usulan pengembalian premi pembatalan polis secara prorata harian, seperti
- * dokumen pembatalan asuransi yang dikirim Harry (10 November 2026, polis
- * 45020126008633): premi × sisa hari ÷ hari periode, misalnya 341/365.
- * Biaya pembatalan dari asuransi tidak termasuk.
+ * Usulan pengembalian premi pembatalan secara prorata harian: premi × sisa hari ÷ hari periode
+ * (Harry, 10 November 2026). Biaya pembatalan dari asuransi tidak termasuk.
  */
 
 import { daysBetween } from "@/lib/date"
@@ -28,11 +26,7 @@ export interface CancellationSuggestion {
 
 const cents = (n: number) => Math.round(n * 100) / 100
 
-/**
- * `endorsements` adalah endorsement yang sudah tercatat pada polis yang
- * dibatalkan; premi dan sum insured-nya ikut dihitung, karena pembatalan
- * berlaku atas pertanggungan yang berjalan saat itu.
- */
+/** Endorsement polis ikut dihitung, karena pembatalan berlaku atas pertanggungan yang berjalan. */
 export function cancellationSuggestion({
   policy,
   endorsements = [],

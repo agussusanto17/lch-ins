@@ -152,8 +152,7 @@ function resolveCobId(
     const found = cache.cobsByName.get(key) ?? cache.cobsByCode.get(key)
     if (found) return found
   }
-  // Dulu jatuh ke COB pertama; SPPA dengan COB yang tidak dikenal lebih baik
-  // ditolak daripada tersimpan dengan COB yang salah.
+  // COB yang tidak dikenal ditolak supaya SPPA tidak tersimpan dengan COB yang salah.
   throw new Error(`Class of business "${cobStr}" tidak ada di master data.`)
 }
 
@@ -268,9 +267,7 @@ function mapPrismaSppaToRecord(raw: PrismaSppaWithRelations): SppaRecord {
   }
 }
 
-/**
- * Auto-seed initial 3 mock SPPA records into PostgreSQL if table is empty.
- */
+/** Seeds 3 mock SPPA records when the table is empty. */
 export async function seedInitialSppaIfEmpty(): Promise<number> {
   if (!shouldSeedMockData()) return 0
   if (hasCheckedSeed) return 0
@@ -372,9 +369,7 @@ export async function listSppa(params: ListSppaParams = {}): Promise<SppaRecord[
   return rows.map(mapPrismaSppaToRecord)
 }
 
-/**
- * Retrieve single SPPA record by database UUID or legacy ID.
- */
+/** Looks up by database UUID or legacy ID. */
 export async function getSppaById(id: string): Promise<SppaRecord | null> {
   await seedInitialSppaIfEmpty()
 
@@ -526,9 +521,7 @@ export async function updateSppa(
   return mapPrismaSppaToRecord(updated)
 }
 
-/**
- * Update SPPA operational status (Draft <-> Submitted).
- */
+/** Toggles between Draft and Submitted. */
 export async function toggleSppaStatus(
   id: string,
   status: SppaStatus,
@@ -561,10 +554,7 @@ export async function toggleSppaStatus(
   }
 }
 
-/**
- * Delete SPPA record from PostgreSQL.
- * Rejects deletion if SPPA is referenced in any Placing Slip.
- */
+/** Rejects deletion if the SPPA is referenced by any Placing Slip. */
 export async function deleteSppa(id: string, userId?: string): Promise<void> {
   const existing = await getSppaById(id)
   if (!existing) {

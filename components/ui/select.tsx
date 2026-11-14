@@ -28,9 +28,7 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
   )
 }
 
-// Ukuran sm setinggi input (36px) supaya filter di toolbar sejajar dengan
-// pencarian dan tombol. Kontrol ringkas seperti ukuran halaman di pagination
-// menimpa tingginya sendiri.
+// Ukuran sm setinggi input (36px) supaya filter toolbar sejajar dengan pencarian dan tombol.
 function SelectTrigger({
   className,
   size = "default",

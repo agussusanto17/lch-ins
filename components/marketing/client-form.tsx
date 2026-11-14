@@ -142,9 +142,8 @@ const schema = z
         message: "Nama PIC wajib diisi untuk klien korporasi",
       })
     }
-    // KTP PIC boleh kosong dan hanya diperiksa untuk korporasi. Klien lama
-    // tanpa KTP PIC datang sebagai undefined, dan untuk perorangan isiannya
-    // tersembunyi, jadi error di situ membuat simpan gagal tanpa pesan.
+    // KTP PIC opsional dan hanya diperiksa untuk korporasi: klien lama mengirim undefined dan di
+    // perorangan isiannya tersembunyi, jadi error di situ menggagalkan simpan tanpa pesan.
     if (
       d.clientType === "Korporasi" &&
       !nik.safeParse(d.contactPersonIdNumber ?? "").success
@@ -232,9 +231,8 @@ export function ClientForm({
     setErrors(result.errors)
     if (!result.ok) return false
 
-    // Isi file dikirim dulu, satu per satu. Id hasilnya langsung dicatat di
-    // draft, jadi bila simpan gagal lalu diulang, file yang sudah terkirim
-    // tidak diunggah lagi.
+    // File dikirim dulu satu per satu dan id-nya langsung dicatat di draft,
+    // jadi bila simpan diulang, file yang sudah terkirim tidak diunggah lagi.
     const fileIds: Record<string, string> = {}
     for (const d of draft.documents) {
       const file = pendingFiles[d.id]

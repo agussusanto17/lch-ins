@@ -28,9 +28,8 @@ function literal(part: string) {
 }
 
 /**
- * Angka diformat mengikuti format sel: jumlah desimal, pemisah ribuan, persen,
- * dan teks di depan atau belakang angka. Format General dicetak apa adanya,
- * jadi tahun pembuatan tetap 2010, bukan 2.010.
+ * Angka mengikuti format sel (desimal, ribuan, persen, teks pengapit). Format General dicetak
+ * apa adanya, jadi tahun pembuatan tetap 2010, bukan 2.010.
  */
 export function formatNumber(value: number, numFmt?: string) {
   const section = (numFmt ?? "").split(";")[0]

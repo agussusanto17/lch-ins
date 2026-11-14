@@ -74,9 +74,7 @@ export interface ListClientsParams {
   status?: string
 }
 
-/**
- * Runtime guard to prevent redundant `prisma.client.count()` queries on every client listing.
- */
+/** Skips the `prisma.client.count()` seed check on every later client listing. */
 let hasCheckedSeed = false
 
 /**
@@ -166,14 +164,11 @@ function resolveCobId(
     const id = cache.cobsByName.get(key) ?? cache.cobsByCode.get(key)
     if (id) return id
   }
-  // COB klien boleh kosong. Dulu nama yang tidak cocok jatuh ke COB pertama
-  // atau dicocokkan sebagian; lebih aman dibiarkan kosong.
+  // COB klien boleh kosong; nama yang tidak cocok dibiarkan kosong, bukan ditebak.
   return null
 }
 
-/**
- * Format Date to ISO date-only string (YYYY-MM-DD).
- */
+/** ISO date-only string (YYYY-MM-DD). */
 function toDateOnly(d: Date | null | undefined): string | undefined {
   if (!d) return undefined
   return d.toISOString().split("T")[0]
@@ -260,9 +255,7 @@ function mapPrismaClientToRecord(
   }
 }
 
-/**
- * Auto-seed 12 default mock clients to PostgreSQL if the clients table is empty.
- */
+/** Seeds 12 default mock clients when the table is empty. */
 export async function seedInitialClientsIfEmpty(): Promise<number> {
   if (!shouldSeedMockData()) return 0
   if (hasCheckedSeed) return 0
@@ -584,10 +577,8 @@ export async function getClientById(
 }
 
 /**
- * Isi klien untuk audit trail. Alamat dan berkas KYC ada di tabel sendiri,
- * jadi disertakan sebagai teks supaya perubahannya ikut tercatat (SIT-012).
- * Diurutkan supaya alamat yang disimpan ulang dengan urutan berbeda tidak
- * terbaca sebagai perubahan.
+ * Isi klien untuk audit trail; alamat dan berkas KYC disertakan sebagai teks supaya ikut tercatat
+ * (SIT-012). Diurutkan supaya alamat yang disimpan ulang dengan urutan lain tidak terbaca berubah.
  */
 async function clientAuditSnapshot(
   tx: Prisma.TransactionClient,
@@ -873,11 +864,8 @@ export async function updateClient(
       }
     }
 
-    // Berkas KYC disamakan dengan isi form: baris yang dihapus ikut dihapus
-    // beserta isinya, file pengganti menggantikan isi lama, dan baris baru
-    // wajib membawa file yang sudah diunggah. Baris baru dari form memakai id
-    // sementara (bukan UUID), jadi baris lama dikenali dari daftar milik klien
-    // ini, bukan dengan query per id.
+    // Berkas KYC mengikuti form: baris hilang dihapus beserta isinya, file pengganti menimpa isi lama,
+    // baris baru wajib membawa file dan ber-id sementara, jadi baris lama dikenali dari daftar klien.
     if (userId && input.documents) {
       const current = await tx.clientDocument.findMany({
         where: { clientId: existing.dbId },
@@ -957,9 +945,7 @@ export async function updateClient(
   return getClientById(existing.dbId) as Promise<ClientRecord>
 }
 
-/**
- * Toggle client operational status (Active, Inactive, Prospect).
- */
+/** Toggles between Active, Inactive, and Prospect. */
 export async function toggleClientStatus(
   id: string,
   status: ClientStatus,
@@ -993,10 +979,7 @@ export async function toggleClientStatus(
   }
 }
 
-/**
- * Delete client record along with addresses and KYC documents.
- * Rejects deletion if client is referenced in SPPA, placing slips, or policies.
- */
+/** Deletes addresses and KYC documents too; rejects clients used in SPPA, slips, or policies. */
 export async function deleteClient(id: string, userId?: string): Promise<void> {
   const existing = await getClientById(id)
   if (!existing) {

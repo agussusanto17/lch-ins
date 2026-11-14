@@ -8,16 +8,8 @@ import { nextCookies } from "better-auth/next-js"
 import { prisma } from "./prisma"
 
 /**
- * Konfigurasi Better Auth untuk LCH.
- *
- * Sesi disimpan di tabel `sessions`, bukan di dalam cookie. Cookie hanya
- * membawa token sesi. Pilihan ini diambil supaya sesi bisa dicabut dari sisi
- * server: menonaktifkan pengguna langsung berlaku, tidak menunggu token
- * kedaluwarsa, dan id sesinya bisa ikut dicatat di audit trail.
- *
- * Login hanya lewat email dan kata sandi. Tidak ada pendaftaran mandiri, tidak
- * ada OAuth. Akun dibuat oleh Admin lewat modul Pengguna, karena ini sistem
- * internal untuk sekitar sepuluh orang.
+ * Sesi disimpan di tabel `sessions` (cookie hanya membawa token) supaya bisa dicabut dari server.
+ * Login hanya email dan kata sandi; akun dibuat Admin lewat modul Pengguna, tanpa sign-up/OAuth.
  */
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
@@ -31,17 +23,15 @@ export const auth = betterAuth({
   },
 
   session: {
-    // Sesi berlaku tujuh hari dan diperpanjang kalau dipakai, supaya pengguna
-    // tidak logout di tengah kerja. Angka ini dipilih sendiri dan bisa diubah
-    // kalau LCH punya kebijakan lain.
+    // Diperpanjang kalau dipakai supaya pengguna tidak logout di tengah kerja.
+    // Tujuh hari dipilih sendiri, bukan kebijakan LCH.
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
   },
 
   user: {
-    // Kolom ini dipakai logika aplikasi, bukan oleh Better Auth.
-    // `input: false` menutup kemungkinan diisi dari request klien, supaya pengguna
-    // tidak bisa mengangkat rolenya sendiri.
+    // `input: false` mencegah kolom diisi dari request klien, supaya pengguna tidak bisa
+    // mengangkat rolenya sendiri.
     additionalFields: {
       roles: {
         type: "string[]",
@@ -69,11 +59,8 @@ export const auth = betterAuth({
   databaseHooks: {
     session: {
       create: {
-        // Akun nonaktif ditolak saat login. Better Auth tidak mengenal kolom
-        // isActive, jadi tanpa hook ini sesi tetap dibuat, aplikasi menolaknya,
-        // dan browser bolak-balik antara /login dan halaman tujuan (SIT-003).
-        // Hook ini jalan setelah kata sandi cocok, jadi pesannya tidak membuka
-        // keberadaan akun ke orang yang tidak tahu kata sandinya.
+        // Akun nonaktif ditolak di sini; tanpa hook, browser bolak-balik ke /login (SIT-003).
+        // Jalan setelah kata sandi cocok, jadi pesannya tidak membuka keberadaan akun.
         before: async (session) => {
           const user = await prisma.user.findUnique({
             where: { id: session.userId },
@@ -92,9 +79,7 @@ export const auth = betterAuth({
 
   advanced: {
     database: {
-      // Id dibuat Postgres lewat gen_random_uuid(), sama seperti tabel lain di
-      // skema ini. Kalau Better Auth yang membuat id, nilainya bukan UUID dan
-      // kolom bertipe uuid akan menolak.
+      // Id dibuat Postgres (gen_random_uuid()); id Better Auth bukan UUID dan ditolak kolom uuid.
       generateId: false,
     },
   },

@@ -1,36 +1,26 @@
-// Schema Sistem Back Office PT. LCH Insurance Brokers.
-//
-// Diturunkan dari ERD di Notion:
+// Schema back office PT. LCH Insurance Brokers, diturunkan dari ERD di Notion:
 // https://app.notion.com/p/3d84848a839381bbbf0deaab63eed08a
 //
-// Konvensi (lihat bagian Konvensi di ERD):
-// - Nama model PascalCase, nama tabel dan kolom tetap snake_case lewat @@map/@map.
-// - Primary key `uuid` di semua tabel, kecuali tabel referensi berkode
-//   (currencies, document_types, bi_scales) yang memakai kodenya sendiri.
-// - `money`  -> Decimal(18,2), dibaca sebagai Decimal.js. Jangan pernah diubah
-//   ke Number, karena nominal harus presisi sampai sen.
-// - `rate`   -> Decimal(12,6). Satuan per mil atau persen mengikuti COB.
-// - Kolom `*_id` yang menunjuk LookupValue adalah daftar pilihan pendek yang
-//   dikelola Admin di master data. Nama relasinya dipakai sebagai lookup_type.
-// - Status yang berubah lewat tombol aksi dikunci di kode, jadi ditulis sebagai
-//   enum, bukan teks bebas.
-// - Master data yang sudah dipakai cukup is_active = false. Dokumen bernomor
-//   tidak dihapus, statusnya Cancelled.
+// Konvensi:
+// - Model PascalCase, tabel dan kolom snake_case lewat @@map/@map.
+// - PK `uuid`, kecuali tabel referensi berkode (currencies, document_types, bi_scales).
+// - `money` -> Decimal(18,2). Jangan pernah diubah ke Number, nominal harus presisi sampai sen.
+// - `rate` -> Decimal(12,6), satuan per mil atau persen mengikuti COB.
+// - Kolom `*_id` ke LookupValue adalah pilihan dari master data; nama relasinya = lookup_type.
+// - Status yang berubah lewat tombol aksi ditulis sebagai enum, bukan teks bebas.
+// - Master data yang sudah dipakai cukup is_active = false; dokumen bernomor jadi Cancelled.
 
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
 }
 
-// Mulai Prisma 7, connection string tidak lagi ditulis di sini.
-// URL-nya ada di prisma.config.ts di root project.
+// Connection string ada di prisma.config.ts (Prisma 7).
 datasource db {
   provider = "postgresql"
 }
 
-// ---------------------------------------------------------------------------
 // Enum
-// ---------------------------------------------------------------------------
 
 /// Status placing slip. Berubah lewat tombol aksi, bukan dropdown.
 enum SlipStatus {
@@ -48,7 +38,6 @@ enum SlipKind {
   Cancellation
 }
 
-/// Status SPPA.
 enum SppaStatus {
   Draft
   Submitted
@@ -61,7 +50,6 @@ enum NoteStatus {
   Cancelled
 }
 
-/// Status jurnal.
 enum JournalStatus {
   Draft
   Posted
@@ -86,7 +74,6 @@ enum SlipItemKind {
   DeductibleSection2
 }
 
-/// Aksi yang dicatat di audit trail.
 enum AuditAction {
   Create
   Update
@@ -95,8 +82,8 @@ enum AuditAction {
   Cancel
 }
 
-/// Satuan tarif. Okupasi dan gempa properti per mil, banjir dan kendaraan
-/// bermotor persen. Karena itu setiap tabel tarif menyimpan satuannya.
+/// Okupasi dan gempa properti per mil, banjir dan kendaraan bermotor persen.
+/// Setiap tabel tarif menyimpan satuannya sendiri.
 enum RateUnit {
   PerMil
   Percent
@@ -108,9 +95,7 @@ enum CoverageType {
   TotalLossOnly
 }
 
-// ---------------------------------------------------------------------------
 // 1. Sistem dan pengguna
-// ---------------------------------------------------------------------------
 
 model User {
   id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -120,13 +105,11 @@ model User {
   emailVerified      Boolean  @default(true) @map("email_verified")
   /// Foto profil, dipakai Better Auth. Belum dipakai LCH.
   image              String?
-  /// lookup role primer (opsional / warisan untuk backward compatibility)
+  /// Role primer lama, disimpan untuk kompatibilitas. Role aktif ada di `roles`.
   roleId             String?  @map("role_id") @db.Uuid
-  /// Daftar role yang diberikan ke pengguna (multi-role)
   roles              String[] @default([]) @map("roles")
-  /// Jabatan pengguna (opsional)
   jobTitle           String?  @map("job_title")
-  /// Menandai apakah pengguna wajib mengganti password pada saat login pertama
+  /// Wajib ganti password saat login pertama.
   mustChangePassword Boolean  @default(false) @map("must_change_password")
   isActive           Boolean  @default(true) @map("is_active")
 
@@ -174,9 +157,8 @@ model Session {
   @@map("sessions")
 }
 
-/// Kredensial pengguna. Untuk LCH hanya ada satu baris per pengguna dengan
-/// provider "credential", dan `password` berisi hash-nya. Kolom token OAuth
-/// dibiarkan kosong karena login eksternal tidak dipakai.
+/// Satu baris per pengguna dengan provider "credential"; `password` berisi hash.
+/// Kolom token OAuth kosong karena login eksternal tidak dipakai.
 model Account {
   id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   accountId             String    @map("account_id")
@@ -271,18 +253,8 @@ model DocumentType {
   @@map("document_types")
 }
 
-/// Nomor urut terakhir per jenis dokumen per periode.
-///
-/// JANGAN menaikkan counter ini langsung. Pakai nextDocumentNumber() di
-/// server/services/number-generator.ts, dan panggil di transaksi yang sama
-/// dengan penyimpanan dokumen supaya nomor tidak bolong saat simpan gagal.
-///
-/// findUnique lalu update TIDAK aman, dua request bersamaan bisa dapat nomor
-/// yang sama. Service itu memakai satu statement INSERT ... ON CONFLICT DO
-/// UPDATE ... RETURNING, yang mengunci baris counter sampai transaksi selesai
-/// seperti SELECT ... FOR UPDATE, sekaligus aman saat dua request membuat baris
-/// periode baru bersamaan. SELECT FOR UPDATE tidak bisa mengunci baris yang
-/// belum ada. Unique constraint di kolom nomor dokumen tetap jadi pengaman.
+/// Nomor urut per jenis dokumen per periode. Jangan dinaikkan langsung, bisa dapat nomor dobel.
+/// Pakai nextDocumentNumber() di transaksi yang sama dengan simpan dokumen supaya tidak bolong.
 model NumberCounter {
   documentTypeCode String @map("document_type_code")
   /// Contoh 2026-08 untuk reset bulanan, 2026 untuk tahunan.
@@ -298,13 +270,10 @@ model NumberCounter {
   @@map("number_counters")
 }
 
-// ---------------------------------------------------------------------------
 // 2. Master data
-// ---------------------------------------------------------------------------
 
-/// Semua daftar pilihan pendek. Admin mengelolanya dari satu halaman dengan
-/// filter per lookup_type. Nilai yang dipakai logika sistem ditandai is_system:
-/// labelnya boleh diubah, kodenya tidak, dan barisnya tidak bisa dihapus.
+/// Semua daftar pilihan pendek, dikelola Admin per lookup_type.
+/// Baris is_system: label boleh diubah, kode tidak, dan tidak bisa dihapus.
 model LookupValue {
   id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Contoh: role, claim_status, payment_type.
@@ -320,8 +289,7 @@ model LookupValue {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relasi balik, satu per lookup_type. Sengaja tidak digambar di ERD supaya
-  // diagramnya tetap terbaca.
+  // Relasi balik per lookup_type, sengaja tidak digambar di ERD.
   usersWithRole         User[]              @relation("role")
   documentTypes         DocumentType[]      @relation("reset_period")
   cobRateMode           ClassOfBusiness[]   @relation("rate_mode")
@@ -399,26 +367,23 @@ model CoverType {
   abbreviation String?
   /// Urutan penggabungan singkatan bila slip mencakup lebih dari satu type of cover (A lebih dulu dari B).
   priority     String?
-  /// Label bawaan Detail tambahan slip saat type of cover ini dipilih,
-  /// misalnya Retroactive Date, Territorial Limit, Jurisdiction (Liability)
-  /// atau Voyage, Conveyance (Marine Cargo). Diatur LCH di Master Data.
+  /// Label bawaan Detail tambahan slip, misalnya Retroactive Date (Liability) atau
+  /// Voyage (Marine Cargo). Diatur LCH di Master Data.
   detailLabels String[] @default([]) @map("detail_labels")
   /// Slip type of cover ini memakai Section 1 (Material Damage) dan Section 2
   /// (Third Party Liability), misalnya CAR dan EAR. Diatur LCH di Master Data.
   usesSections Boolean  @default(false) @map("uses_sections")
-  /// Slip type of cover ini open cover: rate tanpa premi pasti, premi per
-  /// deklarasi di polis, misalnya 0311 MOP. Diatur LCH di Master Data.
+  /// Open cover: rate tanpa premi pasti, premi per deklarasi di polis (misalnya 0311 MOP).
+  /// Diatur LCH di Master Data.
   openCover    Boolean  @default(false) @map("open_cover")
-  /// Slip type of cover ini memakai tarif OJK: batas rate Property atau Motor
-  /// Vehicle dan batas biaya akuisisi (brokerage). Mati untuk Heavy Equipment
-  /// (Harry, 9 November 2026). Diatur LCH di Master Data.
+  /// Pakai tarif OJK: batas rate Property/Motor Vehicle dan batas biaya akuisisi (brokerage).
+  /// Mati untuk Heavy Equipment (Harry, 9 November 2026). Diatur LCH di Master Data.
   ojkTariff    Boolean  @default(true) @map("ojk_tariff")
   /// Label periode bawaan di dokumen slip, misalnya "Date of Tournament"
   /// (Hole in One). Kosong berarti "Period of Insurance".
   periodLabel  String?  @map("period_label")
-  /// Lama periode bawaan dalam hari: tanggal akhir slip otomatis = tanggal
-  /// mulai + sekian hari, misalnya 14 hari setelah ETD untuk single shipment
-  /// atau 0 (hari yang sama) untuk Hole in One. Kosong berarti tidak otomatis.
+  /// Tanggal akhir slip otomatis = tanggal mulai + sekian hari; kosong berarti tidak otomatis.
+  /// Contoh 14 hari setelah ETD untuk single shipment, 0 untuk Hole in One.
   periodDays   Int?     @map("period_days")
   /// Teks pengganti tanggal akhir di dokumen slip, misalnya "until final
   /// destination" untuk single shipment.
@@ -572,9 +537,8 @@ model TariffEqProperty {
   @@map("tariff_eq_property")
 }
 
-/// Tarif jaminan banjir: wilayah dikali zona. Satuannya persen.
-/// Baris tanpa angka, misalnya "Tarif Zona 1 ditambah faktor loading",
-/// mengisi note dan membiarkan rate_min serta rate_max kosong.
+/// Tarif jaminan banjir: wilayah dikali zona, dalam persen.
+/// Baris tanpa angka ("Tarif Zona 1 ditambah faktor loading") hanya mengisi note.
 model TariffFlood {
   id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Harta benda atau kendaraan bermotor.
@@ -591,10 +555,8 @@ model TariffFlood {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Tanpa unique constraint. Pembedanya berbeda antar lini: harta benda
-  // memakai zona tanpa jenis pertanggungan, kendaraan bermotor sebaliknya.
-  // Postgres menganggap NULL selalu berbeda, jadi constraint gabungan tidak
-  // akan menjaga apa pun. Seed menulis ulang seluruh tabel ini.
+  // Tanpa unique: kunci beda per lini dan Postgres menganggap NULL selalu berbeda.
+  // Seed menulis ulang seluruh tabel ini.
   @@index([line, region])
   @@map("tariff_flood")
 }
@@ -679,10 +641,8 @@ model BiScale {
   @@map("bi_scales")
 }
 
-/// Skala premi polis loss limit OJK: Lampiran I Tabel I.B (FLEXAS), sama
-/// dengan Tabel II.C (banjir) dan III.B (gempa). Loss limit sebagai persen
-/// nilai penuh menentukan persen premi full value. Salinan yang dipakai
-/// perhitungan ada di lib/data/loss-limit.ts; keduanya harus identik.
+/// Skala premi loss limit OJK (Tabel I.B = II.C = III.B): persen nilai -> persen premi.
+/// Salinan untuk perhitungan ada di lib/data/loss-limit.ts; keduanya harus identik.
 model LossLimitScale {
   valuesPct  Decimal @id @map("values_pct") @db.Decimal(5, 2)
   premiumPct Decimal @map("premium_pct") @db.Decimal(5, 2)
@@ -814,14 +774,11 @@ model Clause {
   coverTypeId String? @map("cover_type_id") @db.Uuid
   /// HTML dari rich text editor, disanitasi sebelum disimpan.
   wordingHtml String  @map("wording_html")
-  /// Kelompok produk asal klausul di pustaka wording LCH: PAR, EQVET, Cargo,
-  /// CIS, CIT, MB, MV, PA, PL, Fidelity. Kosong berarti dibuat langsung di
-  /// aplikasi. Dipakai membedakan 66 judul yang dipakai beberapa produk dengan
-  /// wording berbeda, dan jadi dasar pemetaan ke COB (CLAUSE_GROUP_COB di seed).
+  /// Kelompok produk di pustaka wording LCH (PAR, Cargo, MV, ...). Kosong: dibuat di aplikasi.
+  /// Membedakan judul sama beda wording, dan dasar pemetaan ke COB (CLAUSE_GROUP_COB di seed).
   sourceGroup String  @default("") @map("source_group")
-  /// Masuk paket klausul bawaan type of cover-nya, atau semua type of cover
-  /// COB-nya bila type of cover kosong. Satu tombol di placing slip memasang
-  /// semua klausul paket (analisa contoh slip LCH: 40 sampai 62 klausul).
+  /// Masuk paket klausul bawaan type of cover-nya, atau semua cover di COB bila cover kosong.
+  /// Satu tombol di placing slip memasang semua klausul paket.
   inPackage    Boolean @default(false) @map("in_package")
   /// Judul kelompok saat dipasang dari paket, misalnya "Extensions".
   packageGroup String? @map("package_group")
@@ -878,13 +835,10 @@ model ClaimDocumentType {
   @@map("claim_document_types")
 }
 
-// ---------------------------------------------------------------------------
 // 3. Marketing dan underwriting
-// ---------------------------------------------------------------------------
 
-/// Data klien mengikuti form KYC LCH. Klien perorangan mengisi tempat dan
-/// tanggal lahir serta nomor identitas, klien korporasi mengisi NPWP, nama PIC,
-/// dan nomor KTP PIC. Keduanya mengisi tujuan menutup asuransi.
+/// Form KYC LCH: perorangan mengisi tempat/tanggal lahir dan nomor identitas, korporasi
+/// mengisi NPWP, nama PIC, dan KTP PIC. Keduanya mengisi tujuan menutup asuransi.
 model Client {
   id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// lookup client_type: Perorangan atau Korporasi.
@@ -988,12 +942,8 @@ model ClientDocument {
   @@map("client_documents")
 }
 
-/// Metadata berkas yang diunggah pengguna. Baris pemakainya menunjuk ke sini
-/// lewat file_path `stored_files/<id>`.
-///
-/// Isi berkas disimpan di object storage (RustFS) bila env S3_* terisi, dan
-/// barisnya hanya membawa storage_key. Tanpa object storage (demo Vercel), isi
-/// berkas tetap disimpan di kolom data. Tepat satu dari keduanya terisi.
+/// Metadata berkas unggahan; pemakainya menunjuk lewat file_path `stored_files/<id>`.
+/// Isi di object storage (storage_key) bila S3_* terisi, selain itu di kolom data; tepat satu terisi.
 model StoredFile {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fileName    String   @map("file_name")
@@ -1074,11 +1024,8 @@ model Sppa {
   @@map("sppa")
 }
 
-/// Placing slip, sekaligus menyimpan nomor dan isi Quotation Slip, Cover Note,
-/// dan Closing Instruction yang terbit darinya.
-///
-/// Total premium, diskon, total payable, brokerage, dan net premium TIDAK
-/// disimpan di sini. Semuanya dihitung dari slip_rate_lines.
+/// Placing slip, sekaligus nomor dan isi Quotation Slip, Cover Note, dan Closing Instruction-nya.
+/// Total premium, diskon, payable, brokerage, dan net premium dihitung dari slip_rate_lines.
 model PlacingSlip {
   id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Terisi saat release.
@@ -1096,9 +1043,7 @@ model PlacingSlip {
   /// pertama dan dipakai polis EQVET (Harry, 5 Nov 2026).
   coverType2Id String? @map("cover_type_2_id") @db.Uuid
   typeOfCover2 String? @map("type_of_cover_2")
-  /// Nama type of cover yang dicetak di dokumen bila berbeda dari master,
-  /// misalnya "PROPERTY ALL RISKS + RIOTS, STRIKES, ... INSURANCE." seperti CI
-  /// LCH. Kosong berarti nama master.
+  /// Nama type of cover yang dicetak di dokumen bila beda dari master; kosong berarti nama master.
   typeOfCoverLabel  String? @map("type_of_cover_label")
   typeOfCover2Label String? @map("type_of_cover_2_label")
 
@@ -1124,13 +1069,11 @@ model PlacingSlip {
   /// Label periode di dokumen, misalnya "Estimated of Departure (ETD)" atau
   /// "Date of Tournament". Kosong berarti "Period of Insurance".
   periodLabel   String?   @map("period_label")
-  /// Teks periode di dokumen yang menggantikan tanggal dan keterangannya,
-  /// misalnya ETD single shipment atau periode proyek T.B.A. Tanggal tetap
-  /// disimpan untuk polis.
+  /// Teks periode pengganti tanggal dan keterangannya, misalnya ETD single shipment atau T.B.A.
+  /// Tanggal tetap disimpan untuk polis.
   periodText    String?   @map("period_text")
-  /// Teks pengganti tanggal akhir di dokumen, misalnya "until final
-  /// destination": dicetak "23 October 2026 until final destination". Tanggal
-  /// akhir tetap disimpan untuk polis. Nilai awal dari type of cover.
+  /// Teks pengganti tanggal akhir, misalnya "until final destination"; nilai awal dari type of cover.
+  /// Tanggal akhir tetap disimpan untuk polis.
   periodEndText String?   @map("period_end_text")
   /// Detail tambahan: baris {label, value} yang dicetak di tabel detail
   /// dokumen setelah baris bawaan, misalnya Retroactive Date, Voyage, Vessels.
@@ -1176,18 +1119,15 @@ model PlacingSlip {
   brokeragePct Decimal @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
   includeVat   Boolean @default(false) @map("include_vat")
 
-  /// Tidak dipakai lagi sejak 12 Nov 2026: additional fee menjadi persen per
-  /// asuransi di panel Security (`slip_security_panel.additional_fee_pct`),
-  /// nominalnya dihitung dari premi. Kolom dibiarkan sebagai isian lama.
+  /// Tidak dipakai lagi sejak 12 Nov 2026, diganti `slip_security_panel.additional_fee_pct`.
+  /// Kolom dibiarkan sebagai isian lama.
   additionalFee Decimal @default(0) @map("additional_fee") @db.Decimal(18, 2)
-  /// Tidak dipakai lagi sejak 12 Nov 2026: status PPN additional fee per
-  /// asuransi (`slip_security_panel.additional_fee_include_vat`). Kolom
-  /// dibiarkan supaya kode versi sebelumnya tetap jalan selama deploy.
+  /// Tidak dipakai lagi sejak 12 Nov 2026, diganti `slip_security_panel.additional_fee_include_vat`.
+  /// Kolom dibiarkan supaya kode versi sebelumnya tetap jalan selama deploy.
   additionalFeeIncludeVat Boolean @default(false) @map("additional_fee_include_vat")
 
-  /// Tidak dipakai lagi sejak 5 Nov 2026: loss limit menjadi persentase per
-  /// baris rate (`slip_rate_lines.loss_limit_pct`). Kolom dibiarkan supaya
-  /// kode versi sebelumnya tetap jalan selama deploy.
+  /// Tidak dipakai lagi sejak 5 Nov 2026, diganti `slip_rate_lines.loss_limit_pct`.
+  /// Kolom dibiarkan supaya kode versi sebelumnya tetap jalan selama deploy.
   lossLimit           Decimal? @map("loss_limit") @db.Decimal(18, 2)
   lossLimitPremiumPct Decimal? @map("loss_limit_premium_pct") @db.Decimal(5, 2)
 
@@ -1202,18 +1142,14 @@ model PlacingSlip {
   releasedBy String?   @map("released_by") @db.Uuid
   createdBy  String    @map("created_by") @db.Uuid
 
-  /// Tanggal dokumen (disetujui Harry, 10 November 2026): Placing Slip memakai
-  /// tanggal release, Quotation Slip dan Draft Cover Note tanggal quoted,
-  /// Closing Instruction tanggal closing. Terisi otomatis saat status
-  /// berpindah dan bisa diubah manual untuk dokumen lama. Dokumen bertanggal
-  /// sebelum 1 September 2025 memakai kop Lestari Cipta Hokindo.
+  /// Tanggal dokumen: release (PS), quoted (QS, Draft CN), closing (CI) (Harry, 10 November 2026).
+  /// Terisi saat status berpindah, bisa diubah manual. Sebelum 1 Sep 2025 kop Lestari Cipta Hokindo.
   releaseDate DateTime? @map("release_date") @db.Date
   quotedDate  DateTime? @map("quoted_date") @db.Date
   closingDate DateTime? @map("closing_date") @db.Date
 
-  /// Placing slip, endorsement slip, atau cancellation slip (Harry, 11 November
-  /// 2026). Endorsement dan cancellation dibuat dari slip polis yang sudah
-  /// Closed; nomornya ES/CS dari urutan nomor placing slip.
+  /// Placing, endorsement, atau cancellation slip (Harry, 11 November 2026).
+  /// Endorsement/cancellation dibuat dari slip polis Closed, nomor ES/CS dari urutan placing slip.
   kind              SlipKind  @default(Placing)
   /// Polis yang di-endorse atau dibatalkan.
   parentPolicyId    String?   @map("parent_policy_id") @db.Uuid
@@ -1263,10 +1199,8 @@ model PlacingSlip {
   @@map("placing_slips")
 }
 
-/// Lokasi risiko slip Property (Harry, 5 November 2026). Tiap lokasi punya
-/// okupasi, kelas konstruksi, sum insured, dan rate sendiri. Okupasi, risk
-/// location, dan kelas di placing_slips diisi dari lokasi pertama supaya modul
-/// lain tetap membaca satu nilai.
+/// Lokasi risiko slip Property dengan okupasi, kelas, SI, dan rate sendiri (Harry, 5 November 2026).
+/// Okupasi, risk location, dan kelas di placing_slips diisi dari lokasi pertama untuk modul lain.
 model SlipLocation {
   id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   slipId              String  @map("slip_id") @db.Uuid
@@ -1299,9 +1233,8 @@ model SlipItem {
   description String
   /// Kosong untuk baris deductible.
   amount      Decimal?     @db.Decimal(18, 2)
-  /// Nilai yang hanya batas (limit): tidak ikut total sum insured dan premi,
-  /// misalnya limit any one carrying CIT. Hanya baris Interest COB selain
-  /// Property dan Motor Vehicle.
+  /// Hanya limit: tidak ikut total sum insured dan premi, misalnya limit any one carrying CIT.
+  /// Hanya baris Interest COB selain Property dan Motor Vehicle.
   isLimitOnly Boolean      @default(false) @map("is_limit_only")
   /// Section objek Interest di slip ber-section: 2 = Third Party Liability.
   /// Kosong berarti Section 1.
@@ -1327,12 +1260,8 @@ model SlipItem {
   @@map("slip_items")
 }
 
-/// Baris rate slip. Menyimpan salinan batas OJK yang berlaku saat input, lalu
-/// rate divalidasi terhadap batas itu.
-///
-/// Rate boleh di bawah batas bawah bila ada potongan sesuai nilai
-/// pertanggungan, dan di atas batas atas bila ada perluasan jaminan. Jadi
-/// validasinya menolak dengan pengecualian yang dicatat alasannya.
+/// Baris rate slip, menyimpan salinan batas OJK saat input sebagai acuan validasi.
+/// Rate di luar batas boleh (potongan nilai pertanggungan, perluasan jaminan) asal alasannya dicatat.
 model SlipRateLine {
   id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   slipId            String   @map("slip_id") @db.Uuid
@@ -1354,18 +1283,15 @@ model SlipRateLine {
   lossLimitPct      Decimal? @map("loss_limit_pct") @db.Decimal(7, 4)
   /// Lokasi slip Property untuk baris rate. TPL, PA, dan COB lain kosong.
   locationId        String?  @map("location_id") @db.Uuid
-  /// Baris Interest pemilik baris rate, TPL, atau PA: kendaraan di Motor
-  /// Vehicle, objek di COB lain selain Property (5 November 2026). Namanya
-  /// tetap "vehicle" karena mula-mula dipakai untuk kendaraan.
+  /// Baris Interest pemilik baris ini: kendaraan di Motor Vehicle, objek di COB lain non-Property.
+  /// Nama "vehicle" sisa pemakaian awal untuk kendaraan.
   vehicleItemId     String?  @map("vehicle_item_id") @db.Uuid
   /// Alasan bila rate keluar dari batas OJK.
   outOfBoundsReason String?  @map("out_of_bounds_reason")
   /// Tidak dipakai lagi sejak satu cover bisa punya beberapa deductible
   /// (4 Nov 2026); isinya disalin ke `deductibles`.
   deductible        String?
-  /// Deductible untuk cover baris ini, teks bebas, paling banyak lima.
-  /// Instruksi LCH 29 Oktober 2026: deductible dibuat per cover, bukan per
-  /// section.
+  /// Deductible per cover (bukan per section), teks bebas, paling banyak lima (LCH, 29 Oktober 2026).
   deductibles       String[] @default([])
   sortOrder         Int      @default(0) @map("sort_order")
 
@@ -1407,9 +1333,8 @@ model SlipSecurityPanel {
   @@map("slip_security_panel")
 }
 
-/// Klausula yang dipakai slip. Wording disalin dari master saat dipilih dan
-/// bisa diedit per slip. Master clause tidak berubah, dan slip lama tidak ikut
-/// berubah kalau master diperbarui.
+/// Klausula slip, wording disalin dari master saat dipilih dan bisa diedit per slip.
+/// Perubahan master tidak mengubah slip lama.
 model SlipClause {
   id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   slipId      String  @map("slip_id") @db.Uuid
@@ -1417,8 +1342,7 @@ model SlipClause {
   title       String
   /// Salinan, bisa diedit per slip.
   wordingHtml String  @map("wording_html")
-  /// Menandai wording yang sudah diubah dari master, supaya kelihatan saat
-  /// review slip.
+  /// Wording sudah diubah dari master, ditandai saat review slip.
   isEdited    Boolean @default(false) @map("is_edited")
   /// Slip Property: 1 Material Damage, 2 Business Interruption. Klausula yang
   /// berlaku untuk keduanya punya satu baris per section. COB lain selalu 1.
@@ -1439,9 +1363,8 @@ model SlipClause {
   @@map("slip_clauses")
 }
 
-/// Peserta PA grup per orang (jawaban Harry, 6 November 2026): dicetak
-/// sebagai lampiran slip, dan nantinya dipakai klaim serta endorsement
-/// tambah/kurang peserta.
+/// Peserta PA grup per orang, dicetak sebagai lampiran slip (Harry, 6 November 2026).
+/// Nantinya dipakai klaim serta endorsement tambah/kurang peserta.
 model SlipParticipant {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   slipId       String    @map("slip_id") @db.Uuid
@@ -1481,23 +1404,16 @@ model SlipWordingForm {
   @@map("slip_wording_forms")
 }
 
-// ---------------------------------------------------------------------------
 // 4. Polis dan klaim
-// ---------------------------------------------------------------------------
 
-/// Status polis (aktif, akan berakhir, berakhir) dihitung dari expiry_date,
-/// tidak disimpan dan tidak ada di form.
-///
-/// Endorsement dan pembatalan dicatat sebagai baris polis tersendiri dengan
-/// policy_type Endorsement atau Cancellation dan parent_policy_id menunjuk
-/// polis induknya. Tambahan premi bernilai positif, pengembalian premi negatif.
+/// Status polis (aktif, akan berakhir, berakhir) dihitung dari expiry_date, tidak disimpan.
+/// Endorsement/pembatalan: baris polis sendiri dengan parent_policy_id, pengembalian premi negatif.
 model Policy {
   id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   policyNo            String   @unique @map("policy_no")
   placingSlipId       String?  @map("placing_slip_id") @db.Uuid
-  /// Bagian slip PAR + EQVET yang menjadi polis ini: PAR atau EQVET. Kosong
-  /// untuk slip yang terbit sebagai satu polis. Satu slip satu polis, slip
-  /// PAR + EQVET satu polis per bagian (dicek di server).
+  /// Bagian slip PAR + EQVET yang jadi polis ini (PAR atau EQVET); kosong untuk slip satu polis.
+  /// Server memastikan satu polis per slip, atau per bagian untuk PAR + EQVET.
   slipPart            String?  @map("slip_part")
   clientId            String?  @map("client_id") @db.Uuid
   cobId               String   @map("cob_id") @db.Uuid
@@ -1515,29 +1431,24 @@ model Policy {
   brokeragePct        Decimal  @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
   /// Brokerage sudah termasuk PPN 2,2%, mengikuti Include VAT di slip.
   includeVat          Boolean  @default(false) @map("include_vat")
-  /// Nominal fee di luar brokerage, dalam mata uang polis: premi × fee (%) per
-  /// asuransi (`policy_insurers.additional_fee_pct`), dihitung server. Negatif
-  /// pada pembatalan atau pengurangan premi.
+  /// Fee di luar brokerage dalam mata uang polis: premi × `policy_insurers.additional_fee_pct`.
+  /// Dihitung server, negatif pada pembatalan atau pengurangan premi.
   additionalFee       Decimal  @default(0) @map("additional_fee") @db.Decimal(18, 2)
-  /// Tidak dipakai lagi sejak 12 Nov 2026: status PPN additional fee per
-  /// asuransi (`policy_insurers.additional_fee_include_vat`). Kolom dibiarkan
-  /// supaya kode versi sebelumnya tetap jalan selama deploy.
+  /// Tidak dipakai lagi sejak 12 Nov 2026, diganti `policy_insurers.additional_fee_include_vat`.
+  /// Kolom dibiarkan supaya kode versi sebelumnya tetap jalan selama deploy.
   additionalFeeIncludeVat Boolean @default(false) @map("additional_fee_include_vat")
-  /// Rate (%) endorsement: premi = sum insured × rate × hari prorata / 365,
-  /// hari prorata dari tanggal efektif s/d tanggal berakhir (Harry, 11 November
-  /// 2026). Kosong berarti premi diisi manual.
+  /// Rate (%) endorsement: premi = SI × rate × hari prorata (efektif s/d berakhir) / 365.
+  /// Kosong berarti premi diisi manual (Harry, 11 November 2026).
   rate                Decimal? @db.Decimal(12, 6)
-  /// Sum insured dasar premi prorata. Kosong berarti memakai sum insured
-  /// endorsement (tambahan UP); diisi UP penuh kalau rate atau jaminan berubah
-  /// tanpa mengubah UP, seperti rumus prorata Harry.
+  /// Sum insured dasar premi prorata; kosong berarti sum insured endorsement (tambahan UP).
+  /// Diisi UP penuh bila rate atau jaminan berubah tanpa mengubah UP (rumus prorata Harry).
   premiumBasis        Decimal? @map("premium_basis") @db.Decimal(18, 2)
   /// Biaya administrasi dan bea meterai endorsement; total premi = premi +
   /// keduanya. Premi produksi tetap kolom premium.
   adminCost           Decimal  @default(0) @map("admin_cost") @db.Decimal(18, 2)
   stampDuty           Decimal  @default(0) @map("stamp_duty") @db.Decimal(18, 2)
-  /// Tanggal premi dibayar; kosong berarti belum dibayar. Diisi manual di
-  /// Policy Database dan tampil saat klaim dicatat (meeting LCH, 10 November
-  /// 2026). Bagian B bisa mengisinya dari pencatatan pembayaran premi.
+  /// Tanggal premi dibayar (kosong = belum), tampil saat klaim (meeting LCH, 10 November 2026).
+  /// Diisi manual; Bagian B bisa mengisinya dari pencatatan pembayaran premi.
   premiumPaidDate     DateTime? @map("premium_paid_date") @db.Date
   /// Uraian perubahan endorsement atau alasan pembatalan, teks bebas (meeting
   /// LCH, 10 November 2026). Hanya untuk tipe Endorsement dan Cancellation.
@@ -1546,9 +1457,8 @@ model Policy {
   policyTypeId        String   @map("policy_type_id") @db.Uuid
   /// Polis induk untuk renewal, endorsement, dan pembatalan.
   parentPolicyId      String?  @map("parent_policy_id") @db.Uuid
-  /// No. polis sebelumnya untuk renewal yang polis lamanya belum ada di sistem,
-  /// karena sistem baru dipakai sejak 2026 (Agus, 9 November 2026). Kosong bila
-  /// polis sebelumnya dipilih lewat parent_policy_id.
+  /// No. polis lama untuk renewal yang polisnya belum ada di sistem (Agus, 9 November 2026).
+  /// Kosong bila polis sebelumnya dipilih lewat parent_policy_id.
   previousPolicyNo    String?  @map("previous_policy_no")
   /// Nomor urut endorsement pada polis induk, diisi server saat polis endorsement disimpan.
   endorsementSeq      Int?     @map("endorsement_seq")
@@ -1592,8 +1502,7 @@ model Policy {
   @@map("policies")
 }
 
-/// Peserta PA grup per polis (jawaban Harry, 6 November 2026): disalin dari
-/// slip saat polis dibuat, lalu bertambah atau berkurang lewat endorsement.
+/// Peserta PA grup per polis: salinan slip, diubah lewat endorsement (Harry, 6 November 2026).
 /// Klaim PA nantinya menunjuk peserta ini.
 model PolicyParticipant {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -1633,9 +1542,8 @@ model PolicyParticipant {
   @@map("policy_participants")
 }
 
-/// Lampiran placing slip, misalnya vessel schedule, daftar unit, atau klausul
-/// hasil scan (analisa contoh slip LCH, Tahap 3 nomor 19). Isinya di
-/// stored_files dengan purpose slip_attachment.
+/// Lampiran placing slip, misalnya vessel schedule, daftar unit, atau klausul hasil scan.
+/// Isinya di stored_files dengan purpose slip_attachment.
 model SlipFile {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   slipId      String   @map("slip_id") @db.Uuid
@@ -1645,9 +1553,8 @@ model SlipFile {
   filePath    String   @map("file_path")
   sizeBytes   Int      @default(0) @map("size_bytes")
   sortOrder   Int      @default(0) @map("sort_order")
-  /// Isi lampiran ikut tercetak di halaman akhir dokumen slip: gambar per
-  /// halaman, Excel sebagai tabel, PDF per halaman (jawaban Harry, 9 November
-  /// 2026). Mati berarti hanya namanya yang tercetak di daftar ATTACHMENTS.
+  /// Isi lampiran ikut dicetak di akhir slip: gambar, Excel, PDF (Harry, 9 November 2026).
+  /// Mati berarti hanya namanya yang tercetak di daftar ATTACHMENTS.
   printContent Boolean @default(true) @map("print_content")
   uploadedBy  String   @map("uploaded_by") @db.Uuid
   uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz(6)
@@ -1719,10 +1626,8 @@ model PolicyFile {
   @@map("policy_files")
 }
 
-/// Potongan berkas yang sedang diunggah. Vercel menolak body request di atas
-/// 4,5 MB, jadi berkas besar dikirim per potongan lalu digabung di server
-/// menjadi stored_files. Baris dihapus setelah digabung; sisa unggahan yang
-/// tidak selesai dibersihkan setelah sehari.
+/// Potongan unggahan: Vercel menolak body di atas 4,5 MB, jadi berkas besar dikirim per potongan.
+/// Dihapus setelah digabung ke stored_files; sisa unggahan gagal dibersihkan setelah sehari.
 model UploadPart {
   uploadId   String   @map("upload_id") @db.Uuid
   partNo     Int      @map("part_no")
@@ -1737,9 +1642,8 @@ model UploadPart {
   @@map("upload_parts")
 }
 
-/// Asuransi dan COB klaim diambil dari polis, tidak dipilih ulang di form.
-/// paid_amount adalah nilai penyelesaian yang dicatat tim Klaim. Uang klaim
-/// yang lewat rekening LCH dicatat Finance di payments.
+/// Asuransi dan COB klaim diambil dari polis. paid_amount = nilai penyelesaian dari tim Klaim.
+/// Uang klaim yang lewat rekening LCH dicatat Finance di payments.
 model Claim {
   id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   claimNo              String    @unique @map("claim_no")
@@ -1829,9 +1733,7 @@ model ClaimFollowup {
   @@map("claim_followups")
 }
 
-// ---------------------------------------------------------------------------
 // 5. Finance
-// ---------------------------------------------------------------------------
 
 model BankAccount {
   id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -1840,8 +1742,7 @@ model BankAccount {
   accountNo      String  @map("account_no")
   accountName    String  @map("account_name")
   currencyCode   String  @map("currency_code")
-  /// Rekening dana premi titipan, dipisah dari rekening operasional di
-  /// pembukuan.
+  /// Rekening dana premi titipan, dipisah dari rekening operasional di pembukuan.
   isPremiumTrust Boolean @default(false) @map("is_premium_trust")
   coaAccountId   String? @map("coa_account_id") @db.Uuid
   isActive       Boolean @default(true) @map("is_active")
@@ -1865,8 +1766,7 @@ model DebitNote {
   dnNo           String  @unique @map("dn_no")
   policyId       String  @map("policy_id") @db.Uuid
   clientId       String  @map("client_id") @db.Uuid
-  /// Salinan saat dokumen dibuat, jadi perubahan data klien tidak mengubah
-  /// dokumen yang sudah terbit.
+  /// Salinan saat dokumen dibuat, supaya perubahan data klien tidak mengubah dokumen terbit.
   insuredName    String  @map("insured_name")
   billingAddress String? @map("billing_address")
   /// lookup payment_model: via rekening LCH atau langsung ke asuransi.
@@ -1928,11 +1828,8 @@ model DebitNoteLine {
   @@map("debit_note_lines")
 }
 
-/// Satu Debit Note dipecah jadi Credit Note per asuransi sesuai share, lalu
-/// per cicilan. Contoh nomor 0581/CNLCH/08/2026-1.
-///
-/// Pembagian share dan cicilan dibulatkan ke sen, selisihnya masuk ke baris
-/// terakhir.
+/// Debit Note dipecah per asuransi sesuai share, lalu per cicilan. Contoh 0581/CNLCH/08/2026-1.
+/// Share dan cicilan dibulatkan ke sen, selisihnya masuk ke baris terakhir.
 model CreditNote {
   id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   cnNo            String  @unique @map("cn_no")
@@ -1972,14 +1869,8 @@ model CreditNote {
   @@map("credit_notes")
 }
 
-/// Penerimaan dan pengeluaran uang.
-///
-/// Jenis pembayaran menentukan dokumen yang wajib diisi: terima premi ke Debit
-/// Note, setor premi dan terima brokerage ke Credit Note, terima dan bayar
-/// klaim ke klaim. Divalidasi di server, bukan di database.
-///
-/// Satu transfer yang membayar beberapa dokumen dicatat sebagai beberapa baris
-/// dengan bank_reference yang sama.
+/// Terima premi -> Debit Note, setor premi/brokerage -> Credit Note, klaim -> klaim (dicek server).
+/// Satu transfer untuk beberapa dokumen dicatat sebagai beberapa baris dengan bank_reference sama.
 model Payment {
   id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// lookup payment_type
@@ -2013,9 +1904,7 @@ model Payment {
   @@map("payments")
 }
 
-// ---------------------------------------------------------------------------
 // 6. Akuntansi
-// ---------------------------------------------------------------------------
 
 model CoaAccount {
   id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -2044,9 +1933,8 @@ model CoaAccount {
   @@map("coa_accounts")
 }
 
-/// Jurnal otomatis dibuat saat Debit Note atau Credit Note terbit dan saat
-/// pembayaran dicatat. source_type dan source_id menunjuk transaksi asalnya.
-/// Jurnal yang sudah Posted tidak diedit, koreksinya lewat jurnal manual.
+/// Jurnal otomatis saat DN/CN terbit dan pembayaran dicatat; source_type/source_id menunjuk asalnya.
+/// Jurnal Posted tidak diedit, koreksinya lewat jurnal manual.
 model JournalEntry {
   id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   journalNo   String        @unique @map("journal_no")
@@ -2071,8 +1959,7 @@ model JournalEntry {
 }
 
 /// Total debit wajib sama dengan total kredit, divalidasi di server.
-/// client_id dan insurer_id membentuk sub ledger piutang dan hutang pada akun
-/// kontrol.
+/// client_id dan insurer_id membentuk sub ledger piutang dan hutang pada akun kontrol.
 model JournalLine {
   id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   journalEntryId String  @map("journal_entry_id") @db.Uuid

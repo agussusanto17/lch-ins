@@ -31,9 +31,8 @@ function Row({
 }
 
 /**
- * Ringkasan penutupan sebelum Closing Instruction diterbitkan (Agus, 13
- * November 2026). `compact` untuk dialog konfirmasi: tanpa rincian per
- * asuransi.
+ * Ringkasan penutupan sebelum Closing Instruction diterbitkan (Agus, 13 November 2026).
+ * `compact` untuk dialog konfirmasi: tanpa rincian per asuransi.
  */
 export function ClosingSummaryPanel({
   slip,

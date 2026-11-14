@@ -1,5 +1,5 @@
 /**
- * Comprehensive End-to-End Integration Test for SPPA Module & PostgreSQL Relational Layer.
+ * End-to-end test for the SPPA module against PostgreSQL.
  * Run with: npx tsx --env-file=.env scripts/test-sppa-e2e.ts
  */
 
@@ -203,7 +203,6 @@ async function runTests() {
   await prisma.placingSlip.delete({ where: { id: dummySlip.id } })
   console.log("[PASS] Dummy placing slip removed.")
 
-  // Now delete SPPA
   await deleteSppa(created.id)
   const afterDelete = await getSppaById(created.id)
   if (afterDelete !== null) {

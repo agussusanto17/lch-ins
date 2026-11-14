@@ -223,7 +223,6 @@ export function TariffOjkTab({
       {/* Motor vehicle statutory tariffs (Lampiran IV) */}
       {activeSubTab === "motor" && (
         <div className="flex flex-col gap-6">
-          {/* Regulatory notice and acquisition cap */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border bg-muted/40 p-3.5 text-xs text-muted-foreground">
             <div>
               <p className="font-semibold text-foreground">

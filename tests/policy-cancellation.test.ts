@@ -4,10 +4,8 @@ import test from "node:test"
 import { cancellationSuggestion } from "../lib/policy-cancellation"
 
 /**
- * Contoh pembatalan dari Harry (polis 45020126008633): periode 28 April 2026 –
- * 28 April 2027, dibatalkan 22 Mei 2026, prorata 341/365. Premi tahunan kesembilan
- * cover pada contoh itu berjumlah IDR 6.861.000, total pengembalian sebelum biaya
- * pembatalan IDR 6.409.865,75 (setelah biaya IDR 10.000: IDR 6.399.865,75).
+ * Contoh pembatalan dari Harry (polis 45020126008633), premi tahunan sembilan cover.
+ * Setelah biaya pembatalan IDR 10.000, pengembaliannya IDR 6.399.865,75.
  */
 test("cancellation returns premium pro rata like the insurer sample", () => {
   const s = cancellationSuggestion({

@@ -1,8 +1,4 @@
-/**
- * Rentang tanggal bebas untuk Report Operational (Agus, 13 November 2026),
- * di samping periode bulanan, kuartalan, dan tahunan: misalnya satu tahun
- * penuh, tiga bulan, atau beberapa bulan sekaligus.
- */
+/** Rentang tanggal bebas Report Operational, selain periode tetap (Agus, 13 November 2026). */
 
 import { dateShort } from "@/lib/format"
 
@@ -14,9 +10,8 @@ export interface ReportRange {
 }
 
 /**
- * Rentang dari isian Dari dan Sampai. Isian kosong memakai tanggal yang lain
- * (atau `fallback` bila keduanya kosong), dan tanggal yang tertukar dibalik,
- * supaya report tetap terisi selama user mengetik.
+ * Rentang dari isian Dari dan Sampai. Isian kosong memakai tanggal lainnya (atau `fallback`),
+ * dan tanggal tertukar dibalik, supaya report tetap terisi selama user mengetik.
  */
 export function customRange(from: string, to: string, fallback: string): ReportRange {
   const a = from || to || fallback

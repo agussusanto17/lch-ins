@@ -37,9 +37,8 @@ function mailingAddress(client: Client | null) {
 }
 
 /**
- * Data cetak endorsement (permintaan LCH, 10 November 2026). Data polis
- * induk dan slip sumbernya ikut dimuat, karena isi endorsement di contoh
- * asuransi mengulang data polis yang di-endorse.
+ * Data cetak endorsement (LCH, 10 November 2026). Polis induk dan slip sumbernya ikut dimuat
+ * karena isi endorsement di contoh asuransi mengulang data polis yang di-endorse.
  */
 export async function getEndorsementSlipData(id: string): Promise<EndorsementSlipData | null> {
   const policy = await getPolicyById(id)
@@ -98,9 +97,8 @@ export interface EndorsementSlipPrint {
 }
 
 /**
- * Data cetak endorsement atau cancellation slip dari Placement (Harry,
- * 11 November 2026). Nomor lampiran memakai urutan record yang sudah tercatat,
- * atau nomor sesudah endorsement terakhir polis induk kalau belum tercatat.
+ * Data cetak endorsement atau cancellation slip dari Placement (Harry, 11 November 2026).
+ * Nomor lampiran dari urutan record tercatat, atau sesudah endorsement terakhir polis induk.
  */
 export async function getEndorsementSlipPrint(id: string): Promise<EndorsementSlipPrint | null> {
   const slip = await getPlacingSlipById(id)

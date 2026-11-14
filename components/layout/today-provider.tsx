@@ -5,9 +5,8 @@ import * as React from "react"
 const TodayContext = React.createContext<string | null>(null)
 
 /**
- * Menyebarkan tanggal "hari ini" (WIB) yang dihitung server ke Client
- * Component. Tanggal tidak dihitung ulang di browser supaya hasil render
- * server dan client selalu sama (tidak ada hydration mismatch).
+ * Menyebarkan tanggal "hari ini" (WIB) dari server ke Client Component.
+ * Tidak dihitung ulang di browser supaya render server dan client sama (tanpa hydration mismatch).
  */
 export function TodayProvider({
   today,

@@ -10,10 +10,8 @@ import { ENDORSEMENT_DAYS_PER_YEAR, slipEndorsementAdjustment } from "@/lib/endo
 import { dateLong, money, num } from "@/lib/format"
 
 /**
- * Bagian khusus endorsement dan cancellation slip di form slip (Harry,
- * 11 November 2026): tanggal efektif, uraian perubahan, dan ringkasan
- * perhitungan premi sebelum dan sesudah. Isian slip lainnya tetap di bagian
- * masing-masing; admin cost, stamp duty, dan diskon di bagian premi.
+ * Isian khusus endorsement dan cancellation slip: tanggal efektif, uraian, premi sebelum/sesudah.
+ * Admin cost, stamp duty, dan diskon tetap di bagian premi (Harry, 11 November 2026).
  */
 export function EndorsementSection({
   slip,

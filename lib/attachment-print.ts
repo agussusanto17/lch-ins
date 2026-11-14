@@ -1,7 +1,6 @@
 /**
- * Isi lampiran slip yang ikut tercetak di dokumen (jawaban Harry, 9 November
- * 2026): gambar per halaman, Excel sebagai tabel, PDF per halaman. File ini
- * hanya tipe dan helper, jadi aman dipakai di client maupun server.
+ * Lampiran slip ikut tercetak: gambar dan PDF per halaman, Excel sebagai tabel (Harry, 9 November
+ * 2026). Hanya tipe dan helper, jadi aman dipakai di client maupun server.
  */
 import { INLINE_TYPES, PDF_TYPE, XLSX_TYPE } from "./file-types"
 

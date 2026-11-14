@@ -9,10 +9,8 @@ import type {
 } from "./types"
 
 /*
- * Daftar yang tersisa di sini dipakai logika aplikasi (status, tipe klien,
- * tipe polis, kelas konstruksi). Pilihan dropdown lain (COB, type of cover,
- * asuransi, mata uang, wording, dan lookup form klien) dibaca dari master data
- * lewat lib/server/form-options.ts.
+ * Daftar di sini dipakai logika aplikasi; pilihan dropdown lain (COB, type of cover, asuransi,
+ * mata uang, wording) dibaca dari master data lewat lib/server/form-options.ts.
  */
 
 export const CLIENT_TYPES: ClientType[] = ["Korporasi", "Perorangan"]
@@ -58,9 +56,8 @@ export const CLAIM_STAGES: ClaimStage[] = [
 export const OPEN_CLAIM_STATUSES: ClaimStatus[] = ["Outstanding"]
 
 /**
- * Kelas konstruksi harta benda (lookup construction_class). Label memakai angka
- * romawi di semua tempat: form slip, panel tarif OJK, master tarif, dan dokumen
- * cetak. Kode K1 sampai K3 tetap jadi nilai data.
+ * Kelas konstruksi harta benda (lookup construction_class). Label angka romawi dipakai
+ * di semua tempat; kode K1 sampai K3 tetap jadi nilai data.
  */
 export const CONSTRUCTION_CLASSES = [
   {
@@ -85,8 +82,7 @@ export function constructionClassLabel(code: string | undefined | null) {
 }
 
 /**
- * Type of cover lama per COB beserta kodenya. Tidak lagi dipakai sebagai
- * pilihan form (pilihan dari master data); hanya cadangan kode {COVER} untuk
+ * Type of cover lama per COB, bukan lagi pilihan form; hanya cadangan kode {COVER} untuk
  * slip lama yang labelnya belum ada di master, misalnya "PAR + EQVET".
  */
 export const TYPE_OF_COVER: Record<
@@ -292,10 +288,8 @@ export const PROPERTY_RATE_LINES = [
 export const TERRORISM_RATE_LINE = "Terrorism & Sabotage"
 
 /**
- * Baris rate Property per kode type of cover. Type of cover lain memakai baris
- * PAR + EQVET di atas. PSATSI (0116) adalah polis tersendiri dengan satu rate
- * atas sum insured Material Damage, seperti CI Terrorism & Sabotage Wisma
- * Habco (analisa contoh slip LCH no. 09, 6 November 2026).
+ * Baris rate Property per kode type of cover; lainnya memakai PAR + EQVET. PSATSI (0116)
+ * satu rate atas sum insured Material Damage (contoh slip LCH no. 09, 6 November 2026).
  */
 export const PROPERTY_COVER_RATE_LINES: Record<string, string[]> = {
   "0116": [TERRORISM_RATE_LINE],

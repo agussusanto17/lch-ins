@@ -1,10 +1,6 @@
 /**
- * Format dan utilitas parsing teks untuk dokumen cetak LCH Insurance Brokers.
- *
- * Mendeteksi bullet marker (- • * – —) dan penomoran (1. 1) a. a) (1) (a) i.)
- * untuk tata letak hanging indent (indentasi gantung), sehingga saat teks membungkus
- * (wrap) ke baris berikutnya, teks sejajar rapi dengan awal kalimat bukan di bawah
- * simbol/nomor butir.
+ * Bullet (- • * – —) dan penomoran (1. 1) a. a) (1) (a) i.) dikenali untuk hanging indent,
+ * supaya baris yang membungkus sejajar dengan awal kalimat, bukan di bawah nomornya.
  */
 
 export const BULLET_LINE_REGEX =
@@ -15,10 +11,7 @@ export interface ParsedBulletLine {
   content: string
 }
 
-/**
- * Mengurai baris teks tunggal. Jika diawali tanda butir atau nomor urut,
- * mengembalikan marker dan content secara terpisah untuk hanging indent.
- */
+/** Pisahkan marker butir atau nomor dari isinya untuk hanging indent; null bila bukan butir. */
 export function parseBulletLine(line: string): ParsedBulletLine | null {
   const match = BULLET_LINE_REGEX.exec(line.trim())
   if (!match) return null
@@ -35,9 +28,8 @@ export interface NumberedItem {
 }
 
 /**
- * Mengelompokkan teks per butir bernomor (1) 1. (1)). Baris tanpa nomor
- * sesudah sebuah nomor ikut butir itu, misalnya nama lokasi dan alamat di
- * bawah nama tertanggung pada Risk Location. Baris kosong dibuang.
+ * Kelompokkan teks per butir bernomor; baris tanpa nomor ikut butir sebelumnya, misalnya alamat
+ * di bawah nama tertanggung pada Risk Location. Baris kosong dibuang.
  */
 export function groupNumberedItems(text: string): NumberedItem[] {
   const items: NumberedItem[] = []

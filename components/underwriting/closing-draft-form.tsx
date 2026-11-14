@@ -6,10 +6,7 @@ import type { InsuredOption } from "@/lib/server/clients"
 
 export { panelIssues } from "@/components/underwriting/placing-slip-form"
 
-/**
- * ClosingDraftForm delegating to PlacingSlipForm in closing mode.
- * Displays full placing slip input menus along with subjectivity, security panel, and closing instruction.
- */
+/** PlacingSlipForm in closing mode, with subjectivity, security, and closing instruction panels. */
 export function ClosingDraftForm({
   id,
   initial,

@@ -27,8 +27,7 @@ export function toIdr(amount: number, currency: string) {
 }
 
 /**
- * Round to cents (2 decimal places). Used on all financial calculations to prevent
- * JavaScript floating-point errors from compounding into totals and documents.
+ * Round to cents so floating-point errors do not compound into totals and documents.
  * Stored as numeric(18,2) in the backend.
  */
 export function roundCents(value: number) {
@@ -96,13 +95,8 @@ export function totalPayable(slip: PlacingSlip) {
 }
 
 /**
- * Detects whether a slip uses PAR + EQVET rate calculation structure (Image 4 & 5).
- * Property slips with FLEXAS or EQVET rate lines follow this grouped presentation.
- */
-/**
- * Bagian slip yang terbit sebagai polis terpisah. Slip PAR + EQVET dengan premi
- * di kedua kelompok menjadi dua polis (Harry, 3 November 2026); slip lain satu
- * polis, ditandai daftar kosong.
+ * Bagian slip yang terbit sebagai polis terpisah: PAR + EQVET dengan premi di kedua
+ * kelompok jadi dua polis (Harry, 3 November 2026); slip lain satu polis, daftar kosong.
  */
 export function slipPolicyParts(slip: PlacingSlip): SlipPart[] {
   if (!isParEqvetSlip(slip)) return []
@@ -169,10 +163,7 @@ export function ratePermilText(ratePermil: number) {
   return `${num(ratePermil, 6)}‰`
 }
 
-/**
- * Policy cost plus stamp duty for one PAR or EQVET policy, taken from the
- * slip's Admin Cost and Stamp Duty fields. An empty field counts as zero.
- */
+/** Policy cost plus stamp duty charged on each PAR or EQVET policy. */
 export function parEqvetPolicyCharge(slip: PlacingSlip) {
   return roundCents((slip.adminCost || 0) + (slip.stampDuty || 0))
 }
@@ -191,10 +182,7 @@ function locationBases(slip: PlacingSlip) {
 }
 
 export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
-  // Tiap baris memakai sum insured lokasinya, dan tiap section hanya memakai
-  // sum insured-nya sendiri, sama seperti recalcSlip. Dulu section kosong
-  // memakai nilai section lain, sehingga rate BI otomatis mendapat premi dari
-  // Section 1 walaupun Section 2 kosong.
+  // Tiap baris memakai sum insured lokasi dan section-nya sendiri, sama seperti recalcSlip.
   const bases = locationBases(slip)
   const owner = locationOwner(slip)
 
@@ -278,9 +266,8 @@ export function netPremium(slip: PlacingSlip) {
 }
 
 /**
- * VAT on insurance brokerage services applies a deemed tax base (DPP nilai lain)
- * of 20% on commission (PMK 67/PMK.03/2022), resulting in an effective rate of
- * 11% x 20% = 2.2% of brokerage, rather than the full 11%.
+ * VAT on brokerage uses a deemed tax base (DPP nilai lain) of 20% (PMK 67/PMK.03/2022),
+ * so the effective rate is 11% x 20% = 2.2% of brokerage.
  */
 export const BROKERAGE_VAT_RATE = 0.022
 
@@ -311,9 +298,8 @@ export function weightedFeePct(
 }
 
 /**
- * Nominal additional fee: premi × fee (%) per asuransi sesuai share-nya
- * (Harry, 12 November 2026: additional fee berupa persen, diisi per asuransi
- * saat closing). Premi negatif (refund) menghasilkan fee negatif.
+ * Nominal additional fee: premi × fee (%) per asuransi sesuai share-nya, diisi saat closing
+ * (Harry, 12 November 2026). Premi negatif (refund) menghasilkan fee negatif.
  */
 export function additionalFeeFor(
   premium: number,
@@ -342,9 +328,8 @@ export function feeVatInside(fee: number, includeVat: boolean | undefined) {
 }
 
 /**
- * PPN di dalam additional fee: dihitung per asuransi, hanya untuk asuransi yang
- * fee-nya termasuk PPN, dengan tarif yang sama seperti brokerage. Status PPN
- * tiap asuransi bisa berbeda (Harry, 12 November 2026).
+ * PPN di dalam additional fee, per asuransi yang fee-nya termasuk PPN, tarifnya sama seperti
+ * brokerage. Status PPN tiap asuransi bisa berbeda (Harry, 12 November 2026).
  */
 export function additionalFeeVatFor(
   premium: number,
@@ -418,9 +403,8 @@ export const BI_RATE_LABELS = [
 export const BI_BASE_LABELS = ["FLEXAS", "FWTWD", "RSMDCC", "Other Losses"]
 
 /**
- * Slip yang memakai tarif OJK. Type of cover yang tarif OJK-nya dimatikan di
- * Master Data, misalnya Heavy Equipment (Harry, 9 November 2026), tidak punya
- * batas rate maupun batas brokerage OJK.
+ * Type of cover yang tarif OJK-nya dimatikan di Master Data, misalnya Heavy Equipment,
+ * tidak punya batas rate maupun batas brokerage OJK (Harry, 9 November 2026).
  */
 export function usesOjkTariff(slip: Pick<PlacingSlip, "ojkTariff">) {
   return slip.ojkTariff !== false
@@ -439,9 +423,8 @@ export function withoutOjkBounds(lines: RateLine[]): RateLine[] {
 }
 
 /**
- * Acquisition cost limits per Circular Letter SE OJK No. 6/SEOJK.05/2017:
- * Property and ancillary perils max 15%; Motor Vehicle max 25%. A cover type
- * without the OJK tariff (`ojkTariff` false) has no limit.
+ * Acquisition cost limits per SE OJK No. 6/SEOJK.05/2017: Property 15%, Motor Vehicle 25%.
+ * A cover type without the OJK tariff (`ojkTariff` false) has no limit.
  */
 export function brokerageCapFor(cob: string, ojkTariff?: boolean) {
   if (ojkTariff === false) return null
@@ -451,9 +434,8 @@ export function brokerageCapFor(cob: string, ojkTariff?: boolean) {
 }
 
 /**
- * Highest brokerage allowed on a slip. The OJK limit covers brokerage plus
- * discount (Harry, 3 November 2026), so a discount lowers the broker's share:
- * Motor Vehicle 25% with a 15% discount leaves at most 10%.
+ * The OJK limit covers brokerage plus discount (Harry, 3 November 2026), so a discount
+ * lowers it: Motor Vehicle 25% with a 15% discount leaves at most 10% brokerage.
  */
 export function maxBrokeragePct(slip: PlacingSlip) {
   const cap = brokerageCapFor(slip.cob, slip.ojkTariff)
@@ -482,10 +464,8 @@ export function brokerageLimitIssue(slip: PlacingSlip) {
 }
 
 /**
- * Recalculate all premiums from rate and sum insured. Property lines use the
- * Section 1 sum insured of their location × rate × loss limit percentage, BI
- * lines the location's Section 2. Other COBs use the value of their interest
- * item (vehicle or object) × rate; TPL and PA lines use their liability limits.
+ * Property lines use their location's Section 1 sum insured × rate × loss limit (BI lines
+ * Section 2); other COBs the interest item value × rate, TPL and PA their liability limits.
  */
 export function recalcSlip(input: PlacingSlip): PlacingSlip {
   const slip = withItemRates(withLocations(input))
@@ -539,9 +519,7 @@ export function recalcSlip(input: PlacingSlip): PlacingSlip {
 }
 
 /**
- * Nilai yang dikalikan rate pada tiap baris, dengan aturan yang sama seperti
- * recalcSlip: Property memakai sum insured section lokasinya (BI memakai
- * Section 2), COB lain memakai nilai objeknya, TPL dan PA memakai limitnya.
+ * Nilai yang dikalikan rate tiap baris, dengan aturan yang sama seperti recalcSlip.
  * Dipakai perhitungan endorsement untuk mencetak "TSI × rate".
  */
 export function rateLineBasis(input: PlacingSlip): Map<string, number> {
@@ -564,9 +542,8 @@ export function rateLineBasis(input: PlacingSlip): Map<string, number> {
 }
 
 /**
- * Rate dibulatkan ke enam desimal seperti kolom numeric(12,6), setengah ke
- * atas. toPrecision membuang galat floating point dulu: 1,0963305 tersimpan
- * sebagai 1,09633049…, yang tanpa itu dibulatkan ke bawah.
+ * Rate dibulatkan ke enam desimal seperti kolom numeric(12,6), setengah ke atas.
+ * toPrecision membuang galat float dulu: 1,0963305 tersimpan sebagai 1,09633049….
  */
 function roundRate(value: number) {
   return Math.round(Number((value * 1e6).toPrecision(12))) / 1e6
@@ -591,9 +568,8 @@ export function biScalePct(indemnityPeriod?: string) {
 }
 
 /**
- * Dasar rate BI slip Property sebelum dikali skala indemnity period: jumlah
- * rate FLEXAS, FWTWD, RSMDCC, dan Other Losses untuk BI PAR, dan rate EQVET
- * untuk BI EQVET, masing-masing setelah persentase loss limit.
+ * Dasar rate BI sebelum dikali skala indemnity period: FLEXAS + FWTWD + RSMDCC + Other
+ * Losses untuk BI PAR, EQVET untuk BI EQVET, masing-masing setelah persentase loss limit.
  */
 export function biRateBasis(
   slip: Pick<PlacingSlip, "rateLines" | "indemnityPeriod">
@@ -610,10 +586,8 @@ export function biRateBasis(
 }
 
 /**
- * Rate BI slip Property selalu dihitung dari baris lain di lokasi yang sama
- * (Harry, 5 November 2026), jadi tidak bisa basi saat rate FLEXAS dan
- * kawan-kawan diubah. Contoh LCH: (0,048300% + 0,045000% × 85% + 0,000001% +
- * 0,000001%) × 90% untuk indemnity period 24 bulan.
+ * Rate BI selalu dihitung dari baris lain di lokasi yang sama (Harry, 5 November 2026).
+ * Contoh LCH, 24 bulan: (0,048300% + 0,045000% × 85% + 0,000001% + 0,000001%) × 90%.
  */
 function withBiRates(slip: PlacingSlip): RateLine[] {
   const owner = locationOwner(slip)

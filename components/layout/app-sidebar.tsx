@@ -72,12 +72,8 @@ function NavButton({
 }
 
 /**
- * Menu yang punya submenu.
- *
- * Judulnya tetap tautan — menuju halaman induk, yang mengalihkan ke bagian
- * pertama — dan tanda panah di sebelahnya yang membuka tutup daftarnya. Dua
- * sasaran klik yang terpisah, supaya membuka submenu tidak memaksa pindah
- * halaman dan sebaliknya.
+ * Menu bersubmenu: judul menuju halaman induk, panah di sebelahnya membuka-tutup daftarnya,
+ * supaya membuka submenu tidak memaksa pindah halaman dan sebaliknya.
  */
 function NavItemWithSub({
   item,
@@ -88,9 +84,8 @@ function NavItemWithSub({
 }) {
   const active = isActive(pathname, item.href)
 
-  // Terbuka sendiri begitu salah satu anaknya aktif, termasuk saat pindah ke
-  // sana dari tempat lain — tautan di dalam halaman, misalnya. Disetel saat
-  // render, bukan di dalam efek, supaya tidak memicu render bertingkat.
+  // Terbuka sendiri saat salah satu anaknya aktif, termasuk lewat tautan dari tempat lain.
+  // Disetel saat render, bukan di efek, supaya tidak memicu render bertingkat.
   const [open, setOpen] = React.useState(active)
   const [prevActive, setPrevActive] = React.useState(active)
   if (prevActive !== active) {

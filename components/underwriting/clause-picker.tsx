@@ -66,10 +66,7 @@ import {
 const NO_GROUP = "__tanpa_judul__"
 const NEW_GROUP = "__kelompok_baru__"
 
-/**
- * Judul kelompok klausula. Disimpan saat keluar dari isian atau Enter, supaya
- * kelompok tidak bergabung dengan kelompok lain di tengah mengetik.
- */
+/** Judul kelompok klausula, disimpan saat blur atau Enter supaya tidak bergabung di tengah mengetik. */
 function GroupTitleInput({
   title,
   listId,
@@ -106,9 +103,8 @@ function GroupTitleInput({
 }
 
 /**
- * Slip Property memasang dua picker (Section 1 dan 2) sekaligus. Keduanya
- * memakai satu permintaan daftar klausula (beserta wording, ratusan KB)
- * selama permintaan itu berjalan; picker yang mount sesudahnya mengambil ulang.
+ * Dua picker slip Property (Section 1 dan 2) berbagi satu permintaan daftar klausula (ratusan KB).
+ * Picker yang mount sesudah permintaan selesai mengambil ulang.
  */
 let pendingClauses: ReturnType<typeof getClausesForPickerAction> | null = null
 
@@ -140,17 +136,15 @@ export function ClausePicker({
   selected: string[]
   overrides: Record<string, ClauseOverride>
   /**
-   * Salinan klausula di slip. Klausula terpilih yang sudah nonaktif di master
-   * (misalnya EQVET) tidak ada di daftar master, jadi tampil dari salinan ini
-   * supaya tetap terlihat dan bisa dilepas.
+   * Salinan klausula di slip; klausula yang sudah nonaktif di master (misalnya EQVET)
+   * tampil dari sini supaya tetap terlihat dan bisa dilepas.
    */
   copies?: Record<string, ClauseOverride>
   onChange: (ids: string[]) => void
   onOverridesChange: (overrides: Record<string, ClauseOverride>) => void
   /**
-   * Judul kelompok per klausul (slip tanpa section). Bila `onGroupsChange`
-   * diisi, daftar terpilih bisa dikelompokkan dengan judul seperti Extensions
-   * dan General Conditions.
+   * Judul kelompok per klausul (slip tanpa section). Bila `onGroupsChange` diisi,
+   * daftar terpilih bisa dikelompokkan, misalnya Extensions dan General Conditions.
    */
   groups?: ClauseGroups
   onGroupsChange?: (groups: ClauseGroups) => void

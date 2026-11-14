@@ -92,10 +92,8 @@ export const store = {
     )
   },
   /**
-   * Pasang daftar dari server ke sebuah koleksi.
-   *
-   * Hidrasi pertama mengganti seisi koleksi; berikutnya hanya upsert karena
-   * daftarnya bisa parsial (detail klien hanya mengirim SPPA klien itu).
+   * Hidrasi pertama mengganti seisi koleksi; berikutnya hanya upsert karena daftarnya bisa
+   * parsial (detail klien hanya mengirim SPPA klien itu).
    */
   hydrate<K extends Key>(key: K, rows: Collections[K]) {
     if (hydrated.has(key)) {
@@ -105,7 +103,6 @@ export const store = {
     hydrated.add(key)
     commit(key, rows)
   },
-  /** Simpan baris: ganti bila id sudah ada, tambah bila belum. */
   upsert<K extends Key>(key: K, row: Row<K>) {
     if (store.get(key, row.id)) store.update(key, row.id, row)
     else store.insert(key, row)

@@ -25,11 +25,8 @@ import { itemGroups } from "@/lib/slip-items"
 import { vehicleTariff, vehicleTitle } from "@/lib/slip-vehicles"
 
 /**
- * Rate slip Motor Vehicle per kendaraan (Harry, 5 November 2026). Tiap kartu
- * berisi referensi tarif OJK, casco dan semua perluasan, TPL, dan PA
- * kendaraan itu, dengan format slip satu kendaraan. Data kendaraan dan TSI
- * diisi di Interest Insured. Type of cover tanpa tarif OJK, misalnya Heavy
- * Equipment, tidak menampilkan referensi, kategori, dan wilayah OJK.
+ * Rate Motor Vehicle per kendaraan; data dan TSI diisi di Interest Insured (Harry, 5 November 2026).
+ * Type of cover tanpa tarif OJK, misalnya Heavy Equipment, tidak menampilkan bagian OJK.
  */
 export function SlipVehicles({
   slip,

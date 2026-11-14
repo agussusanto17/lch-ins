@@ -10,9 +10,8 @@ import {
 import { cn } from "@/lib/utils"
 
 /**
- * Kartu satu lokasi slip Property yang bisa dilipat, karena satu lokasi saja
- * sudah panjang (Agus, 5 November 2026). Ringkasan di kepala kartu tetap
- * terlihat saat terlipat.
+ * Kartu lokasi Property yang bisa dilipat karena satu lokasi sudah panjang (Agus, 5 November 2026).
+ * Ringkasan di kepala kartu tetap terlihat saat terlipat.
  */
 export function UnitCard({
   title,

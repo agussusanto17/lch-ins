@@ -1,7 +1,6 @@
 /**
- * Export tabel ke Excel (.xlsx) dan CSV langsung dari browser (PRD A-20).
- * ExcelJS dimuat saat tombol diklik saja, supaya ±900 KB library tidak ikut
- * bundle awal halaman.
+ * Export tabel ke Excel (.xlsx) dan CSV dari browser (PRD A-20). ExcelJS dimuat saat
+ * tombol diklik supaya ±900 KB library tidak ikut bundle awal.
  */
 
 export type ExportCellType = "text" | "number" | "money" | "percent" | "date"

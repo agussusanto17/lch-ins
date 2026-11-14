@@ -1,9 +1,6 @@
 /**
- * Polis di form klaim (Agus, 13 November 2026). Klaim dicatat ke polis, jadi
- * endorsement dan pembatalan digabung ke polis induknya: pilihan polis cukup
- * satu baris per polis, berkas polis beserta endorsement-nya tampil saat polis
- * dipilih, dan deductible mengikuti endorsement yang berlaku pada tanggal
- * kejadian.
+ * Klaim dicatat ke polis induk, endorsement dan pembatalan digabung ke sana; deductible mengikuti
+ * endorsement yang berlaku pada tanggal kejadian (Agus, 13 November 2026).
  */
 
 import type { PolicyType } from "@/lib/data/types"
@@ -93,9 +90,8 @@ export interface PolicyFamily {
 }
 
 /**
- * Keluarga tiap polis: naik ke polis induk selama polisnya endorsement atau
- * pembatalan, sama dengan rosterPolicyId di server. Endorsement yang polis
- * induknya tidak ditemukan menjadi induk bagi dirinya sendiri.
+ * Keluarga tiap polis: naik ke induk selama endorsement atau pembatalan, sama dengan
+ * rosterPolicyId di server. Endorsement tanpa induk yang ditemukan menjadi induknya sendiri.
  */
 export function policyFamilies(rows: readonly PolicyLink[]): Map<string, PolicyFamily> {
   const byId = new Map(rows.map((r) => [r.id, r]))
@@ -158,9 +154,8 @@ export function claimPolicyLabel(p: ClaimPolicyChoice) {
 }
 
 /**
- * Deductible dari endorsement slip yang sudah tercatat di Policy Database.
- * Endorsement slip menyalin seluruh slip sebelumnya, jadi daftarnya lengkap
- * sesudah perubahan, bukan hanya yang berubah.
+ * Deductible dari endorsement slip di Policy Database; daftarnya lengkap sesudah perubahan
+ * karena endorsement slip menyalin seluruh slip sebelumnya.
  */
 export interface PolicyChangeTerms {
   policyId: string
@@ -174,10 +169,8 @@ export interface PolicyChangeTerms {
 }
 
 /**
- * Deductible yang berlaku pada sebuah tanggal: endorsement terakhir yang
- * efektif pada atau sebelum tanggal itu, atau deductible polis bila belum ada.
- * `next` adalah endorsement pertama yang baru efektif sesudahnya. Urutan
- * `changes` dari server dipakai untuk endorsement dengan tanggal efektif sama.
+ * Deductible endorsement terakhir yang efektif sampai tanggal itu, atau milik polis; `next` adalah
+ * endorsement sesudahnya. Tanggal efektif sama mengikuti urutan `changes` dari server.
  */
 export function deductiblesOn(
   base: { deductibleIntro: string | null; deductibles: DeductibleGroupText[] },

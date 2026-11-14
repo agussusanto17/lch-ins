@@ -1,9 +1,6 @@
 /**
- * Ringkasan penutupan sebelum Closing Instruction diterbitkan (Agus, 13
- * November 2026): premi − brokerage − additional fee adalah net premi yang
- * disetor ke asuransi, sedangkan brokerage + additional fee adalah pendapatan
- * LCH. Hanya tampil di form; dokumen tidak mencetak net premium (instruksi
- * LCH).
+ * Ringkasan penutupan sebelum Closing Instruction (Agus, 13 November 2026). Hanya tampil di form;
+ * dokumen tidak mencetak net premium (instruksi LCH).
  */
 
 import {

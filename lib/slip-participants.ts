@@ -1,9 +1,6 @@
 /**
- * Daftar peserta PA grup per orang (jawaban Harry, 6 November 2026): dicetak
- * sebagai lampiran seperti tabel Excel, dan disimpan satu per satu supaya
- * klaim dan endorsement bisa menunjuk, menambah, atau mengurangi peserta.
- * Contoh LCH: Placing Slip PA Salam Pacific (1.627 peserta) dan CI PA
- * ekspatriat (satu peserta dengan nomor paspor).
+ * Peserta PA grup disimpan per orang supaya klaim dan endorsement bisa menunjuknya, dan dicetak
+ * sebagai lampiran seperti tabel Excel (Harry, 6 November 2026).
  */
 import type { ClassOfBusiness, LineItem, SlipParticipant } from "./data/types"
 
@@ -41,7 +38,6 @@ export const PARTICIPANT_COLUMNS: {
 
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").replace(/[*:]/g, "").trim()
 
-/** Total sum insured semua peserta. */
 export function participantsTotal(list: readonly Pick<SlipParticipant, "sumInsured">[]) {
   return list.reduce((sum, p) => sum + (p.sumInsured || 0), 0)
 }
@@ -66,9 +62,8 @@ const iso = (y: number, m: number, d: number) => {
 }
 
 /**
- * Tanggal dari sel Excel: objek Date, angka seri Excel, "DD/MM/YYYY", atau
- * "YYYY-MM-DD". Tanggal dengan dua bagian ambigu dibaca DD/MM; bila bagian
- * pertama tidak mungkin hari, dibaca MM/DD (contoh LCH mencampur keduanya).
+ * Tanggal sel Excel: Date, angka seri, "DD/MM/YYYY", atau "YYYY-MM-DD". Bagian ambigu dibaca
+ * DD/MM, kecuali bagian pertama tidak mungkin hari (contoh LCH mencampur keduanya).
  */
 export function parseParticipantDate(value: unknown): string | null {
   if (value == null || value === "") return null
@@ -145,9 +140,8 @@ const cellValue = (value: unknown) =>
     : value
 
 /**
- * Peserta dari baris sheet Excel. Baris pertama yang memuat kolom Nama dan Sum
- * Insured dipakai sebagai judul; baris kosong dilewati. Kesalahan per baris
- * dikumpulkan dengan nomor baris Excel-nya, supaya daftar diperbaiki dulu.
+ * Baris pertama berisi kolom Nama dan Sum Insured jadi judul; baris kosong dilewati. Kesalahan
+ * dikumpulkan dengan nomor baris Excel-nya supaya daftar diperbaiki dulu.
  */
 export function participantsFromRows(rows: unknown[][], newId: (index: number) => string) {
   const errors: string[] = []
@@ -209,9 +203,8 @@ function matches(header: string, key: (typeof PARTICIPANT_COLUMNS)[number]["key"
 }
 
 /**
- * Baris Interest Insured dari daftar peserta: satu baris, nilai total UP.
- * Peserta tunggal tidak punya lampiran, jadi barisnya "Sum Insured (per
- * PID)" seperti CI PA ekspatriat LCH (Harry, 7 November 2026).
+ * Satu baris Interest Insured bernilai total UP. Peserta tunggal tanpa lampiran memakai "Sum
+ * Insured (per PID)" seperti CI PA ekspatriat LCH (Harry, 7 November 2026).
  */
 export function participantsInterestItem(
   list: readonly Pick<SlipParticipant, "sumInsured">[]
@@ -230,9 +223,8 @@ export const participantDateText = (iso: string | null | undefined) =>
   iso ? iso.split("-").reverse().join("/") : ""
 
 /**
- * Isi baris "PID / Insured Name" untuk slip dengan satu peserta, mengikuti CI
- * PA ekspatriat LCH: nama, nomor identitas atau paspor, tanggal lahir, dan
- * jabatan. Isian kosong tidak dicetak; beneficiary tetap di Detail tambahan.
+ * Baris "PID / Insured Name" slip satu peserta, seperti CI PA ekspatriat LCH. Isian kosong tidak
+ * dicetak; beneficiary tetap di Detail tambahan.
  */
 export function participantPidText(p: SlipParticipant) {
   return [

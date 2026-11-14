@@ -1,14 +1,6 @@
 /**
- * Perhitungan premi endorsement dan cancellation slip di Placement (Harry,
- * 11 November 2026):
- *
- * - Cetakan memuat perhitungan sebelum dan sesudah, seperti EDM 01 dan
- *   `Rumus Prorate Hari.xlsx`. Perhitungan sebelum dikembalikan, perhitungan
- *   sesudah ditagih, keduanya prorata.
- * - Hari prorata dari tanggal efektif s/d tanggal berakhir polis, dibagi 365.
- *   Endorsement atau pembatalan per awal polis memakai premi penuh (faktor 1).
- * - Selisih positif berarti premi tambahan, negatif berarti refund premi.
- *   Cancellation mengembalikan seluruh perhitungan sebelum.
+ * Endorsement slip: perhitungan sebelum dikembalikan, sesudah ditagih, keduanya prorata hari ÷ 365
+ * sampai polis berakhir; per awal polis premi penuh (Harry, 11 November 2026).
  */
 
 import { rateLineName } from "@/components/underwriting/slip-model"

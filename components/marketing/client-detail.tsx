@@ -77,9 +77,7 @@ export function ClientDetail({
   const canManageMarketing = permission.canManage("/marketing")
   const canManageUnderwriting = permission.canManage("/placement")
 
-  // Data klien dari database. Dulu dicari di store sesi memakai id di URL,
-  // sehingga tautan lama (c-005) menampilkan data contoh beserta slip, polis,
-  // dan klaim contohnya. Setelah KYC diedit, isinya diganti hasil simpanan.
+  // Data klien dari database; setelah KYC diedit, isinya diganti hasil simpanan.
   const [client, setClient] = React.useState(initialClient ?? null)
   const [prevInitialClient, setPrevInitialClient] = React.useState(initialClient)
   if (prevInitialClient !== initialClient) {

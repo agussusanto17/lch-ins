@@ -13,10 +13,8 @@ export interface OccupationTariff {
 }
 
 /**
- * Tabel I.A Lampiran I, diekstrak per sel tabel; keterangan sama dengan PDF.
- * Baris judul tanpa tarif tidak dimasukkan. 29313 dipecah menjadi 29313A dan
- * 29313B karena tarifnya dibedakan Grade A dan Grade B. 2992 dan 40 tidak
- * punya tarif sendiri.
+ * Tabel I.A Lampiran I per sel tabel, tanpa baris judul; keterangan sama dengan PDF.
+ * 29313 dipecah jadi 29313A dan 29313B (Grade A dan B); 2992 dan 40 tidak punya tarif sendiri.
  */
 export const OCCUPATION_TARIFFS: OccupationTariff[] = [
   { code: "200", name: "Mining (underground or above ground) of precious metal (Gold, Silver, Platinum and other precious metals) including primarily smelting and refining", k1: [0.49, 0.613], k2: [0.735, 0.919], k3: [0.98, 1.225] },

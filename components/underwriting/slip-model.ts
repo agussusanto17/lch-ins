@@ -108,10 +108,8 @@ export function slipOccupationText(
 }
 
 /**
- * Nama cover sebuah baris rate, untuk deductible per cover. Baris tunggal
- * "Rate (%)" bukan nama cover, jadi diganti type of cover slipnya; tanpa itu
- * dokumen mencetak "Rate (%)" di kolom cover. Cover tambahan yang belum diberi
- * nama juga memakai type of cover (release memintanya diisi).
+ * Nama cover sebuah baris rate, untuk deductible per cover.
+ * Baris tunggal "Rate (%)" dan cover tambahan tanpa nama memakai type of cover slipnya.
  */
 export function coverLabel(
   slip: Pick<PlacingSlip, "typeOfCover" | "cob">,
@@ -151,11 +149,7 @@ const MOTOR_EXTRA_AFTER = "Terrorism & Sabotage"
 
 type UnitLines = Pick<PlacingSlip, "rateLines" | "tplLines" | "paLines">
 
-/**
- * Lokasi, kendaraan, atau objek yang punya deductible sendiri (Agus, 13
- * November 2026). Sebelumnya satu daftar deductible per cover berlaku untuk
- * semua lokasi dan objek (Harry, 5 November 2026).
- */
+/** Lokasi, kendaraan, atau objek yang punya deductible sendiri (Agus, 13 November 2026). */
 export interface DeductibleUnit {
   /** Id lokasi atau baris Interest; "slip" untuk slip tanpa unit. */
   id: string
@@ -168,10 +162,8 @@ export interface DeductibleUnit {
 }
 
 /**
- * Unit deductible slip: lokasi Property, kendaraan Motor Vehicle, atau objek
- * COB lain. Objek "limit saja" bukan risiko tersendiri, jadi tidak punya
- * deductible. Slip ber-section (CAR, EAR) tetap satu daftar per section dan
- * slip tanpa objek memakai baris slipnya, jadi keduanya satu unit.
+ * Unit deductible: lokasi, kendaraan, atau objek; objek "limit saja" tidak punya deductible.
+ * Slip ber-section (CAR, EAR) dan slip tanpa objek dihitung satu unit.
  */
 export function deductibleUnits(slip: PlacingSlip): DeductibleUnit[] {
   if (slip.cob === "Property") {
@@ -200,9 +192,8 @@ export function deductibleUnits(slip: PlacingSlip): DeductibleUnit[] {
 }
 
 /**
- * Baris penyimpan deductible satu unit, dengan kunci cover untuk mencocokkan
- * baris antarunit: label baris rate beserta urutannya bila labelnya kembar,
- * lalu TPL dan PA yang deductible-nya di baris pertama tabelnya.
+ * Baris penyimpan deductible satu unit, dengan kunci cover untuk mencocokkan baris antarunit:
+ * label baris rate (plus urutan bila kembar), lalu TPL dan PA di baris pertama tabelnya.
  */
 function deductibleLines(lines: UnitLines): Map<string, RateLine> {
   const out = new Map<string, RateLine>()
@@ -236,9 +227,8 @@ export function unitsShareDeductibles(slip: PlacingSlip) {
 }
 
 /**
- * Deductible satu cover diubah di semua unit sekaligus, selama deductible
- * sama untuk semua lokasi, kendaraan, atau objek. Unit tanpa cover itu
- * dilewati. `row` berasal dari unit pertama.
+ * Ubah deductible satu cover di semua unit sekaligus, selama deductible semua unit sama.
+ * Unit tanpa cover itu dilewati; `row` berasal dari unit pertama.
  */
 export function setDeductiblesAllUnits(
   slip: PlacingSlip,
@@ -290,9 +280,8 @@ export function extraDeductibleCovers(
 }
 
 /**
- * Deductible rows of one unit (default the first) in form and print order:
- * one per rate line, with motor PA and TPL after Terrorism & Sabotage once
- * they hold deductibles or were added from the form (`added`).
+ * Deductible rows of one unit (default the first) in form and print order. Motor PA and TPL
+ * follow Terrorism & Sabotage once they hold deductibles or were added from the form (`added`).
  */
 export function deductibleRows(
   slip: PlacingSlip,
@@ -391,10 +380,8 @@ export const DEFAULT_PERIOD_NOTE =
   "Both days at 12 o'clock noon local time at the location of the insured object."
 
 /**
- * Baris Exclusions untuk dokumen. Nomor yang diketik sendiri, misalnya "a)",
- * "1)", "1." atau "-", dipisah dari teksnya supaya baris yang terlipat rata
- * dengan teks. Baris tanpa nomor, seperti "And other exclusion as may be
- * agreed by the company", dicetak apa adanya. Baris kosong dilewati.
+ * Baris Exclusions dokumen; nomor yang diketik ("a)", "1.", "-") dipisah supaya lipatan rata teks.
+ * Baris tanpa nomor dicetak apa adanya, baris kosong dilewati.
  */
 export function exclusionItems(text: string | undefined) {
   return (text ?? "")
@@ -411,18 +398,8 @@ export function exclusionItems(text: string | undefined) {
 export const DEFAULT_PERIOD_LABEL = "Period of Insurance"
 
 /**
- * Baris periode di tabel detail dokumen: label, lalu isinya.
- * - Teks periode yang diketik menggantikan tanggal dan keterangannya, misalnya
- *   "23rd / 24th / 25th October 2026 until final destination" (ETD single
- *   shipment) atau periode proyek T.B.A.
- * - Period TBA tanpa teks: "To Be Advised".
- * - Teks akhir periode menggantikan tanggal akhir, misalnya "23 October 2026
- *   until final destination" untuk single shipment. Keterangan periode tidak
- *   ikut, karena keterangan seperti "both days" mengacu ke dua tanggal.
- * - Tanggal mulai sama dengan tanggal akhir dicetak satu tanggal, misalnya
- *   hari turnamen Hole in One. Keterangan yang menyebut "both days" tidak ikut,
- *   karena mengacu ke dua tanggal (temuan SIT 8 November 2026).
- * - Keterangan periode dicetak di baris berikutnya, seperti CI LCH.
+ * Baris periode dokumen: teks periode, lalu TBA, lalu teks akhir menggantikan tanggal dan keterangan.
+ * Periode satu hari dicetak satu tanggal tanpa keterangan "both days" (temuan SIT 8 November 2026).
  */
 export function slipPeriodRow(
   slip: Pick<
@@ -466,10 +443,8 @@ export function periodNoteNeedsTwoDates(note: string | null | undefined) {
 }
 
 /**
- * Isian bawaan type of cover setelah type of cover diganti, misalnya label
- * periode atau teks akhir periode: nilai bawaan type of cover baru, kecuali
- * nilai yang diketik sendiri (beda dari bawaan type of cover lama) tetap
- * dipakai.
+ * Isian bawaan setelah type of cover diganti, misalnya label periode: pakai bawaan baru,
+ * kecuali nilai yang diketik sendiri (beda dari bawaan lama) tetap dipakai.
  */
 export function nextCoverDefault(
   current: string | undefined,
@@ -560,11 +535,8 @@ export function switchCob(
 // Lokasi slip Property. Fungsi di bawah mengembalikan patch untuk `set` form.
 
 /**
- * Baris rate slip Property mengikuti type of cover yang dipilih, misalnya
- * PSATSI (Terrorism & Sabotage) satu baris rate dan type of cover lain baris
- * PAR + EQVET. Patch kosong bila labelnya sudah sesuai. Baris dengan label
- * yang tetap ada membawa rate, loss limit, dan deductible-nya; baris lain
- * dibuat kosong untuk setiap lokasi.
+ * Baris rate Property mengikuti type of cover, misalnya PSATSI satu baris, lainnya PAR + EQVET.
+ * Baris yang labelnya tetap membawa rate, loss limit, dan deductible; baris lain dibuat kosong.
  */
 export function propertyRateLinesPatch(
   slip: PlacingSlip,
@@ -594,11 +566,7 @@ export function propertyRateLinesPatch(
   }
 }
 
-/**
- * Lokasi baru di akhir daftar: isian kosong, satu baris sum insured per
- * section, dan baris rate dengan cover dan deductible yang sama seperti
- * lokasi pertama. Deductible-nya bisa diubah per lokasi.
- */
+/** Lokasi baru di akhir daftar; cover dan deductible awalnya sama seperti lokasi pertama. */
 export function addLocationPatch(slip: PlacingSlip): Partial<PlacingSlip> {
   const locationId = uid("loc")
   const firstLines = locationGroups(slip)[0].rateLines
@@ -707,9 +675,8 @@ export function itemRowsPatch(
 }
 
 /**
- * Token {COVER} di nomor slip. Singkatan dari master data didahulukan; label
- * lama yang belum ada di master (misalnya "PAR + EQVET") memakai kode bawaan
- * supaya nomor slip lama tetap sama.
+ * Token {COVER} di nomor slip; singkatan master data didahulukan. Label lama di luar master
+ * (misalnya "PAR + EQVET") memakai kode bawaan supaya nomor slip lama tetap sama.
  */
 export function coverCodeFor(
   cob: ClassOfBusiness,
@@ -722,9 +689,8 @@ export function coverCodeFor(
 }
 
 /**
- * Token {COVER} slip dengan dua type of cover: singkatan keduanya digabung
- * sesuai urutan isian, misalnya PAR + EQ menjadi PAREQ seperti CI LCH
- * 011/LCH-PLCMT/CI-PAREQ/VIII/2026.
+ * Token {COVER} slip dua type of cover: singkatan keduanya digabung sesuai urutan isian,
+ * misalnya PAR + EQ menjadi PAREQ (CI LCH 011/LCH-PLCMT/CI-PAREQ/VIII/2026).
  */
 export function joinCoverCodes(...codes: (string | null | undefined)[]) {
   return codes.filter(Boolean).join("") || null
@@ -740,9 +706,8 @@ export function usesSectionSumInsured(cob: ClassOfBusiness) {
 }
 
 /**
- * Ganti objek Interest satu section slip ber-section. Objek Section 2 yang baru
- * ditambah langsung "limit saja", karena Section 2 CAR/EAR biasanya limit TPL
- * tanpa premi tersendiri (contoh slip LCH). Urutannya Section 1 lalu 2.
+ * Ganti objek Interest satu section; urutannya Section 1 lalu 2. Objek Section 2 baru langsung
+ * "limit saja", karena Section 2 CAR/EAR biasanya limit TPL tanpa premi (contoh slip LCH).
  */
 export function sectionItemsPatch(
   slip: Pick<PlacingSlip, "interestItems">,
@@ -761,10 +726,8 @@ export function sectionItemsPatch(
 }
 
 /**
- * Judul section slip untuk klausul, deductible, dan Interest: Property
- * (Material Damage dan Business Interruption), atau slip ber-section seperti
- * CAR dan EAR (Material Damage dan Third Party Liability, contoh slip LCH 6
- * November 2026). Null berarti slip tanpa section.
+ * Judul section klausul, deductible, dan Interest: Property (Material Damage, Business Interruption)
+ * atau CAR/EAR (Material Damage, TPL; contoh slip LCH 6 November 2026). Null berarti tanpa section.
  */
 export function slipSectionTitles(
   slip: Pick<PlacingSlip, "cob" | "usesSections">
@@ -779,11 +742,8 @@ export function slipSectionTitles(
 }
 
 /**
- * Tanggal akhir otomatis dari lama periode bawaan type of cover (Master
- * Data): tanggal mulai + sekian hari, misalnya 14 hari setelah ETD untuk
- * single shipment atau 0 hari untuk Hole in One (jawaban Harry, 6 November
- * 2026). Tanggal akhir yang kosong atau masih hasil hitung dari tanggal mulai
- * sebelumnya ikut berubah; yang sudah diubah sendiri dibiarkan.
+ * Tanggal akhir = tanggal mulai + lama periode bawaan type of cover (Harry, 6 November 2026).
+ * Hanya tanggal akhir yang kosong atau hasil hitung sebelumnya yang ikut berubah.
  */
 export function autoExpiryDate({
   inception,
@@ -830,10 +790,8 @@ export function occupationBounds(
 }
 
 /**
- * Baris rate beserta batas OJK yang berlaku. Batas yang dipilih dari panel
- * referensi dipakai lebih dulu; bila belum ada, FLEXAS memakai batas okupasi
- * dan kelas konstruksi slip, jadi rate yang diketik manual tetap tervalidasi.
- * Type of cover tanpa tarif OJK, misalnya Heavy Equipment, tidak punya batas.
+ * Baris rate beserta batas OJK: batas dari panel referensi didahulukan, lalu FLEXAS dari okupasi
+ * dan kelas konstruksi supaya rate manual tetap tervalidasi. Tanpa tarif OJK berarti tanpa batas.
  */
 export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
   if (!usesOjkTariff(slip)) return withoutOjkBounds(slip.rateLines)
@@ -1023,9 +981,8 @@ export function locationIssues(slip: PlacingSlip): string[] {
 }
 
 /**
- * Isian kendaraan slip Motor Vehicle multi kendaraan yang wajib sebelum
- * release: TSI dan minimal satu rate per kendaraan. Slip satu kendaraan cukup
- * dicek oleh pemeriksaan sum insured dan rate slip.
+ * Isian wajib slip Motor Vehicle multi kendaraan sebelum release: TSI dan minimal satu rate.
+ * Slip satu kendaraan cukup dicek oleh pemeriksaan sum insured dan rate slip.
  */
 export function vehicleIssues(slip: PlacingSlip): string[] {
   if (!isMultiVehicle(slip)) return []
@@ -1059,15 +1016,8 @@ export function rateLineName(slip: PlacingSlip, line: RateLine) {
 // Penomoran
 
 /**
- * Nomor Quotation Slip, Cover Note, dan Closing Instruction diturunkan dari
- * nomor slip: nomor urut sama, hanya kode dokumennya yang berganti (Harry,
- * 19 Oktober 2026). 002/LCH-PLCMT/PS-MV/XI/2026 menjadi QS-MV, CN-MV, dan
- * CI-MV dengan nomor urut, bulan, dan tahun yang sama.
- */
-/**
- * Nomor dokumen turunan dari nomor placing slip: QS, CN, dan CI untuk slip
- * yang sama, serta ES dan CS untuk endorsement dan cancellation slip yang
- * memakai urutan nomor placing slip.
+ * Nomor QS, CN, CI, ES, dan CS = nomor placing slip, kode dokumennya diganti (Harry, 19 Oktober 2026).
+ * Contoh: 002/LCH-PLCMT/PS-MV/XI/2026 menjadi 002/LCH-PLCMT/QS-MV/XI/2026.
  */
 export function derivedDocNumber(
   slipNo: string | null,

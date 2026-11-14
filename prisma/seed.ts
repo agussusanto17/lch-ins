@@ -1,8 +1,5 @@
 /**
- * Seed master data LCH.
- *
- * Idempotent: aman dijalankan berulang kali, semuanya pakai upsert dengan
- * kunci alami (kode), bukan id acak.
+ * Seed master data LCH. Idempotent: semua upsert dengan kunci alami (kode), bukan id acak.
  *
  * Sumbernya ada di prisma/seed-data:
  * - cob-toc.csv            daftar COB dan type of cover milik LCH (sheet FIX)
@@ -11,8 +8,6 @@
  * - skala-bi-ojk.csv       persentase tarif menurut indemnity period
  * - clause-wording-lch.csv 607 klausul dari pustaka wording LCH
  * - kendaraan.csv          10 merek mobil terlaris 2026 (Gaikindo) dan model populernya
- *
- * Jalankan: npm run db:seed
  */
 
 import { randomBytes } from "node:crypto"
@@ -251,8 +246,7 @@ const LOOKUPS: {
     ],
   },
   {
-    // Status siklus hidup klaim, sesuai koreksi Harry 5 Okt 2026. Tahapan
-    // dokumennya dipisah ke lookup claim_stage di bawah.
+    // Status siklus hidup klaim; tahapan dokumen ada di claim_stage (Harry, 5 Oktober 2026).
     type: "claim_status",
     system: true,
     values: [
@@ -331,20 +325,14 @@ async function seedLookups() {
           sortOrder: i,
           isSystem: group.system,
         },
-        // Label sengaja tidak ditimpa, supaya perubahan dari LCH tidak hilang
-        // saat seed dijalankan lagi.
+        // Label sengaja tidak ditimpa supaya perubahan dari LCH tidak hilang.
         update: { sortOrder: i, isSystem: group.system },
       })
       n++
     }
 
-    // Kode pada lookup is_system dimiliki program, bukan LCH. Kalau sebuah kode
-    // dihapus dari daftar di atas, barisnya tidak ikut dihapus supaya data lama
-    // yang menunjuk ke sana tetap bisa ditelusuri, tapi dinonaktifkan supaya
-    // berhenti muncul di dropdown. Tanpa ini, memecah claim_status menjadi
-    // claim_status dan claim_stage menyisakan sepuluh pilihan lama di database.
-    // Hanya baris sistem: nilai yang ditambah LCH di Master Data (misalnya
-    // tahapan klaim baru) tetap aktif walaupun tidak ada di daftar ini.
+    // Kode sistem yang dibuang dari daftar dinonaktifkan, tidak dihapus, agar data lama tertelusur.
+    // Hanya baris is_system; nilai tambahan LCH di Master Data tetap aktif.
     if (group.system) {
       const { count } = await prisma.lookupValue.updateMany({
         where: {
@@ -433,9 +421,7 @@ async function seedCompanyProfile() {
   return 1
 }
 
-/**
- * Sumber penempatan / bisnis awal (PRD A-04, ERD sources).
- */
+/** Sumber penempatan / bisnis awal (PRD A-04, ERD sources). */
 async function seedSources() {
   const sources = [
     { code: "LCH-ID", name: "PT. LCH Insurance Brokers" },
@@ -453,12 +439,8 @@ async function seedSources() {
 }
 
 /**
- * COB dan type of cover dari sheet FIX milik LCH. Kode COB adalah dua digit
- * pertama kode type of cover.
- *
- * Satuan rate: Property per mil, COB lain persen (permintaan 4 November
- * 2026). Tampilan form: Property dan Motor punya form sendiri, sisanya form
- * standar.
+ * COB dan type of cover dari sheet FIX LCH; kode COB = dua digit pertama kode type of cover.
+ * Rate Property per mil, COB lain persen (4 November 2026); Property dan Motor punya form sendiri.
  */
 const COB_FORM: Record<string, { rateMode: string; formVariant: string }> = {
   "01": { rateMode: "permil", formVariant: "property" },
@@ -466,14 +448,9 @@ const COB_FORM: Record<string, { rateMode: string; formVariant: string }> = {
 }
 
 /**
- * Singkatan type of cover untuk token {COVER}, dari kolom SINGKATAN TOC di
- * file LCH "LIST COB DAN TOC" (diperbarui LCH 21 Oktober 2026). Pengecualian:
- * PSAGBI (0105) EQ supaya slip PAR + EQ bernomor PAREQ seperti CI LCH; Directors
- * and Officer Liability (0913) DNO karena singkatan hanya boleh huruf dan angka
- * (file LCH menulis D&O); 0312 kosong di file LCH dan tetap MC. Yang kosong di
- * file LCH dibiarkan tanpa singkatan. 0404 Hull War Risks (HWR) tidak ada di
- * file LCH; ditambahkan dari jawaban Harry 9 November 2026, sesuai nomor
- * CI-HWR di contoh slip LCH.
+ * Singkatan {COVER} dari kolom SINGKATAN TOC file LCH "LIST COB DAN TOC" (LCH, 21 Oktober 2026).
+ * Pengecualian: 0105 EQ (nomor PAREQ), 0913 DNO (huruf/angka saja), 0312 MC (kosong di file LCH),
+ * dan 0404 HWR di luar file LCH (Harry, 9 November 2026).
  */
 const COVER_ABBREVIATIONS: Record<string, string> = {
   "0103": "BI",
@@ -577,9 +554,7 @@ async function seedCobAndCoverTypes() {
   return { cobs: cobs.size, coverTypes: rows.length }
 }
 
-/**
- * Master jenis berkas klaim awal per COB (PRD A-04, A-18, ERD claim_document_types).
- */
+/** Master jenis berkas klaim awal per COB (PRD A-04, A-18, ERD claim_document_types). */
 async function seedClaimDocumentTypes() {
   const cobs = await prisma.classOfBusiness.findMany({
     select: { id: true, code: true },
@@ -638,10 +613,7 @@ async function seedClaimDocumentTypes() {
   return count
 }
 
-/**
- * Baris rate bawaan per COB, dipakai membuat tabel rate saat slip baru.
- * Mengikuti tampilan prototipe yang sudah disetujui LCH.
- */
+/** Baris rate bawaan per COB untuk tabel rate slip baru, mengikuti prototipe yang disetujui LCH. */
 async function seedCobRateLines() {
   const rateKind = await lookupId("rate_line_kind", "rate")
   const tplKind = await lookupId("rate_line_kind", "tpl")
@@ -737,9 +709,7 @@ async function seedOccupations() {
     const code = r.kode_okupasi
     if (!code) continue
 
-    // Hasil ekstraksi PDF pernah memberi kode sama ke dua okupasi berbeda.
-    // Yang belakangan dilewat supaya tarifnya tidak menimpa yang pertama,
-    // lalu dilaporkan untuk dicek ulang ke LCH.
+    // Ekstraksi PDF pernah memberi kode sama ke dua okupasi; yang belakangan dilewati dan dilaporkan.
     const previous = seen.get(code)
     if (previous !== undefined) {
       if (previous !== r.keterangan) {
@@ -992,10 +962,8 @@ async function seedClauses() {
     })
   }
 
-  // Satu INSERT ... ON CONFLICT DO NOTHING, bukan upsert per baris. Hasilnya
-  // sama: wording yang sudah ada sengaja tidak ditimpa, karena klausul bisa
-  // diedit LCH lewat Master Clauses. Upsert per baris butuh satu perjalanan
-  // ke database per klausul, dan ke database cloud itu memakan menit.
+  // Satu INSERT ... ON CONFLICT DO NOTHING: wording yang ada tidak ditimpa karena bisa diedit LCH.
+  // Upsert per baris butuh satu round trip per klausul, ke database cloud itu memakan menit.
   const { count } = await prisma.clause.createMany({
     data,
     skipDuplicates: true,
@@ -1004,10 +972,8 @@ async function seedClauses() {
 }
 
 /**
- * Judul klausul dari contoh slip LCH yang belum ada di pustaka, tanpa wording
- * (jawaban Harry, 9 November 2026: wording dilengkapi LCH di Master Clauses).
- * Daftarnya sama dengan migrasi 20261109180000_impor_judul_klausul_contoh_slip,
- * supaya database baru juga memilikinya.
+ * Judul klausul contoh slip LCH di luar pustaka, wording diisi LCH nanti (Harry, 9 November 2026).
+ * Sama dengan migrasi 20261109180000_impor_judul_klausul_contoh_slip, untuk database baru.
  */
 async function seedSampleClauseTitles() {
   const rows = readCsv("judul-klausul-contoh-slip.csv")
@@ -1031,13 +997,8 @@ async function seedSampleClauseTitles() {
 }
 
 /**
- * Akun awal, satu per role, supaya sistem bisa dicoba sebelum LCH mengirim
- * daftar pengguna sungguhan. Ini data contoh dan harus diganti.
- *
- * Kata sandinya tidak ditulis di repo. Isi SEED_USER_PASSWORD kalau mau
- * menentukan sendiri; kalau kosong, seed membuat kata sandi acak dan
- * menampilkannya sekali di akhir. Hash-nya dibuat memakai fungsi milik Better
- * Auth supaya cocok dengan yang dipakai saat login.
+ * Akun contoh satu per role sebelum LCH mengirim daftar pengguna sungguhan; harus diganti.
+ * Kata sandi dari SEED_USER_PASSWORD, atau acak dan ditampilkan sekali; hash memakai Better Auth.
  */
 interface SeedUserRecord {
   email: string
@@ -1091,9 +1052,7 @@ const PRESERVED_MOCK_USERS: SeedUserRecord[] = [
  * dapat satu akun; email yang konflik identitas tidak di-seed di sini.
  */
 const OPERATIONAL_USERS: SeedUserRecord[] = [
-  // Super Admin ditunjuk LCH 29 Oktober 2026: Harry dan Tresna. Role bidangnya
-  // tetap dipertahankan supaya daftar ini tetap menggambarkan pekerjaan asli
-  // orangnya, walaupun admin sendiri sudah Kelola di seluruh menu.
+  // Super Admin: Harry dan Tresna (LCH, 29 Oktober 2026). Role bidangnya tetap dicatat.
   {
     email: "harry@lch.co.id",
     name: "HARRY SETIAWAN",
@@ -1110,10 +1069,8 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
     mustChangePassword: true,
   },
   // Klaim, Accounting, Finance
-  // LCH menyebut PIC klaim adalah Yusuf dan Tejo (29 Oktober 2026). Tejo sudah
-  // punya akun sendiri di bawah; akun generik "CLAIM LCH" diberi nama Yusuf.
-  // Emailnya masih claim@lch.co.id karena alamat pribadinya belum diberitahu,
-  // tinggal diganti Admin dari /users kalau sudah ada.
+  // PIC klaim Yusuf dan Tejo (LCH, 29 Oktober 2026); akun generik "CLAIM LCH" jadi Yusuf.
+  // Email masih claim@lch.co.id sampai alamat pribadinya diberitahu.
   {
     email: "claim@lch.co.id",
     name: "YUSUF",
@@ -1149,12 +1106,8 @@ const OPERATIONAL_USERS: SeedUserRecord[] = [
     jobTitle: "Finance",
     mustChangePassword: true,
   },
-  // LCH memastikan 29 Oktober 2026 bahwa adminfin@lch.co.id milik Yenie, bukan
-  // akun Super Admin bersama, jadi konflik identitas pada email ini selesai.
-  // Lembar referensi menulis perannya "finance / admin", tetapi di sini baru
-  // diberi finance saja: admin membuka Pengguna dan Audit Trail serta Kelola di
-  // seluruh menu, jadi lebih aman kurang dulu lalu ditambah Admin dari /users
-  // kalau LCH memang meminta. Menunggu jawaban.
+  // adminfin@lch.co.id milik Yenie, bukan akun Super Admin bersama (LCH, 29 Oktober 2026).
+  // Baru diberi finance; role admin menunggu konfirmasi LCH karena aksesnya luas.
   {
     email: "adminfin@lch.co.id",
     name: "YENIE YUSTIKA",
@@ -1199,8 +1152,7 @@ async function seedUsers() {
       await prisma.user.update({
         where: { id: existing.id },
         data: {
-          // Nama ikut diperbarui supaya koreksi dari LCH benar-benar terpasang
-          // saat seed dijalankan ulang, bukan cuma berlaku di database kosong.
+          // Nama ikut diperbarui supaya koreksi LCH juga terpasang saat seed ulang.
           name: item.name,
           roles: item.roles,
           jobTitle: item.jobTitle ?? existing.jobTitle,
@@ -1250,10 +1202,7 @@ async function seedUsers() {
   return { created, updated, password: created ? password : null }
 }
 
-/**
- * Pembenihan data klien awal (12 klien mock LCH) ke tabel clients,
- * client_addresses, dan client_documents di PostgreSQL.
- */
+/** Data klien awal (12 klien mock LCH) ke clients, client_addresses, dan client_documents. */
 async function seedClients() {
   const cache = await prisma.lookupValue.findMany({
     where: {
@@ -1417,9 +1366,7 @@ async function seedClients() {
   return { created, updated, total: CLIENTS.length }
 }
 
-/**
- * Pembenihan data awal 3 mock SPPA LCH ke tabel sppa di PostgreSQL.
- */
+/** Data awal 3 mock SPPA LCH. */
 async function seedSppa() {
   const [cobs, coverTypes, occupations, currencies, clients, user] = await Promise.all([
     prisma.classOfBusiness.findMany({ select: { id: true, code: true, name: true } }),
@@ -1561,9 +1508,8 @@ async function seedVehicles() {
 }
 
 /**
- * Bagian seed yang bisa dipilih: `npm run db:seed -- clauses tariffs`.
- * Tanpa argumen semua bagian dijalankan. Berguna untuk melanjutkan seed ke
- * database cloud tanpa mengulang bagian yang sudah lengkap.
+ * Bagian seed yang bisa dipilih: `npm run db:seed -- clauses tariffs`; tanpa argumen semua jalan.
+ * Berguna melanjutkan seed ke database cloud tanpa mengulang bagian yang sudah lengkap.
  */
 const SECTIONS = [
   "system",

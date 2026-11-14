@@ -33,9 +33,8 @@ import { num } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 /*
- * Isi panel referensi tarif OJK. Dimuat terpisah (next/dynamic) saat panel
- * dibuka, karena membawa tabel zona gempa 511 kabupaten/kota dan tarif
- * kendaraan bermotor yang tidak dibutuhkan saat form pertama tampil.
+ * Isi panel referensi tarif OJK, dimuat terpisah (next/dynamic) saat panel dibuka
+ * karena membawa tabel zona gempa 511 kabupaten/kota dan tarif kendaraan bermotor.
  */
 
 type PickRate = (label: string, value: number, bounds?: RateBounds) => void
@@ -173,9 +172,8 @@ export function PropertyPanel({
       : null
 
   function pickFlood(percent: number) {
-    // FWTWD sudah mencakup flood, windstorm, dan water damage, jadi tarif
-    // banjir OJK mengisi baris itu. Baris "Banjir (Flood)" terpisah dihapus
-    // atas permintaan LCH karena isinya dobel.
+    // FWTWD sudah mencakup flood, windstorm, dan water damage, jadi tarif banjir OJK
+    // mengisi baris itu; baris "Banjir (Flood)" terpisah dihapus karena dobel (LCH).
     onPickRate?.("FWTWD", toPermil(percent), {
       min: floodMin != null ? toPermil(floodMin) : null,
       max: floodMax != null ? toPermil(floodMax) : null,

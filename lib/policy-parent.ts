@@ -1,11 +1,6 @@
 /**
- * Polis rujukan untuk renewal, endorsement, dan pembatalan. Dipakai form dan
- * server supaya aturannya sama.
- *
- * Renewal boleh tanpa polis rujukan di sistem: sistem baru dipakai sejak 2026,
- * jadi polis tahun lalu belum tercatat, dan cukup ditulis nomornya (Agus,
- * 9 November 2026). Endorsement dan pembatalan tetap harus memilih polisnya,
- * karena isinya mengubah data polis itu.
+ * Renewal boleh tanpa polis rujukan di sistem, cukup nomornya, karena polis sebelum 2026 belum
+ * tercatat (Agus, 9 November 2026). Endorsement dan pembatalan tetap wajib memilih polisnya.
  */
 import { POLICY_TYPES_WITH_PARENT } from "./data/reference"
 import type { PolicyType } from "./data/types"
@@ -16,7 +11,6 @@ type ParentFields = {
   previousPolicyNo?: string | null
 }
 
-/** Label isian polis rujukan sesuai tipe polis. */
 export function parentPolicyLabel(type: PolicyType) {
   if (type === "Renewal") return "Polis Sebelumnya"
   if (type === "Endorsement") return "Polis yang Di-endorse"

@@ -74,10 +74,8 @@ type DocProps = {
 }
 
 /**
- * Keterangan di atas Closing Instruction: polis yang tercatat otomatis di
- * Policy Database saat CI terbit (meeting LCH, 10 November 2026). Kalau belum
- * ada polis, misalnya slip Closed sebelum pencatatan otomatis atau
- * pencatatannya gagal, user Policy Database bisa mencatatnya dari sini.
+ * Polis yang tercatat otomatis di Policy Database saat CI terbit (LCH, 10 November 2026).
+ * Kalau belum ada polis, user Policy Database bisa mencatatnya dari sini.
  */
 function LinkedPoliciesNotice({
   slipId,
@@ -192,16 +190,14 @@ function Missing() {
 }
 
 /**
- * Brokerage tidak dicetak di bawah GRAND TOTAL PREMIUM (Harry, 5 November
- * 2026); Placing Slip dan Closing Instruction mencetaknya di BrokerageBlock.
+ * Brokerage tidak dicetak di bawah GRAND TOTAL PREMIUM (Harry, 5 November 2026).
+ * Placing Slip dan Closing Instruction mencetaknya di BrokerageBlock.
  */
 function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
   // Open cover: rate per kategori, premi per deklarasi.
   if (usesOpenCover(slip)) return <OpenCoverRateBlock slip={slip} />
-  // Slip multi lokasi mencetak jadwal premi per lokasi saja (Opsi B); slip
-  // satu lokasi tetap mencetak bagian RATE.
-  // Banyak lokasi atau kendaraan: badan dokumen menulis "As Attached", jadwal
-  // premi dicetak di lampiran DAFTAR LOKASI atau DAFTAR UNIT KENDARAAN.
+  // Multi lokasi atau kendaraan: badan dokumen menulis "As Attached" (Opsi B), jadwal premi
+  // dicetak di lampiran DAFTAR LOKASI atau DAFTAR UNIT KENDARAAN.
   if (isMultiLocation(slip)) return <LocationPremiumAttached slip={slip} />
   if (isMultiVehicle(slip)) return <VehiclePremiumAttached slip={slip} />
   // Slip multi objek COB lain: jadwal premi per objek, lalu diskon dan biaya.
@@ -348,10 +344,8 @@ export function CoverNoteDocument(props: DocProps) {
   // kop pada tanggal itu.
   const date = slipDocumentDate(slip, "coverNote")
   return (
-    // Draft cover note prints without the LCH letterhead and number, following
-    // the marked-up sample of 6 Nov 2026. Isinya mengikuti Closing Instruction
-    // tanpa brokerage dan tanpa instruksi ke asuransi, seperti contoh CN 728 dan
-    // CN 743 (meeting LCH, 10 November 2026).
+    // Draft cover note prints without the LCH letterhead and number (sample of 6 Nov 2026).
+    // Isinya Closing Instruction tanpa brokerage dan instruksi ke asuransi (LCH, 10 November 2026).
     <DocumentShell
       slip
       backHref={`/placement/closing/edit/${slip.id}`}
@@ -458,13 +452,8 @@ export function ClosingInstructionDocument(props: DocProps) {
         Jakarta, {dateEn(date)}
       </p>
       {/*
-       * Closing Instruction dikirim ke masing-masing asuransi, jadi tanda
-       * tangan asuransi cukup satu kolom di kanan blok LCH, seperti CI LCH
-       * yang sudah ditandatangani (SISKA RAHARJA, TRUCKINDO). Tidak ada blok
-       * per asuransi seperti Cover Note (Agus, 9 November 2026). Nama asuransi
-       * dicetak bila hanya satu; co-insurance dibiarkan kosong untuk cap
-       * asuransi penerima. Tanggal diisi asuransi saat menerima, seperti
-       * "Date" di CI SISKA RAHARJA.
+       * CI dikirim per asuransi, jadi tanda tangan asuransi cukup satu kolom (Agus, 9 November 2026).
+       * Nama asuransi dicetak bila hanya satu; co-insurance dikosongkan untuk cap dan tanggal penerima.
        */}
       <div className="avoid-break mt-4 grid grid-cols-1 gap-x-8 gap-y-10 text-[13px] sm:grid-cols-2">
         <div>

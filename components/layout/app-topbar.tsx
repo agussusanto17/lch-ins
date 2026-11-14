@@ -68,11 +68,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   "change-password": "Ganti Kata Sandi",
 }
 
-/**
- * Routes that have their own page. Intermediate segments like
- * `/placement/quotation` or `/finance` are not linked to prevent
- * breadcrumbs from navigating to 404 pages.
- */
+/** Routes with their own page; intermediate segments stay unlinked so breadcrumbs avoid 404s. */
 const PAGES = new Set([
   "/marketing",
   "/placement",
@@ -186,7 +182,6 @@ export function AppTopbar({
         <ThemeToggle />
         <Separator orientation="vertical" className="mx-1 h-4" />
 
-        {/* User Identity & Avatar Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger
             className="flex items-center gap-2 rounded-md p-1 outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"

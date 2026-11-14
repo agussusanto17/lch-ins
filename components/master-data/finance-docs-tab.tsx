@@ -130,8 +130,6 @@ export function FinanceDocsTab({
     setBankDialogOpen(true)
   }
 
-  // Dialog sudah mendukung mode edit, tapi dulu tidak ada tombol yang
-  // membukanya. Sekarang dibuka dari menu aksi baris.
   function openEditBank(acc: BankAccountRecord) {
     setEditingBankAcc(acc)
     setBankId(acc.bankId)

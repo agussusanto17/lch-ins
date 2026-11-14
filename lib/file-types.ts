@@ -1,7 +1,4 @@
-/**
- * Jenis berkas unggahan dibaca dari byte awalnya, bukan dari keterangan
- * browser yang bisa dipalsukan. Dipakai server saat menyimpan berkas.
- */
+/** Jenis berkas unggahan dibaca dari byte awal, karena keterangan dari browser bisa dipalsukan. */
 
 export const PDF_TYPE = "application/pdf"
 export const XLSX_TYPE =
@@ -24,9 +21,8 @@ function containsAscii(bytes: Uint8Array, text: string) {
 }
 
 /**
- * PDF, PNG, JPEG, WebP, atau workbook Excel (.xlsx). Workbook dikenali dari
- * tanda ZIP dan entri xl/workbook.xml, jadi dokumen Word atau ZIP biasa tidak
- * lolos. Null untuk jenis lain.
+ * PDF, PNG, JPEG, WebP, atau .xlsx; null untuk jenis lain. Workbook dikenali dari tanda ZIP
+ * plus entri xl/workbook.xml, jadi dokumen Word atau ZIP biasa tidak lolos.
  */
 export function detectContentType(bytes: Uint8Array): string | null {
   if (startsWith(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d])) return PDF_TYPE

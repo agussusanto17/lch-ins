@@ -4,11 +4,8 @@ import { currentUser } from "@/lib/server/session"
 import { opensInline, purposeMenu, readStoredFile } from "@/lib/server/stored-files"
 
 /**
- * Membuka isi berkas unggahan, misalnya copy KTP klien.
- *
  * Rute /api tidak melewati proxy, jadi login dan hak akses diperiksa di sini.
- * Menu yang dipakai mengikuti pemakaian berkas: berkas KYC hanya bisa dibuka
- * role yang boleh membuka halaman klien.
+ * Menu yang dipakai mengikuti pemakaian berkas, misalnya KYC ikut hak halaman klien.
  */
 export async function GET(
   request: Request,
@@ -16,14 +13,8 @@ export async function GET(
 ) {
   const user = await currentUser()
   if (!user) {
-    // Link berkas biasanya dibuka langsung di tab browser, jadi pengunjung
-    // tanpa sesi diarahkan ke halaman login, sama seperti halaman lain di
-    // proxy.ts. Setelah login, form login kembali ke berkas ini lewat `next`.
-    // Pemeriksaan sesi tetap terjadi sebelum berkas dicari, jadi redirect ini
-    // tidak membocorkan ada tidaknya sebuah ID berkas.
-    // Location sengaja relatif: browser melengkapinya dengan domain yang sedang
-    // dibuka, jadi hasilnya tidak bergantung pada host yang dilihat Next di
-    // balik nginx.
+    // Sesi dicek sebelum berkas dicari, jadi redirect ke login tidak membocorkan ada tidaknya ID.
+    // Location sengaja relatif supaya tidak bergantung pada host yang dilihat Next di balik nginx.
     const next = new URL(request.url).pathname
     return new Response(null, {
       status: 307,

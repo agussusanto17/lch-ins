@@ -220,11 +220,8 @@ export async function assertClaimableFile(
 }
 
 /**
- * Hapus berkas yang tidak dipakai lagi. Path data contoh dilewati.
- *
- * Baris dihapus di dalam transaksi pemanggil. Objeknya baru dihapus setelah
- * response terkirim, saat transaksi sudah selesai, dan hanya bila barisnya
- * memang sudah tidak ada. Jadi kalau transaksi batal, berkas tidak ikut hilang.
+ * Hapus berkas yang tidak dipakai lagi; path data contoh dilewati. Objeknya baru dihapus setelah
+ * response terkirim dan hanya bila barisnya sudah tidak ada, jadi transaksi yang batal aman.
  */
 export async function deleteStoredFiles(
   tx: Tx,

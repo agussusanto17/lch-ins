@@ -54,9 +54,8 @@ export function SearchInput({
 }
 
 /**
- * Export and print buttons above tables. Export uses the currently visible
- * (filtered) rows, matching what the user sees. With `printHref`, Print opens
- * a dedicated print page instead of printing the current screen.
+ * Export and print buttons above tables. Export uses the visible (filtered) rows;
+ * with `printHref`, Print opens a dedicated print page instead of printing the screen.
  */
 export function ExportButtons<T>({
   className,

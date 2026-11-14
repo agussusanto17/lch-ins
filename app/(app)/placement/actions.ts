@@ -52,9 +52,8 @@ export interface ActionResponse<T = void> {
 }
 
 /**
- * Polis otomatis saat Closing Instruction terbit (meeting LCH, 10 November
- * 2026). Gagal mencatat polis tidak membatalkan CI yang sudah tersimpan;
- * alasannya dikembalikan sebagai info supaya polis bisa dicatat manual.
+ * Polis otomatis saat Closing Instruction terbit (meeting LCH, 10 November 2026).
+ * Gagal mencatat tidak membatalkan CI; alasannya dikembalikan sebagai info untuk dicatat manual.
  */
 async function autoPolicyNotice(slipId: string, userId: string) {
   try {
@@ -74,9 +73,8 @@ async function autoPolicyNotice(slipId: string, userId: string) {
 const isPlacingSlip = (slip: Pick<PlacingSlip, "kind">) => !slip.kind || slip.kind === "Placing"
 
 /**
- * Endorsement atau cancellation slip yang Closed tercatat di Policy Database
- * (Harry, 11 November 2026). Gagal mencatat tidak membatalkan slip; alasannya
- * dikembalikan sebagai info.
+ * Endorsement atau cancellation slip Closed tercatat di Policy Database (Harry, 11 November 2026).
+ * Gagal mencatat tidak membatalkan slip; alasannya dikembalikan sebagai info.
  */
 async function endorsementNotice(slipId: string, userId: string) {
   try {
@@ -127,9 +125,8 @@ export async function createEndorsementSlipAction(
 }
 
 /**
- * Revisi slip setelah CI terbit diteruskan ke polis bernomor sementara. Gagal
- * meneruskan tidak membatalkan revisi yang sudah tersimpan; alasannya
- * dikembalikan sebagai info supaya polis bisa diperbarui manual.
+ * Revisi slip setelah CI terbit diteruskan ke polis bernomor sementara.
+ * Gagal meneruskan tidak membatalkan revisi; alasannya dikembalikan sebagai info.
  */
 async function revisionPolicyNotice(before: PlacingSlipRecord, userId: string) {
   try {
@@ -145,10 +142,8 @@ async function revisionPolicyNotice(before: PlacingSlipRecord, userId: string) {
 }
 
 /**
- * Catat polis dari Closing Instruction yang sudah terbit, lewat tombol di
- * dokumen CI. Untuk slip yang Closed sebelum pencatatan otomatis ada, atau
- * yang pencatatan otomatisnya gagal; alasan gagal dikembalikan apa adanya
- * supaya terlihat di halaman. Bagian yang sudah punya polis tidak dibuat lagi.
+ * Catat polis dari CI terbit lewat tombol di dokumen CI, untuk slip yang pencatatan otomatisnya
+ * belum ada atau gagal. Bagian yang sudah punya polis tidak dibuat lagi.
  */
 export async function recordPoliciesFromClosingAction(
   slipId: string
@@ -583,9 +578,7 @@ export async function savePlacingSlipAction(
   }
 }
 
-/**
- * Releases placing slip and issues official document number (PS/COB/YYYY/MM/XXXX).
- */
+/** Releases placing slip and issues official document number (PS/COB/YYYY/MM/XXXX). */
 export async function releasePlacingSlipAction(
   id: string
 ): Promise<ActionResponse<PlacingSlipRecord>> {
@@ -687,9 +680,7 @@ export async function togglePlacingSlipStatusAction(
   }
 }
 
-/**
- * Deletes a placing slip with Draft status.
- */
+/** Deletes a placing slip with Draft status. */
 export async function deletePlacingSlipAction(
   id: string
 ): Promise<ActionResponse<void>> {
@@ -714,9 +705,7 @@ export async function deletePlacingSlipAction(
   }
 }
 
-/**
- * Duplicates an existing placing slip into a new Draft without document number.
- */
+/** Duplicates an existing placing slip into a new Draft without document number. */
 export async function duplicatePlacingSlipAction(
   id: string
 ): Promise<ActionResponse<PlacingSlipRecord>> {

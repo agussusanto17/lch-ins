@@ -81,12 +81,8 @@ export function FormActions({ className, children }: { className?: string; child
 }
 
 /**
- * Wrapper konten di antara kedua bar sticky.
- *
- * Latarnya abu-abu tipis supaya kartu section yang putih terbaca sebagai
- * bagian-bagian terpisah; form slip punya delapan section dan di atas latar
- * putih batasnya cuma garis tipis. Di tema gelap latarnya tetap `background`,
- * karena di sana `muted` lebih terang dari kartu dan urutannya jadi terbalik.
+ * Wrapper konten di antara bar sticky. Latar abu-abu tipis supaya kartu section putih terpisah;
+ * di tema gelap tetap `background` karena di sana `muted` lebih terang dari kartu.
  */
 export function FormBody({ className, children }: { className?: string; children: React.ReactNode }) {
   return (

@@ -1,12 +1,6 @@
 /**
- * Cari objek di bucket yang tidak punya baris stored_files, lalu hapus.
- *
- * Objek seperti ini muncul kalau aplikasi mati di tengah unggahan, atau kalau
- * berkas dihapus dari skrip (di luar request, objeknya tidak dihapus
- * otomatis). Objek yang lebih muda dari satu jam dilewati karena bisa jadi
- * unggahannya masih berjalan.
- *
- * Tanpa --apply hanya menampilkan daftar.
+ * Hapus objek bucket tanpa baris stored_files, misalnya berkas yang dihapus dari skrip (di luar
+ * request objeknya tidak ikut terhapus). Objek di bawah satu jam dilewati; tanpa --apply hanya daftar.
  *
  *   node -r ./scripts/mock-server-only.cjs --import tsx --env-file=.env \
  *     scripts/sweep-orphan-objects.ts [--apply]

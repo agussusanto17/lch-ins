@@ -34,19 +34,8 @@ export interface AutoPolicyResult {
 }
 
 /**
- * Polis otomatis dari Closing Instruction (meeting LCH, 10 November 2026):
- * begitu CI terbit, polisnya langsung tercatat di Policy Database, jadi
- * petugas polis tinggal mengganti nomor polis dan mengunggah polis dari
- * asuransi.
- *
- * - Data polis disalin dengan aturan yang sama seperti "polis dari slip" di
- *   form polis. Slip PAR + EQVET menjadi satu polis per bagian.
- * - Nomor polis sementara memakai nomor CI.
- * - Slip yang punya Existing Policy No. dicatat sebagai Renewal dengan nomor
- *   polis sebelumnya.
- * - Bagian yang sudah punya polis tidak dibuat lagi.
- * - Slip open cover dilewati karena polisnya per deklarasi. Slip tanpa periode
- *   juga dilewati, karena polis wajib bertanggal.
+ * Begitu CI terbit, polisnya langsung tercatat dengan nomor sementara dari CI; petugas polis
+ * tinggal mengganti nomor dan mengunggah polis dari asuransi (meeting LCH, 10 November 2026).
  */
 export async function recordPoliciesFromClosing(
   slipId: string,
@@ -110,17 +99,8 @@ export async function recordPoliciesFromClosing(
 }
 
 /**
- * Revisi slip setelah Closing Instruction terbit ikut ke polis yang masih
- * bernomor sementara dari CI (laporan Agus, 10 November 2026: additional fee
- * yang diisi setelah CI terbit tidak masuk report produksi).
- *
- * - Hanya isian slip yang berubah pada revisi ini yang disalin, jadi isian
- *   yang diubah petugas polis di Policy Database tidak tertimpa.
- * - Polis yang nomornya sudah diganti nomor polis dari asuransi tidak
- *   disentuh, karena sejak itu datanya mengikuti polis asli.
- *
- * `before` adalah slip sebelum revisi disimpan. Mengembalikan nomor polis yang
- * ikut diperbarui.
+ * Revisi slip setelah CI terbit ikut ke polis yang masih bernomor sementara (Agus, 10 November 2026).
+ * Hanya isian yang berubah di revisi ini yang disalin, supaya editan petugas polis tidak tertimpa.
  */
 export async function syncPoliciesFromSlipRevision(
   before: PlacingSlipRecord,
@@ -162,11 +142,8 @@ export async function syncPoliciesFromSlipRevision(
 }
 
 /**
- * Endorsement atau cancellation slip yang Closed tercatat di Policy Database
- * sebagai Endorsement atau Cancellation polis induknya (Harry, 11 November
- * 2026). Selisih sum insured dan premi dihitung dari perhitungan sebelum dan
- * sesudah slip. Nomornya sementara memakai nomor ES/CS; petugas polis
- * menggantinya dengan nomor endorsement dari asuransi saat mengunggahnya.
+ * Endorsement/cancellation slip yang Closed tercatat sebagai Endorsement/Cancellation polis induknya
+ * dengan nomor ES/CS sementara, diganti petugas polis saat unggah (Harry, 11 November 2026).
  */
 export async function recordEndorsementFromSlip(
   slipId: string,

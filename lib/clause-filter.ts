@@ -18,13 +18,8 @@ function isCashInTransit(name: string) {
 }
 
 /**
- * Whether a clause belongs in the picker of a slip with these COB and types
- * of cover. A clause without a COB or cover type applies to every one.
- *
- * Cover-specific clauses need the exact type of cover name, so "Marine Hull"
- * clauses stay out of "Marine Hull Single Voyage" slips. `knownCovers` lists
- * the COB's master names; a slip cover outside it (an older free-text name such
- * as "Marine Cargo — Institute Cargo Clauses (A)") still matches by fragment.
+ * Clauses without COB or cover type fit every slip; cover names must match exactly, except
+ * slip covers outside `knownCovers` (older free-text names), which match by fragment.
  */
 export function clauseFitsSlip(
   clause: ClauseScope,

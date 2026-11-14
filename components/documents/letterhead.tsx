@@ -16,11 +16,8 @@ export const LCH_ADDRESS = {
 }
 
 /**
- * Kop per nama perusahaan. Kop Lestari Cipta Hokindo dipakai dokumen slip
- * bertanggal sebelum 1 September 2025 (lihat `lib/document-dates.ts`). Logo
- * dan lencana footernya diambil dari scan kop LCH 21 Oktober 2026; alamat,
- * SKOJK, dan APPARINDO sama, yang beda nama, warna, telepon, dan lencana MARI
- * Berasuransi.
+ * Kop per nama perusahaan; kop Lestari Cipta Hokindo untuk slip sebelum 1 September 2025.
+ * Kedua kop beda di nama, warna, telepon, dan lencana MARI Berasuransi (scan LCH 21 Oktober 2026).
  */
 const LETTERHEADS = {
   lch: {

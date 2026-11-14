@@ -4,9 +4,8 @@ import { OPEN_CLAIM_STATUSES } from "./reference"
 import type { Claim, Client, PlacingSlip, Policy } from "./types"
 
 /*
- * Semua agregasi menerima data dan tanggal "hari ini" sebagai argumen, jadi
- * bisa dipakai dari Server Component (query database) maupun Client Component
- * (store sesi) tanpa hasil yang berbeda.
+ * Agregasi menerima data dan tanggal "hari ini" sebagai argumen, jadi hasilnya sama
+ * dari Server Component (query database) maupun Client Component (store sesi).
  */
 
 export function premiumIdr(p: { premium: number; currency: string }) {

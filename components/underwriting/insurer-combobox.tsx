@@ -9,10 +9,7 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox"
 
-/**
- * Pilihan asuransi di panel security: tetap dropdown, tapi nama asuransi bisa
- * diketik untuk mencari (permintaan LCH, 10 November 2026).
- */
+/** Dropdown asuransi di panel security yang bisa diketik untuk mencari (LCH, 10 November 2026). */
 export function InsurerCombobox({
   items,
   value,

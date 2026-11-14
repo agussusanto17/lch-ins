@@ -4,16 +4,8 @@ import { DATABASE_URL_CANDIDATES, databaseUrl } from "./database-url"
 import { PrismaClient } from "./generated/prisma/client"
 
 /**
- * Satu instance PrismaClient untuk seluruh aplikasi.
- *
- * Prisma 7 wajib memakai driver adapter, jadi koneksinya lewat PrismaPg.
- * Di dev, Next.js memuat ulang modul setiap kali file berubah, jadi instance
- * disimpan di globalThis supaya koneksi ke Postgres tidak menumpuk.
- *
- * Instance dibuat saat pertama kali dipakai, bukan saat modul diimpor. Next.js
- * mengimpor modul halaman saat build untuk membaca konfigurasinya, dan server
- * build tidak punya DATABASE_URL. Kalau client dibuat di level modul, build
- * gagal padahal tidak ada query yang dijalankan.
+ * Instance disimpan di globalThis supaya koneksi Postgres tidak menumpuk saat hot reload dev.
+ * Dibuat saat pertama dipakai, karena build mengimpor modul halaman tanpa DATABASE_URL.
  */
 
 function createPrismaClient() {

@@ -6,10 +6,8 @@ import { POLICY_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
 import { prisma } from "@/lib/prisma"
 
 /**
- * Polis yang sudah dibatalkan → no. record Cancellation-nya (lihat
- * `cancelledPolicies`). Cukup memuat record Endorsement dan Cancellation,
- * karena polis asal adalah induk endorsement yang paling atas. Dipakai Policy
- * Database, Placement, dan topbar supaya aturannya sama.
+ * Polis yang sudah dibatalkan → no. record Cancellation-nya, dipakai bersama Policy Database,
+ * Placement, dan topbar. Cukup memuat Endorsement dan Cancellation karena polis asal induk teratas.
  */
 export async function loadCancelledPolicies(
   db: Prisma.TransactionClient = prisma

@@ -5,18 +5,12 @@
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 
 /**
- * Berkas polis (Polis, Premium Note, Commission Note) boleh sampai 25 MB
- * (Agus, 9 November 2026). Berkas sebesar itu dikirim per potongan
- * UPLOAD_PART_BYTES lalu digabung di server, karena satu request ke Vercel
- * maksimal 4,5 MB.
+ * Berkas polis (Polis, Premium Note, Commission Note) boleh sampai 25 MB (Agus, 9 November 2026),
+ * dikirim per potongan UPLOAD_PART_BYTES karena satu request Vercel maksimal 4,5 MB.
  */
 export const MAX_POLICY_FILE_BYTES = 25 * 1024 * 1024
 
-/**
- * Ukuran satu potongan unggahan: di bawah batas body Server Action (5 MB di
- * next.config.ts) dan batas request Vercel (4,5 MB), termasuk pembungkus
- * multipart.
- */
+/** Di bawah batas Server Action (5 MB) dan request Vercel (4,5 MB), plus overhead multipart. */
 export const UPLOAD_PART_BYTES = 3 * 1024 * 1024
 
 /** Pemakaian berkas. Menentukan menu yang hak aksesnya dipakai saat dibuka. */
@@ -33,7 +27,6 @@ export const FILE_PURPOSES: FilePurpose[] = [
   "slip_attachment",
 ]
 
-/** Batas ukuran satu berkas per pemakaian. */
 export function maxUploadBytes(purpose: FilePurpose) {
   return purpose === "policy_file" ? MAX_POLICY_FILE_BYTES : MAX_UPLOAD_BYTES
 }

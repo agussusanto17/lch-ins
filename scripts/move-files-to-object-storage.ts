@@ -1,9 +1,5 @@
 /**
- * Pindahkan isi berkas lama dari kolom stored_files.data ke object storage.
- *
- * Aman dijalankan berulang: hanya baris yang masih membawa data yang diproses,
- * dan setiap baris diperbarui sendiri-sendiri. Objek ditulis dulu, baru kolom
- * data dikosongkan, jadi berkas tidak pernah tanpa isi.
+ * Pindahkan stored_files.data ke object storage; aman diulang, objek ditulis sebelum kolom kosong.
  *
  *   node -r ./scripts/mock-server-only.cjs --import tsx --env-file=.env \
  *     scripts/move-files-to-object-storage.ts [--dry-run]

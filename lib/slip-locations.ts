@@ -6,9 +6,8 @@ import type {
 } from "./data/types"
 
 /**
- * Lokasi slip Property tanpa daftar lokasi: data contoh, dan slip yang dibuka
- * sebelum lokasi disimpan per baris. Id tetap supaya hitung ulang dua kali
- * menghasilkan slip yang sama dan form tidak dianggap berubah.
+ * Lokasi slip Property tanpa daftar lokasi (data contoh, slip lama). Id tetap supaya hitung ulang
+ * dua kali menghasilkan slip yang sama dan form tidak dianggap berubah.
  */
 const FIRST_LOCATION_ID = "loc-1"
 
@@ -47,10 +46,8 @@ export function locationOwner(slip: LocationSource) {
 const CLASS_RATED_LABELS = ["FLEXAS", "EQVET"]
 
 /**
- * Kelas konstruksi wajib bila lokasi punya rate FLEXAS atau EQVET, karena
- * batas tarif OJK keduanya bergantung kelas konstruksi. Slip tanpa rate itu,
- * misalnya Terrorism & Sabotage yang rate-nya di Other Losses, boleh tanpa
- * kelas (jawaban Harry, 6 November 2026).
+ * Kelas konstruksi wajib bila lokasi punya rate FLEXAS atau EQVET; slip tanpa rate itu, misalnya
+ * Terrorism & Sabotage di Other Losses, boleh tanpa kelas (Harry, 6 November 2026).
  */
 export function needsConstructionClass(
   lines: Pick<RateLine, "label" | "rate">[]
@@ -89,9 +86,8 @@ export function locationGroups(
 }
 
 /**
- * Semua lokasi memakai rate dan loss limit yang sama untuk setiap cover,
- * misalnya lima unit apartemen di CI SISKA RAHARJA. Dokumennya tetap mencetak
- * bagian RATE sekali, sebelum jadwal premi per lokasi.
+ * Semua lokasi memakai rate dan loss limit yang sama per cover (misalnya CI SISKA RAHARJA), jadi
+ * dokumen mencetak bagian RATE sekali sebelum jadwal premi per lokasi.
  */
 export function locationsShareRates(
   slip: Parameters<typeof locationGroups>[0]
@@ -128,9 +124,8 @@ export function addressLines(text: string) {
 }
 
 /**
- * Risk location slip: alamat lokasi pertama, atau semua alamat bernomor satu
- * per baris bila lokasinya lebih dari satu. Dipakai polis, daftar slip, dan
- * pencarian, yang membaca satu nilai.
+ * Risk location sebagai satu nilai untuk polis, daftar slip, dan pencarian: alamat lokasi
+ * pertama, atau semua alamat bernomor bila lokasinya lebih dari satu.
  */
 export function slipRiskLocationText(locations: Pick<SlipLocation, "riskLocation">[]) {
   if (locations.length <= 1) return locations[0]?.riskLocation ?? ""
@@ -140,9 +135,8 @@ export function slipRiskLocationText(locations: Pick<SlipLocation, "riskLocation
 }
 
 /**
- * Slip Property selalu punya daftar lokasi dan setiap baris sum insured dan
- * rate menunjuk lokasinya. Okupasi, risk location, dan kelas slip diisi dari
- * lokasi. COB lain tidak memakai lokasi.
+ * Slip Property selalu punya daftar lokasi, dan tiap baris sum insured dan rate menunjuk lokasi.
+ * Okupasi, risk location, dan kelas slip diisi dari lokasi; COB lain tidak memakai lokasi.
  */
 export function withLocations(slip: PlacingSlip): PlacingSlip {
   if (slip.cob !== "Property") return slip
