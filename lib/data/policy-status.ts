@@ -31,8 +31,8 @@ const isChange = (p: PolicyLink) =>
   p.type === "Endorsement" || p.type === "Cancellation"
 
 /**
- * Polis asal tiap Cancellation, plus endorsement dan pembatalannya, dipetakan ke no. Cancellation.
- * `links` harus memuat semua Endorsement dan Cancellation; induk di luar itu dianggap polis asal.
+ * Polis asal tiap Cancellation dan endorsementnya dipetakan ke no. Cancellation; induk pembatalan
+ * bisa endorsement, jadi dicari naik. `links` wajib memuat semua Endorsement dan Cancellation.
  */
 export function cancelledPolicies(links: readonly PolicyLink[]): Map<string, string> {
   const byId = new Map(links.map((p) => [p.id, p]))

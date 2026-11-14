@@ -466,7 +466,7 @@ export interface PlacingSlip {
   updatedAt: string
   /**
    * Tanggal dokumen "YYYY-MM-DD": Placing Slip (release), Quotation Slip dan Draft Cover Note
-   * (quoted), Closing Instruction (closing). Terisi otomatis; lihat `lib/document-dates.ts`.
+   * (quoted), Closing Instruction (closing). Otomatis, bisa diubah manual (`lib/document-dates.ts`).
    */
   releaseDate?: string | null
   quotedDate?: string | null

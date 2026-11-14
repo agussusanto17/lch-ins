@@ -12,8 +12,8 @@ const toggleVariants = cva(
       variant: {
         default: "bg-transparent",
         outline: "border border-input bg-transparent hover:bg-muted",
-        // Chip pilihan: aktif tanpa latar primary penuh supaya tidak mirip tombol utama (Agus).
-        // px-[11px] mengimbangi bingkai 2px agar lebar chip tetap sama dengan px-3.
+        // Chip: belum aktif berbingkai abu tipis (Agus); aktif tanpa latar primary penuh supaya tidak
+        // mirip tombol utama, bingkai 2px jadi penanda selain warna, px-[11px] menahan lebar chip.
         filter:
           "cursor-pointer border border-border bg-transparent hover:border-primary aria-pressed:border-2 aria-pressed:border-primary aria-pressed:bg-primary/8 aria-pressed:px-[11px] aria-pressed:text-primary aria-pressed:hover:bg-primary/12 aria-pressed:hover:text-primary",
       },

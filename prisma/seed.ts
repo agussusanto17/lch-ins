@@ -449,7 +449,8 @@ const COB_FORM: Record<string, { rateMode: string; formVariant: string }> = {
 
 /**
  * Singkatan {COVER} dari kolom SINGKATAN TOC file LCH "LIST COB DAN TOC" (LCH, 21 Oktober 2026).
- * Pengecualian: 0105 EQ (nomor PAREQ), 0913 DNO (huruf/angka saja), 0404 (Harry, 9 November 2026).
+ * Pengecualian: 0105 EQ (nomor PAREQ), 0913 DNO (huruf/angka saja), 0312 MC (kosong di file LCH),
+ * dan 0404 HWR di luar file LCH (Harry, 9 November 2026).
  */
 const COVER_ABBREVIATIONS: Record<string, string> = {
   "0103": "BI",

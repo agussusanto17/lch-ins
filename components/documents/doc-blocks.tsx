@@ -1606,8 +1606,8 @@ export function VehiclePremiumAttached({ slip }: { slip: PlacingSlip }) {
 }
 
 /**
- * Lampiran DAFTAR UNIT KENDARAAN (Agus, 9 November 2026), ditumpuk agar muat A4 portrait di Chrome.
- * Lebar kolom ikut isi supaya angka tidak terpecah ke dua baris (temuan SIT-089, 9 November 2026).
+ * DAFTAR UNIT KENDARAAN (Agus, 9 November 2026): kolom ditumpuk agar muat A4 portrait, karena Chrome
+ * tetap memakai lebar portrait di halaman landscape. Lebar kolom ikut isi agar angka utuh (SIT-089).
  */
 export function VehicleScheduleAppendix({ slip }: { slip: PlacingSlip }) {
   if (!isMultiVehicle(slip)) return null
@@ -1894,7 +1894,7 @@ export function SignatureGrid({
 
 /**
  * Tanda tangan Draft Cover Note, satu blok per asuransi seperti CN 728/743 (Agus, 9 November 2026).
- * Co-insurance mencetak share dan peran di bawah nama; satu asuransi cukup namanya.
+ * Co-insurance: share dan peran di bawah nama. CI cukup satu kolom penerimaan (dikirim per asuransi).
  */
 export function CoverNoteSignature({
   slip,

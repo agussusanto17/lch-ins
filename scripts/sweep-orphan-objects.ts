@@ -1,6 +1,6 @@
 /**
- * Hapus objek bucket tanpa baris stored_files; objek di bawah satu jam dilewati (masih diunggah).
- * Tanpa --apply hanya menampilkan daftar.
+ * Hapus objek bucket tanpa baris stored_files, misalnya berkas yang dihapus dari skrip (di luar
+ * request objeknya tidak ikut terhapus). Objek di bawah satu jam dilewati; tanpa --apply hanya daftar.
  *
  *   node -r ./scripts/mock-server-only.cjs --import tsx --env-file=.env \
  *     scripts/sweep-orphan-objects.ts [--apply]

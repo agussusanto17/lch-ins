@@ -38,7 +38,7 @@ export default async function AppLayout({
             roles={user.roles}
           />
           {/*
-            Jangan pasang `overflow-hidden`: topbar `sticky top-0` jadi menempel ke container lain.
+            Jangan `overflow-hidden`: topbar `sticky` lepas; lebar ditahan `overflow-x: clip` html/body.
             `min-w-0` wajib supaya flex item ini tidak melebar ikut tabel `whitespace-nowrap`.
           */}
           <SidebarInset className="min-w-0">

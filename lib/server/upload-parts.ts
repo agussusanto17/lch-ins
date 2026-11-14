@@ -12,7 +12,7 @@ import {
 
 /*
  * Unggahan besar dikirim per potongan karena Vercel menolak body request di atas 4,5 MB.
- * Potongan disimpan sementara di upload_parts lalu digabung menjadi satu stored_files.
+ * Potongan disimpan sementara di upload_parts lalu digabung jadi satu stored_files; alur sama di VPS.
  */
 
 const UUID_RE =

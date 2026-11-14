@@ -864,8 +864,8 @@ export async function updateClient(
       }
     }
 
-    // Berkas KYC disamakan dengan form: baris yang hilang dihapus beserta isinya, baris baru wajib
-    // membawa file. Baris baru memakai id sementara, jadi baris lama dikenali dari daftar klien ini.
+    // Berkas KYC mengikuti form: baris hilang dihapus beserta isinya, file pengganti menimpa isi lama,
+    // baris baru wajib membawa file dan ber-id sementara, jadi baris lama dikenali dari daftar klien.
     if (userId && input.documents) {
       const current = await tx.clientDocument.findMany({
         where: { clientId: existing.dbId },
