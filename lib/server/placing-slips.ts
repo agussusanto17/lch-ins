@@ -2044,7 +2044,7 @@ export async function updatePlacingSlip(
     }
 
     await tx.slipClause.deleteMany({ where: { slipId: id } })
-    const savedClauses = await insertSlipClauses(tx, id, resolvedCob.name, input)
+    await insertSlipClauses(tx, id, resolvedCob.name, input)
     // Peserta hanya diganti bila dikirim; slip dari daftar tidak memuatnya.
     if (input.participants !== undefined) {
       await replaceParticipants(tx, id, input.participants)
@@ -2074,28 +2074,14 @@ export async function updatePlacingSlip(
       }
     }
 
-    // Isi slip sesudah revisi seperti yang tersimpan: objek yang tidak
-    // disimpan karena kosong, beserta baris rate miliknya, tidak ikut.
-    const savedLines = (lines: RateLine[] | undefined) =>
-      (lines ?? []).filter(
-        (rl) => !itemRates || savedItemId(itemIds, rl.vehicleId) !== undefined
-      )
-    const savedRows = (rows: LineItem[] | undefined) =>
-      (rows ?? []).filter((it) => it.description.trim())
-    const after: PlacingSlip = {
-      ...before,
-      cob: normalizeCob(resolvedCob.name as CobType),
-      currency: currencyCode,
-      usesSections: input.usesSections === true,
-      locations: input.locations,
-      interestItems: (input.interestItems ?? []).filter((it) => itemIds.has(it.id)),
-      sumInsuredSection1: savedRows(input.sumInsuredSection1),
-      sumInsuredSection2: savedRows(input.sumInsuredSection2),
-      rateLines: savedLines(input.rateLines),
-      tplLines: savedLines(input.tplLines),
-      paLines: savedLines(input.paLines),
-      specialConditions: input.specialConditions?.trim() || undefined,
-    }
+    // Isi sesudah revisi dibaca ulang dari database, dengan bentuk yang sama
+    // seperti isi sebelum revisi, supaya ringkasan audit hanya berbeda pada
+    // isian yang benar-benar berubah.
+    const saved = await tx.placingSlip.findUniqueOrThrow({
+      where: { id },
+      include: SLIP_RECORD_INCLUDE,
+    })
+    const after = toPlacingSlipRecord(saved)
 
     await recordAudit(tx, {
       userId,
@@ -2121,7 +2107,7 @@ export async function updatePlacingSlip(
         closingDate: documentDates.closingDate ?? null,
         inceptionDate: dateOnly(inceptionDate),
         expiryDate: dateOnly(expiryDate),
-        ...slipAuditSummary(after, savedClauses),
+        ...slipAuditSummary(after, saved.clauses),
         brokeragePct: input.brokeragePct ?? 0,
         includeVat: input.includeVat ?? false,
         additionalFeePanel: usesAdditionalFee(normalizeCob(resolvedCob.name))
