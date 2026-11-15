@@ -3,7 +3,7 @@ import fs from "node:fs"
 import path from "node:path"
 import test from "node:test"
 
-test("globals.css defines top-level @page and synchronized 18mm print margins", () => {
+test("globals.css defines top-level @page and print margins from --print-x (18mm default, 10mm for slips)", () => {
   const css = fs.readFileSync(
     path.join(process.cwd(), "app/globals.css"),
     "utf-8"
@@ -32,20 +32,30 @@ test("globals.css defines top-level @page and synchronized 18mm print margins", 
 
   assert.match(
     css,
-    /\.print-header-fixed\s*\{[^}]*left:\s*18mm;[^}]*right:\s*18mm;/,
-    "print-header-fixed should have 18mm side margins"
+    /\.print-header-fixed\s*\{[^}]*left:\s*var\(--print-x,\s*18mm\);[^}]*right:\s*var\(--print-x,\s*18mm\);/,
+    "print-header-fixed should follow --print-x with an 18mm default"
+  )
+
+  assert.match(
+    css,
+    /\.doc-slip\s*\{[^}]*--print-x:\s*10mm;/,
+    "slip documents should narrow the print side margin to 10mm"
   )
 })
 
-test("document-shell uses 18mm content margins and full-width print overrides", () => {
+test("document-shell uses --print-x content margins and full-width print overrides", () => {
   const shell = fs.readFileSync(
     path.join(process.cwd(), "components/documents/document-shell.tsx"),
     "utf-8"
   )
 
   assert.ok(
-    shell.includes("print:px-[18mm]"),
-    "table content cell should use 18mm print horizontal padding"
+    shell.includes("print:px-[var(--print-x,18mm)]"),
+    "table content cell should use the --print-x print padding (18mm default)"
+  )
+  assert.ok(
+    shell.includes('slip ? "doc-slip '),
+    "slip documents should get the doc-slip class that sets --print-x to 10mm"
   )
   assert.ok(
     shell.includes("print:m-0 print:p-0 print:max-w-none print:w-full print:block print:gap-0"),
@@ -53,15 +63,15 @@ test("document-shell uses 18mm content margins and full-width print overrides", 
   )
 })
 
-test("letterhead footer applies full-width bleed on screen and 18mm print padding", () => {
+test("letterhead footer applies full-width bleed on screen and --print-x print padding", () => {
   const letterhead = fs.readFileSync(
     path.join(process.cwd(), "components/documents/letterhead.tsx"),
     "utf-8"
   )
 
   assert.ok(
-    letterhead.includes('px-[18mm] py-2.5 text-white'),
-    "print fixed footer should use 18mm padding to align with document content"
+    letterhead.includes('px-[var(--print-x,18mm)] py-2.5 text-white'),
+    "print fixed footer should follow --print-x so it aligns with document content"
   )
 
   assert.ok(
