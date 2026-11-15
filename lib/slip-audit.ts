@@ -8,6 +8,7 @@ import { totalPremium, totalSumInsured } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data/types"
 import { money } from "@/lib/format"
 import { deductibleGroups, deductiblesByUnit } from "@/lib/slip-deductibles"
+import { printedDetailRows } from "@/lib/slip-details"
 
 /** Judul klausul yang tersimpan di slip_clauses. */
 export interface SlipClauseTitle {
@@ -76,9 +77,20 @@ export function clausesText(
     .join("\n\n")
 }
 
+/** Detail Tambahan yang tercetak di dokumen, satu baris "Label: isi". */
+export function detailRowsText(rows: PlacingSlip["detailRows"]) {
+  return printedDetailRows(rows)
+    .map((r) => `${r.label}: ${r.value}`)
+    .join("\n")
+}
+
+const text = (value: string | null | undefined) => value?.trim() ?? ""
+
 /**
  * Isi slip yang dicatat audit trail saat slip diubah, satu teks per isian.
- * Total memakai mata uang slip, misalnya "IDR 1.250.000.000".
+ * Total memakai mata uang slip, misalnya "IDR 1.250.000.000". Isian teks
+ * dokumen ikut dicatat supaya perubahan seperti Risk Location atau Detail
+ * Tambahan tidak tercatat sebagai Ubah tanpa rincian.
  */
 export function slipAuditSummary(
   slip: PlacingSlip,
@@ -88,7 +100,37 @@ export function slipAuditSummary(
     totalSumInsured: money(totalSumInsured(slip), slip.currency),
     totalPremium: money(totalPremium(slip), slip.currency),
     deductibles: deductiblesText(slip),
-    specialConditions: slip.specialConditions?.trim() ?? "",
+    specialConditions: text(slip.specialConditions),
     clauses: clausesText(slip, clauses),
+    typeOfCover: text(slip.typeOfCover),
+    typeOfCoverLabel: text(slip.typeOfCoverLabel),
+    insuredDescription: text(slip.insuredDescription),
+    correspondenceAddress: text(slip.correspondenceAddress),
+    periodLabel: text(slip.periodLabel),
+    periodText: text(slip.periodText),
+    periodEndText: text(slip.periodEndText),
+    periodNote: text(slip.periodNote),
+    detailRows: detailRowsText(slip.detailRows),
+    occupation: text(slip.occupation),
+    occupationLabel: text(slip.occupationLabel),
+    riskLocation: text(slip.riskLocation),
+    constructionClass: text(slip.constructionClass),
+    coverage: text(slip.coverage),
+    interestSection1: text(slip.interestSection1),
+    interestSection2: text(slip.interestSection2),
+    deductibleIntro: text(slip.deductibleIntro),
+    exclusions: text(slip.exclusions),
+    // Urutan relasi wording form tidak dijamin database, jadi diurutkan.
+    wordingForms: slip.wordingForms
+      .map(text)
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b))
+      .join("\n"),
+    discountPct: slip.discountPct,
+    adminCost: slip.adminCost,
+    stampDuty: slip.stampDuty,
+    subjectivity: text(slip.subjectivity),
+    closingInstruction: text(slip.closingInstruction),
+    coverNoteRemarks: text(slip.coverNoteRemarks),
   }
 }

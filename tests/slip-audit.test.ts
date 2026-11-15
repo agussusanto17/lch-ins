@@ -315,3 +315,49 @@ test("hanya isian yang teksnya berubah yang berbeda", () => {
     ["specialConditions", "clauses"]
   )
 })
+
+test("isian teks dokumen ikut tercatat: Risk Location, Detail Tambahan, alamat", () => {
+  const saved: PlacingSlip = {
+    ...switchCob(emptySlip(), "Engineering"),
+    riskLocation: "Proyek Gedung SIT, Bekasi",
+    correspondenceAddress: "Jl. Uji Coba No. 1, Jakarta Pusat",
+    detailRows: [
+      { label: "Existing Policy No.", value: "" },
+      { label: "The Project", value: "" },
+    ],
+  }
+  const before = slipAuditSummary(saved, [])
+  const after = slipAuditSummary(
+    {
+      ...saved,
+      riskLocation: "1) Proyek Gedung SIT\nJl. Raya Industri No. 5, Bekasi",
+      correspondenceAddress: " Jl. Uji Coba No. 1, Jakarta Pusat ",
+      detailRows: [
+        { label: "Existing Policy No.", value: "" },
+        { label: "The Project", value: " Gedung Kantor 8 lantai " },
+        { label: "The Business", value: "General contractor" },
+      ],
+    },
+    []
+  )
+  // Alamat hanya beda spasi di tepi, jadi tidak tercatat.
+  assert.deepEqual(changedFields(before, after), ["detailRows", "riskLocation"])
+  // Detail tanpa isi tidak tercetak, jadi juga tidak ditulis.
+  assert.equal(before.detailRows, "")
+  assert.equal(
+    after.detailRows,
+    "The Project: Gedung Kantor 8 lantai\nThe Business: General contractor"
+  )
+})
+
+test("urutan wording form tidak dianggap perubahan", () => {
+  const saved: PlacingSlip = {
+    ...switchCob(emptySlip(), "Property"),
+    wordingForms: ["Munich Re Property All Risks Wording", "Buku Wording Standar PSAKBI 2021"],
+  }
+  const reordered = { ...saved, wordingForms: [...saved.wordingForms].reverse() }
+  assert.deepEqual(
+    changedFields(slipAuditSummary(saved, []), slipAuditSummary(reordered, [])),
+    []
+  )
+})
