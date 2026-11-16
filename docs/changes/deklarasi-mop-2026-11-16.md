@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-16
 - **Branch:** `feat/mop-polis-induk-deklarasi`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #257
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
