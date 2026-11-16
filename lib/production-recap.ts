@@ -10,8 +10,13 @@ import type { PolicyType } from "@/lib/data/types"
 /** Data polis yang dibutuhkan rekap, disiapkan server. */
 export interface RecapPolicy {
   policyNo: string
-  /** Polis induk untuk endorsement dan pembatalan. */
+  /** Polis induk untuk endorsement, pembatalan, dan deklarasi MOP. */
   parentPolicyNo: string | null
+  /**
+   * Polis induk MOP. Tanpa premi deposit tidak ada produksinya, jadi tidak ditulis;
+   * produksinya datang dari baris deklarasi.
+   */
+  openCoverMaster?: boolean
   slipNo: string | null
   type: PolicyType
   endorsementSeq: number | null
@@ -106,6 +111,8 @@ const TYPE_CODES: Record<PolicyType, string> = {
   Renewal: "RENEWAL",
   Endorsement: "ENDORSE",
   Cancellation: "CANCEL",
+  // Deklarasi MOP adalah produksi baru di bawah nomor polis MOP, dengan nomor sertifikatnya.
+  Deklarasi: "NEW",
 }
 
 /** Tanggal contoh LCH ditulis MM/DD/YYYY. */
@@ -124,9 +131,12 @@ const codeName = (code: string | null | undefined, name: string | null | undefin
  */
 export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = FX): RecapRow[] {
   return policies.flatMap((p) => {
+    if (p.openCoverMaster && p.premium === 0) return []
     const rate = fx[p.currency] ?? 1
     const [year, month] = p.productionDate.split("-").map(Number)
-    const changeRecord = p.type === "Endorsement" || p.type === "Cancellation"
+    // Endorsement, pembatalan, dan deklarasi ditulis di bawah nomor polis induknya.
+    const changeRecord =
+      p.type === "Endorsement" || p.type === "Cancellation" || p.type === "Deklarasi"
     const source = codeName(p.sourceCode, p.sourceName)
     const insurers = p.insurers.length
       ? p.insurers

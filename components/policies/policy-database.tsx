@@ -72,6 +72,7 @@ import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
 import { MAIN_POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
 import { parentPolicyNote } from "@/lib/policy-parent"
+import { isOpenCoverMaster } from "@/lib/open-cover"
 import { isRenewable } from "@/lib/renewal"
 import type { PolicyFormOptions } from "@/lib/server/policies"
 import { store } from "@/lib/store"
@@ -293,6 +294,36 @@ export function PolicyDatabase({
             }),
         }
       )
+    }
+    // Deklarasi MOP dicatat di bawah polis induknya (Agus, 16 November 2026).
+    if (!p.cancelled && isOpenCoverMaster(p, (id) => slips.find((s) => s.id === id))) {
+      actions.push({
+        label: "Tambah deklarasi",
+        icon: FilePlus2,
+        onSelect: () =>
+          openForm(null, {
+            type: "Deklarasi",
+            parentPolicyId: p.id,
+            placingSlipId: p.placingSlipId,
+            clientId: p.clientId,
+            insuredName: p.insuredName,
+            insurer: p.insurer,
+            insurers: p.insurers,
+            cob: p.cob,
+            typeOfCover: p.typeOfCover,
+            currency: p.currency,
+            riskLocation: p.riskLocation,
+            brokeragePct: p.brokeragePct,
+            includeVat: p.includeVat,
+            additionalFeePct: p.additionalFeePct,
+            additionalFeeIncludeVat: p.additionalFeeIncludeVat,
+            cobOjkClassId: p.cobOjkClassId,
+            placementLocationId: p.placementLocationId,
+            groupingInsured: p.groupingInsured,
+            inceptionDate: today,
+            expiryDate: p.expiryDate,
+          }),
+      })
     }
     actions.push({
       label: blocked ? "Hapus (masih dipakai)" : "Hapus polis",

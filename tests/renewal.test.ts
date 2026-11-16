@@ -34,6 +34,8 @@ test("hanya polis asal yang belum dibatalkan yang bisa diperpanjang", () => {
   assert.equal(isRenewable({ type: "Renewal", cancelled: true }), false)
   assert.equal(isRenewable({ type: "Endorsement" }), false)
   assert.equal(isRenewable({ type: "Cancellation" }), false)
+  // Deklarasi MOP ikut polis MOP-nya; yang di-renew polis MOP.
+  assert.equal(isRenewable({ type: "Deklarasi" }), false)
 })
 
 test("renewal notice tidak memuat polis yang dibatalkan, endorsement, dan pembatalan", () => {

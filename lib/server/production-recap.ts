@@ -27,7 +27,9 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       coverType: { select: { code: true, name: true } },
       policyType: { select: { code: true, name: true } },
       parentPolicy: { select: { policyNo: true, inceptionDate: true, expiryDate: true } },
-      placingSlip: { select: { slipNo: true, source: { select: { code: true, name: true } } } },
+      placingSlip: {
+        select: { slipNo: true, openCover: true, source: { select: { code: true, name: true } } },
+      },
       cobOjkClass: { select: { name: true } },
       placementLocation: { select: { name: true } },
       insurers: {
@@ -40,11 +42,14 @@ export async function listProductionRecap(start: string, end: string): Promise<R
 
   return rows.map((row) => {
     const parent = row.parentPolicy
+    const type = systemValueFromRow(POLICY_TYPE_CODES, row.policyType, "Baru")
     return {
       policyNo: row.policyNo,
       parentPolicyNo: parent?.policyNo ?? null,
+      openCoverMaster:
+        Boolean(row.placingSlip?.openCover) && (type === "Baru" || type === "Renewal"),
       slipNo: row.placingSlip?.slipNo ?? null,
-      type: systemValueFromRow(POLICY_TYPE_CODES, row.policyType, "Baru"),
+      type,
       endorsementSeq: row.endorsementSeq,
       insuredName: row.insuredName,
       clientName: row.client?.name ?? null,
@@ -58,7 +63,7 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       cobName: row.cob.name,
       coverCode: row.coverType?.code ?? null,
       coverName: row.coverType?.name ?? row.typeOfCover ?? null,
-      // Endorsement dan pembatalan ditulis dengan periode polis induknya.
+      // Endorsement, pembatalan, dan deklarasi ditulis dengan periode polis induknya.
       periodStart: isoDate(parent?.inceptionDate ?? row.inceptionDate),
       periodEnd: isoDate(parent?.expiryDate ?? row.expiryDate),
       productionDate: isoDate(row.inceptionDate),

@@ -57,7 +57,12 @@ import {
   prorataDays,
   totalPremium,
 } from "@/lib/endorsement-premium"
-import { openCoverRateText, usesOpenCover } from "@/lib/open-cover"
+import {
+  isOpenCoverMaster,
+  openCoverPremium,
+  openCoverRateText,
+  usesOpenCover,
+} from "@/lib/open-cover"
 import { parentPolicyIssue, parentPolicyLabel } from "@/lib/policy-parent"
 import { cancellationSuggestion } from "@/lib/policy-cancellation"
 import { isProvisionalPolicyNo, policyFieldsFromSlip } from "@/lib/policy-from-slip"
@@ -209,6 +214,20 @@ const schema = z
           "Pembatalan mencatat pengembalian premi, isi dengan nilai negatif",
       })
     }
+    if (d.type === "Deklarasi" && !(d.sumInsured > 0)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sumInsured"],
+        message: "Nilai deklarasi harus lebih dari 0",
+      })
+    }
+    if (d.type === "Deklarasi" && !(d.premium > 0)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["premium"],
+        message: "Premi deklarasi harus lebih dari 0",
+      })
+    }
   })
 
 export function PolicyForm({
@@ -245,6 +264,9 @@ export function PolicyForm({
   const [pickedFiles, setPickedFiles] = React.useState<
     Partial<Record<PolicyFileKind, File>>
   >({})
+  // Kategori rate open cover dan jumlah unit untuk menghitung premi deklarasi.
+  const [ocRateId, setOcRateId] = React.useState<string | null>(null)
+  const [ocUnits, setOcUnits] = React.useState<number | null>(null)
   // Perubahan peserta PA grup, hanya untuk endorsement baru.
   const [addedParticipants, setAddedParticipants] = React.useState<SlipParticipant[]>([])
   const [removedParticipantIds, setRemovedParticipantIds] = React.useState<string[]>([])
@@ -269,19 +291,25 @@ export function PolicyForm({
     clientOptions.find((c) => c.id === id)
   // Polis yang sudah dibatalkan tidak bisa dipilih lagi, kecuali induk yang
   // tersimpan pada record ini, misalnya saat mengedit pembatalannya sendiri.
+  const slipById = (id: string) => slips.find((s) => s.id === id)
+  // Deklarasi hanya di bawah polis MOP; deklarasi sendiri tidak menjadi induk polis lain.
+  const declaration = draft.type === "Deklarasi"
   const parentItems = policies
     .filter(
       (p) =>
         p.id !== draft.id &&
         p.type !== "Cancellation" &&
+        p.type !== "Deklarasi" &&
+        (!declaration || isOpenCoverMaster(p, slipById)) &&
         (!p.cancelled || p.id === policy?.parentPolicyId)
     )
     .map((p) => ({ label: `${p.policyNo} — ${p.insuredName}`, value: p.id }))
   // Slip yang sudah jadi polis tidak muncul lagi; slip PAR + EQVET muncul sampai kedua bagiannya
   // berpolis (polis lama tanpa bagian = seluruh slip). Kosong berarti habis; [null] berarti utuh.
   function freeSlipParts(slip: PlacingSlip): (SlipPart | null)[] {
-    // Slip open cover menerbitkan satu polis per deklarasi (Harry, 6 November 2026).
-    if (usesOpenCover(slip)) return [null]
+    // Slip open cover: polis induk MOP tercatat dari Closing Instruction dan deklarasinya dari
+    // menu Tambah deklarasi di polis itu, jadi slip-nya tidak dipilih di sini (Agus, 16 November 2026).
+    if (usesOpenCover(slip)) return []
     const used = policies.filter(
       (p) => p.placingSlipId === slip.id && p.id !== draft.id
     )
@@ -357,9 +385,14 @@ export function PolicyForm({
     vat
       ? `${money(amount, draft.currency)} · termasuk PPN 2,2% ${money(vat, draft.currency)}`
       : money(amount, draft.currency)
-  // Polis dari slip open cover adalah satu deklarasi: nilai, premi, dan
-  // periodenya diisi per deklarasi; data lain tetap dari slip.
+  // Polis induk MOP dan deklarasinya menautkan slip open cover. Nilai, premi, dan periode
+  // deklarasi diisi per pengiriman; data lain ikut polis MOP.
   const openCoverSlip = linkedSlip ? usesOpenCover(linkedSlip) : false
+  const ocRates =
+    declaration && linkedSlip
+      ? (linkedSlip.openCoverRates ?? []).filter((r) => r.rate != null && r.rate > 0)
+      : []
+  const ocRate = ocRates.find((r) => r.id === ocRateId) ?? null
   const periodLocked =
     Boolean(linkedSlip?.inceptionDate && linkedSlip.expiryDate) && !openCoverSlip
   // COB dan type of cover dari master data. Nilai polis lama yang sudah tidak
@@ -419,13 +452,15 @@ export function PolicyForm({
     }
     // Polis sebelumnya dari sistem menggantikan nomor yang diketik.
     setParent({ previousPolicyNo: null })
-    // Polis dari slip hanya menautkan polis induk; datanya tetap dari slip.
-    if (draft.placingSlipId) {
+    // Polis dari slip hanya menautkan polis induk; datanya tetap dari slip. Deklarasi selalu
+    // mengikuti polis MOP-nya, termasuk slip open cover tempat rate-nya.
+    if (draft.placingSlipId && !declaration) {
       set({ parentPolicyId: parent.id })
       return
     }
     const renewal = draft.type === "Renewal"
     set({
+      ...(declaration ? { placingSlipId: parent.placingSlipId } : {}),
       parentPolicyId: parent.id,
       clientId: parent.clientId,
       insuredName: parent.insuredName,
@@ -454,6 +489,10 @@ export function PolicyForm({
   async function submit() {
     const result = validate(schema, draft)
     const errs = { ...result.errors }
+    // Polis induk MOP boleh tanpa premi: produksinya dari deklarasi (Agus, 16 November 2026).
+    if (openCoverSlip && (draft.type === "Baru" || draft.type === "Renewal")) {
+      delete errs.premium
+    }
     const duplicate = policies.find(
       (p) =>
         p.id !== draft.id &&
@@ -461,7 +500,7 @@ export function PolicyForm({
     )
     if (duplicate) errs.policyNo = "No. polis sudah terdaftar"
     setErrors(errs)
-    if (!result.ok || duplicate) return false
+    if (Object.keys(errs).length > 0) return false
     const incomplete = participantChangesOn
       ? addedParticipants.findIndex((p) => !p.name.trim() || !(p.sumInsured > 0))
       : -1
@@ -553,12 +592,32 @@ export function PolicyForm({
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title={policy ? "Edit Polis" : "Tambah Polis"}
-      description="Data polis yang sudah terbit dari perusahaan asuransi. Field bertanda * wajib diisi."
+      title={
+        declaration
+          ? policy
+            ? "Edit Deklarasi"
+            : "Tambah Deklarasi"
+          : policy
+            ? "Edit Polis"
+            : "Tambah Polis"
+      }
+      description={
+        declaration
+          ? "Satu deklarasi pengiriman di bawah polis MOP. Field bertanda * wajib diisi."
+          : "Data polis yang sudah terbit dari perusahaan asuransi. Field bertanda * wajib diisi."
+      }
       onSubmit={submit}
     >
       <FieldGroup>
-        {!policy ? (
+        {declaration ? (
+          linkedSlip ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Link2 className="size-3.5" />
+              Deklarasi dari slip open cover {linkedSlip.slipNo}. Tertanggung, asuransi, dan
+              brokerage ikut polis MOP; rate dari slip ini.
+            </p>
+          ) : null
+        ) : !policy ? (
           <SearchSelect
             label="Ambil dari placing slip"
             items={slipItems}
@@ -597,16 +656,18 @@ export function PolicyForm({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField
-            label="No. Polis"
+            label={declaration ? "No. Sertifikat / Deklarasi" : "No. Polis"}
             required
             value={draft.policyNo}
             onChange={(v) => set({ policyNo: v })}
-            placeholder="PAR/2026/JKT/…"
+            placeholder={declaration ? "Nomor dari asuransi" : "PAR/2026/JKT/…"}
             error={errors.policyNo}
             description={
-              isProvisionalPolicyNo(draft.policyNo)
-                ? "Nomor sementara dari Closing Instruction. Ganti dengan nomor polis dari asuransi."
-                : undefined
+              declaration
+                ? "Ditulis di Rekap Produksi sebagai nomor sertifikat, di bawah nomor polis MOP."
+                : isProvisionalPolicyNo(draft.policyNo)
+                  ? "Nomor sementara dari Closing Instruction. Ganti dengan nomor polis dari asuransi."
+                  : undefined
             }
           />
           <SelectInput
@@ -764,7 +825,9 @@ export function PolicyForm({
           </fieldset>
           <fieldset disabled={periodLocked} className="contents">
             <TextField
-              label={changesParent ? "Tanggal Efektif" : "Tanggal Mulai"}
+              label={
+                changesParent ? "Tanggal Efektif" : declaration ? "Tanggal Deklarasi" : "Tanggal Mulai"
+              }
               required
               type="date"
               value={draft.inceptionDate}
@@ -775,7 +838,9 @@ export function PolicyForm({
                   ? "Polis dibatalkan terhitung sejak tanggal ini."
                   : draft.type === "Endorsement"
                     ? "Perubahan berlaku terhitung sejak tanggal ini."
-                    : undefined
+                    : declaration
+                      ? "Tanggal pengiriman atau keberangkatan; menentukan bulan produksi."
+                      : undefined
               }
             />
             <TextField
@@ -803,18 +868,64 @@ export function PolicyForm({
           </fieldset>
           <fieldset disabled={slipLocked && !openCoverSlip} className="contents">
             <NumberField
-              label="Total Sum Insured"
+              label={declaration ? "Nilai Deklarasi" : "Total Sum Insured"}
               value={draft.sumInsured}
-              onValueChange={(v) => set({ sumInsured: v ?? 0 })}
+              onValueChange={(v) =>
+                set({
+                  sumInsured: v ?? 0,
+                  ...(ocRate?.basis === "percent"
+                    ? { premium: openCoverPremium(ocRate, v ?? 0) }
+                    : {}),
+                })
+              }
               error={errors.sumInsured}
               description={
                 draft.type === "Endorsement" || draft.type === "Cancellation"
                   ? "Tambahan UP positif, pengurangan UP negatif."
-                  : openCoverSlip
-                    ? "Nilai deklarasi ini."
-                    : undefined
+                  : declaration
+                    ? "Nilai barang yang dikirim pada deklarasi ini."
+                    : openCoverSlip
+                      ? "Polis MOP: nilai dan premi dicatat per deklarasi."
+                      : undefined
               }
             />
+            {declaration && ocRates.length ? (
+              <>
+                <SelectInput
+                  label="Kategori Rate"
+                  items={ocRates.map((r) => ({
+                    label: `${r.label} · ${openCoverRateText(r, draft.currency)}`,
+                    value: r.id,
+                  }))}
+                  value={ocRateId ?? ""}
+                  onValueChange={(v) => {
+                    const rate = ocRates.find((r) => r.id === v) ?? null
+                    setOcRateId(rate?.id ?? null)
+                    if (rate) {
+                      set({
+                        premium: openCoverPremium(
+                          rate,
+                          rate.basis === "percent" ? draft.sumInsured : (ocUnits ?? 0)
+                        ),
+                      })
+                    }
+                  }}
+                  description="Rate dari slip open cover. Premi dihitung otomatis dan tetap bisa diubah."
+                />
+                {ocRate?.basis === "per_unit" ? (
+                  <NumberField
+                    label={`Jumlah ${ocRate.unit?.trim() || "unit"}`}
+                    preset="integer"
+                    min={0}
+                    value={ocUnits}
+                    onValueChange={(v) => {
+                      setOcUnits(v)
+                      set({ premium: openCoverPremium(ocRate, v ?? 0) })
+                    }}
+                  />
+                ) : null}
+              </>
+            ) : null}
             {isEndorsement ? (
               <>
                 <NumberField
@@ -856,12 +967,18 @@ export function PolicyForm({
                   ? `${money(premiumBasis(draft), draft.currency)} × ${num(draft.rate ?? 0, 0, 6)}% × ${endorsementDays}/${DAYS_PER_YEAR} = ${money(draft.premium, draft.currency)}`
                   : draft.type === "Endorsement" || draft.type === "Cancellation"
                   ? "Tambahan premi positif, pengembalian premi negatif."
-                  : openCoverSlip && linkedSlip
-                    ? `Rate open cover: ${(linkedSlip.openCoverRates ?? [])
-                        .filter((r) => r.rate != null)
-                        .map((r) => `${r.label} ${openCoverRateText(r, draft.currency)}`)
-                        .join(" · ")}.`
-                    : money(draft.premium, draft.currency)
+                  : declaration && ocRate
+                    ? ocRate.basis === "percent"
+                      ? `${money(draft.sumInsured, draft.currency)} × ${openCoverRateText(ocRate, draft.currency)} = ${money(openCoverPremium(ocRate, draft.sumInsured), draft.currency)}`
+                      : `${num(ocUnits ?? 0, 0, 0)} × ${openCoverRateText(ocRate, draft.currency)} = ${money(openCoverPremium(ocRate, ocUnits ?? 0), draft.currency)}`
+                    : openCoverSlip && linkedSlip && declaration
+                      ? `Rate open cover: ${(linkedSlip.openCoverRates ?? [])
+                          .filter((r) => r.rate != null)
+                          .map((r) => `${r.label} ${openCoverRateText(r, draft.currency)}`)
+                          .join(" · ")}.`
+                      : openCoverSlip
+                        ? "Polis MOP: premi masuk lewat deklarasi. Isi hanya bila ada premi deposit."
+                        : money(draft.premium, draft.currency)
               }
             />
             {isEndorsement ? (

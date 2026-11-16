@@ -312,6 +312,7 @@ export function ReportView({
       "Endorsement & Pembatalan",
       String(countType("Endorsement") + countType("Cancellation")),
     ],
+    ["Deklarasi MOP", String(countType("Deklarasi"))],
   ]
 
   const periodSlug =

@@ -1,8 +1,10 @@
 /**
  * Open cover (Tahap 3 nomor 15): slip berisi rate per kategori tanpa TSI dan premi; premi
- * dicatat per deklarasi sebagai polis (Harry, 6 November 2026).
+ * dicatat per deklarasi (Harry, 6 November 2026). Sejak 16 November 2026 (Agus) MOP tercatat
+ * sebagai satu polis induk dari Closing Instruction, dan tiap deklarasi menjadi polis bertipe
+ * Deklarasi di bawahnya dengan nomor sertifikat dan premi sendiri.
  */
-import type { OpenCoverRate, PlacingSlip } from "./data/types"
+import type { OpenCoverRate, PlacingSlip, Policy } from "./data/types"
 import { money, num } from "./format"
 
 export const OPEN_COVER_LIMITS = { rows: 30, text: 200, unit: 50 }
@@ -14,6 +16,16 @@ export function usesOpenCover(slip: Pick<PlacingSlip, "cob" | "openCover">) {
     slip.cob !== "Property" &&
     slip.cob !== "Motor Vehicle"
   )
+}
+
+/** Polis induk MOP: polis baru atau renewal dari slip open cover, tempat deklarasi dicatat. */
+export function isOpenCoverMaster(
+  policy: Pick<Policy, "type" | "placingSlipId">,
+  slipOf: (id: string) => Pick<PlacingSlip, "cob" | "openCover"> | null | undefined
+) {
+  if (policy.type !== "Baru" && policy.type !== "Renewal") return false
+  const slip = policy.placingSlipId ? slipOf(policy.placingSlipId) : null
+  return Boolean(slip && usesOpenCover(slip))
 }
 
 /** Baris rate open cover yang valid dari JSON tersimpan atau input. */

@@ -31,12 +31,14 @@ export const POLICY_TYPES: PolicyType[] = [
   "Renewal",
   "Endorsement",
   "Cancellation",
+  "Deklarasi",
 ]
 /** Tipe polis yang wajib menunjuk polis induk. */
 export const POLICY_TYPES_WITH_PARENT: PolicyType[] = [
   "Renewal",
   "Endorsement",
   "Cancellation",
+  "Deklarasi",
 ]
 export const CLAIM_STATUSES: ClaimStatus[] = [
   "Outstanding",

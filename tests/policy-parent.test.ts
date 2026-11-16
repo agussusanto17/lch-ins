@@ -41,3 +41,13 @@ test("keterangan polis rujukan di daftar polis", () => {
   assert.equal(parentPolicyNote({ type: "Cancellation", parentPolicyNo: "PAR/2026/3" }), "pembatalan PAR/2026/3")
   assert.equal(parentPolicyNote({ type: "Baru", parentPolicyNo: null }), null)
 })
+
+test("deklarasi wajib menunjuk polis MOP", () => {
+  assert.equal(parentPolicyLabel("Deklarasi"), "Polis MOP")
+  assert.equal(parentPolicyIssue({ type: "Deklarasi", parentPolicyId: null }), "Polis MOP wajib dipilih")
+  assert.equal(parentPolicyIssue({ type: "Deklarasi", parentPolicyId: "mop" }), null)
+  assert.equal(
+    parentPolicyNote({ type: "Deklarasi", parentPolicyNo: "007/LCH-PLCMT/CI-MOP/XI/2026" }),
+    "deklarasi 007/LCH-PLCMT/CI-MOP/XI/2026"
+  )
+})

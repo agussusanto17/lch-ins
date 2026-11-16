@@ -235,6 +235,7 @@ const LOOKUPS: {
       ["renewal", "Renewal"],
       ["endorsement", "Endorsement"],
       ["cancellation", "Cancellation"],
+      ["declaration", "Deklarasi"],
     ],
   },
   {

@@ -34,7 +34,7 @@ test("daftar tetap: nilai sistem berlabel nama Master Data, urut seperti master"
   // Tanpa data master: semua nilai sistem.
   assert.deepEqual(
     fixedLookupItems([], POLICY_TYPE_CODES).map((i) => i.value),
-    ["Baru", "Renewal", "Endorsement", "Cancellation"]
+    ["Baru", "Renewal", "Endorsement", "Cancellation", "Deklarasi"]
   )
   assert.equal(fixedLookupLabel(CLAIM_STATUS_ROWS, CLAIM_STATUS_CODES, "Closed"), "Close")
   assert.equal(fixedLookupLabel(CLAIM_STATUS_ROWS, CLAIM_STATUS_CODES, "Rejected"), "Rejected")
