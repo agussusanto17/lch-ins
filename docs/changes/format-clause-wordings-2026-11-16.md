@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-16
 - **Branch:** `fix/format-clause-wordings`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #256
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
