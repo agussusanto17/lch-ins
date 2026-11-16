@@ -131,6 +131,39 @@ test("an endorsement row carries the parent policy number, sequence, and parent 
   assert.equal(row.Note, "Additional accessories")
 })
 
+test("an MOP declaration is a NEW row under the MOP policy number with its own certificate", () => {
+  const rows = recapRows([
+    policy({
+      type: "Baru",
+      policyNo: "007/LCH-PLCMT/CI-MOP/XI/2026",
+      openCoverMaster: true,
+      premium: 0,
+    }),
+    policy({
+      type: "Deklarasi",
+      policyNo: "CERT/MOP/0001",
+      parentPolicyNo: "007/LCH-PLCMT/CI-MOP/XI/2026",
+      premium: 750_000,
+      productionDate: "2026-12-05",
+    }),
+  ])
+  // Polis MOP tanpa premi deposit tidak punya produksi, jadi hanya deklarasinya yang tertulis.
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].tipe, "NEW")
+  assert.equal(rows[0].policyno, "007/LCH-PLCMT/CI-MOP/XI/2026")
+  assert.equal(rows[0].CERTIFICATENO, "CERT/MOP/0001")
+  assert.equal(rows[0].eseqno, 0)
+  assert.equal(rows[0].mth, 12)
+})
+
+test("an MOP policy with a deposit premium stays in the recap", () => {
+  const rows = recapRows([
+    policy({ type: "Baru", openCoverMaster: true, premium: 5_000_000 }),
+  ])
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].CERTIFICATENO, "")
+})
+
 test("a cancellation refund reverses income, so commission and fee turn positive", () => {
   const [row] = recapRows([
     policy({

@@ -3,7 +3,7 @@ import "server-only"
 import { derivedDocNumber } from "@/components/underwriting/slip-model"
 import { slipPolicyParts } from "@/lib/calc"
 import type { SlipPart } from "@/lib/data/types"
-import { usesOpenCover } from "@/lib/open-cover"
+import { POLICY_TYPE_CODES } from "@/lib/form-options"
 import {
   changedSlipFields,
   isProvisionalPolicyNo,
@@ -16,10 +16,16 @@ import { getPlacingSlipById, type PlacingSlipRecord } from "@/lib/server/placing
 import { createPolicy, getPolicyById, updatePolicy } from "@/lib/server/policies"
 import { slipEndorsementAdjustment } from "@/lib/endorsement-calc"
 
+/**
+ * Deklarasi MOP ikut menautkan slip-nya, tapi bukan polis dari CI itu: polis CI-nya polis induk
+ * MOP. Deklarasi tidak dihitung saat mencari polis dari slip.
+ */
+const NOT_DECLARATION = { NOT: { policyType: { code: POLICY_TYPE_CODES.Deklarasi } } }
+
 /** Nomor polis yang berasal dari slip ini, untuk keterangan di dokumen CI. */
 export async function policyNosForSlip(slipId: string): Promise<string[]> {
   const policies = await prisma.policy.findMany({
-    where: { placingSlipId: slipId },
+    where: { placingSlipId: slipId, ...NOT_DECLARATION },
     select: { policyNo: true },
     orderBy: { createdAt: "asc" },
   })
@@ -36,6 +42,8 @@ export interface AutoPolicyResult {
 /**
  * Begitu CI terbit, polisnya langsung tercatat dengan nomor sementara dari CI; petugas polis
  * tinggal mengganti nomor dan mengunggah polis dari asuransi (meeting LCH, 10 November 2026).
+ * Slip open cover mencatat polis induk MOP dengan nilai dan premi 0; premi masuk lewat
+ * deklarasinya (Agus, 16 November 2026).
  */
 export async function recordPoliciesFromClosing(
   slipId: string,
@@ -43,12 +51,6 @@ export async function recordPoliciesFromClosing(
 ): Promise<AutoPolicyResult> {
   const slip = await getPlacingSlipById(slipId)
   if (!slip || slip.status !== "Closed") return { created: [], skipped: null }
-  if (usesOpenCover(slip)) {
-    return {
-      created: [],
-      skipped: "Slip open cover: polis dicatat per deklarasi di Policy Database.",
-    }
-  }
   if (!slip.inceptionDate || !slip.expiryDate) {
     return {
       created: [],
@@ -57,7 +59,7 @@ export async function recordPoliciesFromClosing(
   }
 
   const existing = await prisma.policy.findMany({
-    where: { placingSlipId: slip.id },
+    where: { placingSlipId: slip.id, ...NOT_DECLARATION },
     select: { slipPart: true },
   })
   // Polis lama tanpa bagian memakai seluruh slip.
@@ -108,8 +110,9 @@ export async function syncPoliciesFromSlipRevision(
 ): Promise<string[]> {
   const after = await getPlacingSlipById(before.id)
   if (!after || after.status !== "Closed") return []
+  // Nilai dan premi deklarasi diisi per pengiriman, jadi revisi slip tidak menyentuhnya.
   const policies = await prisma.policy.findMany({
-    where: { placingSlipId: after.id },
+    where: { placingSlipId: after.id, ...NOT_DECLARATION },
     select: { id: true, policyNo: true, slipPart: true },
     orderBy: { createdAt: "asc" },
   })

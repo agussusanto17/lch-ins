@@ -15,6 +15,7 @@ export function parentPolicyLabel(type: PolicyType) {
   if (type === "Renewal") return "Polis Sebelumnya"
   if (type === "Endorsement") return "Polis yang Di-endorse"
   if (type === "Cancellation") return "Polis yang Dibatalkan"
+  if (type === "Deklarasi") return "Polis MOP"
   return "Polis Induk"
 }
 
@@ -44,5 +45,6 @@ export function parentPolicyNote(
   if (p.type === "Renewal") return `renewal dari ${no}`
   if (p.type === "Endorsement") return `endorsement ${no}`
   if (p.type === "Cancellation") return `pembatalan ${no}`
+  if (p.type === "Deklarasi") return `deklarasi ${no}`
   return `induk ${no}`
 }

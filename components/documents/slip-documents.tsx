@@ -81,10 +81,13 @@ function LinkedPoliciesNotice({
   slipId,
   policies,
   canRecord,
+  openCover,
 }: {
   slipId: string
   policies: string[]
   canRecord: boolean
+  /** Slip open cover: polisnya polis induk MOP, deklarasinya dicatat dari polis itu. */
+  openCover: boolean
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -103,7 +106,9 @@ function LinkedPoliciesNotice({
     return (
       <div className="flex flex-col gap-2">
         <p className="text-muted-foreground">
-          Belum ada polis di Policy Database untuk Closing Instruction ini.{" "}
+          {openCover
+            ? "Belum ada polis MOP di Policy Database untuk Closing Instruction ini."
+            : "Belum ada polis di Policy Database untuk Closing Instruction ini."}{" "}
           <Link href="/policies" className="font-medium text-primary underline-offset-2 hover:underline">
             Buka Policy Database
           </Link>
@@ -111,7 +116,11 @@ function LinkedPoliciesNotice({
         {canRecord ? (
           <div className="flex flex-wrap items-center gap-3">
             <Button size="sm" onClick={record} disabled={isPending}>
-              {isPending ? "Mencatat polis…" : "Catat polis dari CI ini"}
+              {isPending
+                ? "Mencatat polis…"
+                : openCover
+                  ? "Catat polis MOP dari CI ini"
+                  : "Catat polis dari CI ini"}
             </Button>
             {error ? (
               <span role="alert" className="text-destructive">
@@ -126,10 +135,13 @@ function LinkedPoliciesNotice({
   const provisional = policies.some(isProvisionalPolicyNo)
   return (
     <p>
-      Polis tercatat di Policy Database:{" "}
+      {openCover ? "Polis MOP tercatat di Policy Database: " : "Polis tercatat di Policy Database: "}
       <span className="font-medium tabular">{policies.join(", ")}</span>.
       {provisional
         ? " Nomor sementara dari CI; ganti dengan nomor polis dari asuransi dan unggah polisnya."
+        : null}
+      {openCover
+        ? " Deklarasi pengiriman dicatat dari polis itu lewat menu Tambah deklarasi."
         : null}{" "}
       <Link href="/policies" className="font-medium text-primary underline-offset-2 hover:underline">
         Buka Policy Database
@@ -412,6 +424,7 @@ export function ClosingInstructionDocument(props: DocProps) {
             slipId={slip.id}
             policies={props.linkedPolicies}
             canRecord={props.canRecordPolicy ?? false}
+            openCover={usesOpenCover(slip)}
           />
         ) : undefined
       }

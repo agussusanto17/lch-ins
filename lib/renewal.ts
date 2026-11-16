@@ -30,11 +30,16 @@ export function renewalBackHref(days: string, cob: string) {
 }
 
 /**
- * Polis yang bisa diperpanjang: polis asal yang belum dibatalkan. Endorsement
- * dan pembatalan ikut polis induknya, tidak di-renew sendiri.
+ * Polis yang bisa diperpanjang: polis asal yang belum dibatalkan. Endorsement, pembatalan, dan
+ * deklarasi MOP ikut polis induknya, tidak di-renew sendiri.
  */
 export function isRenewable(p: Pick<Policy, "type" | "cancelled">) {
-  return p.type !== "Endorsement" && p.type !== "Cancellation" && !p.cancelled
+  return (
+    p.type !== "Endorsement" &&
+    p.type !== "Cancellation" &&
+    p.type !== "Deklarasi" &&
+    !p.cancelled
+  )
 }
 
 /**

@@ -106,6 +106,7 @@ export const POLICY_TYPE_CODES: Record<PolicyType, string> = {
   Renewal: "renewal",
   Endorsement: "endorsement",
   Cancellation: "cancellation",
+  Deklarasi: "declaration",
 }
 export const CLIENT_TYPE_CODES: Record<ClientType, string> = {
   Perorangan: "individual",

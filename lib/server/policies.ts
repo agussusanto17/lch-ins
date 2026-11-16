@@ -409,21 +409,43 @@ async function checkedPolicyData(tx: Tx, input: PolicyInput, selfId?: string) {
   if (duplicate && duplicate.id !== selfId) {
     throw new Error(`No. polis ${data.policyNo} sudah terdaftar.`)
   }
+  if (input.type === "Deklarasi") await assertOpenCoverParent(tx, data.parentPolicyId)
   return {
     ...data,
-    slipPart: await checkedSlipPart(tx, data.placingSlipId, input.slipPart, selfId),
+    slipPart: await checkedSlipPart(tx, data.placingSlipId, input.slipPart, input.type, selfId),
     endorsementSeq: await endorsementSeqFor(tx, input.type, data.parentPolicyId, selfId),
   }
 }
 
+/** Deklarasi hanya dicatat di bawah polis induk MOP: polis baru atau renewal dari slip open cover. */
+async function assertOpenCoverParent(tx: Tx, parentPolicyId: string | null) {
+  const parent = parentPolicyId
+    ? await tx.policy.findUnique({
+        where: { id: parentPolicyId },
+        select: {
+          policyType: { select: { code: true } },
+          placingSlip: { select: { openCover: true } },
+        },
+      })
+    : null
+  const masterType =
+    parent?.policyType.code === POLICY_TYPE_CODES.Baru ||
+    parent?.policyType.code === POLICY_TYPE_CODES.Renewal
+  if (!parent || !masterType || !parent.placingSlip?.openCover) {
+    throw new Error("Deklarasi hanya bisa dicatat di bawah polis MOP dari slip open cover.")
+  }
+}
+
 /**
- * Satu placing slip satu polis (PAR + EQVET per bagian, open cover per deklarasi) supaya produksi
- * tidak terhitung dua kali. Tautan yang tidak berubah saat polis diedit tidak diperiksa ulang.
+ * Satu placing slip satu polis (PAR + EQVET per bagian) supaya produksi tidak terhitung dua kali.
+ * Slip open cover satu polis induk MOP, deklarasinya tidak dibatasi. Tautan yang tidak berubah
+ * saat polis diedit tidak diperiksa ulang.
  */
 async function checkedSlipPart(
   tx: Tx,
   slipId: string | null,
   part: SlipPart | null | undefined,
+  type: PolicyInput["type"],
   selfId?: string
 ): Promise<SlipPart | null> {
   if (!slipId) return null
@@ -442,8 +464,23 @@ async function checkedSlipPart(
   if (!slip) throw new Error("Placing slip tidak ditemukan.")
   // Endorsement dan cancellation slip mencatat satu record untuk polis induknya.
   if (slip.kind && slip.kind !== "Placing") return null
-  // Slip open cover menerbitkan satu polis per deklarasi (Harry, 6 November 2026).
-  if (usesOpenCover(slip)) return null
+  if (usesOpenCover(slip)) {
+    if (type === "Deklarasi") return null
+    const master = await tx.policy.findFirst({
+      where: {
+        placingSlipId: slipId,
+        ...(selfId ? { id: { not: selfId } } : {}),
+        NOT: { policyType: { code: POLICY_TYPE_CODES.Deklarasi } },
+      },
+      select: { policyNo: true },
+    })
+    if (master) {
+      throw new Error(
+        `Placing slip ${slip.slipNo ?? "ini"} sudah dipakai polis MOP ${master.policyNo}. Catat deklarasinya dari polis itu.`
+      )
+    }
+    return null
+  }
   const parts = slipPolicyParts(slip)
   const slipPart = parts.length ? (part ?? null) : null
   if (parts.length && !(slipPart && parts.includes(slipPart))) {

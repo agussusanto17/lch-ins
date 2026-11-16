@@ -45,7 +45,11 @@ export type SlipStatus =
  * Cancelled bila polis sudah punya record Cancellation.
  */
 export type PolicyStatus = "Active" | "Expiring" | "Expired" | "Cancelled"
-export type PolicyType = "Baru" | "Renewal" | "Endorsement" | "Cancellation"
+/**
+ * Deklarasi: satu pengiriman di bawah polis open cover (MOP), dengan nomor sertifikat dan premi
+ * sendiri; polis induknya polis MOP dari Closing Instruction (Agus, 16 November 2026).
+ */
+export type PolicyType = "Baru" | "Renewal" | "Endorsement" | "Cancellation" | "Deklarasi"
 /** Kelompok perhitungan slip PAR + EQVET yang masing-masing terbit sebagai polis. */
 export type SlipPart = "PAR" | "EQVET"
 /**

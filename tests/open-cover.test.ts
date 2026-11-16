@@ -6,6 +6,7 @@ import { totalPayable, totalPremium } from "../lib/calc"
 import type { PlacingSlip } from "../lib/data/types"
 import {
   cleanOpenCoverRates,
+  isOpenCoverMaster,
   openCoverIssues,
   openCoverPremium,
   openCoverRateText,
@@ -45,6 +46,20 @@ test("open cover hanya untuk COB selain Property dan Motor Vehicle", () => {
   assert.equal(usesOpenCover({ cob: "Marine Cargo", openCover: true }), true)
   assert.equal(usesOpenCover({ cob: "Property", openCover: true }), false)
   assert.equal(usesOpenCover({ cob: "Marine Cargo", openCover: false }), false)
+})
+
+test("polis MOP adalah polis baru atau renewal dari slip open cover", () => {
+  const slips: Record<string, { cob: PlacingSlip["cob"]; openCover: boolean }> = {
+    mop: { cob: "Marine Cargo", openCover: true },
+    cargo: { cob: "Marine Cargo", openCover: false },
+  }
+  const slipOf = (id: string) => slips[id]
+  assert.equal(isOpenCoverMaster({ type: "Baru", placingSlipId: "mop" }, slipOf), true)
+  assert.equal(isOpenCoverMaster({ type: "Renewal", placingSlipId: "mop" }, slipOf), true)
+  // Deklarasi ikut menautkan slip open cover, tapi bukan polis MOP-nya.
+  assert.equal(isOpenCoverMaster({ type: "Deklarasi", placingSlipId: "mop" }, slipOf), false)
+  assert.equal(isOpenCoverMaster({ type: "Baru", placingSlipId: "cargo" }, slipOf), false)
+  assert.equal(isOpenCoverMaster({ type: "Baru", placingSlipId: null }, slipOf), false)
 })
 
 test("release open cover tanpa TSI dan premi, cukup rate berkategori", () => {
