@@ -125,8 +125,12 @@ test("doc-blocks prints clause list titles unbolded without wording and keeps bo
     "ClauseWordingAppendix should nest clause title and wording body inside flex-1 min-w-0 column for hanging indent"
   )
   assert.ok(
-    appendixSection.includes('className="rte-prose mt-0.5 text-[12px] text-justify"'),
-    "ClauseWordingAppendix should justify descriptive wording paragraphs"
+    appendixSection.includes('className="rte-prose mt-0.5 text-[12px]"'),
+    "ClauseWordingAppendix should render wording without forcing justify"
+  )
+  assert.ok(
+    appendixSection.includes("hangNumberedWording(sanitizeHtml(c.wording))"),
+    "ClauseWordingAppendix should hang numbered wording lines"
   )
 })
 
@@ -154,7 +158,7 @@ test("free-text content blocks in slip documents use the normal text color", () 
   }
 })
 
-test("globals.css configures natural left alignment for headings and justified text for paragraphs in rich text", () => {
+test("globals.css keeps editor paragraphs justified and document wording left-aligned", () => {
   const css = fs.readFileSync(
     path.join(process.cwd(), "app/globals.css"),
     "utf-8"
@@ -172,9 +176,16 @@ test("globals.css configures natural left alignment for headings and justified t
   )
   assert.match(
     css,
-    /\.rte-content p,\s*\.rte-prose p\s*\{[^}]*text-align:\s*justify;[^}]*text-justify:\s*inter-word;/,
-    "paragraphs in rich text should have justified text alignment"
+    /\.rte-content p\s*\{[^}]*text-align:\s*justify;[^}]*text-justify:\s*inter-word;/,
+    "paragraphs in the editor should stay justified"
   )
+  // Baris wording yang diputus <br> jadi renggang kalau di-justify (LMA 5397, 16 November 2026).
+  assert.match(
+    css,
+    /\.rte-prose,\s*\.rte-prose p,\s*\.rte-prose li\s*\{[^}]*text-align:\s*left;/,
+    "document wording should be left-aligned"
+  )
+  assert.match(css, /\.rte-prose p\[data-hang\]\s*\{[^}]*display:\s*flex;/)
 })
 
 test("parseBulletLine parses bullet markers and numbered list items correctly", async () => {
@@ -330,4 +341,39 @@ test("groupNumberedItems keeps location name and address under each numbered ris
   assert.deepEqual(groupNumberedItems("Grand Mall\nJl. Sudirman 1"), [
     { marker: null, lines: ["Grand Mall", "Jl. Sudirman 1"] },
   ])
+})
+
+// Wording LMA 5397 dari editor: nomor di baris sendiri, baris lanjutan menjorok (LCH, 16 November 2026).
+test("hangNumberedWording splits numbered <br> lines into hanging items", async () => {
+  const { hangNumberedWording } = await import("../lib/document-format.js")
+  const html =
+    "<p>1. Notwithstanding any provision,<br>resulting from, arising out of.</p>" +
+    "<p>2. As used herein where :<br>2.1 the substance or agent, and<br>" +
+    "2.2 the method of transmission or between<br>organisms, and</p>" +
+    "<p>LMA5397<br>29 April 2020</p>"
+
+  assert.equal(
+    hangNumberedWording(html),
+    '<p data-hang="first"><span data-hang-marker>1.</span>' +
+      "<span data-hang-body>Notwithstanding any provision,<br>resulting from, arising out of.</span></p>" +
+      '<p data-hang="first"><span data-hang-marker>2.</span>' +
+      "<span data-hang-body>As used herein where :</span></p>" +
+      '<p data-hang="cont"><span data-hang-marker>2.1</span>' +
+      "<span data-hang-body>the substance or agent, and</span></p>" +
+      '<p data-hang="cont"><span data-hang-marker>2.2</span>' +
+      "<span data-hang-body>the method of transmission or between<br>organisms, and</span></p>" +
+      "<p>LMA5397<br>29 April 2020</p>"
+  )
+})
+
+test("hangNumberedWording keeps alignment styles and leaves plain paragraphs alone", async () => {
+  const { hangNumberedWording } = await import("../lib/document-format.js")
+  assert.equal(
+    hangNumberedWording('<p style="text-align: center">Intro<br>(a) first item</p>'),
+    '<p style="text-align: center">Intro</p>' +
+      '<p data-hang="cont" style="text-align: center"><span data-hang-marker>(a)</span>' +
+      "<span data-hang-body>first item</span></p>"
+  )
+  const plain = "<p>Sum of 1.000.000 dollars<br>29 April 2020</p><ul><li>1. item</li></ul>"
+  assert.equal(hangNumberedWording(plain), plain)
 })

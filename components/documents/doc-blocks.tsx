@@ -79,7 +79,11 @@ import {
   vehicleSchedule,
 } from "@/lib/slip-schedule"
 import { isMultiVehicle } from "@/lib/slip-vehicles"
-import { groupNumberedItems, parseBulletLine } from "@/lib/document-format"
+import {
+  groupNumberedItems,
+  hangNumberedWording,
+  parseBulletLine,
+} from "@/lib/document-format"
 import { cn } from "@/lib/utils"
 
 export function DocTitle({
@@ -914,8 +918,10 @@ export function ClauseWordingAppendix({ slip }: { slip: PlacingSlip }) {
                   </p>
                   {wordingText(c.wording) ? (
                     <div
-                      className="rte-prose mt-0.5 text-[12px] text-justify"
-                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.wording) }}
+                      className="rte-prose mt-0.5 text-[12px]"
+                      dangerouslySetInnerHTML={{
+                        __html: hangNumberedWording(sanitizeHtml(c.wording)),
+                      }}
                     />
                   ) : null}
                 </div>

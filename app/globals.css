@@ -326,10 +326,30 @@
     font-weight: 600;
     text-align: left;
   }
-  .rte-content p,
-  .rte-prose p {
+  .rte-content p {
     text-align: justify;
     text-justify: inter-word;
+  }
+  /* Wording di dokumen rata kiri: baris yang diputus <br> jadi renggang kalau di-justify. */
+  .rte-prose,
+  .rte-prose p,
+  .rte-prose li {
+    text-align: left;
+    hyphens: manual;
+  }
+  .rte-prose p[data-hang] {
+    display: flex;
+    gap: 0.35em;
+  }
+  .rte-prose p[data-hang="cont"] {
+    margin-top: 0;
+  }
+  .rte-prose [data-hang-marker] {
+    flex-shrink: 0;
+  }
+  .rte-prose [data-hang-body] {
+    flex: 1;
+    min-width: 0;
   }
   .rte-content ul,
   .rte-prose ul {
@@ -341,8 +361,7 @@
     list-style: decimal;
     padding-left: 1.4rem;
   }
-  .rte-content li,
-  .rte-prose li {
+  .rte-content li {
     text-align: justify;
     text-justify: inter-word;
   }
