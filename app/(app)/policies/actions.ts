@@ -158,6 +158,8 @@ const declarationRowsSchema = z
       premium: z.number().gt(0, "Premi deklarasi harus lebih dari 0"),
       // Tertanggung di sertifikat ("... QQ ..."); kosong berarti ikut polis MOP.
       insuredName: z.string().trim().max(500, "Tertanggung maksimal 500 karakter").nullable().optional(),
+      // Admin Fee General Marine Report, disimpan sebagai admin cost deklarasi.
+      adminFee: z.number().min(0, "Admin Fee tidak boleh negatif").nullable().optional(),
       remarks: z.string().max(2000, "Keterangan maksimal 2000 karakter").nullable(),
     })
   )
@@ -200,7 +202,7 @@ export async function importDeclarationsAction(
         additionalFee: 0,
         rate: null,
         premiumBasis: null,
-        adminCost: 0,
+        adminCost: row.adminFee ?? 0,
         stampDuty: 0,
         slipPart: null,
         premiumPaidDate: null,

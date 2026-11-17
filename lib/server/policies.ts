@@ -308,11 +308,14 @@ async function policyData(tx: Tx, input: PolicyInput) {
     // ikut berubah bersama premi, termasuk premi negatif pada pembatalan.
     additionalFee: additionalFeeFor(premium, insurerRows(input)),
     // Rate dan dasar premi untuk endorsement manual; admin cost dan stamp duty
-    // untuk endorsement dan pembatalan.
+    // untuk endorsement dan pembatalan. Deklarasi MOP menyimpan Admin Fee dari
+    // General Marine Report sebagai admin cost (Agus, 17 November 2026).
     rate: input.type === "Endorsement" ? (input.rate ?? null) : null,
     premiumBasis: input.type === "Endorsement" ? (input.premiumBasis ?? null) : null,
     adminCost:
-      input.type === "Endorsement" || input.type === "Cancellation" ? (input.adminCost ?? 0) : 0,
+      input.type === "Endorsement" || input.type === "Cancellation" || input.type === "Deklarasi"
+        ? (input.adminCost ?? 0)
+        : 0,
     stampDuty:
       input.type === "Endorsement" || input.type === "Cancellation" ? (input.stampDuty ?? 0) : 0,
     riskLocation: input.riskLocation.trim() || null,
@@ -320,9 +323,10 @@ async function policyData(tx: Tx, input: PolicyInput) {
     placementLocationId: await findPlacementLocationId(tx, input.placementLocationId),
     groupingInsured: input.groupingInsured?.trim() || null,
     premiumPaidDate: input.premiumPaidDate ? new Date(input.premiumPaidDate) : null,
-    // Remarks hanya untuk endorsement dan pembatalan.
+    // Remarks untuk endorsement dan pembatalan, serta keterangan pengiriman deklarasi MOP
+    // (barang, kapal, rute, ETD, B/L, invoice).
     remarks:
-      input.type === "Endorsement" || input.type === "Cancellation"
+      input.type === "Endorsement" || input.type === "Cancellation" || input.type === "Deklarasi"
         ? input.remarks?.trim() || null
         : null,
   } satisfies Prisma.PolicyUncheckedCreateInput

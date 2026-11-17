@@ -30,31 +30,32 @@ const LIMITS = { policyNo: 100, insuredName: 500, remarks: 2000 }
 type ColumnKey =
   | "policyNo"
   | "date"
-  | "value"
-  | "rate"
-  | "units"
-  | "premium"
-  | "insured"
-  | "remarks"
-  // Kolom General Marine Report yang tidak ada di template sistem.
   | "mocNo"
-  | "currency"
-  | "etd"
+  | "insured"
   | "goods"
   | "conveyance"
   | "vessel"
   | "voyage"
+  | "etd"
   | "from"
   | "to"
-  | "blNo"
-  | "invoiceNo"
+  | "currency"
+  | "value"
+  | "premium"
+  | "adminFee"
   | "refNo"
+  | "invoiceNo"
+  | "blNo"
+  | "rate"
+  | "units"
+  | "remarks"
 
 interface ColumnDef {
   key: ColumnKey
-  header: string
-  /** Judul lain, urut prioritas. General Marine Report memakai judul bahasa Inggris. */
-  aliases: string[]
+  /** Judul di template, sama dengan General Marine Report dari asuransi. */
+  title: string
+  /** Judul yang dikenali saat upload, urut prioritas. */
+  names: string[]
   required?: boolean
   /** Ikut template sistem. */
   template?: boolean
@@ -62,14 +63,19 @@ interface ColumnDef {
   last?: boolean
 }
 
-/** Kolom yang dikenali saat upload. Yang bertanda `template` ikut template sistem. */
+/**
+ * Kolom yang dikenali saat upload, urut seperti General Marine Report (Agus, 17 November 2026:
+ * template harus memuat Admin Fee, B/L, invoice, currency, rute, alat angkut, kapal, dan uraian
+ * barang). Kategori Rate, Interest Insured (jumlah container), dan Keterangan tambahan dari sistem.
+ */
 export const DECLARATION_COLUMNS: ColumnDef[] = [
   {
     key: "policyNo",
-    header: "No. Sertifikat / Deklarasi",
-    aliases: [
+    title: "Cert No.",
+    names: [
       "cert no.",
       "cert no",
+      "no. sertifikat / deklarasi",
       "no. sertifikat",
       "no sertifikat",
       "nomor sertifikat",
@@ -84,9 +90,10 @@ export const DECLARATION_COLUMNS: ColumnDef[] = [
   },
   {
     key: "date",
-    header: "Tanggal Deklarasi",
-    aliases: [
+    title: "Date of Issue",
+    names: [
       "date of issue",
+      "tanggal deklarasi",
       "tgl deklarasi",
       "tgl. deklarasi",
       "tanggal sertifikat",
@@ -98,11 +105,79 @@ export const DECLARATION_COLUMNS: ColumnDef[] = [
     template: true,
   },
   {
+    key: "mocNo",
+    title: "MOC No.",
+    names: [
+      "moc no.",
+      "moc no",
+      "no. polis mop",
+      "open cover no.",
+      "open cover no",
+    ],
+  },
+  {
+    key: "insured",
+    title: "Assured Name",
+    names: [
+      "assured name",
+      "tertanggung",
+      "insured name",
+      "nama tertanggung",
+      "assured",
+    ],
+    template: true,
+  },
+  {
+    key: "goods",
+    title: "Description of Goods",
+    names: ["description of goods", "uraian barang", "goods"],
+    template: true,
+  },
+  {
+    key: "conveyance",
+    title: "Conv",
+    names: ["conv", "conveyance", "alat angkut"],
+    template: true,
+  },
+  {
+    key: "vessel",
+    title: "Vessel Name",
+    names: ["vessel name", "vessel", "nama kapal"],
+    template: true,
+  },
+  {
+    key: "voyage",
+    title: "Voyage No",
+    names: ["voyage no", "voyage no.", "voyage"],
+    template: true,
+  },
+  {
+    key: "etd",
+    title: "ETD",
+    names: ["etd", "sailing date", "tanggal keberangkatan"],
+    template: true,
+  },
+  {
+    key: "from",
+    title: "From",
+    names: ["from", "dari", "asal"],
+    template: true,
+  },
+  { key: "to", title: "To", names: ["to", "ke", "tujuan"], template: true },
+  // Premium Currency lebih dulu: di General Marine Report, Currency adalah mata uang barang.
+  {
+    key: "currency",
+    title: "Currency",
+    names: ["premium currency", "currency", "mata uang"],
+    template: true,
+  },
+  {
     key: "value",
     // Sum Insured kedua di General Marine Report sudah dalam mata uang premi.
-    header: "Nilai Deklarasi",
-    aliases: [
+    title: "Sum Insured",
+    names: [
       "sum insured",
+      "nilai deklarasi",
       "nilai",
       "nilai barang",
       "nilai pertanggungan",
@@ -114,66 +189,60 @@ export const DECLARATION_COLUMNS: ColumnDef[] = [
     last: true,
   },
   {
-    key: "rate",
-    header: "Kategori Rate",
-    aliases: ["kategori", "category"],
-    template: true,
-  },
-  {
-    key: "units",
-    header: "Jumlah Unit",
-    aliases: ["jumlah", "unit", "units", "jumlah container"],
-    template: true,
-  },
-  {
     key: "premium",
-    header: "Premium",
-    aliases: ["gross premium", "premi"],
+    title: "Gross Premium",
+    names: ["gross premium", "premium", "premi"],
     template: true,
   },
   {
-    key: "insured",
-    header: "Tertanggung",
-    aliases: ["assured name", "insured name", "nama tertanggung", "assured"],
+    key: "adminFee",
+    title: "Admin Fee",
+    names: ["admin fee", "biaya admin", "admin cost", "biaya administrasi"],
+    template: true,
+  },
+  {
+    key: "refNo",
+    title: "Internal Ref No.",
+    names: ["internal ref no.", "internal ref no", "ref no."],
+    template: true,
+  },
+  {
+    key: "invoiceNo",
+    title: "Invoice No.",
+    names: ["invoice no.", "invoice no"],
+    template: true,
+  },
+  {
+    key: "blNo",
+    title: "B/L No.",
+    names: ["b/l no.", "b/l no", "bl no"],
+    template: true,
+  },
+  {
+    key: "rate",
+    title: "Kategori Rate",
+    names: ["kategori rate", "kategori", "category"],
+    template: true,
+  },
+  {
+    // Biasanya diisi jumlah container (Agus, 17 November 2026); angkanya dipakai rate per container.
+    key: "units",
+    title: "Interest Insured",
+    names: [
+      "interest insured",
+      "jumlah container",
+      "jumlah unit",
+      "jumlah",
+      "unit",
+      "units",
+    ],
     template: true,
   },
   {
     key: "remarks",
-    header: "Keterangan",
-    aliases: ["remarks", "catatan"],
+    title: "Keterangan",
+    names: ["keterangan", "remarks", "catatan"],
     template: true,
-  },
-  {
-    key: "mocNo",
-    header: "MOC No.",
-    aliases: ["moc no", "no. polis mop", "open cover no.", "open cover no"],
-  },
-  {
-    key: "currency",
-    header: "Premium Currency",
-    aliases: ["mata uang", "currency"],
-  },
-  {
-    key: "etd",
-    header: "ETD",
-    aliases: ["sailing date", "tanggal keberangkatan"],
-  },
-  {
-    key: "goods",
-    header: "Description of Goods",
-    aliases: ["uraian barang", "goods"],
-  },
-  { key: "conveyance", header: "Conv", aliases: ["conveyance", "alat angkut"] },
-  { key: "vessel", header: "Vessel Name", aliases: ["vessel", "nama kapal"] },
-  { key: "voyage", header: "Voyage No", aliases: ["voyage no.", "voyage"] },
-  { key: "from", header: "From", aliases: ["dari", "asal"] },
-  { key: "to", header: "To", aliases: ["ke", "tujuan"] },
-  { key: "blNo", header: "B/L No.", aliases: ["b/l no", "bl no"] },
-  { key: "invoiceNo", header: "Invoice No.", aliases: ["invoice no"] },
-  {
-    key: "refNo",
-    header: "Internal Ref No.",
-    aliases: ["internal ref no", "ref no."],
   },
 ]
 
@@ -191,6 +260,8 @@ export interface DeclarationImportRow {
   units: number | null
   /** Tertanggung di sertifikat, misalnya "... QQ ..."; kosong berarti ikut polis MOP. */
   insuredName: string | null
+  /** Admin Fee dari asuransi per sertifikat; tidak menambah premi produksi. */
+  adminFee: number | null
   remarks: string | null
 }
 
@@ -221,7 +292,7 @@ const compact = (s: string) => s.replace(/\s+/g, "").toLowerCase()
 
 /** Indeks kolom menurut judul dan alias, urut prioritas; -1 bila tidak ada. */
 function columnIndex(header: string[], col: ColumnDef) {
-  for (const name of [col.header, ...col.aliases].map(norm)) {
+  for (const name of col.names.map(norm)) {
     const hit = (h: string) => h === name || h.startsWith(`${name} (`)
     const index = col.last ? header.findLastIndex(hit) : header.findIndex(hit)
     if (index >= 0) return index
@@ -297,7 +368,7 @@ export function declarationsFromRows(
       swappedDates: 0,
       otherMocNos: [] as string[],
       errors: [
-        "Kolom No. Sertifikat dan Nilai Deklarasi (atau Cert No. dan Sum Insured) tidak ditemukan. Pakai template deklarasi atau General Marine Report.",
+        "Kolom Cert No. dan Sum Insured tidak ditemukan. Pakai template deklarasi atau General Marine Report.",
       ],
     }
   }
@@ -389,10 +460,18 @@ export function declarationsFromRows(
         `Kategori Rate "${rateText}" tidak ada di slip.${rateNames ? ` Pilihan: ${rateNames}.` : ""}`
       )
 
+    // Interest Insured: angka (jumlah container) dipakai rate per container; teks seperti
+    // "3X20' CONTAINER" hanya dicatat di keterangan, tidak dibaca sebagai angka.
     const rawUnits = cellValue(get("units"))
-    const units = parseParticipantAmount(rawUnits)
-    if (rawUnits != null && rawUnits !== "" && (units == null || units <= 0))
-      fail("Jumlah Unit harus angka lebih dari 0.")
+    const unitsText = text("units")
+    const units =
+      typeof rawUnits === "number"
+        ? rawUnits
+        : /^\d+([.,]\d+)?$/.test(unitsText)
+          ? Number(unitsText.replace(",", "."))
+          : null
+    if (units != null && units <= 0)
+      fail("Interest Insured harus angka lebih dari 0.")
 
     const rawPremium = cellValue(get("premium"))
     const given = parseParticipantAmount(rawPremium)
@@ -405,7 +484,7 @@ export function declarationsFromRows(
       if (rate.basis === "per_unit") {
         if (!(units != null && units > 0))
           fail(
-            `Jumlah Unit wajib diisi untuk rate ${rate.label.trim()} (${openCoverRateText(rate, ctx.currency)}).`
+            `Interest Insured wajib diisi jumlah container (angka) untuk rate ${rate.label.trim()} (${openCoverRateText(rate, ctx.currency)}).`
           )
         else premium = openCoverPremium(rate, units)
       } else if (value != null && value > 0) {
@@ -423,7 +502,13 @@ export function declarationsFromRows(
 
     const insuredName = text("insured")
     if (insuredName.length > LIMITS.insuredName)
-      fail(`Tertanggung maksimal ${LIMITS.insuredName} karakter.`)
+      fail(`Assured Name maksimal ${LIMITS.insuredName} karakter.`)
+
+    const rawAdmin = cellValue(get("adminFee"))
+    const adminFee = parseParticipantAmount(rawAdmin)
+    const adminFilled = rawAdmin != null && rawAdmin !== ""
+    if (adminFilled && (adminFee == null || adminFee < 0))
+      fail("Admin Fee harus angka 0 atau lebih.")
 
     if (errors.length > before) return
     declarations.push({
@@ -435,6 +520,10 @@ export function declarationsFromRows(
       rateLabel: rate ? rate.label.trim() : null,
       units: rate?.basis === "per_unit" ? units : null,
       insuredName: insuredName || null,
+      adminFee:
+        adminFilled && adminFee != null
+          ? Math.round(adminFee * 100) / 100
+          : null,
       remarks:
         shipmentRemarks(text, readDate(rawEtd, swapEtd)).slice(
           0,
@@ -480,6 +569,7 @@ function shipmentRemarks(text: (key: ColumnKey) => string, etd: string | null) {
   return [
     text("remarks"),
     text("goods"),
+    text("units") && `Interest Insured: ${text("units")}`,
     vessel,
     route,
     etd ? `ETD ${ddmmyyyy(etd)}` : "",
@@ -508,20 +598,25 @@ export function fillDeclarationTemplate(
   const ws = wb.addWorksheet("Deklarasi", {
     views: [{ state: "frozen", ySplit: 1 }],
   })
+  const widths: Partial<Record<ColumnKey, number>> = {
+    insured: 40,
+    goods: 50,
+    remarks: 40,
+    rate: 30,
+    from: 24,
+    to: 24,
+    vessel: 22,
+  }
   ws.columns = TEMPLATE_COLUMNS.map((c) => ({
-    header: c.required ? `${c.header}*` : c.header,
+    header: c.required ? `${c.title}*` : c.title,
     key: c.key,
-    width:
-      c.key === "policyNo" || c.key === "rate"
-        ? 30
-        : c.key === "remarks" || c.key === "insured"
-          ? 40
-          : 20,
+    width: widths[c.key] ?? 16,
   }))
   ws.getRow(1).font = { bold: true }
-  ws.getColumn("date").numFmt = "dd/mm/yyyy"
-  ws.getColumn("value").numFmt = "#,##0.00"
-  ws.getColumn("premium").numFmt = "#,##0.00"
+  for (const key of ["date", "etd"] as const)
+    ws.getColumn(key).numFmt = "dd/mm/yyyy"
+  for (const key of ["value", "premium", "adminFee"] as const)
+    ws.getColumn(key).numFmt = "#,##0.00"
   ws.getColumn("units").numFmt = "#,##0"
 
   const rates = usableRates(info.rates)
@@ -563,17 +658,22 @@ export function fillDeclarationTemplate(
     `Polis MOP ${info.policyNo} · ${info.insuredName}`,
     `Periode ${dateShort(info.period.start)} s/d ${dateShort(info.period.end)}, mata uang ${info.currency}.`,
     "",
-    "General Marine Report dari asuransi bisa langsung diupload tanpa template ini (simpan dulu sebagai .xlsx).",
-    "Isi satu pengiriman per baris di sheet Deklarasi, mulai baris 2. Kolom bertanda * wajib diisi.",
-    "Tanggal Deklarasi: DD/MM/YYYY, misalnya 05/12/2026, dan harus di dalam periode polis MOP.",
-    "Nilai Deklarasi dan Premium: angka tanpa mata uang, misalnya 1000000000.",
-    "Kategori Rate: pilih dari dropdown (daftarnya di sheet Rate). Premium dihitung dari rate itu.",
+    "Kolom sheet Deklarasi sama dengan General Marine Report dari asuransi, jadi barisnya bisa disalin langsung. Laporannya juga bisa diupload langsung (simpan dulu sebagai .xlsx).",
+    "Isi satu sertifikat per baris, mulai baris 2. Kolom bertanda * wajib diisi.",
+    "Date of Issue dan ETD: DD/MM/YYYY, misalnya 05/12/2026. Date of Issue menentukan bulan produksi dan harus di dalam periode polis MOP.",
+    "Sum Insured, Gross Premium, dan Admin Fee: angka tanpa mata uang, misalnya 1000000000.",
+    `Currency: kosongkan atau isi ${info.currency}, sama dengan mata uang polis MOP.`,
+    "Gross Premium: kosongkan supaya dihitung dari Kategori Rate (dropdown, daftarnya di sheet Rate).",
     ...(perUnit
-      ? ["Jumlah Unit: wajib untuk rate per container atau per unit."]
-      : []),
-    "Premium: kosongkan supaya dihitung dari rate; isi hanya bila premi dari asuransi berbeda.",
-    'Tertanggung: isi bila sertifikat atas nama lain, misalnya "... QQ ..."; kosong berarti ikut polis MOP.',
-    `Maksimal ${DECLARATION_IMPORT_LIMIT.toLocaleString("id-ID")} baris per file. No. sertifikat yang sudah tercatat di polis MOP ini dilewati, jadi file yang sama boleh diupload ulang.`,
+      ? [
+          "Interest Insured: jumlah container (angka), misalnya 3. Wajib untuk rate per container.",
+        ]
+      : [
+          "Interest Insured: jumlah container, misalnya 3; dicatat di keterangan deklarasi.",
+        ]),
+    'Assured Name: isi bila sertifikat atas nama lain, misalnya "... QQ ..."; kosong berarti ikut polis MOP.',
+    "Description of Goods, Interest Insured, Conv, Vessel Name, Voyage No, ETD, From, To, Internal Ref No., Invoice No., B/L No., dan Keterangan disimpan sebagai keterangan deklarasi. Admin Fee disimpan sebagai biaya admin, tidak menambah premi produksi.",
+    `Maksimal ${DECLARATION_IMPORT_LIMIT.toLocaleString("id-ID")} baris per file. Cert No. yang sudah tercatat di polis MOP ini dilewati, jadi file yang sama boleh diupload ulang.`,
     "File sertifikat diunggah per deklarasi lewat menu Berkas polis.",
   ])
     help.addRow([line])

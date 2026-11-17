@@ -124,6 +124,35 @@ test("premi deklarasi dihitung dari kategori rate slip, atau memakai kolom Premi
   assert.equal(declarations[0].remarks, "Jakarta - Medan")
 })
 
+test("Interest Insured: angka dipakai rate per container, teks hanya dicatat", () => {
+  const head = [
+    "Cert No.",
+    "Date of Issue",
+    "Sum Insured",
+    "Kategori Rate",
+    "Interest Insured",
+  ]
+  const { declarations, errors } = declarationsFromRows(
+    [
+      head,
+      ["C/1", "05/12/2026", 300_000_000, "20 FT - Others", 3],
+      ["C/2", "05/12/2026", 300_000_000, "DRY SHIPMENT", "3X20' CONTAINER"],
+      ["C/3", "05/12/2026", 300_000_000, "20 FT - Others", "3X20' CONTAINER"],
+    ],
+    ctx()
+  )
+  assert.deepEqual(
+    declarations.map((d) => [d.policyNo, d.premium, d.units, d.remarks]),
+    [
+      ["C/1", 300_000, 3, "Interest Insured: 3"],
+      ["C/2", 225_000, null, "Interest Insured: 3X20' CONTAINER"],
+    ]
+  )
+  assert.deepEqual(errors, [
+    "Baris 4: Interest Insured wajib diisi jumlah container (angka) untuk rate 20 FT - Others (IDR 100.000 per container).",
+  ])
+})
+
 test("slip dengan satu rate: kategori boleh dikosongkan", () => {
   const { declarations, errors } = declarationsFromRows(
     [HEADER, ["CERT/010", "05/12/2026", 1_000_000_000]],
@@ -163,7 +192,7 @@ test("kesalahan per baris memakai nomor baris Excel, dan tidak ada baris yang lo
     'Baris 7: Tanggal Deklarasi "kemarin" tidak dikenali.',
     "Baris 8: Nilai Deklarasi harus angka lebih dari 0.",
     'Baris 9: Kategori Rate "BULK" tidak ada di slip. Pilihan: DRY SHIPMENT, REEFER SHIPMENT (WITHIN INDONESIA), 20 FT - Others.',
-    "Baris 10: Jumlah Unit wajib diisi untuk rate 20 FT - Others (IDR 100.000 per container).",
+    "Baris 10: Interest Insured wajib diisi jumlah container (angka) untuk rate 20 FT - Others (IDR 100.000 per container).",
     "Baris 11: Isi Kategori Rate atau Premium.",
     "Baris 12: No. Sertifikat kosong.",
   ])
@@ -171,7 +200,7 @@ test("kesalahan per baris memakai nomor baris Excel, dan tidak ada baris yang lo
 
 test("file tanpa kolom wajib, file kosong, dan file di atas batas ditolak", () => {
   assert.deepEqual(declarationsFromRows([["Nama", "Alamat"]], ctx()).errors, [
-    "Kolom No. Sertifikat dan Nilai Deklarasi (atau Cert No. dan Sum Insured) tidak ditemukan. Pakai template deklarasi atau General Marine Report.",
+    "Kolom Cert No. dan Sum Insured tidak ditemukan. Pakai template deklarasi atau General Marine Report.",
   ])
   assert.deepEqual(declarationsFromRows([HEADER, []], ctx()).errors, [
     "Tidak ada deklarasi di file.",
@@ -316,6 +345,11 @@ test("General Marine Report dari asuransi dibaca langsung, termasuk tanggal yang
       ],
     ]
   )
+  // Admin Fee General Marine Report ikut tersimpan per sertifikat.
+  assert.deepEqual(
+    ok.declarations.map((d) => d.adminFee),
+    [10_000, 10_000]
+  )
   // ETD yang ikut dibalik Excel juga dibaca hari/bulan di keterangan.
   assert.equal(
     ok.declarations[1].remarks,
@@ -360,14 +394,53 @@ test("template bisa diisi lalu dibaca lagi, dengan dropdown kategori dari sheet 
     wb.worksheets.map((w) => w.name),
     ["Deklarasi", "Rate", "Petunjuk"]
   )
-  assert.deepEqual(ws.getCell("D2").dataValidation.formulae, ["Rate!$A$2:$A$4"])
+  // Kolom sama dengan General Marine Report, ditambah Kategori Rate, Interest Insured, dan Keterangan.
+  assert.deepEqual((ws.getRow(1).values as unknown[]).slice(1), [
+    "Cert No.*",
+    "Date of Issue*",
+    "Assured Name",
+    "Description of Goods",
+    "Conv",
+    "Vessel Name",
+    "Voyage No",
+    "ETD",
+    "From",
+    "To",
+    "Currency",
+    "Sum Insured*",
+    "Gross Premium",
+    "Admin Fee",
+    "Internal Ref No.",
+    "Invoice No.",
+    "B/L No.",
+    "Kategori Rate",
+    "Interest Insured",
+    "Keterangan",
+  ])
+  assert.deepEqual(ws.getRow(2).getCell("rate").dataValidation.formulae, [
+    "Rate!$A$2:$A$4",
+  ])
   // Diisi seperti petugas: langsung di baris 2, di bawah judul.
-  ws.getRow(2).values = [
-    "CERT/500",
-    new Date(Date.UTC(2026, 11, 5)),
-    1_000_000_000,
-    "DRY SHIPMENT",
-  ]
+  const filled: Record<string, ExcelJS.CellValue> = {
+    policyNo: "CERT/500",
+    date: new Date(Date.UTC(2026, 11, 5)),
+    insured: "CV KARYA MITRA KASIH QQ PT UJI",
+    goods: "KACA packed in Container 1X20",
+    conveyance: "Sea",
+    vessel: "SUNGAI MAS",
+    voyage: "53",
+    etd: "19/12/2026",
+    from: "Jakarta, Indonesia",
+    to: "Medan, Indonesia",
+    currency: "IDR",
+    value: 1_000_000_000,
+    adminFee: 10_000,
+    invoiceNo: "INV-1",
+    blNo: "BL-9",
+    rate: "DRY SHIPMENT",
+  }
+  for (const [key, value] of Object.entries(filled))
+    ws.getRow(2).getCell(key).value = value
 
   const loaded = new ExcelJS.Workbook()
   await loaded.xlsx.load(await wb.xlsx.writeBuffer())
@@ -382,8 +455,28 @@ test("template bisa diisi lalu dibaca lagi, dengan dropdown kategori dari sheet 
   )
   assert.deepEqual(errors, [])
   assert.deepEqual(
-    declarations.map((d) => [d.row, d.policyNo, d.inceptionDate, d.premium]),
-    [[2, "CERT/500", "2026-12-05", 750_000]]
+    declarations.map((d) => [
+      d.row,
+      d.policyNo,
+      d.inceptionDate,
+      d.premium,
+      d.adminFee,
+      d.insuredName,
+    ]),
+    [
+      [
+        2,
+        "CERT/500",
+        "2026-12-05",
+        750_000,
+        10_000,
+        "CV KARYA MITRA KASIH QQ PT UJI",
+      ],
+    ]
+  )
+  assert.equal(
+    declarations[0].remarks,
+    "KACA packed in Container 1X20 · Sea SUNGAI MAS V. 53 · Jakarta, Indonesia - Medan, Indonesia · ETD 19/12/2026 · B/L BL-9 · Invoice INV-1"
   )
 })
 

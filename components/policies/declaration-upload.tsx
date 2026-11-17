@@ -111,6 +111,7 @@ export function DeclarationUpload({
   const showRate = rows.some((r) => r.rateLabel)
   const totalValue = rows.reduce((sum, r) => sum + r.sumInsured, 0)
   const totalPremium = rows.reduce((sum, r) => sum + r.premium, 0)
+  const totalAdminFee = rows.reduce((sum, r) => sum + (r.adminFee ?? 0), 0)
 
   async function readFile(file: File) {
     setReading(true)
@@ -164,6 +165,7 @@ export function DeclarationUpload({
             sumInsured: r.sumInsured,
             premium: r.premium,
             insuredName: r.insuredName,
+            adminFee: r.adminFee,
             remarks: r.remarks,
           }))
         )
@@ -360,6 +362,9 @@ export function DeclarationUpload({
                 {" "}
                 · nilai {money(totalValue, master.currency)} · premi{" "}
                 {money(totalPremium, master.currency)}
+                {totalAdminFee
+                  ? ` · admin fee ${money(totalAdminFee, master.currency)}`
+                  : ""}
               </span>
             </p>
             <div className="max-h-[22rem] overflow-auto rounded-lg border">
