@@ -99,6 +99,7 @@ export function DeclarationUpload({
     { row: number; policyNo: string }[]
   >([])
   const [swappedDates, setSwappedDates] = React.useState(0)
+  const [otherMocNos, setOtherMocNos] = React.useState<string[]>([])
   const [errors, setErrors] = React.useState<string[]>([])
   const [reading, setReading] = React.useState(false)
   const [progress, setProgress] = React.useState<{
@@ -117,6 +118,7 @@ export function DeclarationUpload({
     setRows([])
     setSkipped([])
     setSwappedDates(0)
+    setOtherMocNos([])
     setErrors([])
     try {
       const result = declarationsFromRows(await readSheetRows(file), {
@@ -129,6 +131,7 @@ export function DeclarationUpload({
       })
       setSkipped(result.skipped)
       setSwappedDates(result.swappedDates)
+      setOtherMocNos(result.otherMocNos)
       if (result.errors.length) setErrors(result.errors)
       else setRows(result.declarations)
     } catch {
@@ -318,6 +321,17 @@ export function DeclarationUpload({
               ? `, dan ${(skipped.length - 5).toLocaleString("id-ID")} lainnya`
               : ""}
             .
+          </p>
+        ) : null}
+
+        {otherMocNos.length && rows.length ? (
+          <p
+            role="note"
+            className="rounded-lg bg-warning/10 px-4 py-3 text-sm text-warning"
+          >
+            MOC No. di file {otherMocNos.join(", ")} berbeda dengan nomor polis
+            MOP {master.policyNo}. Simpan bila file ini memang untuk polis MOP
+            ini; MOC No. bisa nomor kontrak open cover, bukan nomor polisnya.
           </p>
         ) : null}
 
