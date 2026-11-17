@@ -851,25 +851,54 @@ export async function listPolicyParticipants(policyId: string): Promise<PolicyPa
   }))
 }
 
-export async function createPolicy(input: PolicyInput, userId: string): Promise<PolicyRecord> {
-  return prisma.$transaction(async (tx) => {
-    const { id } = await tx.policy.create({
-      data: await checkedPolicyData(tx, input),
-      select: { id: true },
-    })
-    await writeInsurers(tx, id, input)
-    await writeParticipants(tx, id, input)
-    const record = await readPolicy(tx, id)
-    await recordAudit(tx, {
-      userId,
-      entity: "policies",
-      entityId: id,
-      action: "Create",
-      before: null,
-      after: auditSnapshot(record),
-    })
-    return record
+async function createPolicyIn(tx: Tx, input: PolicyInput, userId: string): Promise<PolicyRecord> {
+  const { id } = await tx.policy.create({
+    data: await checkedPolicyData(tx, input),
+    select: { id: true },
   })
+  await writeInsurers(tx, id, input)
+  await writeParticipants(tx, id, input)
+  const record = await readPolicy(tx, id)
+  await recordAudit(tx, {
+    userId,
+    entity: "policies",
+    entityId: id,
+    action: "Create",
+    before: null,
+    after: auditSnapshot(record),
+  })
+  return record
+}
+
+export async function createPolicy(input: PolicyInput, userId: string): Promise<PolicyRecord> {
+  return prisma.$transaction((tx) => createPolicyIn(tx, input, userId))
+}
+
+/**
+ * Banyak polis sekaligus, misalnya deklarasi MOP dari Excel: satu transaksi, jadi satu baris
+ * gagal berarti tidak ada yang tersimpan dan file bisa diperbaiki lalu diunggah ulang.
+ */
+export async function createPolicies(
+  inputs: PolicyInput[],
+  userId: string
+): Promise<PolicyRecord[]> {
+  return prisma.$transaction(
+    async (tx) => {
+      const records: PolicyRecord[] = []
+      for (const input of inputs) {
+        try {
+          records.push(await createPolicyIn(tx, input, userId))
+        } catch (err) {
+          // Bentrok unique key dijelaskan oleh pemanggil; pesan validasi diberi nomor sertifikatnya.
+          if (err instanceof Prisma.PrismaClientKnownRequestError || !(err instanceof Error)) throw err
+          throw new Error(`${input.policyNo}: ${err.message}`)
+        }
+      }
+      return records
+    },
+    // Ratusan baris butuh lebih lama dari batas bawaan 5 detik.
+    { maxWait: 10_000, timeout: 120_000 }
+  )
 }
 
 export async function updatePolicy(

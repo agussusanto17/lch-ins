@@ -8,10 +8,14 @@ import { POLICY_TYPES } from "@/lib/data/reference"
 import { Prisma } from "@/lib/generated/prisma/client"
 import { participantListSchema } from "@/lib/participant-schema"
 import type { PolicyParticipant } from "@/lib/policy-participants"
+import { DECLARATION_SAVE_BATCH } from "@/lib/declaration-import"
+import { declarationPreset } from "@/lib/open-cover"
 import {
   addPolicyFile,
+  createPolicies,
   createPolicy,
   deletePolicy,
+  getPolicyById,
   listPolicyParticipants,
   updatePolicy,
   type PolicyInput,
@@ -138,6 +142,77 @@ export async function createPolicyAction(
     return { ok: true, data }
   } catch (err) {
     return fail(err, "Gagal menyimpan polis")
+  }
+}
+
+const declarationRowsSchema = z
+  .array(
+    z.object({
+      policyNo: z
+        .string()
+        .trim()
+        .min(1, "No. sertifikat wajib diisi")
+        .max(100, "No. sertifikat maksimal 100 karakter"),
+      inceptionDate: isoDate,
+      sumInsured: z.number().gt(0, "Nilai deklarasi harus lebih dari 0"),
+      premium: z.number().gt(0, "Premi deklarasi harus lebih dari 0"),
+      remarks: z.string().max(2000, "Keterangan maksimal 2000 karakter").nullable(),
+    })
+  )
+  .min(1, "Tidak ada deklarasi untuk disimpan")
+  .max(DECLARATION_SAVE_BATCH, `Maksimal ${DECLARATION_SAVE_BATCH} deklarasi per simpan`)
+
+/**
+ * Upload deklarasi MOP dari Excel (Agus, 17 November 2026). Isian selain nomor, tanggal, nilai,
+ * premi, dan keterangan diambil server dari polis MOP-nya, sama dengan form Tambah deklarasi.
+ * Klien mengirim per kelompok; satu kelompok tersimpan dalam satu transaksi, atau tidak sama sekali.
+ */
+export async function importDeclarationsAction(
+  masterId: string,
+  rows: z.input<typeof declarationRowsSchema>
+): Promise<ActionResponse<PolicyRecord[]>> {
+  try {
+    const user = await requireManage("/policies")
+    const id = policyIdSchema.safeParse(masterId)
+    if (!id.success) return { ok: false, error: "ID polis tidak valid" }
+    const parsedRows = declarationRowsSchema.safeParse(rows)
+    if (!parsedRows.success) {
+      return { ok: false, error: parsedRows.error.issues[0]?.message ?? "Data deklarasi tidak valid" }
+    }
+    const master = await getPolicyById(id.data)
+    if (!master) return { ok: false, error: "Polis MOP tidak ditemukan" }
+    const preset = declarationPreset(master)
+    const inputs: PolicyInput[] = []
+    for (const row of parsedRows.data) {
+      if (row.inceptionDate < master.inceptionDate || row.inceptionDate > master.expiryDate) {
+        return { ok: false, error: `${row.policyNo}: tanggal deklarasi di luar periode polis MOP` }
+      }
+      const parsed = parseInput({
+        ...preset,
+        policyNo: row.policyNo,
+        previousPolicyNo: null,
+        inceptionDate: row.inceptionDate,
+        sumInsured: row.sumInsured,
+        premium: row.premium,
+        additionalFee: 0,
+        rate: null,
+        premiumBasis: null,
+        adminCost: 0,
+        stampDuty: 0,
+        slipPart: null,
+        premiumPaidDate: null,
+        remarks: row.remarks,
+      })
+      if (!parsed.data) return { ok: false, error: `${row.policyNo}: ${parsed.error}` }
+      inputs.push(parsed.data)
+    }
+    const data = await createPolicies(inputs, user.id)
+    revalidatePath("/policies")
+    revalidatePath("/reports")
+    revalidatePath("/", "layout")
+    return { ok: true, data }
+  } catch (err) {
+    return fail(err, "Gagal menyimpan deklarasi")
   }
 }
 

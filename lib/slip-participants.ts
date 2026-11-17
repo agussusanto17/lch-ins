@@ -122,7 +122,7 @@ export function normalizeGender(value: unknown) {
 }
 
 /** Teks sel Excel: teks biasa, rich text, hyperlink, atau hasil rumus. */
-const cellText = (value: unknown): string => {
+export const cellText = (value: unknown): string => {
   if (value == null) return ""
   if (value instanceof Date) return value.toISOString().slice(0, 10)
   if (typeof value === "object") {
@@ -134,7 +134,8 @@ const cellText = (value: unknown): string => {
   return String(value).trim()
 }
 
-const cellValue = (value: unknown) =>
+/** Nilai sel Excel; sel rumus memakai hasilnya. */
+export const cellValue = (value: unknown) =>
   value && typeof value === "object" && !(value instanceof Date) && "result" in (value as object)
     ? (value as { result: unknown }).result
     : value

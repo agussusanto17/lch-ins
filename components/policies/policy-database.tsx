@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import {
   FilePlus2,
+  FileSpreadsheet,
   FileText,
   Pencil,
   Plus,
@@ -17,6 +18,7 @@ import { toast } from "sonner"
 import { deletePolicyAction } from "@/app/(app)/policies/actions"
 import { useToday } from "@/components/layout/today-provider"
 import { PageHeader } from "@/components/layout/page-header"
+import { DeclarationUpload } from "@/components/policies/declaration-upload"
 import { PolicyFilesSheet } from "@/components/policies/policy-files-sheet"
 import { PolicyParticipantsSheet } from "@/components/policies/policy-participants-sheet"
 import { PolicyForm } from "@/components/policies/policy-form"
@@ -72,7 +74,7 @@ import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
 import { MAIN_POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
 import { parentPolicyNote } from "@/lib/policy-parent"
-import { isOpenCoverMaster } from "@/lib/open-cover"
+import { declarationPreset, isOpenCoverMaster } from "@/lib/open-cover"
 import { isRenewable } from "@/lib/renewal"
 import type { PolicyFormOptions } from "@/lib/server/policies"
 import { store } from "@/lib/store"
@@ -151,6 +153,22 @@ export function PolicyDatabase({
   const [form, setForm] = React.useState<FormState | null>(null)
   const [filesFor, setFilesFor] = React.useState<string | null>(null)
   const [participantsFor, setParticipantsFor] = React.useState<string | null>(null)
+  const [uploadFor, setUploadFor] = React.useState<string | null>(null)
+
+  const uploadMaster = uploadFor ? (policies.find((p) => p.id === uploadFor) ?? null) : null
+  const existingNos = React.useMemo(
+    () => new Set(policies.map((p) => p.policyNo.toLowerCase())),
+    [policies]
+  )
+  const savedNos = React.useMemo(
+    () =>
+      new Set(
+        policies
+          .filter((p) => uploadFor && p.parentPolicyId === uploadFor && p.type === "Deklarasi")
+          .map((p) => p.policyNo.toLowerCase())
+      ),
+    [policies, uploadFor]
+  )
 
   const openForm = (policy: Policy | null, preset?: Partial<Policy>) =>
     // Key baru setiap kali form dibuka supaya isiannya selalu mulai dari data terbaru.
@@ -297,33 +315,19 @@ export function PolicyDatabase({
     }
     // Deklarasi MOP dicatat di bawah polis induknya (Agus, 16 November 2026).
     if (!p.cancelled && isOpenCoverMaster(p, (id) => slips.find((s) => s.id === id))) {
-      actions.push({
-        label: "Tambah deklarasi",
-        icon: FilePlus2,
-        onSelect: () =>
-          openForm(null, {
-            type: "Deklarasi",
-            parentPolicyId: p.id,
-            placingSlipId: p.placingSlipId,
-            clientId: p.clientId,
-            insuredName: p.insuredName,
-            insurer: p.insurer,
-            insurers: p.insurers,
-            cob: p.cob,
-            typeOfCover: p.typeOfCover,
-            currency: p.currency,
-            riskLocation: p.riskLocation,
-            brokeragePct: p.brokeragePct,
-            includeVat: p.includeVat,
-            additionalFeePct: p.additionalFeePct,
-            additionalFeeIncludeVat: p.additionalFeeIncludeVat,
-            cobOjkClassId: p.cobOjkClassId,
-            placementLocationId: p.placementLocationId,
-            groupingInsured: p.groupingInsured,
-            inceptionDate: today,
-            expiryDate: p.expiryDate,
-          }),
-      })
+      actions.push(
+        {
+          label: "Tambah deklarasi",
+          icon: FilePlus2,
+          onSelect: () => openForm(null, { ...declarationPreset(p), inceptionDate: today }),
+        },
+        // Banyak pengiriman sekaligus dari Excel (Agus, 17 November 2026).
+        {
+          label: "Upload deklarasi (Excel)",
+          icon: FileSpreadsheet,
+          onSelect: () => setUploadFor(p.id),
+        }
+      )
     }
     actions.push({
       label: blocked ? "Hapus (masih dipakai)" : "Hapus polis",
@@ -706,6 +710,19 @@ export function PolicyDatabase({
           if (!open) setParticipantsFor(null)
         }}
       />
+      {uploadMaster ? (
+        <DeclarationUpload
+          key={uploadMaster.id}
+          master={uploadMaster}
+          slip={slips.find((s) => s.id === uploadMaster.placingSlipId) ?? null}
+          existingNos={existingNos}
+          savedNos={savedNos}
+          open
+          onOpenChange={(open) => {
+            if (!open) setUploadFor(null)
+          }}
+        />
+      ) : null}
     </div>
   )
 }
