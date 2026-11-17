@@ -151,13 +151,17 @@ export function participantsFromRows(rows: unknown[][], newId: (index: number) =
     return names.some((n) => matches(n, "name")) && names.some((n) => matches(n, "sumInsured"))
   })
   if (headerIndex < 0) {
-    return { participants: [] as SlipParticipant[], errors: ["Kolom Nama dan Sum Insured tidak ditemukan. Pakai template peserta."] }
+    const message = "Kolom Nama dan Sum Insured tidak ditemukan. Pakai template peserta."
+    return { participants: [] as SlipParticipant[], errors: [message], fileErrors: [message], read: 0, failed: 0 }
   }
   const header = rows[headerIndex].map((c) => norm(cellText(c)))
   const columnOf = new Map(
     PARTICIPANT_COLUMNS.map((col) => [col.key, header.findIndex((h) => matches(h, col.key))])
   )
   const participants: SlipParticipant[] = []
+  // Baris yang gagal tidak ikut diimpor; jumlahnya dilaporkan (Agus, 17 November 2026).
+  let read = 0
+  let failed = 0
   rows.slice(headerIndex + 1).forEach((row, i) => {
     const excelRow = headerIndex + i + 2
     const get = (key: (typeof PARTICIPANT_COLUMNS)[number]["key"]) => {
@@ -166,6 +170,8 @@ export function participantsFromRows(rows: unknown[][], newId: (index: number) =
     }
     const texts = PARTICIPANT_COLUMNS.map((c) => cellText(get(c.key)))
     if (texts.every((t) => !t)) return
+    read += 1
+    const before = errors.length
     const name = cellText(get("name"))
     const amount = parseParticipantAmount(cellValue(get("sumInsured")))
     const rawDate = cellValue(get("birthDate"))
@@ -174,6 +180,10 @@ export function participantsFromRows(rows: unknown[][], newId: (index: number) =
     if (amount == null || amount <= 0) errors.push(`Baris ${excelRow}: Sum Insured harus angka lebih dari 0.`)
     if (rawDate != null && rawDate !== "" && !birthDate)
       errors.push(`Baris ${excelRow}: Tanggal lahir "${cellText(rawDate)}" tidak dikenali.`)
+    if (errors.length > before) {
+      failed += 1
+      return
+    }
     const text = (key: TextKey) => cellText(get(key)).slice(0, PARTICIPANT_LIMITS.text) || undefined
     participants.push({
       id: newId(participants.length),
@@ -188,11 +198,21 @@ export function participantsFromRows(rows: unknown[][], newId: (index: number) =
       beneficiary: text("beneficiary"),
     })
   })
-  if (participants.length > PARTICIPANT_LIMITS.rows) {
-    errors.push(`Peserta maksimal ${PARTICIPANT_LIMITS.rows.toLocaleString("id-ID")} orang.`)
+  // Kesalahan tingkat file menahan seluruh impor; kesalahan per baris hanya menahan baris itu.
+  const fileErrors: string[] = []
+  if (participants.length > PARTICIPANT_LIMITS.rows)
+    fileErrors.push(`Peserta maksimal ${PARTICIPANT_LIMITS.rows.toLocaleString("id-ID")} orang.`)
+  if (!participants.length && !errors.length) fileErrors.push("Tidak ada peserta di file.")
+  return {
+    participants: fileErrors.length ? [] : participants,
+    /** Kesalahan per baris ("Baris N: ...") lalu kesalahan tingkat file. */
+    errors: [...errors, ...fileErrors],
+    fileErrors,
+    /** Baris berisi yang dibaca, termasuk yang gagal. */
+    read,
+    /** Baris yang gagal dan tidak ikut diimpor. */
+    failed,
   }
-  if (!participants.length && !errors.length) errors.push("Tidak ada peserta di file.")
-  return { participants, errors }
 }
 
 function matches(header: string, key: (typeof PARTICIPANT_COLUMNS)[number]["key"]) {

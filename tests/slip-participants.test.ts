@@ -69,6 +69,17 @@ test("impor peserta: judul kolom dikenali, baris kosong dilewati, kesalahan bern
     "Baris 3: Sum Insured harus angka lebih dari 0.",
     'Baris 3: Tanggal lahir "40/40/2000" tidak dikenali.',
   ])
+  // Baris yang gagal tidak ikut, dan jumlahnya dilaporkan.
+  assert.deepEqual([bad.participants.length, bad.read, bad.failed], [0, 2, 2])
+
+  // Campuran: baris benar tetap diimpor, baris salah dilaporkan (Agus, 17 November 2026).
+  const mixed = participantsFromRows(
+    [["Nama", "Sum Insured"], ["Ani", 50_000_000], ["", 1000], ["Budi", 75_000_000]],
+    (i) => `m${i}`
+  )
+  assert.deepEqual(mixed.participants.map((p) => p.name), ["Ani", "Budi"])
+  assert.deepEqual([mixed.read, mixed.failed, mixed.fileErrors], [3, 1, []])
+  assert.deepEqual(mixed.errors, ["Baris 3: Nama kosong."])
   assert.deepEqual(participantsFromRows([["A", "B"]], () => "x").errors, [
     "Kolom Nama dan Sum Insured tidak ditemukan. Pakai template peserta.",
   ])

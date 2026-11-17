@@ -163,24 +163,25 @@ test("slip dengan satu rate: kategori boleh dikosongkan", () => {
   assert.equal(declarations[0].rateLabel, "DRY SHIPMENT")
 })
 
-test("kesalahan per baris memakai nomor baris Excel, dan tidak ada baris yang lolos sebagian", () => {
-  const { declarations, errors } = declarationsFromRows(
-    [
-      ["Daftar deklarasi CV KARYA MITRA KASIH"],
-      HEADER,
-      ["CERT/100", "05/12/2026", 1_000_000_000, "DRY SHIPMENT"],
-      ["cert/100", "06/12/2026", 1_000_000_000, "DRY SHIPMENT"],
-      ["CERT/LAMA/001", "06/12/2026", 1_000_000_000, "DRY SHIPMENT"],
-      ["CERT/101", "01/06/2027", 1_000_000_000, "DRY SHIPMENT"],
-      ["CERT/102", "kemarin", 1_000_000_000, "DRY SHIPMENT"],
-      ["CERT/103", "07/12/2026", 0, "DRY SHIPMENT"],
-      ["CERT/104", "07/12/2026", 1_000_000_000, "BULK"],
-      ["CERT/105", "07/12/2026", 1_000_000_000, "20 FT - Others"],
-      ["CERT/106", "07/12/2026", 1_000_000_000],
-      ["", "07/12/2026", 1_000_000_000, "DRY SHIPMENT"],
-    ],
-    ctx()
-  )
+test("kesalahan per baris memakai nomor baris Excel; baris benar tetap disimpan", () => {
+  const { declarations, errors, read, failed, fileErrors } =
+    declarationsFromRows(
+      [
+        ["Daftar deklarasi CV KARYA MITRA KASIH"],
+        HEADER,
+        ["CERT/100", "05/12/2026", 1_000_000_000, "DRY SHIPMENT"],
+        ["cert/100", "06/12/2026", 1_000_000_000, "DRY SHIPMENT"],
+        ["CERT/LAMA/001", "06/12/2026", 1_000_000_000, "DRY SHIPMENT"],
+        ["CERT/101", "01/06/2027", 1_000_000_000, "DRY SHIPMENT"],
+        ["CERT/102", "kemarin", 1_000_000_000, "DRY SHIPMENT"],
+        ["CERT/103", "07/12/2026", 0, "DRY SHIPMENT"],
+        ["CERT/104", "07/12/2026", 1_000_000_000, "BULK"],
+        ["CERT/105", "07/12/2026", 1_000_000_000, "20 FT - Others"],
+        ["CERT/106", "07/12/2026", 1_000_000_000],
+        ["", "07/12/2026", 1_000_000_000, "DRY SHIPMENT"],
+      ],
+      ctx()
+    )
   assert.deepEqual(
     declarations.map((d) => d.policyNo),
     ["CERT/100"]
@@ -196,6 +197,8 @@ test("kesalahan per baris memakai nomor baris Excel, dan tidak ada baris yang lo
     "Baris 11: Isi Kategori Rate atau Premium.",
     "Baris 12: No. Sertifikat kosong.",
   ])
+  // Satu baris benar disimpan, sembilan gagal dilaporkan (Agus, 17 November 2026).
+  assert.deepEqual([read, failed, fileErrors], [10, 9, []])
 })
 
 test("file tanpa kolom wajib, file kosong, dan file di atas batas ditolak", () => {
@@ -216,6 +219,8 @@ test("file tanpa kolom wajib, file kosong, dan file di atas batas ditolak", () =
     big.errors.at(-1),
     `Maksimal ${DECLARATION_IMPORT_LIMIT.toLocaleString("id-ID")} deklarasi baru per file. Pecah file menjadi beberapa upload.`
   )
+  // Kesalahan tingkat file menahan seluruh upload.
+  assert.deepEqual([big.declarations.length, big.fileErrors.length], [0, 1])
 })
 
 test("no. sertifikat yang sudah tercatat di polis MOP ini dilewati, jadi file boleh diupload ulang", () => {

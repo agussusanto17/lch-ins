@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { importDeclarationsAction } from "@/app/(app)/policies/actions"
 import { FormDrawer } from "@/components/shared/form-drawer"
+import { UploadSummary } from "@/components/shared/upload-summary"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -27,9 +28,6 @@ import {
 import { dateShort, money, num } from "@/lib/format"
 import { openCoverRateText } from "@/lib/open-cover"
 import { store } from "@/lib/store"
-
-/** Pesan kesalahan yang ditampilkan; sisanya cukup jumlahnya. */
-const SHOWN_ERRORS = 30
 
 /** Isi sheet Deklarasi, atau sheet pertama bila namanya diganti, sebagai larik baris. */
 async function readSheetRows(file: File) {
@@ -100,7 +98,19 @@ export function DeclarationUpload({
   >([])
   const [swappedDates, setSwappedDates] = React.useState(0)
   const [otherMocNos, setOtherMocNos] = React.useState<string[]>([])
+  /** Kesalahan per baris; baris itu tidak ikut disimpan. */
   const [errors, setErrors] = React.useState<string[]>([])
+  /** Kesalahan tingkat file; seluruh file tidak diproses. */
+  const [fileErrors, setFileErrors] = React.useState<string[]>([])
+  const [read, setRead] = React.useState(0)
+  const [failed, setFailed] = React.useState(0)
+  /** Hasil simpan, ditampilkan bila ada baris yang gagal atau belum tersimpan. */
+  const [result, setResult] = React.useState<{
+    saved: number
+    failed: number
+    skipped: number
+    errors: string[]
+  } | null>(null)
   const [reading, setReading] = React.useState(false)
   const [progress, setProgress] = React.useState<{
     done: number
@@ -121,6 +131,10 @@ export function DeclarationUpload({
     setSwappedDates(0)
     setOtherMocNos([])
     setErrors([])
+    setFileErrors([])
+    setRead(0)
+    setFailed(0)
+    setResult(null)
     try {
       const result = declarationsFromRows(await readSheetRows(file), {
         rates: slip?.openCoverRates ?? [],
@@ -133,10 +147,17 @@ export function DeclarationUpload({
       setSkipped(result.skipped)
       setSwappedDates(result.swappedDates)
       setOtherMocNos(result.otherMocNos)
-      if (result.errors.length) setErrors(result.errors)
-      else setRows(result.declarations)
+      if (result.fileErrors.length) {
+        setFileErrors(result.fileErrors)
+        return
+      }
+      // Baris yang benar tetap disimpan; baris yang gagal dilaporkan per nomor baris.
+      setRows(result.declarations)
+      setErrors(result.errors)
+      setRead(result.read)
+      setFailed(result.failed)
     } catch {
-      setErrors([
+      setFileErrors([
         "File tidak bisa dibaca. Pakai file Excel (.xlsx) dari template deklarasi.",
       ])
     } finally {
@@ -145,17 +166,24 @@ export function DeclarationUpload({
     }
   }
 
+  const count = (n: number) => n.toLocaleString("id-ID")
+
   async function submit() {
+    // Hasil upload sudah tampil dan tidak ada yang tersisa: tombol utama menutup drawer.
+    if (result && !rows.length) {
+      onOpenChange(false)
+      return
+    }
     if (!rows.length) {
-      if (!errors.length && !skipped.length)
-        setErrors(["Pilih file Excel deklarasi dulu."])
+      if (!fileErrors.length && !read)
+        setFileErrors(["Pilih file Excel deklarasi dulu."])
       return false
     }
     let done = 0
-    setErrors([])
-    setProgress({ done, total: rows.length })
+    const total = rows.length
+    setProgress({ done, total })
     try {
-      while (done < rows.length) {
+      while (done < total) {
         const batch = rows.slice(done, done + DECLARATION_SAVE_BATCH)
         const res = await importDeclarationsAction(
           master.id,
@@ -172,26 +200,49 @@ export function DeclarationUpload({
         if (!res.ok || !res.data) {
           // Kelompok sebelumnya sudah tersimpan; sisanya bisa disimpan ulang dari sini,
           // atau file yang sama diupload lagi karena yang tersimpan akan dilewati.
-          setRows(rows.slice(done))
-          setErrors([
-            done
-              ? `${done.toLocaleString("id-ID")} deklarasi sudah tersimpan. Mulai baris ${batch[0].row} belum: ${res.error ?? "gagal disimpan"}`
-              : `Belum ada yang tersimpan: ${res.error ?? "gagal disimpan"}`,
-          ])
-          toast.error("Deklarasi belum tersimpan semua", {
-            description: res.error,
+          const remaining = rows.slice(done)
+          setRows(remaining)
+          setResult({
+            saved: done,
+            failed: failed + remaining.length,
+            skipped: skipped.length,
+            errors: [
+              ...errors,
+              `Baris ${remaining[0].row} sampai ${remaining.at(-1)!.row} belum tersimpan: ${res.error ?? "gagal disimpan"}`,
+            ],
           })
+          toast.error(
+            done
+              ? `${count(done)} deklarasi tersimpan, ${count(remaining.length)} belum`
+              : "Deklarasi belum tersimpan",
+            { description: res.error }
+          )
           return false
         }
         for (const record of res.data) store.upsert("policies", record)
         done += batch.length
-        setProgress({ done, total: rows.length })
+        setProgress({ done, total })
       }
     } finally {
       setProgress(null)
     }
-    toast.success(`${done.toLocaleString("id-ID")} deklarasi tersimpan`, {
-      description: `Di bawah polis MOP ${master.policyNo}`,
+    const skippedNote = skipped.length
+      ? `${count(skipped.length)} baris sudah tercatat dan dilewati. `
+      : ""
+    if (failed) {
+      // Ada baris gagal: drawer tetap terbuka dengan ringkasan supaya baris yang belum masuk terlihat.
+      setRows([])
+      setResult({ saved: done, failed, skipped: skipped.length, errors })
+      toast.warning(
+        `${count(done)} deklarasi tersimpan, ${count(failed)} baris gagal`,
+        {
+          description: `${skippedNote}Polis MOP ${master.policyNo}`,
+        }
+      )
+      return false
+    }
+    toast.success(`${count(done)} deklarasi tersimpan`, {
+      description: `${skippedNote}Polis MOP ${master.policyNo}`,
     })
     onOpenChange(false)
   }
@@ -205,7 +256,9 @@ export function DeclarationUpload({
       submitLabel={
         rows.length
           ? `Simpan ${rows.length.toLocaleString("id-ID")} deklarasi`
-          : "Simpan"
+          : result
+            ? "Tutup"
+            : "Simpan"
       }
       onSubmit={submit}
     >
@@ -278,37 +331,49 @@ export function DeclarationUpload({
           </p>
         </div>
 
-        {errors.length ? (
+        {fileErrors.length ? (
           <div
             role="alert"
             className="flex flex-col gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm"
           >
             <p className="font-medium text-destructive">
-              File belum bisa disimpan. Perbaiki baris berikut lalu pilih file
-              lagi.
+              File belum bisa diproses. Perbaiki lalu pilih file lagi.
             </p>
             <ul className="flex list-disc flex-col gap-1 pl-5 text-xs">
-              {errors.slice(0, SHOWN_ERRORS).map((e) => (
+              {fileErrors.map((e) => (
                 <li key={e}>{e}</li>
               ))}
             </ul>
-            {errors.length > SHOWN_ERRORS ? (
-              <p className="text-xs text-muted-foreground">
-                dan {(errors.length - SHOWN_ERRORS).toLocaleString("id-ID")}{" "}
-                kesalahan lain.
-              </p>
-            ) : null}
           </div>
         ) : null}
 
-        {skipped.length && !rows.length && !errors.length ? (
-          <p
-            role="status"
-            className="rounded-lg border bg-muted/40 px-4 py-3 text-sm"
-          >
-            Semua deklarasi di file ini sudah tercatat di polis MOP ini. Tidak
-            ada yang baru untuk disimpan.
-          </p>
+        {result ? (
+          <UploadSummary
+            title="Hasil upload"
+            read={read}
+            ok={result.saved}
+            okLabel="Tersimpan"
+            failed={result.failed}
+            skipped={result.skipped}
+            errors={result.errors}
+            hint="Baris berikut belum tersimpan. Perbaiki di file yang sama lalu upload lagi; baris yang sudah tersimpan akan dilewati."
+          />
+        ) : read ? (
+          <UploadSummary
+            title="Hasil baca file"
+            read={read}
+            ok={rows.length}
+            okLabel="Siap disimpan"
+            failed={failed}
+            skipped={skipped.length}
+            errors={errors}
+            hint="Baris berikut gagal dan tidak ikut disimpan. Perbaiki di file yang sama lalu upload lagi; baris yang sudah tersimpan akan dilewati."
+            note={
+              !rows.length && !failed
+                ? "Semua baris sudah tercatat di polis MOP ini. Tidak ada yang baru untuk disimpan."
+                : undefined
+            }
+          />
         ) : null}
 
         {skipped.length ? (
