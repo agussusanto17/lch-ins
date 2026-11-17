@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-17
 - **Branch:** `feat/ringkasan-hasil-upload`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #261
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
