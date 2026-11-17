@@ -717,6 +717,18 @@ export function PolicyForm({
               description="Isi bila polis sebelumnya belum ada di sistem. Data polis diisi manual."
             />
           ) : null}
+          {declaration ? (
+            <TextField
+              className="sm:col-span-2"
+              label="Keterangan"
+              multiline
+              rows={3}
+              value={draft.remarks ?? ""}
+              onChange={(v) => set({ remarks: v })}
+              placeholder="Contoh: KACA packed in Container 1X20 · Sea SUNGAI MAS V. 53 · Jakarta - Medan · ETD 19/09/2026"
+              description="Barang, kapal, rute, ETD, B/L, dan invoice. Terisi otomatis dari upload Excel."
+            />
+          ) : null}
           {draft.type === "Endorsement" || draft.type === "Cancellation" ? (
             <TextField
               className="sm:col-span-2"
@@ -1009,6 +1021,17 @@ export function PolicyForm({
                   </span>
                 </div>
               </>
+            ) : null}
+            {declaration ? (
+              // Admin Fee dari asuransi per sertifikat (General Marine Report), di luar premi produksi.
+              <NumberField
+                label="Admin Fee"
+                min={0}
+                value={draft.adminCost ?? 0}
+                onValueChange={(v) => set({ adminCost: v ?? 0 })}
+                error={errors.adminCost}
+                description="Biaya admin dari asuransi per sertifikat; tidak menambah premi produksi."
+              />
             ) : null}
           </fieldset>
           {cancellation ? (
