@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-17
 - **Branch:** `feat/upload-deklarasi-excel`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #258
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
