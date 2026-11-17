@@ -28,6 +28,34 @@ export function isOpenCoverMaster(
   return Boolean(slip && usesOpenCover(slip))
 }
 
+/**
+ * Isian deklarasi yang ikut polis MOP: tertanggung, asuransi, brokerage, fee, dan akhir periode.
+ * Dipakai form Tambah deklarasi dan upload deklarasi dari Excel supaya keduanya sama.
+ */
+export function declarationPreset(master: Policy) {
+  return {
+    type: "Deklarasi" as const,
+    parentPolicyId: master.id,
+    placingSlipId: master.placingSlipId,
+    clientId: master.clientId,
+    insuredName: master.insuredName,
+    insurer: master.insurer,
+    insurers: master.insurers,
+    cob: master.cob,
+    typeOfCover: master.typeOfCover,
+    currency: master.currency,
+    riskLocation: master.riskLocation,
+    brokeragePct: master.brokeragePct,
+    includeVat: master.includeVat,
+    additionalFeePct: master.additionalFeePct,
+    additionalFeeIncludeVat: master.additionalFeeIncludeVat,
+    cobOjkClassId: master.cobOjkClassId,
+    placementLocationId: master.placementLocationId,
+    groupingInsured: master.groupingInsured,
+    expiryDate: master.expiryDate,
+  } satisfies Partial<Policy>
+}
+
 /** Baris rate open cover yang valid dari JSON tersimpan atau input. */
 export function cleanOpenCoverRates(input: unknown): OpenCoverRate[] {
   if (!Array.isArray(input)) return []
