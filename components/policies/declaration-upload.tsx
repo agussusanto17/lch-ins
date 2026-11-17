@@ -95,11 +95,19 @@ export function DeclarationUpload({
   const fileRef = React.useRef<HTMLInputElement>(null)
   const [fileName, setFileName] = React.useState<string | null>(null)
   const [rows, setRows] = React.useState<DeclarationImportRow[]>([])
-  const [skipped, setSkipped] = React.useState<{ row: number; policyNo: string }[]>([])
+  const [skipped, setSkipped] = React.useState<
+    { row: number; policyNo: string }[]
+  >([])
+  const [swappedDates, setSwappedDates] = React.useState(0)
   const [errors, setErrors] = React.useState<string[]>([])
   const [reading, setReading] = React.useState(false)
-  const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null)
+  const [progress, setProgress] = React.useState<{
+    done: number
+    total: number
+  } | null>(null)
   const rates = usableRates(slip?.openCoverRates ?? [])
+  // General Marine Report tidak memakai kategori rate; kolomnya disembunyikan supaya tabel muat.
+  const showRate = rows.some((r) => r.rateLabel)
   const totalValue = rows.reduce((sum, r) => sum + r.sumInsured, 0)
   const totalPremium = rows.reduce((sum, r) => sum + r.premium, 0)
 
@@ -108,20 +116,25 @@ export function DeclarationUpload({
     setFileName(file.name)
     setRows([])
     setSkipped([])
+    setSwappedDates(0)
     setErrors([])
     try {
       const result = declarationsFromRows(await readSheetRows(file), {
         rates: slip?.openCoverRates ?? [],
         period: { start: master.inceptionDate, end: master.expiryDate },
         currency: master.currency,
+        masterPolicyNo: master.policyNo,
         existingNos,
         savedNos,
       })
       setSkipped(result.skipped)
+      setSwappedDates(result.swappedDates)
       if (result.errors.length) setErrors(result.errors)
       else setRows(result.declarations)
     } catch {
-      setErrors(["File tidak bisa dibaca. Pakai file Excel (.xlsx) dari template deklarasi."])
+      setErrors([
+        "File tidak bisa dibaca. Pakai file Excel (.xlsx) dari template deklarasi.",
+      ])
     } finally {
       setReading(false)
       if (fileRef.current) fileRef.current.value = ""
@@ -130,7 +143,8 @@ export function DeclarationUpload({
 
   async function submit() {
     if (!rows.length) {
-      if (!errors.length) setErrors(["Pilih file Excel deklarasi dulu."])
+      if (!errors.length && !skipped.length)
+        setErrors(["Pilih file Excel deklarasi dulu."])
       return false
     }
     let done = 0
@@ -146,6 +160,7 @@ export function DeclarationUpload({
             inceptionDate: r.inceptionDate,
             sumInsured: r.sumInsured,
             premium: r.premium,
+            insuredName: r.insuredName,
             remarks: r.remarks,
           }))
         )
@@ -158,7 +173,9 @@ export function DeclarationUpload({
               ? `${done.toLocaleString("id-ID")} deklarasi sudah tersimpan. Mulai baris ${batch[0].row} belum: ${res.error ?? "gagal disimpan"}`
               : `Belum ada yang tersimpan: ${res.error ?? "gagal disimpan"}`,
           ])
-          toast.error("Deklarasi belum tersimpan semua", { description: res.error })
+          toast.error("Deklarasi belum tersimpan semua", {
+            description: res.error,
+          })
           return false
         }
         for (const record of res.data) store.upsert("policies", record)
@@ -180,7 +197,11 @@ export function DeclarationUpload({
       onOpenChange={onOpenChange}
       title="Upload Deklarasi dari Excel"
       description="Satu baris satu pengiriman. Tertanggung, asuransi, brokerage, dan fee ikut polis MOP."
-      submitLabel={rows.length ? `Simpan ${rows.length.toLocaleString("id-ID")} deklarasi` : "Simpan"}
+      submitLabel={
+        rows.length
+          ? `Simpan ${rows.length.toLocaleString("id-ID")} deklarasi`
+          : "Simpan"
+      }
       onSubmit={submit}
     >
       <div className="flex flex-col gap-5">
@@ -196,7 +217,12 @@ export function DeclarationUpload({
           <dt className="text-muted-foreground">Rate slip</dt>
           <dd>
             {rates.length
-              ? rates.map((r) => `${r.label.trim()} ${openCoverRateText(r, master.currency)}`).join(" · ")
+              ? rates
+                  .map(
+                    (r) =>
+                      `${r.label.trim()} ${openCoverRateText(r, master.currency)}`
+                  )
+                  .join(" · ")
               : "Belum ada rate berkategori; isi kolom Premium di Excel."}
           </dd>
         </dl>
@@ -233,13 +259,17 @@ export function DeclarationUpload({
               {reading ? "Membaca…" : "Pilih file Excel"}
             </Button>
             {fileName ? (
-              <span className="truncate text-xs text-muted-foreground">{fileName}</span>
+              <span className="truncate text-xs text-muted-foreground">
+                {fileName}
+              </span>
             ) : null}
           </div>
           <p className="text-xs text-muted-foreground">
-            Template berisi dropdown Kategori Rate dari slip ini. Premium dihitung dari rate,
-            kecuali kolom Premium diisi. Maksimal {DECLARATION_IMPORT_LIMIT.toLocaleString("id-ID")}{" "}
-            baris baru per file; no. sertifikat yang sudah tercatat di polis ini dilewati.
+            Bisa memakai template ini atau General Marine Report dari asuransi
+            (.xlsx). Premium memakai Gross Premium atau kolom Premium, kalau
+            kosong dihitung dari rate slip. Maksimal{" "}
+            {DECLARATION_IMPORT_LIMIT.toLocaleString("id-ID")} baris baru per
+            file; no. sertifikat yang sudah tercatat di polis ini dilewati.
           </p>
         </div>
 
@@ -249,7 +279,8 @@ export function DeclarationUpload({
             className="flex flex-col gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm"
           >
             <p className="font-medium text-destructive">
-              File belum bisa disimpan. Perbaiki baris berikut lalu pilih file lagi.
+              File belum bisa disimpan. Perbaiki baris berikut lalu pilih file
+              lagi.
             </p>
             <ul className="flex list-disc flex-col gap-1 pl-5 text-xs">
               {errors.slice(0, SHOWN_ERRORS).map((e) => (
@@ -258,17 +289,43 @@ export function DeclarationUpload({
             </ul>
             {errors.length > SHOWN_ERRORS ? (
               <p className="text-xs text-muted-foreground">
-                dan {(errors.length - SHOWN_ERRORS).toLocaleString("id-ID")} kesalahan lain.
+                dan {(errors.length - SHOWN_ERRORS).toLocaleString("id-ID")}{" "}
+                kesalahan lain.
               </p>
             ) : null}
           </div>
         ) : null}
 
+        {skipped.length && !rows.length && !errors.length ? (
+          <p
+            role="status"
+            className="rounded-lg border bg-muted/40 px-4 py-3 text-sm"
+          >
+            Semua deklarasi di file ini sudah tercatat di polis MOP ini. Tidak
+            ada yang baru untuk disimpan.
+          </p>
+        ) : null}
+
         {skipped.length ? (
           <p className="text-xs text-muted-foreground">
-            {skipped.length.toLocaleString("id-ID")} baris sudah tercatat di polis MOP ini dan
-            dilewati: {skipped.slice(0, 5).map((s) => s.policyNo).join(", ")}
-            {skipped.length > 5 ? `, dan ${(skipped.length - 5).toLocaleString("id-ID")} lainnya` : ""}.
+            {skipped.length.toLocaleString("id-ID")} baris sudah tercatat di
+            polis MOP ini dan dilewati:{" "}
+            {skipped
+              .slice(0, 5)
+              .map((s) => s.policyNo)
+              .join(", ")}
+            {skipped.length > 5
+              ? `, dan ${(skipped.length - 5).toLocaleString("id-ID")} lainnya`
+              : ""}
+            .
+          </p>
+        ) : null}
+
+        {swappedDates ? (
+          <p className="text-xs text-muted-foreground">
+            {swappedDates.toLocaleString("id-ID")} tanggal dibaca ulang sebagai
+            hari/bulan: Excel sempat mengubahnya ke bulan/hari saat file
+            disimpan.
           </p>
         ) : null}
 
@@ -298,24 +355,36 @@ export function DeclarationUpload({
                     <TableHead>No. Sertifikat</TableHead>
                     <TableHead>Tanggal</TableHead>
                     <TableHead className="text-right">Nilai</TableHead>
-                    <TableHead>Kategori Rate</TableHead>
+                    {showRate ? <TableHead>Kategori Rate</TableHead> : null}
                     <TableHead className="text-right">Premium</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((r) => (
                     <TableRow key={r.row}>
-                      <TableCell className="font-medium">{r.policyNo}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{r.policyNo}</div>
+                        {r.insuredName ? (
+                          <div
+                            className="max-w-52 truncate text-xs text-muted-foreground"
+                            title={r.insuredName}
+                          >
+                            {r.insuredName}
+                          </div>
+                        ) : null}
+                      </TableCell>
                       <TableCell>{dateShort(r.inceptionDate)}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {money(r.sumInsured, master.currency)}
                       </TableCell>
-                      <TableCell>
-                        {r.rateLabel ?? "—"}
-                        {r.units != null
-                          ? ` · ${num(r.units, 0, 2)} ${rates.find((x) => x.label.trim() === r.rateLabel)?.unit?.trim() || "unit"}`
-                          : ""}
-                      </TableCell>
+                      {showRate ? (
+                        <TableCell>
+                          {r.rateLabel ?? "—"}
+                          {r.units != null
+                            ? ` · ${num(r.units, 0, 2)} ${rates.find((x) => x.label.trim() === r.rateLabel)?.unit?.trim() || "unit"}`
+                            : ""}
+                        </TableCell>
+                      ) : null}
                       <TableCell className="text-right tabular-nums">
                         {money(r.premium, master.currency)}
                       </TableCell>
@@ -328,7 +397,8 @@ export function DeclarationUpload({
         ) : null}
 
         <p className="text-xs text-muted-foreground">
-          File sertifikat diunggah per deklarasi lewat menu Berkas polis setelah tersimpan.
+          File sertifikat diunggah per deklarasi lewat menu Berkas polis setelah
+          tersimpan.
         </p>
       </div>
     </FormDrawer>

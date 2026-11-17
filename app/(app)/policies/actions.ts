@@ -156,6 +156,8 @@ const declarationRowsSchema = z
       inceptionDate: isoDate,
       sumInsured: z.number().gt(0, "Nilai deklarasi harus lebih dari 0"),
       premium: z.number().gt(0, "Premi deklarasi harus lebih dari 0"),
+      // Tertanggung di sertifikat ("... QQ ..."); kosong berarti ikut polis MOP.
+      insuredName: z.string().trim().max(500, "Tertanggung maksimal 500 karakter").nullable().optional(),
       remarks: z.string().max(2000, "Keterangan maksimal 2000 karakter").nullable(),
     })
   )
@@ -189,6 +191,7 @@ export async function importDeclarationsAction(
       }
       const parsed = parseInput({
         ...preset,
+        insuredName: row.insuredName || preset.insuredName,
         policyNo: row.policyNo,
         previousPolicyNo: null,
         inceptionDate: row.inceptionDate,
