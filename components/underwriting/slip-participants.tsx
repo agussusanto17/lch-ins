@@ -5,6 +5,7 @@ import { Download, FileSpreadsheet, Plus, Search, Trash2, Upload } from "lucide-
 import { toast } from "sonner"
 
 import { TablePagination } from "@/components/shared/table-pagination"
+import { UploadSummary } from "@/components/shared/upload-summary"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +42,9 @@ import {
 } from "@/lib/slip-participants"
 
 const PAGE_SIZES = [25, 50, 100]
+
+/** Hasil impor Excel: baris dibaca, diimpor, gagal, dan kesalahannya per baris. */
+type ImportSummary = { read: number; ok: number; failed: number; errors: string[] }
 
 let idSeq = 0
 const newParticipantId = () => `peserta-${Date.now().toString(36)}-${(idSeq++).toString(36)}`
@@ -108,8 +112,14 @@ export function SlipParticipants({
   const [query, setQuery] = React.useState("")
   const [page, setPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(PAGE_SIZES[0])
+  /** Kesalahan tingkat file; seluruh file tidak diimpor. */
   const [errors, setErrors] = React.useState<string[]>([])
-  const [pending, setPending] = React.useState<SlipParticipant[] | null>(null)
+  /** Ringkasan impor terakhir, termasuk baris yang gagal dan belum masuk daftar. */
+  const [summary, setSummary] = React.useState<ImportSummary | null>(null)
+  const [pending, setPending] = React.useState<{
+    participants: SlipParticipant[]
+    summary: ImportSummary
+  } | null>(null)
   const [confirmClear, setConfirmClear] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
 
@@ -135,6 +145,18 @@ export function SlipParticipants({
   const update = (index: number, patch: Partial<SlipParticipant>) =>
     onChange(participants.map((p, i) => (i === index ? { ...p, ...patch } : p)))
 
+  function applyImport(list: SlipParticipant[], result: ImportSummary) {
+    onChange(list)
+    setSummary(result)
+    setPage(1)
+    const imported = `${list.length.toLocaleString("id-ID")} peserta diimpor`
+    if (result.failed)
+      toast.warning(`${imported}, ${result.failed.toLocaleString("id-ID")} baris gagal`, {
+        description: "Baris yang gagal belum masuk daftar; lihat ringkasan impor.",
+      })
+    else toast.success(imported)
+  }
+
   async function importFile(file: File) {
     setBusy(true)
     setErrors([])
@@ -151,15 +173,19 @@ export function SlipParticipants({
         Array.from(sheetRows, (r) => r ?? []),
         () => newParticipantId()
       )
-      if (result.errors.length) {
-        setErrors(result.errors)
+      if (result.fileErrors.length) {
+        setErrors(result.fileErrors)
         return
       }
-      if (participants.length) setPending(result.participants)
-      else {
-        onChange(result.participants)
-        toast.success(`${result.participants.length.toLocaleString("id-ID")} peserta diimpor`)
+      // Baris yang benar diimpor; baris yang gagal dilaporkan per nomor baris (Agus, 17 November 2026).
+      const next: ImportSummary = {
+        read: result.read,
+        ok: result.participants.length,
+        failed: result.failed,
+        errors: result.errors,
       }
+      if (participants.length) setPending({ participants: result.participants, summary: next })
+      else applyImport(result.participants, next)
     } catch {
       setErrors(["File tidak bisa dibaca. Pakai file Excel (.xlsx) dari template peserta."])
     } finally {
@@ -257,6 +283,18 @@ export function SlipParticipants({
             <p className="mt-1">dan {errors.length - 8} kesalahan lain.</p>
           ) : null}
         </div>
+      ) : null}
+
+      {summary ? (
+        <UploadSummary
+          title="Hasil impor peserta"
+          read={summary.read}
+          ok={summary.ok}
+          okLabel="Diimpor"
+          failed={summary.failed}
+          errors={summary.errors}
+          hint="Baris berikut gagal dan belum masuk daftar. Perbaiki di Excel lalu impor lagi file lengkapnya."
+        />
       ) : null}
 
       {participants.length ? (
@@ -429,20 +467,19 @@ export function SlipParticipants({
             <AlertDialogTitle>Ganti daftar peserta?</AlertDialogTitle>
             <AlertDialogDescription>
               {participants.length.toLocaleString("id-ID")} peserta yang ada akan
-              diganti {pending?.length.toLocaleString("id-ID")} peserta dari file
-              Excel.
+              diganti {pending?.participants.length.toLocaleString("id-ID")} peserta
+              dari file Excel.
+              {pending?.summary.failed
+                ? ` ${pending.summary.failed.toLocaleString("id-ID")} baris gagal dan tidak ikut; daftarnya tampil di ringkasan impor.`
+                : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (pending) {
-                  onChange(pending)
-                  toast.success(`${pending.length.toLocaleString("id-ID")} peserta diimpor`)
-                }
+                if (pending) applyImport(pending.participants, pending.summary)
                 setPending(null)
-                setPage(1)
               }}
             >
               Ganti daftar
@@ -466,6 +503,7 @@ export function SlipParticipants({
             <AlertDialogAction
               onClick={() => {
                 onChange([])
+                setSummary(null)
                 setConfirmClear(false)
               }}
             >

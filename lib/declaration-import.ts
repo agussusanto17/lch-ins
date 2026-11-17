@@ -362,14 +362,17 @@ export function declarationsFromRows(
     )
   })
   if (headerIndex < 0) {
+    const message =
+      "Kolom Cert No. dan Sum Insured tidak ditemukan. Pakai template deklarasi atau General Marine Report."
     return {
       declarations,
       skipped,
       swappedDates: 0,
       otherMocNos: [] as string[],
-      errors: [
-        "Kolom Cert No. dan Sum Insured tidak ditemukan. Pakai template deklarasi atau General Marine Report.",
-      ],
+      errors: [message],
+      fileErrors: [message],
+      read: 0,
+      failed: 0,
     }
   }
   const header = rows[headerIndex].map((c) => norm(cellText(c)))
@@ -389,6 +392,8 @@ export function declarationsFromRows(
     ctx.masterPolicyNo && !isProvisionalPolicyNo(ctx.masterPolicyNo)
   const otherMocNos = new Set<string>()
   let filled = 0
+  // Baris yang punya kesalahan tidak ikut disimpan; jumlahnya dilaporkan (Agus, 17 November 2026).
+  let failed = 0
 
   body.forEach((row, i) => {
     const excelRow = headerIndex + i + 2
@@ -510,7 +515,10 @@ export function declarationsFromRows(
     if (adminFilled && (adminFee == null || adminFee < 0))
       fail("Admin Fee harus angka 0 atau lebih.")
 
-    if (errors.length > before) return
+    if (errors.length > before) {
+      failed += 1
+      return
+    }
     declarations.push({
       row: excelRow,
       policyNo,
@@ -532,21 +540,28 @@ export function declarationsFromRows(
     })
   })
 
-  if (filled > DECLARATION_IMPORT_LIMIT) {
-    errors.push(
+  // Kesalahan tingkat file menahan seluruh upload; kesalahan per baris hanya menahan baris itu.
+  const fileErrors: string[] = []
+  if (filled > DECLARATION_IMPORT_LIMIT)
+    fileErrors.push(
       `Maksimal ${DECLARATION_IMPORT_LIMIT.toLocaleString("id-ID")} deklarasi baru per file. Pecah file menjadi beberapa upload.`
     )
-  }
   // Semua baris sudah tercatat bukan kesalahan: tidak ada yang perlu diperbaiki atau disimpan.
   if (!declarations.length && !errors.length && !skipped.length)
-    errors.push("Tidak ada deklarasi di file.")
+    fileErrors.push("Tidak ada deklarasi di file.")
   return {
-    declarations,
+    declarations: fileErrors.length ? [] : declarations,
     skipped,
     swappedDates,
     /** MOC No. di file yang berbeda dari no. polis MOP; ditampilkan sebagai peringatan. */
     otherMocNos: [...otherMocNos],
-    errors,
+    /** Kesalahan per baris ("Baris N: ...") lalu kesalahan tingkat file. */
+    errors: [...errors, ...fileErrors],
+    fileErrors,
+    /** Baris berisi yang dibaca, termasuk yang dilewati dan yang gagal. */
+    read: filled + skipped.length,
+    /** Baris yang gagal dan tidak ikut disimpan. */
+    failed,
   }
 }
 
