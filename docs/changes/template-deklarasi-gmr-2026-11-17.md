@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-17
 - **Branch:** `feat/template-deklarasi-gmr`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #260
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
