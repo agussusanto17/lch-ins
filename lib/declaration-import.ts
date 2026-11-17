@@ -200,7 +200,11 @@ export interface DeclarationImportContext {
   /** Periode polis MOP; tanggal deklarasi harus di dalamnya. */
   period: { start: string; end: string }
   currency: string
-  /** No. polis MOP. MOC No. di file dicocokkan bila nomor ini sudah bukan nomor sementara CI. */
+  /**
+   * No. polis MOP. MOC No. di file yang berbeda dari nomor ini hanya diberi peringatan: MOC No.
+   * bisa nomor kontrak open cover, bukan nomor polis tahunannya (produksi, 17 November 2026:
+   * polis 45031126000502, MOC di General Marine Report 45031125000646).
+   */
   masterPolicyNo?: string
   /** No. polis yang sudah ada di Policy Database, huruf kecil. */
   existingNos: ReadonlySet<string>
@@ -291,6 +295,7 @@ export function declarationsFromRows(
       declarations,
       skipped,
       swappedDates: 0,
+      otherMocNos: [] as string[],
       errors: [
         "Kolom No. Sertifikat dan Nilai Deklarasi (atau Cert No. dan Sum Insured) tidak ditemukan. Pakai template deklarasi atau General Marine Report.",
       ],
@@ -311,6 +316,7 @@ export function declarationsFromRows(
   const periodText = `${dateShort(ctx.period.start)} s/d ${dateShort(ctx.period.end)}`
   const checkMoc =
     ctx.masterPolicyNo && !isProvisionalPolicyNo(ctx.masterPolicyNo)
+  const otherMocNos = new Set<string>()
   let filled = 0
 
   body.forEach((row, i) => {
@@ -344,7 +350,7 @@ export function declarationsFromRows(
 
     const moc = text("mocNo")
     if (checkMoc && moc && compact(moc) !== compact(ctx.masterPolicyNo!))
-      fail(`MOC No. ${moc} bukan nomor polis MOP ini (${ctx.masterPolicyNo}).`)
+      otherMocNos.add(moc)
 
     const currency = text("currency")
     if (currency && currency.toUpperCase() !== ctx.currency.toUpperCase())
@@ -445,7 +451,14 @@ export function declarationsFromRows(
   // Semua baris sudah tercatat bukan kesalahan: tidak ada yang perlu diperbaiki atau disimpan.
   if (!declarations.length && !errors.length && !skipped.length)
     errors.push("Tidak ada deklarasi di file.")
-  return { declarations, skipped, swappedDates, errors }
+  return {
+    declarations,
+    skipped,
+    swappedDates,
+    /** MOC No. di file yang berbeda dari no. polis MOP; ditampilkan sebagai peringatan. */
+    otherMocNos: [...otherMocNos],
+    errors,
+  }
 }
 
 /**

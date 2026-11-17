@@ -330,13 +330,11 @@ test("General Marine Report dari asuransi dibaca langsung, termasuk tanggal yang
       masterPolicyNo: "45031125009999",
     })
   )
-  assert.deepEqual(
-    bad.errors.filter((e) => e.startsWith("Baris 4")),
-    [
-      "Baris 4: MOC No. 45031125000646 bukan nomor polis MOP ini (45031125009999).",
-      "Baris 4: Mata uang USD berbeda dengan polis MOP (IDR).",
-    ]
-  )
+  // MOC No. lain hanya peringatan: di produksi polis 45031126000502 punya MOC 45031125000646.
+  assert.deepEqual(bad.errors, [
+    "Baris 4: Mata uang USD berbeda dengan polis MOP (IDR).",
+  ])
+  assert.deepEqual(bad.otherMocNos, ["45031125000646"])
   // Nomor sementara CI belum diganti nomor asuransi: MOC No. tidak dicocokkan.
   const provisional = declarationsFromRows(
     rows.slice(0, 3),
@@ -346,7 +344,7 @@ test("General Marine Report dari asuransi dibaca langsung, termasuk tanggal yang
       masterPolicyNo: "007/LCH-PLCMT/CI-MOP/XI/2026",
     })
   )
-  assert.deepEqual(provisional.errors, [])
+  assert.deepEqual([provisional.errors, provisional.otherMocNos], [[], []])
 })
 
 test("template bisa diisi lalu dibaca lagi, dengan dropdown kategori dari sheet Rate", async () => {
