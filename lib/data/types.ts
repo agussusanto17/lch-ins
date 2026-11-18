@@ -607,13 +607,24 @@ export interface Policy {
   cancelled?: boolean
 }
 
+/** Satu asuransi pada polis klaim, dari panel security polis. */
+export interface ClaimInsurerShare {
+  insurer: string
+  /** Persen, misalnya 60 untuk 60%. */
+  sharePct: number
+  leader: boolean
+}
+
 export interface Claim {
   id: string
   claimNo: string
   policyId: string | null
   policyNo: string
   insuredName: string
+  /** Asuransi leader, atau asuransi pertama bila tidak ada leader. */
   insurer: string
+  /** Semua asuransi polis beserta share-nya, untuk co-insurance di detail klaim. */
+  insurers?: ClaimInsurerShare[]
   cob: ClassOfBusiness
   currency: string
   lossDate: string
