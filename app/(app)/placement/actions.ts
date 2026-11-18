@@ -417,6 +417,11 @@ const placingSlipSchema = z.object({
     .optional(),
   securityPanel: z.array(securityPanelRowSchema).optional(),
   discountPct: z.coerce.number().optional(),
+  additionalDiscountPct: z.coerce
+    .number()
+    .min(0, "Additional discount tidak boleh negatif")
+    .max(15, "Additional discount maksimal 15%")
+    .optional(),
   adminCost: z.coerce.number().optional(),
   stampDuty: z.coerce.number().optional(),
   brokeragePct: z.coerce.number().optional(),

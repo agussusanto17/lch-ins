@@ -94,6 +94,42 @@ export function totalPayable(slip: PlacingSlip) {
   )
 }
 
+/** Batas additional discount Quotation (MoM review Phase 1, poin 7). */
+export const MAX_ADDITIONAL_DISCOUNT_PCT = 15
+
+/**
+ * Additional discount Quotation: persen dari premi setelah discount utama (MoM review Phase 1,
+ * poin 7). Hanya untuk cetakan Quotation Slip Internal LCH; Closing Instruction, polis, dan report
+ * tetap memakai discount utama.
+ */
+export function additionalDiscountFor(afterDiscount: number, pct: number | undefined) {
+  return roundCents((afterDiscount * (pct || 0)) / 100)
+}
+
+/**
+ * Total Payable cetakan internal: premi setelah discount dan additional discount, ditambah biaya
+ * polis. Slip PAR + EQVET menghitung additional discount per kelompok, seperti discount utama.
+ */
+export function internalTotalPayable(slip: PlacingSlip) {
+  const pct = slip.additionalDiscountPct || 0
+  if (isParEqvetSlip(slip)) {
+    const { par, eqvet } = calculateParEqvet(slip)
+    return roundCents(
+      [par, eqvet].reduce(
+        (sum, g) => sum + g.total - additionalDiscountFor(g.afterDiscount, pct),
+        0
+      )
+    )
+  }
+  const afterDiscount = roundCents(totalPremium(slip) - discountAmount(slip))
+  return roundCents(
+    afterDiscount -
+      additionalDiscountFor(afterDiscount, pct) +
+      (slip.adminCost || 0) +
+      (slip.stampDuty || 0)
+  )
+}
+
 /**
  * Bagian slip yang terbit sebagai polis terpisah: PAR + EQVET dengan premi di kedua
  * kelompok jadi dua polis (Harry, 3 November 2026); slip lain satu polis, daftar kosong.

@@ -486,6 +486,11 @@ export interface PlacingSlip {
   /** Alasan per id baris rate yang berada di luar batas OJK. */
   rateExceptions?: Record<string, RateException>
   discountPct: number
+  /**
+   * Additional discount Quotation dalam persen (MoM review Phase 1, poin 7), dari premi setelah
+   * discount. Hanya untuk Quotation Slip Internal LCH; CI, polis, dan report memakai discount saja.
+   */
+  additionalDiscountPct?: number
   adminCost: number
   stampDuty: number
   brokeragePct: number

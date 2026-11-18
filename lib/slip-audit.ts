@@ -141,6 +141,7 @@ export function slipAuditSummary(
       .sort((a, b) => a.localeCompare(b))
       .join("\n"),
     discountPct: slip.discountPct,
+    additionalDiscountPct: slip.additionalDiscountPct ?? 0,
     adminCost: slip.adminCost,
     stampDuty: slip.stampDuty,
     subjectivity: text(slip.subjectivity),
