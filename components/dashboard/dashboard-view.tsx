@@ -151,10 +151,11 @@ export function DashboardView({
           sub={`Outstanding Rp ${compactMoney(totals.claimOutstanding)}`}
           icon={TriangleAlert}
         />
+        {/* Brokerage jadi angka utama, premium keterangannya (MoM review Phase 1, 17 November 2026). */}
         <StatCard
-          label="Total Premium"
-          value={`Rp ${compactMoney(totals.totalPremium)}`}
-          sub={`Brokerage ${compactMoney(totals.totalBrokerage)}`}
+          label="Total Brokerage"
+          value={`Rp ${compactMoney(totals.totalBrokerage)}`}
+          sub={`Premium Rp ${compactMoney(totals.totalPremium)}`}
           icon={TrendingUp}
         />
       </div>
