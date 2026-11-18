@@ -1032,6 +1032,19 @@ function SlipEditor({
             summary={slip.insuredName || "Belum ada tertanggung"}
           >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/*
+               * Entitas LCH yang menempatkan bisnis (MoM review Phase 1, 17 November 2026),
+               * isian pertama form (Agus, 18 November 2026).
+               */}
+              <SelectInput
+                className="md:col-span-2"
+                label="Source"
+                description="Terisi dari cabang klien: Jakarta ke PT. LCH Insurance Brokers, Singapore ke LCH Insurance Brokers Pte Ltd. Bisa diubah per slip."
+                items={sourceItems}
+                value={slip.sourceId ?? defaultSourceId}
+                onValueChange={(v) => set({ sourceId: v || null })}
+                placeholder="Pilih source"
+              />
               <Field>
                 <FieldLabel>Class of Business *</FieldLabel>
                 <Select
@@ -1244,25 +1257,14 @@ function SlipEditor({
                 insuredName={slip.insuredName}
                 insuredDescription={slip.insuredDescription}
                 correspondenceAddress={slip.correspondenceAddress}
-                onChange={(patch) =>
-                  // Ganti klien: Source kembali mengikuti cabang klien baru.
-                  set(
+                onChange={(patch) => {
+                  // Ganti klien: Source yang masih isian awal klien lama ikut klien baru,
+                  // sedangkan Source yang dipilih manual (misalnya sebelum klien) tetap.
+                  const changed =
                     patch.clientId !== undefined && patch.clientId !== slip.clientId
-                      ? { ...patch, sourceId: null }
-                      : patch
-                  )
-                }
-              />
-
-              {/* Entitas LCH yang menempatkan bisnis (MoM review Phase 1, 17 November 2026). */}
-              <SelectInput
-                className="md:col-span-2"
-                label="Source"
-                description="Terisi dari cabang klien: Jakarta ke PT. LCH Insurance Brokers, Singapore ke LCH Insurance Brokers Pte Ltd. Bisa diubah per slip."
-                items={sourceItems}
-                value={slip.sourceId ?? defaultSourceId}
-                onValueChange={(v) => set({ sourceId: v || null })}
-                placeholder="Pilih source"
+                  const followsClient = !slip.sourceId || slip.sourceId === defaultSourceId
+                  set(changed && followsClient ? { ...patch, sourceId: null } : patch)
+                }}
               />
 
               <Field orientation="horizontal" className="md:col-span-2">
