@@ -5,7 +5,19 @@
  * kerugian (koreksi Agus, 18 November 2026).
  */
 import { roundCents } from "@/lib/calc"
-import type { ClaimInsurerShare } from "@/lib/data/types"
+import type { ClaimInsurerShare, ClaimStatus } from "@/lib/data/types"
+
+/**
+ * Klaim Settled bersifat final dan terkunci: data klaim, dokumen, dan tindak lanjut tidak bisa
+ * diubah (MoM review Phase 1, poin 9). Hanya Admin yang bisa membuka kuncinya bila ada salah input.
+ */
+export function isClaimLocked(status: ClaimStatus) {
+  return status === "Settled"
+}
+
+/** Pesan saat klaim terkunci diubah. */
+export const CLAIM_LOCKED_MESSAGE =
+  "Klaim Settled terkunci: data, dokumen, dan tindak lanjut tidak bisa diubah. Minta Admin membuka kunci bila ada salah input."
 
 export interface ClaimInsurerPortion extends ClaimInsurerShare {
   /** Bagian nilai klaim sesuai share, tanpa fee. */

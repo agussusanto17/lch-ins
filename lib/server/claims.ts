@@ -1,7 +1,11 @@
 import "server-only"
 
 import { coverCodeFor } from "@/components/underwriting/slip-model"
-import { documentReceiptLocked } from "@/lib/claim-detail"
+import {
+  CLAIM_LOCKED_MESSAGE,
+  documentReceiptLocked,
+  isClaimLocked,
+} from "@/lib/claim-detail"
 import type { Claim, ClaimStage, ClaimStatus } from "@/lib/data/types"
 import { todayIso } from "@/lib/date"
 import { CLAIM_STATUS_CODES, POLICY_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
@@ -277,6 +281,24 @@ function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
 }
 
 /** Semua klaim, atau hanya klaim atas polis satu klien bila `clientId` (UUID) diisi. */
+/** Status klaim dari baris lookup, dicocokkan lewat kode seperti toClaimRecord. */
+function claimStatusOf(row: { code: string | null; name: string } | null | undefined) {
+  return systemValueFromRow(CLAIM_STATUS_CODES, row, "Outstanding")
+}
+
+/**
+ * Tolak perubahan klaim Settled: data, dokumen, dan tindak lanjutnya terkunci (MoM review
+ * Phase 1, poin 9). Admin membuka kuncinya lewat unlockSettledClaim.
+ */
+async function assertClaimUnlocked(claimId: string, db: Prisma.TransactionClient = prisma) {
+  const claim = await db.claim.findUnique({
+    where: { id: claimId },
+    select: { status: { select: { code: true, name: true } } },
+  })
+  if (!claim) throw new Error("Klaim tidak ditemukan.")
+  if (isClaimLocked(claimStatusOf(claim.status))) throw new Error(CLAIM_LOCKED_MESSAGE)
+}
+
 export async function listClaims(
   params: { clientId?: string } = {}
 ): Promise<ClaimRecord[]> {
@@ -664,6 +686,9 @@ export async function updateClaim(
     if (!existing) {
       throw new Error("Klaim tidak ditemukan.")
     }
+    if (isClaimLocked(claimStatusOf(existing.status))) {
+      throw new Error(CLAIM_LOCKED_MESSAGE)
+    }
 
     const { participantId, paBenefitId } = await checkedPaClaim(tx, input)
     const [statusId, stageId, adjusterId] = await Promise.all([
@@ -752,6 +777,7 @@ export async function updateClaimStatus(
   if (!existing) {
     throw new Error("Klaim tidak ditemukan.")
   }
+  await assertClaimUnlocked(id)
 
   const statusId = await resolveStatusId(status)
 
@@ -780,6 +806,7 @@ export async function deleteClaim(id: string, userId: string): Promise<void> {
   if (!existing) {
     throw new Error("Klaim tidak ditemukan.")
   }
+  await assertClaimUnlocked(id)
 
   const paymentCount = await prisma.payment.count({ where: { claimId: id } })
   if (paymentCount > 0) {
@@ -805,6 +832,43 @@ export async function deleteClaim(id: string, userId: string): Promise<void> {
       claimNo: existing.claimNo,
     },
     after: null,
+  })
+}
+
+/**
+ * Buka kunci klaim Settled oleh Admin bila ada salah input (MoM review Phase 1, poin 9). Status
+ * pindah ke status pilihan supaya data bisa diperbaiki, dan alasannya tercatat di Audit Trail.
+ * Setelah diperbaiki, ubah status ke Settled lagi untuk mengunci.
+ */
+export async function unlockSettledClaim(
+  id: string,
+  input: { status: ClaimStatus; reason: string },
+  userId: string
+): Promise<ClaimRecord> {
+  const reason = input.reason.trim()
+  if (isClaimLocked(input.status)) throw new Error("Pilih status selain Settled.")
+  if (!reason) throw new Error("Alasan membuka kunci wajib diisi.")
+  const statusId = await resolveStatusId(input.status)
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.claim.findUnique({ where: { id }, include: claimIncludeRelations })
+    if (!existing) throw new Error("Klaim tidak ditemukan.")
+    if (!isClaimLocked(claimStatusOf(existing.status))) {
+      throw new Error("Klaim ini tidak berstatus Settled, jadi tidak terkunci.")
+    }
+    const record = await tx.claim.update({
+      where: { id },
+      data: { statusId },
+      include: claimIncludeRelations,
+    })
+    await recordAudit(tx, {
+      userId,
+      entity: "claims",
+      entityId: id,
+      action: "Update",
+      before: { statusId: existing.statusId, settledUnlockReason: "" },
+      after: { statusId: record.statusId, settledUnlockReason: reason },
+    })
+    return toClaimRecord(record)
   })
 }
 
@@ -1199,6 +1263,7 @@ export async function toggleClaimDocument(
   userId: string
 ): Promise<ClaimDocumentRecord> {
   const before = await findClaimDocument(documentId)
+  await assertClaimUnlocked(before.claimId)
   if (!isReceived && documentReceiptLocked(before)) {
     throw new Error(
       `"${before.documentTypeName}" sudah punya file, jadi tetap ditandai diterima. Ganti file-nya bila perlu.`
@@ -1243,6 +1308,7 @@ export async function updateClaimDocument(
   userId: string
 ): Promise<ClaimDocumentRecord> {
   const before = await findClaimDocument(documentId)
+  await assertClaimUnlocked(before.claimId)
   const data: { notes?: string | null; filePath?: string | null; receivedDate?: Date | null } = {}
   if (input.notes !== undefined) data.notes = input.notes
   if (input.filePath !== undefined) data.filePath = input.filePath
@@ -1281,6 +1347,7 @@ export async function attachClaimDocumentFile(
   userId: string
 ): Promise<ClaimDocumentRecord> {
   const before = await findClaimDocument(documentId)
+  await assertClaimUnlocked(before.claimId)
   const receiveNow = !before.isReceived
 
   return prisma.$transaction(async (tx) => {
@@ -1324,6 +1391,7 @@ export async function addClaimDocument(
 ): Promise<ClaimDocumentRecord> {
   const realClaimId = await resolveClaimId(claimId)
   if (!realClaimId) throw new Error("Klaim tidak ditemukan.")
+  await assertClaimUnlocked(realClaimId)
 
   const claim = await prisma.claim.findUnique({
     where: { id: realClaimId },
@@ -1376,6 +1444,7 @@ export async function addClaimDocument(
 
 export async function deleteClaimDocument(documentId: string, userId: string): Promise<void> {
   const before = await findClaimDocument(documentId)
+  await assertClaimUnlocked(before.claimId)
   await prisma.$transaction(async (tx) => {
     await tx.claimDocument.delete({ where: { id: documentId } })
     await deleteStoredFiles(tx, [before.filePath])
@@ -1425,6 +1494,7 @@ export async function addClaimFollowup(
 ): Promise<ClaimFollowupRecord> {
   const realClaimId = await resolveClaimId(claimId)
   if (!realClaimId) throw new Error("Klaim tidak ditemukan.")
+  await assertClaimUnlocked(realClaimId)
 
   let validUserId: string | null = null
   if (userId) {
@@ -1469,6 +1539,7 @@ export async function addClaimFollowup(
 export async function deleteClaimFollowup(followupId: string, userId: string): Promise<void> {
   const existing = await prisma.claimFollowup.findUnique({ where: { id: followupId } })
   if (!existing) throw new Error("Catatan follow-up tidak ditemukan.")
+  await assertClaimUnlocked(existing.claimId)
   await prisma.claimFollowup.delete({
     where: { id: followupId },
   })

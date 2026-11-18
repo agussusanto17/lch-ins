@@ -101,6 +101,7 @@ export function isFixedLookupType(type: string) {
 /** Kode master untuk setiap nilai yang dipakai sistem. */
 export const CLAIM_STATUS_CODES: Record<ClaimStatus, string> = {
   Outstanding: "outstanding",
+  "Partial Settle": "partial_settle",
   Settled: "settled",
   Closed: "closed",
   Rejected: "rejected",

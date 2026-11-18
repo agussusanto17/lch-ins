@@ -119,6 +119,7 @@ const FIELD_LABELS: Record<string, string> = {
   wordingForms: "Wording form",
   discountPct: "Diskon (%)",
   additionalDiscountPct: "Additional discount Quotation (%)",
+  settledUnlockReason: "Alasan buka kunci klaim Settled",
   subjectivity: "Subjectivity",
   closingInstruction: "Catatan Closing Instruction",
   coverNoteRemarks: "Catatan Cover Note",

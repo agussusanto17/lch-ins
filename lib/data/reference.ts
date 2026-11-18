@@ -42,6 +42,7 @@ export const POLICY_TYPES_WITH_PARENT: PolicyType[] = [
 ]
 export const CLAIM_STATUSES: ClaimStatus[] = [
   "Outstanding",
+  "Partial Settle",
   "Settled",
   "Closed",
   "Rejected",
@@ -54,8 +55,11 @@ export const CLAIM_STAGES: ClaimStage[] = [
   "Proses Adjuster",
   "SPK / SPGR terbit",
 ]
-/** Klaim yang masih berjalan, dipakai untuk outstanding di dashboard. */
-export const OPEN_CLAIM_STATUSES: ClaimStatus[] = ["Outstanding"]
+/**
+ * Klaim yang masih berjalan, dipakai untuk outstanding di dashboard dan daftar klaim. Partial
+ * Settle (baru diselesaikan sebagian) tetap terhitung berjalan (MoM review Phase 1, poin 9).
+ */
+export const OPEN_CLAIM_STATUSES: ClaimStatus[] = ["Outstanding", "Partial Settle"]
 
 /**
  * Kelas konstruksi harta benda (lookup construction_class). Label angka romawi dipakai

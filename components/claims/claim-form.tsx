@@ -637,6 +637,13 @@ export function ClaimForm({
               )}
               placeholder="Pilih status klaim..."
               error={errors.status}
+              description={
+                draft.status === "Settled"
+                  ? "Settled mengunci klaim: data, dokumen, dan tindak lanjut tidak bisa diubah lagi kecuali kuncinya dibuka Admin."
+                  : draft.status === "Partial Settle"
+                    ? "Diselesaikan sebagian; tetap dihitung klaim berjalan."
+                    : undefined
+              }
             />
             <SelectInput
               label="Tahapan Dokumen"

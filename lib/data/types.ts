@@ -56,7 +56,12 @@ export type SlipPart = "PAR" | "EQVET"
  * Status siklus hidup klaim sesuai ERD (lookup claim_status). Tahapan
  * dokumennya dicatat terpisah di ClaimStage.
  */
-export type ClaimStatus = "Outstanding" | "Settled" | "Closed" | "Rejected"
+export type ClaimStatus =
+  | "Outstanding"
+  | "Partial Settle"
+  | "Settled"
+  | "Closed"
+  | "Rejected"
 
 /**
  * Tahapan dokumen dan proses klaim, berjalan sendiri di samping status. Nama
