@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/detail-klaim-coinsurance-checklist`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #262
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
