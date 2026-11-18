@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/alur-tahapan-placement`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #277
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
