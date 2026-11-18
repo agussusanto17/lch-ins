@@ -34,11 +34,13 @@ import { dateEn, normalizeCob } from "@/lib/format"
 import { withDetailLabels } from "@/lib/slip-details"
 import { participantIssues } from "@/lib/slip-participants"
 import {
+  isFloatingSumInsured,
   isMultiLocation,
   locationGroups,
   locationOwner,
   needsConstructionClass,
   slipLocations,
+  strictestBounds,
 } from "@/lib/slip-locations"
 import {
   GENERIC_RATE_LABEL,
@@ -167,7 +169,9 @@ export interface DeductibleUnit {
  */
 export function deductibleUnits(slip: PlacingSlip): DeductibleUnit[] {
   if (slip.cob === "Property") {
-    return locationGroups(slip).map((g) => ({
+    // Slip floating: satu daftar deductible untuk semua lokasi, di baris rate lokasi pertama.
+    const groups = locationGroups(slip)
+    return (isFloatingSumInsured(slip) ? groups.slice(0, 1) : groups).map((g) => ({
       id: g.location.id,
       no: g.no,
       location: g.location,
@@ -527,6 +531,8 @@ export function switchCob(
     coverCode: null,
     // Slip Property mulai lagi dengan satu lokasi dari isian slip.
     locations: undefined,
+    floatingSumInsured: false,
+    floatingSumInsuredText: undefined,
     rateLines: makeRateLines(normCob),
     ...sub,
   })
@@ -544,7 +550,10 @@ export function propertyRateLinesPatch(
 ): Partial<PlacingSlip> {
   if (slip.cob !== "Property") return {}
   const labels = propertyRateLabels(coverCode)
-  const groups = locationGroups(slip)
+  // Slip floating hanya punya baris rate di lokasi pertama.
+  const groups = isFloatingSumInsured(slip)
+    ? locationGroups(slip).slice(0, 1)
+    : locationGroups(slip)
   const current = groups[0].rateLines.map((l) => l.label)
   if (current.length === labels.length && current.every((l, i) => l === labels[i])) {
     return {}
@@ -569,6 +578,10 @@ export function propertyRateLinesPatch(
 /** Lokasi baru di akhir daftar; cover dan deductible awalnya sama seperti lokasi pertama. */
 export function addLocationPatch(slip: PlacingSlip): Partial<PlacingSlip> {
   const locationId = uid("loc")
+  // Slip floating: lokasi baru cukup alamat, okupasi, dan kelas; sum insured dan rate tetap satu.
+  if (isFloatingSumInsured(slip)) {
+    return { locations: [...slipLocations(slip), { id: locationId, riskLocation: "" }] }
+  }
   const firstLines = locationGroups(slip)[0].rateLines
   const template: Pick<RateLine, "label" | "deductibles">[] = firstLines.length
     ? firstLines
@@ -606,6 +619,18 @@ export function removeLocationPatch(
   const groups = locationGroups(slip)
   const removed = groups.find((g) => g.location.id === locationId)
   if (!removed || groups.length < 2) return {}
+  if (isFloatingSumInsured(slip)) {
+    // Sum insured dan rate bersama pindah ke lokasi yang menjadi pertama.
+    const locations = slipLocations(slip).filter((l) => l.id !== locationId)
+    const to = <T extends { locationId?: string | null }>(rows: T[]) =>
+      rows.map((r) => ({ ...r, locationId: locations[0].id }))
+    return {
+      locations,
+      sumInsuredSection1: to(slip.sumInsuredSection1),
+      sumInsuredSection2: to(slip.sumInsuredSection2),
+      rateLines: to(slip.rateLines),
+    }
+  }
   const owner = locationOwner(slip)
   const keep = (row: { locationId?: string | null }) =>
     owner(row.locationId) !== locationId
@@ -633,6 +658,99 @@ export function updateLocationPatch(
     locations: slipLocations(slip).map((l) =>
       l.id === locationId ? { ...l, ...patch } : l
     ),
+  }
+}
+
+/**
+ * Rate atau deductible lokasi 2 dst. yang hilang bila floating sum insured dinyalakan, supaya
+ * form meminta konfirmasi dulu.
+ */
+export function floatingDropsLocationData(slip: PlacingSlip) {
+  if (isFloatingSumInsured(slip)) return false
+  return locationGroups(slip)
+    .slice(1)
+    .some((g) =>
+      g.rateLines.some(
+        (l) =>
+          l.rate != null ||
+          l.lossLimitPct != null ||
+          (l.deductibles ?? []).some((t) => t.trim()) ||
+          Boolean(slip.rateExceptions?.[l.id])
+      )
+    )
+}
+
+/**
+ * Nyalakan atau matikan floating sum insured (MoM review Phase 1, poin 5).
+ * - Nyala: sum insured semua lokasi digabung di lokasi pertama (baris kosong lokasi lain
+ *   dibuang). Rate, deductible, dan alasan rate lokasi pertama berlaku untuk semua lokasi; milik
+ *   lokasi lain dihapus.
+ * - Mati: semua sum insured tetap di lokasi pertama. Lokasi lain mendapat baris sum insured
+ *   kosong serta salinan rate, loss limit, dan deductible lokasi pertama.
+ */
+export function floatingSumInsuredPatch(
+  slip: PlacingSlip,
+  on: boolean
+): Partial<PlacingSlip> {
+  if (slip.cob !== "Property" || on === isFloatingSumInsured(slip)) return {}
+  const groups = locationGroups(slip)
+  const [first, ...rest] = groups
+  const at = <T extends { locationId?: string | null }>(
+    rows: T[],
+    locationId = first.location.id
+  ) => rows.map((r) => ({ ...r, locationId }))
+
+  if (on) {
+    const filled = (it: LineItem) =>
+      it.description.trim() !== "" || (it.amount || 0) !== 0
+    const merge = (section: "section1" | "section2") =>
+      at([...first[section], ...rest.flatMap((g) => g[section].filter(filled))])
+    const removed = new Set(rest.flatMap((g) => g.rateLines.map((l) => l.id)))
+    return {
+      floatingSumInsured: true,
+      sumInsuredSection1: merge("section1"),
+      sumInsuredSection2: merge("section2"),
+      rateLines: at(first.rateLines),
+      rateExceptions: Object.fromEntries(
+        Object.entries(slip.rateExceptions ?? {}).filter(
+          ([lineId]) => !removed.has(lineId)
+        )
+      ),
+    }
+  }
+
+  const emptyRow = (prefix: string, locationId: string): LineItem => ({
+    id: uid(prefix),
+    description: "",
+    amount: 0,
+    locationId,
+  })
+  return {
+    floatingSumInsured: false,
+    sumInsuredSection1: [
+      ...at(first.section1),
+      ...rest.map((g) => emptyRow("m", g.location.id)),
+    ],
+    sumInsuredSection2: [
+      ...at(first.section2),
+      ...rest.map((g) => emptyRow("b", g.location.id)),
+    ],
+    rateLines: [
+      ...at(first.rateLines),
+      ...rest.flatMap((g) =>
+        first.rateLines.map(
+          (l): RateLine => ({
+            id: uid("r"),
+            label: l.label,
+            rate: l.rate,
+            premium: 0,
+            locationId: g.location.id,
+            ...(l.lossLimitPct != null ? { lossLimitPct: l.lossLimitPct } : {}),
+            ...(l.deductibles?.length ? { deductibles: [...l.deductibles] } : {}),
+          })
+        )
+      ),
+    ],
   }
 }
 
@@ -796,13 +914,17 @@ export function occupationBounds(
 export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
   if (!usesOjkTariff(slip)) return withoutOjkBounds(slip.rateLines)
   if (slip.cob === "Property") {
-    // Tiap lokasi punya okupasi dan kelas konstruksi sendiri.
+    // Tiap lokasi punya okupasi dan kelas konstruksi sendiri. Rate slip floating berlaku di
+    // semua lokasi, jadi batasnya dari lokasi paling berisiko.
     const owner = locationOwner(slip)
+    const locations = slipLocations(slip)
+    const bounds = locations.map((location) =>
+      occupationBounds(location.occupation, location.constructionClass)
+    )
     const auto = new Map(
-      slipLocations(slip).map((location) => [
-        location.id,
-        occupationBounds(location.occupation, location.constructionClass),
-      ])
+      isFloatingSumInsured(slip)
+        ? [[locations[0].id, strictestBounds(bounds)]]
+        : locations.map((location, i) => [location.id, bounds[i]])
     )
     return slip.rateLines.map((l) => {
       if (l.min != null || l.max != null) return l
@@ -958,6 +1080,19 @@ export function releaseIssues(slip: PlacingSlip) {
 export function locationIssues(slip: PlacingSlip): string[] {
   if (slip.cob !== "Property") return []
   const groups = locationGroups(slip)
+  if (isFloatingSumInsured(slip) && groups.length > 1) {
+    // Sum insured floating dicek sekali lewat "Isi sum insured." di releaseIssues.
+    const needsClass = needsConstructionClass(slip.rateLines)
+    return groups.flatMap(({ location, no }) => {
+      const issues: string[] = []
+      if (!location.riskLocation.trim()) issues.push(`Isi alamat lokasi ${no}.`)
+      if (!location.occupation)
+        issues.push(`Pilih okupasi OJK untuk lokasi ${no}.`)
+      if (!location.constructionClass && needsClass)
+        issues.push(`Pilih kelas konstruksi untuk lokasi ${no}.`)
+      return issues
+    })
+  }
   if (groups.length === 1) {
     const { location, rateLines } = groups[0]
     const issues: string[] = []

@@ -18,6 +18,7 @@ type LocationSource = Pick<
   | "occupation"
   | "occupationLabel"
   | "constructionClass"
+  | "floatingSumInsured"
 >
 
 /** Lokasi slip Property; tanpa daftar lokasi berarti satu lokasi dari isian slip. */
@@ -34,9 +35,24 @@ export function slipLocations(slip: LocationSource): SlipLocation[] {
   ]
 }
 
-/** Id lokasi pemilik sebuah baris; baris tanpa lokasi yang dikenal ikut lokasi pertama. */
+/**
+ * Floating sum insured (MoM review Phase 1, poin 5): sum insured, rate, dan deductible diisi
+ * sekali untuk semua lokasi, seperti slip 015/LCH-PLCMT/PS-PAR/X/2026. Tiap lokasi cukup
+ * alamat, okupasi, dan kelas konstruksi.
+ */
+export function isFloatingSumInsured(
+  slip: Pick<PlacingSlip, "cob" | "floatingSumInsured">
+) {
+  return slip.cob === "Property" && slip.floatingSumInsured === true
+}
+
+/**
+ * Id lokasi pemilik sebuah baris; baris tanpa lokasi yang dikenal ikut lokasi pertama.
+ * Slip floating menaruh semua baris di lokasi pertama, jadi premi dihitung dari total sum insured.
+ */
 export function locationOwner(slip: LocationSource) {
   const locations = slipLocations(slip)
+  if (slip.floatingSumInsured) return () => locations[0].id
   const known = new Set(locations.map((l) => l.id))
   return (locationId?: string | null) =>
     locationId && known.has(locationId) ? locationId : locations[0].id
@@ -100,9 +116,37 @@ export function locationsShareRates(
   return groups.every((g) => key(g) === key(groups[0]))
 }
 
-/** Slip Property dengan lebih dari satu lokasi; dokumennya memakai jadwal per lokasi. */
-export function isMultiLocation(slip: Pick<PlacingSlip, "cob" | "locations">) {
-  return slip.cob === "Property" && (slip.locations?.length ?? 0) > 1
+/**
+ * Slip Property dengan lebih dari satu lokasi; dokumennya memakai jadwal per lokasi.
+ * Slip floating dicetak seperti satu lokasi dengan daftar alamat bernomor.
+ */
+export function isMultiLocation(
+  slip: Pick<PlacingSlip, "cob" | "locations" | "floatingSumInsured">
+) {
+  return (
+    slip.cob === "Property" &&
+    (slip.locations?.length ?? 0) > 1 &&
+    !slip.floatingSumInsured
+  )
+}
+
+/**
+ * Batas OJK satu rate yang berlaku untuk semua lokasi slip floating: batas lokasi dengan batas
+ * bawah tertinggi, yaitu risiko terberat. Lokasinya disebut di sumber batas bila lebih dari satu.
+ */
+export function strictestBounds<T extends { min: number | null; source: string }>(
+  perLocation: (T | null | undefined)[]
+): T | null {
+  let best: T | null = null
+  let no = 0
+  for (const [i, bounds] of perLocation.entries()) {
+    if (bounds && (best === null || (bounds.min ?? -Infinity) > (best.min ?? -Infinity))) {
+      best = bounds
+      no = i + 1
+    }
+  }
+  if (!best || perLocation.length < 2) return best
+  return { ...best, source: `${best.source}, lokasi ${no}` }
 }
 
 /** Alamat dalam satu baris, untuk daftar bernomor: "Jl. A,\nMakassar" menjadi "Jl. A, Makassar". */
