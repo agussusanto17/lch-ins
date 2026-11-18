@@ -65,6 +65,8 @@ export interface ClientInput {
   cob?: CobType | string | null
   /** Cabang klien korporasi; perorangan selalu Jakarta. */
   branch?: ClientBranch | string | null
+  /** Occupation / bisnis utama (lookup business_line). */
+  businessLine?: string | null
   status?: ClientStatus | string
   notes?: string | null
   addresses?: ClientAddressInput[]
@@ -92,6 +94,7 @@ const getLookupsCache = cache(async () => {
           in: [
             "client_type",
             "client_branch",
+            "business_line",
             "client_status",
             "id_type",
             "income_source",
@@ -191,6 +194,7 @@ type PrismaClientWithRelations = Prisma.ClientGetPayload<{
   include: {
     clientType: true
     branch: true
+    businessLine: true
     idType: true
     incomeSource: true
     insurancePurpose: true
@@ -246,6 +250,7 @@ function mapPrismaClientToRecord(
     // Dicocokkan lewat kode, jadi nama yang diganti di Master Data aman.
     clientType: systemValueFromRow(CLIENT_TYPE_CODES, c.clientType, "Korporasi"),
     branch: systemValueFromRow(CLIENT_BRANCH_CODES, c.branch, "Jakarta"),
+    businessLine: c.businessLine?.name || undefined,
     name: c.name,
     npwp: c.npwp || "",
     idType: c.idType?.name || undefined,
@@ -492,6 +497,7 @@ export async function listClients(
     include: {
       clientType: true,
       branch: true,
+      businessLine: true,
       idType: true,
       incomeSource: true,
       insurancePurpose: true,
@@ -539,6 +545,7 @@ export async function getClientById(
         include: {
           clientType: true,
           branch: true,
+          businessLine: true,
           idType: true,
           incomeSource: true,
           insurancePurpose: true,
@@ -571,6 +578,7 @@ export async function getClientById(
     include: {
       clientType: true,
       branch: true,
+      businessLine: true,
       idType: true,
       incomeSource: true,
       insurancePurpose: true,
@@ -691,6 +699,7 @@ export async function createClient(
     input.insurancePurpose
   )
   const cobId = resolveCobId(cache, input.cob)
+  const businessLineId = resolveLookupId(cache, "business_line", input.businessLine)
 
   const corporate = input.clientType === "Korporasi"
   // Perorangan selalu Jakarta (MoM review Phase 1, 17 November 2026).
@@ -719,12 +728,14 @@ export async function createClient(
         kycDate: input.kycDate ? new Date(input.kycDate) : new Date(),
         cobId,
         branchId,
+        businessLineId,
         statusId,
         notes: input.notes?.trim() || null,
       },
       include: {
         clientType: true,
         branch: true,
+        businessLine: true,
         idType: true,
         incomeSource: true,
         insurancePurpose: true,
@@ -835,6 +846,7 @@ export async function updateClient(
     input.insurancePurpose
   )
   const cobId = resolveCobId(cache, input.cob)
+  const businessLineId = resolveLookupId(cache, "business_line", input.businessLine)
 
   const corporate = input.clientType === "Korporasi"
   // Perorangan selalu Jakarta (MoM review Phase 1, 17 November 2026).
@@ -864,8 +876,10 @@ export async function updateClient(
         insurancePurposeId,
         insurancePurposeNote: input.insurancePurposeNote?.trim() || null,
         kycDate: input.kycDate ? new Date(input.kycDate) : undefined,
-        cobId,
+        // COB utama tidak lagi dikirim form; nilai lama tetap tersimpan.
+        ...(input.cob !== undefined ? { cobId } : {}),
         branchId,
+        businessLineId,
         statusId,
         notes: input.notes?.trim() || null,
       },

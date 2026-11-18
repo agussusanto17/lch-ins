@@ -36,10 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  useCobFilterItems,
-  useFormOptions,
-} from "@/components/shared/form-options-provider"
+import { useFormOptions } from "@/components/shared/form-options-provider"
 import {
   CLIENT_STATUSES,
   kycMissing,
@@ -65,9 +62,13 @@ interface ClientTableProps {
 }
 
 export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
-  const cobItems = useCobFilterItems()
   // Status klien dari Master Data.
   const masterOptions = useFormOptions()
+  // Occupation / bisnis utama dari Master Data, menggantikan filter COB utama (MoM poin 2).
+  const businessItems = [
+    { label: "Semua bisnis utama", value: "all" },
+    ...masterOptions.lookups.business_line.map((b) => ({ label: b, value: b })),
+  ]
   const statusItems = [
     { label: "Semua status", value: "all" },
     ...dynamicLookupItems(masterOptions.systemLookups.client_status, CLIENT_STATUSES).map((s) => ({
@@ -91,14 +92,14 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
   const permission = usePermission()
   const canManage = permission.canManage("/marketing")
   const [query, setQuery] = React.useState("")
-  const [cob, setCob] = React.useState("all")
+  const [business, setBusiness] = React.useState("all")
   const [status, setStatus] = React.useState("all")
   const [branch, setBranch] = React.useState("all")
 
   const rows = React.useMemo(() => {
     const q = query.trim().toLowerCase()
     return clients.filter((c) => {
-      if (cob !== "all" && c.cob !== cob) return false
+      if (business !== "all" && c.businessLine !== business) return false
       if (status !== "all" && c.status !== status) return false
       if (branch !== "all" && (c.branch ?? "Jakarta") !== branch) return false
       if (!q) return true
@@ -106,7 +107,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
         (v ?? "").toLowerCase().includes(q)
       )
     })
-  }, [clients, query, cob, status, branch])
+  }, [clients, query, business, status, branch])
 
   const {
     page,
@@ -197,7 +198,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
       { header: "Email", value: (c) => c.email, width: 30 },
       { header: "Telepon", value: (c) => c.phone },
       { header: "NPWP", value: (c) => c.npwp },
-      { header: "COB Utama", value: (c) => c.cob },
+      { header: "Occupation / Bisnis Utama", value: (c) => c.businessLine ?? "", width: 32 },
       { header: "Cabang", value: (c) => branchLabel(c.branch) },
       { header: "Status", value: (c) => c.status },
       { header: "Tanggal KYC", value: (c) => c.kycDate, type: "date" },
@@ -218,16 +219,16 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
           placeholder="Cari nama klien, kontak, email, nomor telepon, NPWP…"
         />
         <Select
-          items={cobItems}
-          value={cob}
-          onValueChange={(v) => setCob(v as string)}
+          items={businessItems}
+          value={business}
+          onValueChange={(v) => setBusiness(v as string)}
         >
-          <SelectTrigger size="sm" className="w-42">
+          <SelectTrigger size="sm" className="w-52">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              {cobItems.map((i) => (
+              {businessItems.map((i) => (
                 <SelectItem key={i.value} value={i.value}>
                   {i.label}
                 </SelectItem>
@@ -283,7 +284,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
               </TableHead>
               <TableHead>Nama Klien</TableHead>
               <TableHead>Kontak &amp; PIC</TableHead>
-              <TableHead>COB Utama</TableHead>
+              <TableHead>Bisnis Utama</TableHead>
               <TableHead>Cabang</TableHead>
               <TableHead>Kelengkapan KYC</TableHead>
               <TableHead>Status</TableHead>
@@ -335,8 +336,14 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
                           .join(" • ") || "—"}
                       </p>
                     </TableCell>
-                    <TableCell className="max-w-40">
-                      <span className="font-medium">{c.cob}</span>
+                    <TableCell className="max-w-56 min-w-40 whitespace-normal">
+                      {c.businessLine ? (
+                        <span className="line-clamp-2 font-medium" title={c.businessLine}>
+                          {c.businessLine}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>{branchLabel(c.branch)}</TableCell>
                     <TableCell className="max-w-50">

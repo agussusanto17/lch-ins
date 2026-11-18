@@ -67,6 +67,7 @@ const FIELD_LABELS: Record<string, string> = {
   client: "Klien",
   clientId: "Klien",
   branchId: "Cabang",
+  businessLineId: "Occupation / Bisnis Utama",
   sourceId: "Source",
   clientTypeId: "Jenis klien",
   idTypeId: "Jenis identitas",

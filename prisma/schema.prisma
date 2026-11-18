@@ -304,6 +304,7 @@ model LookupValue {
   clientPurposes        Client[]            @relation("insurance_purpose")
   clientStatuses        Client[]            @relation("client_status")
   clientBranches        Client[]            @relation("client_branch")
+  clientBusinessLines   Client[]            @relation("business_line")
   addressTypes          ClientAddress[]     @relation("address_type")
   clientDocumentTypes   ClientDocument[]    @relation("client_document_type")
   slipSecurityRoles     SlipSecurityPanel[] @relation("security_role_slip")
@@ -865,8 +866,12 @@ model Client {
   /// Diisi bila tujuannya Lain-lain.
   insurancePurposeNote  String?   @map("insurance_purpose_note")
   kycDate               DateTime? @map("kyc_date") @db.Date
-  /// COB utama klien.
+  /// COB utama klien. Tidak dipakai lagi sejak 18 November 2026: diganti `businessLineId`
+  /// (MoM review Phase 1 poin 2). Nilai lama disimpan, tidak dihapus.
   cobId                 String?   @map("cob_id") @db.Uuid
+  /// lookup business_line: occupation / bisnis utama klien, daftar awal kategori KBLI 2020
+  /// (MoM review Phase 1, 17 November 2026, poin 2).
+  businessLineId        String?   @map("business_line_id") @db.Uuid
   /// lookup client_branch: cabang LCH yang melayani klien, Jakarta atau Singapore (MoM review
   /// Phase 1, 17 November 2026). Perorangan selalu Jakarta; isian awal Source di placing slip.
   branchId              String?   @map("branch_id") @db.Uuid
@@ -884,6 +889,7 @@ model Client {
   status           LookupValue      @relation("client_status", fields: [statusId], references: [id])
   cob              ClassOfBusiness? @relation(fields: [cobId], references: [id])
   branch           LookupValue?     @relation("client_branch", fields: [branchId], references: [id])
+  businessLine     LookupValue?     @relation("business_line", fields: [businessLineId], references: [id])
 
   addresses    ClientAddress[]
   documents    ClientDocument[]
@@ -897,6 +903,7 @@ model Client {
   @@index([name])
   @@index([statusId])
   @@index([branchId])
+  @@index([businessLineId])
   @@map("clients")
 }
 

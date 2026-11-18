@@ -115,7 +115,13 @@ export interface Client {
   insurancePurpose?: string
   insurancePurposeNote?: string
   kycDate?: string
+  /**
+   * COB utama lama. Tidak lagi diisi di form sejak 18 November 2026; masih dipakai sebagai COB
+   * awal SPPA dan slip dari klien, dengan default Property.
+   */
   cob: ClassOfBusiness
+  /** Occupation / bisnis utama (lookup business_line), menggantikan COB utama. */
+  businessLine?: string
   /** Klien lama dan perorangan: Jakarta. */
   branch?: ClientBranch
   status: ClientStatus

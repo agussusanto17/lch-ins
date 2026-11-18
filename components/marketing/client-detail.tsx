@@ -125,8 +125,12 @@ export function ClientDetail({
         description={
           <span className="flex flex-wrap items-center gap-2">
             <span>{client.clientType}</span>
-            <span aria-hidden="true">·</span>
-            <span>{client.cob}</span>
+            {client.businessLine ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{client.businessLine}</span>
+              </>
+            ) : null}
             <StatusBadge status={client.status} />
           </span>
         }
@@ -172,6 +176,7 @@ export function ClientDetail({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <SectionCard title="Data KYC">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Item label="Occupation / Bisnis Utama" value={client.businessLine} />
             {corporate ? (
               <>
                 <Item
