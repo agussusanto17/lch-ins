@@ -60,6 +60,7 @@ export const FORM_LOOKUP_TYPES = [
   "insurance_purpose",
   "address_type",
   "client_document_type",
+  "business_line",
 ] as const
 
 export type FormLookupType = (typeof FORM_LOOKUP_TYPES)[number]
@@ -233,6 +234,7 @@ export const EMPTY_FORM_OPTIONS: FormOptions = {
     insurance_purpose: [],
     address_type: [],
     client_document_type: [],
+    business_line: [],
   },
   paBenefits: [],
   systemLookups: {

@@ -62,6 +62,7 @@ const TYPE_LABELS: Record<string, string> = {
   client_status: "Status Klien",
   client_type: "Tipe Klien",
   client_branch: "Cabang Klien",
+  business_line: "Occupation / Bisnis Utama",
   id_type: "Jenis Identitas",
   policy_type: "Tipe Polis",
   claim_status: "Status Klaim",

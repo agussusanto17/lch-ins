@@ -24,7 +24,6 @@ import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   CLIENT_STATUSES,
-  type ClassOfBusiness,
   type Client,
   type ClientAddress,
   type ClientBranch,
@@ -125,6 +124,7 @@ const schema = z
       ),
     insurancePurpose: z.string().optional(),
     insurancePurposeNote: z.string().optional(),
+    businessLine: z.string().optional(),
     addresses: z
       .array(
         z.object({
@@ -167,6 +167,13 @@ const schema = z
         code: "custom",
         path: ["idNumber"],
         message: "Nomor KTP harus 16 digit angka",
+      })
+    }
+    if (d.clientType === "Korporasi" && !d.businessLine?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["businessLine"],
+        message: "Pilih occupation / bisnis utama perusahaan",
       })
     }
     if (d.insurancePurpose === "Lain-lain" && !d.insurancePurposeNote?.trim()) {
@@ -282,7 +289,7 @@ export function ClientForm({
       insurancePurpose: draft.insurancePurpose || null,
       insurancePurposeNote: draft.insurancePurposeNote || null,
       kycDate: draft.kycDate || null,
-      cob: draft.cob,
+      businessLine: draft.businessLine || null,
       // Perorangan selalu Jakarta; server memakai aturan yang sama.
       branch: corporate ? (draft.branch ?? "Jakarta") : "Jakarta",
       status: draft.status,
@@ -375,12 +382,15 @@ export function ClientForm({
             }
             error={errors.name}
           />
+          {/* Menggantikan COB utama (MoM review Phase 1, 17 November 2026, poin 2). */}
           <SelectInput
-            label="Class of Business Utama"
-            required
-            items={withCurrent(cobLabels(options), draft.cob)}
-            value={draft.cob}
-            onValueChange={(v) => set({ cob: v as ClassOfBusiness })}
+            label="Occupation / Bisnis Utama"
+            required={corporate}
+            items={withCurrent(options.lookups.business_line, draft.businessLine)}
+            value={draft.businessLine ?? ""}
+            onValueChange={(v) => set({ businessLine: v || undefined })}
+            placeholder="Pilih bidang usaha"
+            error={errors.businessLine}
           />
           <SelectInput
             label="Status"
