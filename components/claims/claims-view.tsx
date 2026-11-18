@@ -3,13 +3,24 @@
 import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { CircleCheck, Clock, Eye, Pencil, Plus, Printer, Receipt, Trash2 } from "lucide-react"
+import {
+  CircleCheck,
+  Clock,
+  Eye,
+  Lock,
+  Pencil,
+  Plus,
+  Printer,
+  Receipt,
+  Trash2,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { deleteClaimAction } from "@/app/(app)/claims/actions"
 import { usePermission } from "@/components/auth/permission-provider"
 import { ClaimDetailSheet } from "@/components/claims/claim-detail-sheet"
 import { ClaimForm } from "@/components/claims/claim-form"
+import { isClaimLocked } from "@/lib/claim-detail"
 import { PageHeader } from "@/components/layout/page-header"
 import { useToday } from "@/components/layout/today-provider"
 import { ACTION_COL_CLASS, RowActions } from "@/components/shared/row-actions"
@@ -232,7 +243,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
       <div className="flex flex-col gap-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatCard
-            label="Klaim Berjalan (Outstanding)"
+            label="Klaim Berjalan (Outstanding, Partial Settle)"
             value={openList.length}
             sub={`${compactMoney(openTotalIdr)} potensi beban`}
             icon={Clock}
@@ -377,7 +388,16 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
                               />
                             ),
                           },
-                          ...(canManage
+                          // Klaim Settled terkunci; Admin membukanya dari detail klaim (MoM poin 9).
+                          ...(canManage && isClaimLocked(c.status)
+                            ? [
+                                {
+                                  label: "Terkunci (Settled)",
+                                  icon: Lock,
+                                  disabled: true,
+                                },
+                              ]
+                            : canManage
                             ? [
                                 {
                                   label: "Edit",
@@ -454,6 +474,7 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
 
         <ClaimDetailSheet
           claim={selected}
+          onUpdated={handleSaved}
           open={selected !== null}
           onOpenChange={(v) => {
             if (!v) closeDetail()

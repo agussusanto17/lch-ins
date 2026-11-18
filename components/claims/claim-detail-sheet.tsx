@@ -11,6 +11,8 @@ import {
   FileText,
   FileUp,
   Loader2,
+  Lock,
+  LockOpen,
   MapPin,
   Pencil,
   Plus,
@@ -30,6 +32,7 @@ import {
   listClaimDocumentsAction,
   listClaimFollowupsAction,
   toggleClaimDocumentAction,
+  unlockSettledClaimAction,
   uploadClaimDocumentFileAction,
 } from "@/app/(app)/claims/actions"
 import { StatusBadge, ToneBadge } from "@/components/shared/status-badge"
@@ -40,7 +43,17 @@ import {
 } from "@/components/claims/claim-policy-info"
 import { usePermission } from "@/components/auth/permission-provider"
 import { useFormOptions } from "@/components/shared/form-options-provider"
+import { SelectInput } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -54,12 +67,23 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { todayIso } from "@/lib/date"
 import { Textarea } from "@/components/ui/textarea"
-import { claimInsurerPortions, documentReceiptLocked, isCoInsurance } from "@/lib/claim-detail"
-import type { Claim } from "@/lib/data"
+import {
+  claimInsurerPortions,
+  documentReceiptLocked,
+  isClaimLocked,
+  isCoInsurance,
+} from "@/lib/claim-detail"
+import { CLAIM_STATUSES } from "@/lib/data/reference"
+import type { Claim, ClaimStatus } from "@/lib/data"
 import { dateShort, money, num } from "@/lib/format"
 import { CLAIM_STATUS_CODES, fixedLookupLabel } from "@/lib/form-options"
+import { store } from "@/lib/store"
 import { paClaimWarnings } from "@/lib/pa-benefits"
-import type { ClaimDocumentRecord, ClaimFollowupRecord } from "@/lib/server/claims"
+import type {
+  ClaimDocumentRecord,
+  ClaimFollowupRecord,
+  ClaimRecord,
+} from "@/lib/server/claims"
 import { cn } from "@/lib/utils"
 import { compressImage } from "@/lib/image-compress"
 import { UPLOAD_ACCEPT, UPLOAD_HINT, uploadProblem } from "@/lib/uploads"
@@ -123,14 +147,25 @@ export function ClaimDetailSheet({
   open,
   onOpenChange,
   onEdit,
+  onUpdated,
 }: {
   claim: Claim | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onEdit?: (claim: Claim) => void
+  /** Klaim berubah dari dalam detail, misalnya kuncinya dibuka Admin. */
+  onUpdated?: (claim: ClaimRecord) => void
 }) {
   const permission = usePermission()
   const canManage = permission.canManage("/claims")
+  // Klaim Settled terkunci: data, dokumen, dan tindak lanjut tidak bisa diubah (MoM poin 9).
+  const locked = claim ? isClaimLocked(claim.status) : false
+  const editable = canManage && !locked
+  const isAdmin = permission.roles.includes("admin")
+  const [unlockOpen, setUnlockOpen] = React.useState(false)
+  const [unlockStatus, setUnlockStatus] = React.useState<ClaimStatus>("Outstanding")
+  const [unlockReason, setUnlockReason] = React.useState("")
+  const [unlocking, setUnlocking] = React.useState(false)
   const masterOptions = useFormOptions()
   // Status premi dan file polis untuk bagian Polis terkait.
   const { info: policyInfo } = useClaimPolicyInfo(open ? claim?.policyId : null)
@@ -196,6 +231,28 @@ export function ClaimDetailSheet({
   const requiredReceivedCount = requiredDocs.filter((d) => d.isReceived).length
   const allRequiredReceived =
     requiredDocs.length > 0 && requiredReceivedCount === requiredDocs.length
+
+  async function unlockClaim(target: Claim) {
+    setUnlocking(true)
+    try {
+      const res = await unlockSettledClaimAction(target.id, {
+        status: unlockStatus,
+        reason: unlockReason,
+      })
+      if (!res.ok || !res.data) {
+        toast.error("Gagal membuka kunci klaim", { description: res.error })
+        return
+      }
+      store.upsert("claims", res.data)
+      onUpdated?.(res.data)
+      setUnlockOpen(false)
+      toast.success("Kunci klaim dibuka", {
+        description: `${res.data.claimNo} sekarang ${res.data.status}. Ubah ke Settled lagi setelah diperbaiki.`,
+      })
+    } finally {
+      setUnlocking(false)
+    }
+  }
 
   async function handleToggleDocument(doc: ClaimDocumentRecord, checked: boolean) {
     setTogglingDocId(doc.id)
@@ -340,6 +397,60 @@ export function ClaimDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full gap-0 overflow-y-auto data-[side=right]:sm:max-w-152">
         {claim ? (
+          <Dialog open={unlockOpen} onOpenChange={setUnlockOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Buka kunci klaim {claim.claimNo}?</DialogTitle>
+                <DialogDescription>
+                  Status berganti supaya data, dokumen, dan tindak lanjut bisa
+                  diperbaiki. Setelah selesai, ubah status ke Settled lagi untuk
+                  mengunci. Alasannya dicatat di Audit Trail.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col gap-4">
+                <SelectInput
+                  id="unlock-status"
+                  label="Status setelah dibuka"
+                  items={CLAIM_STATUSES.filter((s) => !isClaimLocked(s)).map((s) => ({
+                    value: s,
+                    label: fixedLookupLabel(
+                      masterOptions.systemLookups.claim_status,
+                      CLAIM_STATUS_CODES,
+                      s
+                    ),
+                  }))}
+                  value={unlockStatus}
+                  onValueChange={(v) => setUnlockStatus(v as ClaimStatus)}
+                />
+                <Field>
+                  <FieldLabel htmlFor="unlock-reason">Alasan *</FieldLabel>
+                  <Textarea
+                    id="unlock-reason"
+                    rows={3}
+                    maxLength={1000}
+                    value={unlockReason}
+                    placeholder="Misalnya: nilai dibayar salah input, seharusnya …"
+                    onChange={(e) => setUnlockReason(e.target.value)}
+                  />
+                  <FieldDescription>Wajib diisi, tercatat di Audit Trail.</FieldDescription>
+                </Field>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setUnlockOpen(false)}>
+                  Batal
+                </Button>
+                <Button
+                  disabled={!unlockReason.trim() || unlocking}
+                  onClick={() => void unlockClaim(claim)}
+                >
+                  <LockOpen data-icon="inline-start" />
+                  {unlocking ? "Membuka…" : "Buka kunci"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        ) : null}
+        {claim ? (
           <>
             <SheetHeader className="pb-2">
               <div className="flex items-start justify-between gap-3 pr-6">
@@ -363,6 +474,33 @@ export function ClaimDetailSheet({
             </SheetHeader>
 
             <div className="flex flex-col gap-4 px-4 pb-8">
+              {locked ? (
+                <div
+                  role="note"
+                  className="flex flex-wrap items-start gap-3 rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 text-sm"
+                >
+                  <Lock className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+                  <p className="min-w-0 flex-1">
+                    Klaim Settled terkunci: data, dokumen, dan tindak lanjut tidak
+                    bisa diubah.
+                    {isAdmin ? "" : " Minta Admin membuka kunci bila ada salah input."}
+                  </p>
+                  {isAdmin && canManage ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setUnlockStatus("Outstanding")
+                        setUnlockReason("")
+                        setUnlockOpen(true)
+                      }}
+                    >
+                      <LockOpen data-icon="inline-start" />
+                      Buka kunci
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
               <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}
@@ -402,7 +540,7 @@ export function ClaimDetailSheet({
                     <span className="text-xs text-muted-foreground">
                       Adjuster: {claim.adjuster || "belum ditunjuk"}
                     </span>
-                    {onEdit && canManage ? (
+                    {onEdit && editable ? (
                       <Button
                         variant="outline"
                         size="sm"
@@ -583,7 +721,9 @@ export function ClaimDetailSheet({
                         <p className="mt-0.5 opacity-90">
                           {allRequiredReceived
                             ? "Berkas klaim telah siap diproses ke penaksir (adjuster) atau penerbitan SPK/SPGR."
-                            : "Unggah file atau centang berkas yang sudah diterima dari tertanggung. Tanggal upload dicatat sebagai tanggal dokumen diterima."}
+                            : locked
+                              ? "Klaim terkunci karena Settled, jadi berkas tidak bisa ditambah atau diubah."
+                              : "Unggah file atau centang berkas yang sudah diterima dari tertanggung. Tanggal upload dicatat sebagai tanggal dokumen diterima."}
                         </p>
                       </div>
                     </div>
@@ -599,7 +739,7 @@ export function ClaimDetailSheet({
                       <FileText className="mb-2 size-8 text-muted-foreground/60" />
                       <p className="font-medium text-foreground">Belum ada daftar dokumen</p>
                       <p className="text-xs">
-                        {canManage
+                        {editable
                           ? "Tambahkan dokumen yang disyaratkan di bawah ini."
                           : "Tidak ada dokumen yang disyaratkan."}
                       </p>
@@ -623,7 +763,7 @@ export function ClaimDetailSheet({
                             >
                               <Checkbox
                                 checked={doc.isReceived}
-                                disabled={isToggling || !canManage || documentReceiptLocked(doc)}
+                                disabled={isToggling || !editable || documentReceiptLocked(doc)}
                                 onCheckedChange={(checked) =>
                                   handleToggleDocument(doc, checked === true)
                                 }
@@ -678,7 +818,7 @@ export function ClaimDetailSheet({
                                 ) : null}
                               </div>
                             </div>
-                            {canManage && (
+                            {editable && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -695,7 +835,7 @@ export function ClaimDetailSheet({
                                 {doc.fileUrl ? "Ganti" : "Unggah"}
                               </Button>
                             )}
-                            {!doc.isRequired && canManage && (
+                            {!doc.isRequired && editable && (
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
@@ -712,7 +852,7 @@ export function ClaimDetailSheet({
                     </div>
                   )}
 
-                  {canManage && documents.length > 0 && (
+                  {editable && documents.length > 0 && (
                     <p className="text-xs text-muted-foreground">
                       File berkas: {UPLOAD_HINT}
                     </p>
@@ -729,7 +869,7 @@ export function ClaimDetailSheet({
                     }}
                   />
 
-                  {canManage && (
+                  {editable && (
                     <form
                       onSubmit={handleAddDocument}
                       className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3.5"
@@ -773,7 +913,7 @@ export function ClaimDetailSheet({
 
                 {/* Tindak lanjut klaim (PRD A-18) */}
                 <TabsContent value="followups" className="flex flex-col gap-5 pt-1">
-                  {canManage && (
+                  {editable && (
                     <form
                       onSubmit={handleAddFollowup}
                       className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3.5"
@@ -831,7 +971,7 @@ export function ClaimDetailSheet({
                       <Clock className="mb-2 size-8 text-muted-foreground/60" />
                       <p className="font-medium text-foreground">Belum ada riwayat tindak lanjut</p>
                       <p className="text-xs">
-                        {canManage
+                        {editable
                           ? "Catat aktivitas komunikasi atau investigasi klaim di atas."
                           : "Belum ada aktivitas komunikasi atau investigasi klaim."}
                       </p>
@@ -868,7 +1008,7 @@ export function ClaimDetailSheet({
                                     <User className="size-3" />
                                     {item.createdByName || "Staf Klaim"}
                                   </span>
-                                  {canManage && (
+                                  {editable && (
                                     <Button
                                       variant="ghost"
                                       size="icon-sm"

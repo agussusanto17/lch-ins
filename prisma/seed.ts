@@ -288,6 +288,7 @@ const LOOKUPS: {
     system: true,
     values: [
       ["outstanding", "Outstanding"],
+      ["partial_settle", "Partial Settle"],
       ["settled", "Settled"],
       ["closed", "Closed"],
       ["rejected", "Rejected"],

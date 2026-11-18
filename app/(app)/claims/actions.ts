@@ -11,6 +11,7 @@ import {
   deleteClaim,
   updateClaim,
   updateClaimStatus,
+  unlockSettledClaim,
   listClaimDocuments,
   toggleClaimDocument,
   updateClaimDocument,
@@ -166,6 +167,44 @@ export async function updateClaimStatusAction(
   } catch (err) {
     unstable_rethrow(err)
     const message = err instanceof Error ? err.message : "Gagal mengubah status klaim"
+    return { ok: false, error: message }
+  }
+}
+
+const unlockSchema = z.object({
+  status: z.enum(CLAIM_STATUSES as [ClaimStatus, ...ClaimStatus[]]),
+  reason: z
+    .string()
+    .trim()
+    .min(1, "Alasan membuka kunci wajib diisi")
+    .max(1000, "Alasan maksimal 1000 karakter"),
+})
+
+/**
+ * Buka kunci klaim Settled (MoM review Phase 1, poin 9): hanya Admin, dengan alasan yang
+ * tercatat di Audit Trail.
+ */
+export async function unlockSettledClaimAction(
+  id: string,
+  input: { status: ClaimStatus; reason: string }
+): Promise<ActionResponse<ClaimRecord>> {
+  try {
+    const session = await requireManage("/claims")
+    if (!session.roles.includes("admin") && session.roleCode !== "admin") {
+      return { ok: false, error: "Hanya Admin yang bisa membuka kunci klaim Settled." }
+    }
+    const parsed = unlockSchema.safeParse(input)
+    if (!parsed.success) {
+      return { ok: false, error: parsed.error.issues[0]?.message ?? "Data tidak valid" }
+    }
+    const record = await unlockSettledClaim(id, parsed.data, session.id)
+    revalidatePath("/claims")
+    revalidatePath("/reports")
+    revalidatePath("/", "layout")
+    return { ok: true, data: record }
+  } catch (err) {
+    unstable_rethrow(err)
+    const message = err instanceof Error ? err.message : "Gagal membuka kunci klaim"
     return { ok: false, error: message }
   }
 }

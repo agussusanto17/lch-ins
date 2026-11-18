@@ -59,8 +59,11 @@ async function fetchOpenClaims(): Promise<TopbarClaimItem[]> {
     where: {
       status: {
         OR: [
+          // Partial Settle tetap klaim berjalan (MoM review Phase 1, poin 9).
           { name: { equals: "Outstanding", mode: "insensitive" } },
           { code: { equals: "outstanding", mode: "insensitive" } },
+          { name: { equals: "Partial Settle", mode: "insensitive" } },
+          { code: { equals: "partial_settle", mode: "insensitive" } },
         ],
       },
     },

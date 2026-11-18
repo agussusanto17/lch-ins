@@ -106,7 +106,7 @@ export function NotificationPopover({ data }: { data?: TopbarData }) {
     for (const c of data?.openClaims ?? []) {
       list.push({
         id: `claim-${c.id}`,
-        title: "Klaim Outstanding",
+        title: "Klaim Berjalan",
         description: `${c.claimNo} · ${c.insuredName}`,
         time: dateShort(c.lossDate),
         href: `/claims`,

@@ -40,6 +40,7 @@ const STATUS_TONE: Record<string, Tone> = {
   Cancellation: "danger",
   /* claim status */
   Outstanding: "warning",
+  "Partial Settle": "info",
   Settled: "success",
   Rejected: "danger",
   /* claim stage */
