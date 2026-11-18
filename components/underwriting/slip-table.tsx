@@ -143,7 +143,7 @@ function actionsFor(
     }
     if (slip.status === "Quoted" || slip.status === "Closed") {
       actions.push({
-        label: "Closing instruction",
+        label: "Cover note & closing instruction",
         icon: FileCheck2,
         render: <Link href={`/placement/closing/edit/${slip.id}`} />,
       })
