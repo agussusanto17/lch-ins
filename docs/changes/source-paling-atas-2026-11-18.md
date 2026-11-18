@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `fix/source-paling-atas`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #270
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
