@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `fix/batas-ojk-ganti-okupasi`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #273
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
