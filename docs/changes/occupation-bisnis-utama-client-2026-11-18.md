@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/occupation-bisnis-utama-client`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #271
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
