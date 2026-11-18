@@ -1298,6 +1298,9 @@ model SlipRateLine {
   /// Batas bawah dan atas OJK saat rate diisi.
   rateMin           Decimal? @map("rate_min") @db.Decimal(12, 6)
   rateMax           Decimal? @map("rate_max") @db.Decimal(12, 6)
+  /// Asal batas di atas, misalnya "FLEXAS okupasi 29378 K2" dari okupasi lokasi atau
+  /// "EQVET Com: Others, Zona 3" dari panel Referensi Tarif OJK. Kosong untuk baris tanpa batas.
+  boundSource       String?  @map("bound_source")
   /// Persentase loss limit baris Property: premi = sum insured × rate ×
   /// persentase. Kosong berarti full value.
   lossLimitPct      Decimal? @map("loss_limit_pct") @db.Decimal(7, 4)

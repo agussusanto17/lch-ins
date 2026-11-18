@@ -132,6 +132,7 @@ import {
   totalPremium,
   totalSumInsured,
   usesOjkTariff,
+  withoutBounds,
 } from "@/lib/calc"
 import {
   CLAUSES,
@@ -625,6 +626,8 @@ function SlipEditor({
   /**
    * Isi satu baris rate dari panel referensi OJK, sekaligus catat batasnya.
    * Slip Property dan Motor Vehicle mengisi baris lokasi atau kendaraan panelnya.
+   * Slip floating hanya mengisi rate: rate bersama memakai batas lokasi paling berisiko, bukan
+   * batas lokasi yang panelnya dipakai, supaya rate lokasi ringan tidak lolos tanpa alasan.
    */
   function applyOjkRate(
     label: string,
@@ -639,28 +642,33 @@ function SlipEditor({
       (!scope.locationId || location(l.locationId) === scope.locationId) &&
       (!scope.vehicleId || vehicle(l.vehicleId) === scope.vehicleId)
     if (!slip.rateLines.some(target)) return
+    const floating = isFloatingSumInsured(slip)
     setSlip((s) =>
       recalc({
         ...s,
         rateLines: s.rateLines.map((l) =>
-          target(l)
-            ? {
-                ...l,
-                rate: value,
-                ...(bounds
-                  ? {
-                      min: bounds.min,
-                      max: bounds.max,
-                      boundSource: bounds.source,
-                    }
-                  : {}),
-              }
-            : l
+          !target(l)
+            ? l
+            : floating
+              ? { ...withoutBounds(l), rate: value }
+              : {
+                  ...l,
+                  rate: value,
+                  ...(bounds
+                    ? {
+                        min: bounds.min,
+                        max: bounds.max,
+                        boundSource: bounds.source,
+                      }
+                    : {}),
+                }
         ),
       })
     )
     toast.success(`Rate ${label} diisi ${value.toLocaleString("id-ID")}`, {
-      description: bounds?.source,
+      description: floating
+        ? "Batas OJK mengikuti lokasi paling berisiko."
+        : bounds?.source,
     })
   }
 

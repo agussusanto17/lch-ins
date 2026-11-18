@@ -577,6 +577,7 @@ function toPlacingSlipRecord(
       basis: rl.limitAmount != null ? String(Number(rl.limitAmount)) : undefined,
       min: rl.rateMin != null ? Number(rl.rateMin) : null,
       max: rl.rateMax != null ? Number(rl.rateMax) : null,
+      boundSource: rl.boundSource ?? undefined,
       lossLimitPct: rl.lossLimitPct != null ? Number(rl.lossLimitPct) : null,
       deductibles: rl.deductibles,
       locationId: rl.locationId,
@@ -1044,6 +1045,11 @@ function cleanDeductibles(deductibles: string[] | undefined) {
     .map((d) => d.trim())
     .filter(Boolean)
     .slice(0, MAX_DEDUCTIBLES)
+}
+
+/** Asal batas OJK sebuah baris rate; hanya disimpan bila barisnya punya batas. */
+function boundSourceOf(line: Pick<RateLine, "min" | "max" | "boundSource">) {
+  return line.min != null || line.max != null ? line.boundSource?.trim() || null : null
 }
 
 /**
@@ -1540,6 +1546,7 @@ export async function createPlacingSlip(
       isFlatPremium?: boolean
       rateMin: Prisma.Decimal | null
       rateMax: Prisma.Decimal | null
+      boundSource?: string | null
       lossLimitPct: Prisma.Decimal | null
       deductibles: string[]
       outOfBoundsReason: string | null
@@ -1566,6 +1573,7 @@ export async function createPlacingSlip(
           isFlatPremium: rl.flatPremium === true,
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
+          boundSource: boundSourceOf(rl),
           lossLimitPct:
             rl.lossLimitPct != null ? new Prisma.Decimal(rl.lossLimitPct) : null,
           deductibles: cleanDeductibles(rl.deductibles),
@@ -1594,6 +1602,7 @@ export async function createPlacingSlip(
           premium: new Prisma.Decimal(rl.premium || 0),
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
+          boundSource: boundSourceOf(rl),
           lossLimitPct: null,
           deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
@@ -1620,6 +1629,7 @@ export async function createPlacingSlip(
           premium: new Prisma.Decimal(rl.premium || 0),
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
+          boundSource: boundSourceOf(rl),
           lossLimitPct: null,
           deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
@@ -1980,6 +1990,7 @@ export async function updatePlacingSlip(
       isFlatPremium?: boolean
       rateMin: Prisma.Decimal | null
       rateMax: Prisma.Decimal | null
+      boundSource?: string | null
       lossLimitPct: Prisma.Decimal | null
       deductibles: string[]
       outOfBoundsReason: string | null
@@ -2006,6 +2017,7 @@ export async function updatePlacingSlip(
           isFlatPremium: rl.flatPremium === true,
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
+          boundSource: boundSourceOf(rl),
           lossLimitPct:
             rl.lossLimitPct != null ? new Prisma.Decimal(rl.lossLimitPct) : null,
           deductibles: cleanDeductibles(rl.deductibles),
@@ -2034,6 +2046,7 @@ export async function updatePlacingSlip(
           premium: new Prisma.Decimal(rl.premium || 0),
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
+          boundSource: boundSourceOf(rl),
           lossLimitPct: null,
           deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
@@ -2060,6 +2073,7 @@ export async function updatePlacingSlip(
           premium: new Prisma.Decimal(rl.premium || 0),
           rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
           rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
+          boundSource: boundSourceOf(rl),
           lossLimitPct: null,
           deductibles: cleanDeductibles(rl.deductibles),
           outOfBoundsReason: reason,
@@ -2536,6 +2550,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
           isFlatPremium?: boolean
           rateMin: Prisma.Decimal | null
           rateMax: Prisma.Decimal | null
+          boundSource?: string | null
           deductibles: string[]
           outOfBoundsReason: string | null
           sortOrder: number
@@ -2552,6 +2567,7 @@ export async function seedInitialSlipsIfEmpty(): Promise<number> {
             isFlatPremium: rl.flatPremium === true,
             rateMin: rl.min != null ? new Prisma.Decimal(rl.min) : null,
             rateMax: rl.max != null ? new Prisma.Decimal(rl.max) : null,
+            boundSource: boundSourceOf(rl),
             deductibles: cleanDeductibles(rl.deductibles),
             outOfBoundsReason: null,
             sortOrder: rIdx++,
