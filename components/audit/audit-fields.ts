@@ -40,6 +40,7 @@ const FIELD_LABELS: Record<string, string> = {
   periodNote: "Keterangan periode",
   exclusions: "Exclusions",
   deductibleIntro: "Kalimat pengantar deductible",
+  floatingSumInsured: "Floating Sum Insured",
   clauseGroups: "Kelompok klausul",
   periodLabel: "Label periode",
   periodEndText: "Teks akhir periode",

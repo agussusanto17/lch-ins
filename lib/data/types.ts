@@ -404,6 +404,13 @@ export interface PlacingSlip {
    * pertama; risk location memuat semua alamat bernomor bila lokasinya lebih dari satu.
    */
   locations?: SlipLocation[]
+  /**
+   * Floating sum insured Property: sum insured, rate, dan deductible diisi sekali untuk semua
+   * lokasi (MoM review Phase 1, poin 5). Baris sum insured dan rate menempel di lokasi pertama.
+   */
+  floatingSumInsured?: boolean
+  /** Keterangan sebelum nilai Total Sum Insured di dokumen, misalnya "On Floating Stock". */
+  floatingSumInsuredText?: string
   wordingForms: string[]
   coverage?: string
   constructionClass?: string

@@ -152,7 +152,11 @@ import {
 } from "@/lib/form-options"
 import { money, num, percent } from "@/lib/format"
 import { cleanDetailLabels, withDetailLabels } from "@/lib/slip-details"
-import { locationGroups, locationOwner } from "@/lib/slip-locations"
+import {
+  isFloatingSumInsured,
+  locationGroups,
+  locationOwner,
+} from "@/lib/slip-locations"
 import {
   allowsFlatPremium,
   isLimitOnlyItem,
@@ -1789,7 +1793,9 @@ function SlipEditor({
             <SectionCard
               title="Lokasi & Sum Insured *"
               {...sectionProps("sumInsured")}
-              summary={`${locationCount} lokasi · ${money(tsi, slip.currency)}`}
+              summary={`${locationCount} lokasi${
+                isFloatingSumInsured(slip) ? " floating" : ""
+              } · ${money(tsi, slip.currency)}`}
               action={
                 unresolved ? (
                   <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">

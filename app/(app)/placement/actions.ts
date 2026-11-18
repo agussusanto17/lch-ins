@@ -312,6 +312,11 @@ const placingSlipSchema = z.object({
     .nullish(),
   usesSections: z.boolean().optional(),
   openCover: z.boolean().optional(),
+  floatingSumInsured: z.boolean().optional(),
+  floatingSumInsuredText: z
+    .string()
+    .max(100, "Keterangan floating sum insured maksimal 100 karakter")
+    .nullish(),
   openCoverRates: z
     .array(
       z.object({

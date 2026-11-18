@@ -149,6 +149,9 @@ export interface PlacingSlipInput {
   occupationLabel?: string | null
   /** Lokasi slip Property; tanpa daftar ini isian okupasi dan lokasi slip menjadi satu lokasi. */
   locations?: SlipLocation[]
+  /** Floating sum insured Property. Undefined berarti tidak diubah. */
+  floatingSumInsured?: boolean
+  floatingSumInsuredText?: string | null
   coverage?: string | null
   constructionClass?: string | null
   indemnityPeriod?: string | null
@@ -720,6 +723,8 @@ function toPlacingSlipRecord(
     occupationLabel: raw.occupationLabel || undefined,
     riskLocation: raw.riskLocation || undefined,
     locations,
+    floatingSumInsured: raw.floatingSumInsured || undefined,
+    floatingSumInsuredText: raw.floatingSumInsuredText || undefined,
     coverage: raw.coverage || undefined,
     constructionClass: raw.constructionClass?.code || undefined,
     indemnityPeriod: raw.indemnityMonths ? `${raw.indemnityMonths} bulan` : undefined,
@@ -866,6 +871,8 @@ export function copySlipInput(source: PlacingSlipRecord): PlacingSlipInput {
     occupationLabel: source.occupationLabel,
     riskLocation: source.riskLocation,
     locations: source.locations,
+    floatingSumInsured: source.floatingSumInsured,
+    floatingSumInsuredText: source.floatingSumInsuredText,
     coverage: source.coverage,
     constructionClass: source.constructionClass,
     indemnityPeriod: source.indemnityPeriod,
@@ -1405,6 +1412,15 @@ export async function createPlacingSlip(
         constructionClassId,
         ...slipLocationFields(locations),
         indemnityMonths,
+        floatingSumInsured:
+          input.floatingSumInsured === undefined
+            ? undefined
+            : normalizeCob(resolvedCob.name as CobType) === "Property" &&
+              input.floatingSumInsured === true,
+        floatingSumInsuredText:
+          input.floatingSumInsuredText === undefined
+            ? undefined
+            : input.floatingSumInsuredText?.trim() || null,
         interestSection1: input.interestSection1?.trim() || null,
         interestSection2: input.interestSection2?.trim() || null,
         specialConditions: input.specialConditions?.trim() || null,
@@ -1826,6 +1842,15 @@ export async function updatePlacingSlip(
         constructionClassId,
         ...slipLocationFields(locations),
         indemnityMonths,
+        floatingSumInsured:
+          input.floatingSumInsured === undefined
+            ? undefined
+            : normalizeCob(resolvedCob.name as CobType) === "Property" &&
+              input.floatingSumInsured === true,
+        floatingSumInsuredText:
+          input.floatingSumInsuredText === undefined
+            ? undefined
+            : input.floatingSumInsuredText?.trim() || null,
         interestSection1: input.interestSection1?.trim() || null,
         interestSection2: input.interestSection2?.trim() || null,
         specialConditions: input.specialConditions?.trim() || null,

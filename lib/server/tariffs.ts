@@ -6,7 +6,12 @@ import {
   slipSectionTitles,
   vehicleIssues,
 } from "@/components/underwriting/slip-model"
-import { locationOwner, slipLocations } from "@/lib/slip-locations"
+import {
+  isFloatingSumInsured,
+  locationOwner,
+  slipLocations,
+  strictestBounds,
+} from "@/lib/slip-locations"
 import { openCoverIssues, usesOpenCover } from "@/lib/open-cover"
 import { coverNameIssues, itemOwner, missingRateIssue } from "@/lib/slip-items"
 import { participantIssues } from "@/lib/slip-participants"
@@ -142,11 +147,22 @@ export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
   if (!usesOjkTariff(slip)) return withoutOjkBounds(slip.rateLines)
   if (slip.cob === "Property") {
     const owner = locationOwner(slip)
+    const locations = slipLocations(slip)
+    const perLocation = locations.map(getPropertyRateBounds)
+    // Rate slip floating berlaku di semua lokasi: tiap cover memakai batas lokasi paling berisiko.
+    const floating = (): Record<string, RateBounds> => {
+      const labels = new Set(perLocation.flatMap((b) => Object.keys(b)))
+      return Object.fromEntries(
+        [...labels].flatMap((label) => {
+          const b = strictestBounds(perLocation.map((bounds) => bounds[label]))
+          return b ? [[label, b]] : []
+        })
+      )
+    }
     const byLocation = new Map(
-      slipLocations(slip).map((location) => [
-        location.id,
-        getPropertyRateBounds(location),
-      ])
+      isFloatingSumInsured(slip)
+        ? [[locations[0].id, floating()]]
+        : locations.map((location, i) => [location.id, perLocation[i]])
     )
     return slip.rateLines.map((l) => {
       if (l.min != null || l.max != null) return l

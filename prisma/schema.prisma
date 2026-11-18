@@ -1106,6 +1106,13 @@ model PlacingSlip {
   constructionClassId String? @map("construction_class_id") @db.Uuid
   /// FK ke skala BI.
   indemnityMonths     Int?    @map("indemnity_months")
+  /// Property floating sum insured (MoM review Phase 1, poin 5): sum insured,
+  /// rate, dan deductible berlaku untuk semua lokasi; baris sum insured dan
+  /// rate menempel di lokasi pertama.
+  floatingSumInsured     Boolean @default(false) @map("floating_sum_insured")
+  /// Keterangan sebelum nilai Total Sum Insured di dokumen, misalnya
+  /// "On Floating Stock". Kosong berarti hanya nilainya.
+  floatingSumInsuredText String? @map("floating_sum_insured_text")
 
   interestSection1  String? @map("interest_section1")
   interestSection2  String? @map("interest_section2")

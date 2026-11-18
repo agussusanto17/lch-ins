@@ -45,9 +45,11 @@ import {
 import { CURRENCY_SYMBOL, money, moneyCents, num } from "@/lib/format"
 import {
   addressLines,
+  isFloatingSumInsured,
   isMultiLocation,
   locationGroups,
   locationsShareRates,
+  slipRiskLocationText,
   type LocationGroup,
 } from "@/lib/slip-locations"
 import {
@@ -172,6 +174,8 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
     rows.push(["PID / Insured Name", participantPidText(slip.participants[0])])
   if (isMultiLocation(slip)) {
     rows.push(...attachedLocationRows(slip))
+  } else if (isFloatingSumInsured(slip) && locationGroups(slip).length > 1) {
+    rows.push(...floatingLocationRows(slip))
   } else {
     const occupation = slipOccupationText(slip)
     if (occupation) rows.push(["Occupation", occupation])
@@ -220,6 +224,37 @@ function attachedLocationRows(slip: PlacingSlip): [string, string][] {
     )
   )
   if (classes) rows.push(["Construction Class", classes])
+  return rows
+}
+
+/**
+ * Okupasi, lokasi, dan kelas Property floating, seperti slip 015/LCH-PLCMT/PS-PAR/X/2026: semua
+ * alamat bernomor di Risk Location. Okupasi dan kelas yang sama di semua lokasi dicetak sekali;
+ * yang berbeda dicetak bernomor sesuai urutan lokasi.
+ */
+function floatingLocationRows(slip: PlacingSlip): InfoRow[] {
+  const groups = locationGroups(slip)
+  const sameOrNumbered = (values: string[]) => {
+    const texts = values.map((v) => v.trim())
+    if (texts.every((t) => !t)) return ""
+    return new Set(texts).size === 1
+      ? texts[0]
+      : texts.map((t, i) => `${i + 1}. ${t || "—"}`).join("\n")
+  }
+  const rows: InfoRow[] = []
+  const occupation = sameOrNumbered(groups.map((g) => slipOccupationText(g.location)))
+  if (occupation) rows.push(["Occupation", occupation, { numberedItems: true }])
+  rows.push([
+    "Risk Location",
+    slipRiskLocationText(groups.map((g) => g.location)),
+    { numberedItems: true },
+  ])
+  const classes = sameOrNumbered(
+    groups.map((g) =>
+      g.location.constructionClass ? constructionClassLabel(g.location.constructionClass) : ""
+    )
+  )
+  if (classes) rows.push(["Construction Class", classes, { numberedItems: true }])
   return rows
 }
 
@@ -347,6 +382,9 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
   if (isMultiVehicle(slip)) return <VehiclesAttachedInterest slip={slip} />
   const isProperty = slip.cob === "Property"
   const multi = isMultiLocation(slip)
+  const floatingText = isFloatingSumInsured(slip)
+    ? slip.floatingSumInsuredText?.trim()
+    : ""
   const sumInsuredRow = (i: LineItem) => (
     <li
       key={i.id}
@@ -552,6 +590,8 @@ export function InterestBlock({ slip }: { slip: PlacingSlip }) {
             {slip.cob === "Liability" ? "Total Limit of Liability" : "Total Sum Insured"}
           </span>
           <span className="tabular">
+            {/* Slip floating: "On Floating Stock – IDR …", seperti slip 015/LCH-PLCMT/PS-PAR/X/2026. */}
+            {floatingText ? `${floatingText} – ` : ""}
             {money(totalSumInsured(slip), slip.currency)}
           </span>
         </p>

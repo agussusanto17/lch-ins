@@ -4,6 +4,16 @@ import * as React from "react"
 import { Plus, Trash2 } from "lucide-react"
 
 import { SelectInput } from "@/components/shared/form-fields"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { LineItemList, TotalBar } from "@/components/underwriting/line-items"
 import { OccupationCombobox } from "@/components/underwriting/occupation-combobox"
 import {
@@ -13,6 +23,8 @@ import {
 import { CoverRateTable } from "@/components/underwriting/rate-tables"
 import {
   addLocationPatch,
+  floatingDropsLocationData,
+  floatingSumInsuredPatch,
   isOutOfBounds,
   locationRowsPatch,
   occupationParts,
@@ -21,7 +33,14 @@ import {
 } from "@/components/underwriting/slip-model"
 import { UnitCard } from "@/components/underwriting/unit-card"
 import { Button } from "@/components/ui/button"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import {
   BI_BASE_LABELS,
@@ -30,6 +49,7 @@ import {
   rateUnitFor,
   sumItems,
   sumPremium,
+  totalSumInsured,
 } from "@/lib/calc"
 import {
   CONSTRUCTION_CLASSES,
@@ -40,6 +60,7 @@ import {
 } from "@/lib/data"
 import { money, num } from "@/lib/format"
 import {
+  isFloatingSumInsured,
   locationGroups,
   needsConstructionClass,
   oneLineAddress,
@@ -87,7 +108,8 @@ function biRateNote(
 
 /**
  * Daftar lokasi risiko slip Property (Harry, 5 November 2026).
- * Premi tiap lokasi dijumlah per polis PAR dan EQVET.
+ * Premi tiap lokasi dijumlah per polis PAR dan EQVET. Slip floating mengisi sum insured, rate,
+ * dan deductible sekali untuk semua lokasi (MoM review Phase 1, poin 5).
  */
 export function SlipLocations({
   slip,
@@ -103,8 +125,9 @@ export function SlipLocations({
   lines: RateLine[]
   locked: boolean
   onChange: (patch: Partial<PlacingSlip>) => void
+  /** Lokasi kosong berarti baris rate bersama slip floating. */
   onPickRate: (
-    locationId: string,
+    locationId: string | undefined,
     label: string,
     value: number,
     bounds?: RateBounds
@@ -114,7 +137,10 @@ export function SlipLocations({
 }) {
   const groups = locationGroups(slip)
   const multi = groups.length > 1
-  const first = groups[0].location
+  const floating = isFloatingSumInsured(slip)
+  // Slip floating: semua sum insured dan rate menempel di lokasi pertama.
+  const shared = groups[0]
+  const first = shared.location
   const setLine = (id: string, patch: Partial<RateLine>) =>
     onChange({
       rateLines: slip.rateLines.map((l) =>
@@ -128,6 +154,7 @@ export function SlipLocations({
   const [openAt, setOpenAt] = React.useState<Record<number, boolean>>({})
   const isOpen = (index: number) => openAt[index] ?? startOpen
   const allOpen = groups.every((_, i) => isOpen(i))
+  const [confirmFloating, setConfirmFloating] = React.useState(false)
 
   function addLocation() {
     setOpenAt((o) => ({ ...o, [groups.length]: true }))
@@ -145,8 +172,114 @@ export function SlipLocations({
     onChange(removeLocationPatch(slip, locationId))
   }
 
+  function setFloating(on: boolean) {
+    if (on && floatingDropsLocationData(slip)) setConfirmFloating(true)
+    else onChange(floatingSumInsuredPatch(slip, on))
+  }
+
+  /** Sum insured Section 1 dan 2 satu lokasi, atau seluruh lokasi slip floating. */
+  const sumInsuredLists = (g: LocationGroup) => (
+    <>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">Section 1 — Material Damage</p>
+        <LineItemList
+          items={g.section1}
+          onChange={(items) =>
+            onChange(
+              locationRowsPatch(slip, "sumInsuredSection1", g.location.id, items)
+            )
+          }
+          descPlaceholder="Deskripsi"
+          amountPlaceholder="Nilai"
+        />
+        <TotalBar
+          label="Subtotal Material Damage"
+          value={money(sumItems(g.section1), slip.currency)}
+          tone="muted"
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">Section 2 — Business Interruption</p>
+        <LineItemList
+          items={g.section2}
+          onChange={(items) =>
+            onChange(
+              locationRowsPatch(slip, "sumInsuredSection2", g.location.id, items)
+            )
+          }
+          descPlaceholder="Deskripsi"
+          amountPlaceholder="Nilai"
+        />
+        <TotalBar
+          label="Subtotal Business Interruption"
+          value={money(sumItems(g.section2), slip.currency)}
+          tone="muted"
+        />
+      </div>
+    </>
+  )
+
+  const rateBasis = (g: LocationGroup) =>
+    biRateBasis({ rateLines: g.rateLines, indemnityPeriod: slip.indemnityPeriod })
+
+  /** Tabel rate baris milik satu lokasi, atau baris bersama slip floating. */
+  const rateTable = (g: LocationGroup) => {
+    const ids = new Set(g.rateLines.map((l) => l.id))
+    return (
+      <CoverRateTable
+        lines={lines.filter((l) => ids.has(l.id))}
+        currency={slip.currency}
+        unit={rateUnitFor(slip.cob)}
+        exceptions={slip.rateExceptions}
+        readOnly={locked}
+        onRateChange={(id, rate) => setLine(id, { rate })}
+        onExceptionChange={onExceptionChange}
+        onLossLimitChange={(id, lossLimitPct) => setLine(id, { lossLimitPct })}
+        autoRateNote={biRateNote(slip, g, rateBasis(g))}
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4">
+      <Field orientation="horizontal">
+        <Switch
+          id="floating-sum-insured"
+          checked={floating}
+          disabled={locked}
+          onCheckedChange={setFloating}
+        />
+        <FieldContent>
+          <FieldLabel htmlFor="floating-sum-insured" className="font-normal">
+            Floating Sum Insured
+          </FieldLabel>
+          <FieldDescription>
+            {floating
+              ? "Sum insured, rate, dan deductible diisi sekali untuk semua lokasi. Tiap lokasi cukup diisi alamat, okupasi, dan kelas konstruksi."
+              : "Nyalakan bila satu sum insured berlaku untuk semua lokasi, misalnya stok yang berpindah antar gudang."}
+          </FieldDescription>
+        </FieldContent>
+      </Field>
+      {floating ? (
+        <Field>
+          <FieldLabel htmlFor="floating-sum-insured-text">
+            Keterangan Total Sum Insured
+          </FieldLabel>
+          <Input
+            id="floating-sum-insured-text"
+            maxLength={100}
+            value={slip.floatingSumInsuredText ?? ""}
+            disabled={locked}
+            placeholder="On Floating Stock"
+            onChange={(e) => onChange({ floatingSumInsuredText: e.target.value })}
+          />
+          <FieldDescription>
+            Dicetak sebelum nilainya, misalnya On Floating Stock –{" "}
+            {money(12_000_000_000, slip.currency)}. Kosongkan bila cukup nilainya.
+          </FieldDescription>
+        </Field>
+      ) : null}
+
       {multi ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
           {/*
@@ -198,27 +331,30 @@ export function SlipLocations({
         const md = sumItems(g.section1)
         const bi = sumItems(g.section2)
         const ids = new Set(g.rateLines.map((l) => l.id))
-        const locationLines = lines.filter((l) => ids.has(l.id))
         const ojkName = occupationParts(location.occupation).name
-        const basis = biRateBasis({
-          rateLines: g.rateLines,
-          indemnityPeriod: slip.indemnityPeriod,
-        })
+        // Panel tarif OJK slip floating mengisi baris rate bersama dari lokasi mana pun.
+        const basis = rateBasis(floating ? shared : g)
         const incomplete =
           !location.riskLocation.trim() ||
           !location.occupation ||
           !location.constructionClass ||
-          md + bi <= 0
-        const unresolved = locationLines.filter(
-          (l) => isOutOfBounds(l) && !slip.rateExceptions?.[l.id]
-        ).length
+          (!floating && md + bi <= 0)
+        const unresolved = floating
+          ? 0
+          : lines.filter(
+              (l) => ids.has(l.id) && isOutOfBounds(l) && !slip.rateExceptions?.[l.id]
+            ).length
         const facts = [
           occupationParts(location.occupation).code,
           location.constructionClass
             ? constructionClassLabel(location.constructionClass)
             : "",
-          `Sum insured ${money(md + bi, slip.currency)}`,
-          `Premi ${money(sumPremium(g.rateLines), slip.currency)}`,
+          ...(floating
+            ? []
+            : [
+                `Sum insured ${money(md + bi, slip.currency)}`,
+                `Premi ${money(sumPremium(g.rateLines), slip.currency)}`,
+              ]),
         ].filter(Boolean)
 
         return (
@@ -246,7 +382,9 @@ export function SlipLocations({
                 <span className="block truncate">
                   {oneLineAddress(location.riskLocation) || "Alamat belum diisi"}
                 </span>
-                <span className="block">{facts.join(" · ")}</span>
+                {facts.length ? (
+                  <span className="block">{facts.join(" · ")}</span>
+                ) : null}
               </>
             }
             action={
@@ -320,7 +458,7 @@ export function SlipLocations({
               <SelectInput
                 id={`${key}-class`}
                 label="Construction Class"
-                required={needsConstructionClass(g.rateLines)}
+                required={needsConstructionClass(floating ? slip.rateLines : g.rateLines)}
                 items={CONSTRUCTION_ITEMS}
                 value={location.constructionClass ?? ""}
                 onValueChange={(v) => update({ constructionClass: v })}
@@ -329,54 +467,7 @@ export function SlipLocations({
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">Section 1 — Material Damage</p>
-              <LineItemList
-                items={g.section1}
-                onChange={(items) =>
-                  onChange(
-                    locationRowsPatch(
-                      slip,
-                      "sumInsuredSection1",
-                      location.id,
-                      items
-                    )
-                  )
-                }
-                descPlaceholder="Deskripsi"
-                amountPlaceholder="Nilai"
-              />
-              <TotalBar
-                label="Subtotal Material Damage"
-                value={money(md, slip.currency)}
-                tone="muted"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">
-                Section 2 — Business Interruption
-              </p>
-              <LineItemList
-                items={g.section2}
-                onChange={(items) =>
-                  onChange(
-                    locationRowsPatch(
-                      slip,
-                      "sumInsuredSection2",
-                      location.id,
-                      items
-                    )
-                  )
-                }
-                descPlaceholder="Deskripsi"
-                amountPlaceholder="Nilai"
-              />
-              <TotalBar
-                label="Subtotal Business Interruption"
-                value={money(bi, slip.currency)}
-                tone="muted"
-              />
-            </div>
+            {floating ? null : sumInsuredLists(g)}
 
             {!locked ? (
               <OjkReference
@@ -387,30 +478,18 @@ export function SlipLocations({
                 onConstructionClassChange={(code) =>
                   update({ constructionClass: code })
                 }
-                sumInsured={md + bi}
+                sumInsured={floating ? totalSumInsured(slip) : md + bi}
                 baseRate={basis.par}
                 eqRate={basis.eqvet || null}
                 onPickRate={(label, value, bounds) =>
-                  onPickRate(location.id, label, value, bounds)
+                  onPickRate(floating ? undefined : location.id, label, value, bounds)
                 }
                 onPickIndemnity={onPickIndemnity}
               />
             ) : null}
 
-            <CoverRateTable
-              lines={locationLines}
-              currency={slip.currency}
-              unit={rateUnitFor(slip.cob)}
-              exceptions={slip.rateExceptions}
-              readOnly={locked}
-              onRateChange={(id, rate) => setLine(id, { rate })}
-              onExceptionChange={onExceptionChange}
-              onLossLimitChange={(id, lossLimitPct) =>
-                setLine(id, { lossLimitPct })
-              }
-              autoRateNote={biRateNote(slip, g, basis)}
-            />
-            {multi ? (
+            {floating ? null : rateTable(g)}
+            {multi && !floating ? (
               <TotalBar
                 label={`Premi lokasi ${g.no}`}
                 value={`PAR ${money(sumPremium(g.rateLines.filter((l) => !isEqvet(l))), slip.currency)} · EQVET ${money(sumPremium(g.rateLines.filter(isEqvet)), slip.currency)}`}
@@ -435,20 +514,60 @@ export function SlipLocations({
         </div>
       ) : null}
 
+      {floating ? (
+        <div className="flex flex-col gap-4 rounded-xl border p-4">
+          <div>
+            <p className="text-sm font-medium">Sum insured & rate semua lokasi</p>
+            <p className="text-xs text-muted-foreground">
+              Berlaku untuk {groups.length} lokasi di atas. Premi dihitung sekali dari
+              total sum insured.
+            </p>
+          </div>
+          {sumInsuredLists(shared)}
+          {rateTable(shared)}
+        </div>
+      ) : null}
+
       <p className="text-xs text-muted-foreground">
-        Rate dalam per mil (‰). Premi = sum insured lokasi × rate × persentase
-        loss limit; kosongkan loss limit untuk full value. Baris BI memakai sum
-        insured Section 2 lokasi itu, sisanya Section 1. Batas FLEXAS terisi
-        otomatis dari okupasi dan kelas konstruksi lokasi.
+        {floating
+          ? "Rate dalam per mil (‰). Premi = total sum insured × rate × persentase loss limit; kosongkan loss limit untuk full value. Baris BI memakai sum insured Section 2, sisanya Section 1. Batas FLEXAS mengikuti lokasi dengan batas bawah tertinggi."
+          : "Rate dalam per mil (‰). Premi = sum insured lokasi × rate × persentase loss limit; kosongkan loss limit untuk full value. Baris BI memakai sum insured Section 2 lokasi itu, sisanya Section 1. Batas FLEXAS terisi otomatis dari okupasi dan kelas konstruksi lokasi."}
       </p>
 
       <TotalBar
-        label={multi ? `Total Sum Insured (${groups.length} lokasi)` : "Total Sum Insured"}
-        value={money(
-          sumItems(slip.sumInsuredSection1) + sumItems(slip.sumInsuredSection2),
-          slip.currency
-        )}
+        label={
+          floating
+            ? `Total Sum Insured (floating, ${groups.length} lokasi)`
+            : multi
+              ? `Total Sum Insured (${groups.length} lokasi)`
+              : "Total Sum Insured"
+        }
+        value={money(totalSumInsured(slip), slip.currency)}
       />
+
+      <AlertDialog open={confirmFloating} onOpenChange={setConfirmFloating}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pakai floating sum insured?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rate, loss limit, dan deductible Lokasi 1 berlaku untuk semua lokasi.
+              Isian rate dan deductible lokasi lain dihapus. Sum insured semua lokasi
+              digabung ke satu daftar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onChange(floatingSumInsuredPatch(slip, true))
+                setConfirmFloating(false)
+              }}
+            >
+              Pakai floating
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

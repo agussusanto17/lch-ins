@@ -9,6 +9,7 @@ import type { PlacingSlip } from "@/lib/data/types"
 import { money } from "@/lib/format"
 import { deductibleGroups, deductiblesByUnit } from "@/lib/slip-deductibles"
 import { printedDetailRows } from "@/lib/slip-details"
+import { isFloatingSumInsured } from "@/lib/slip-locations"
 
 /** Judul klausul yang tersimpan di slip_clauses. */
 export interface SlipClauseTitle {
@@ -115,6 +116,10 @@ export function slipAuditSummary(
     occupation: text(slip.occupation),
     occupationLabel: text(slip.occupationLabel),
     riskLocation: text(slip.riskLocation),
+    // Kosong berarti sum insured per lokasi; isinya keterangan yang dicetak, atau "Ya".
+    floatingSumInsured: isFloatingSumInsured(slip)
+      ? text(slip.floatingSumInsuredText) || "Ya"
+      : "",
     constructionClass: text(slip.constructionClass),
     coverage: text(slip.coverage),
     interestSection1: text(slip.interestSection1),
