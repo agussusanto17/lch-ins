@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/additional-discount-quotation`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #275
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
