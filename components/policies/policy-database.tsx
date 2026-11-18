@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import {
   FilePlus2,
   FileSpreadsheet,
@@ -145,12 +146,20 @@ export function PolicyDatabase({
     store.replace("policies", initialPolicies)
   }, [initialPolicies])
 
-  const [query, setQuery] = React.useState("")
+  // /policies?policy=<id>, misalnya dari detail client (MoM review Phase 1, 17 November 2026):
+  // tabel disaring ke nomor polisnya, dan role yang boleh kelola langsung melihat form polisnya.
+  const searchParams = useSearchParams()
+  const linkedId = searchParams.get("policy")
+  const linked = linkedId ? (initialPolicies.find((p) => p.id === linkedId) ?? null) : null
+
+  const [query, setQuery] = React.useState(linked?.policyNo ?? "")
   const [cob, setCob] = React.useState("all")
   const [status, setStatus] = React.useState("all")
   const [fileFilter, setFileFilter] = React.useState("all")
   const [tab, setTab] = React.useState<"all" | PolicyType>("all")
-  const [form, setForm] = React.useState<FormState | null>(null)
+  const [form, setForm] = React.useState<FormState | null>(() =>
+    linked && canManage ? { key: 1, policy: linked } : null
+  )
   const [filesFor, setFilesFor] = React.useState<string | null>(null)
   const [participantsFor, setParticipantsFor] = React.useState<string | null>(null)
   const [uploadFor, setUploadFor] = React.useState<string | null>(null)
@@ -688,7 +697,11 @@ export function PolicyDatabase({
           key={form.key}
           open
           onOpenChange={(open) => {
-            if (!open) setForm(null)
+            if (!open) {
+              setForm(null)
+              // Parameter policy dibuang supaya refresh tidak membuka form lagi; saringannya tetap.
+              if (linkedId) window.history.replaceState(null, "", "/policies")
+            }
           }}
           policy={form.policy}
           preset={form.preset}

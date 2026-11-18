@@ -76,6 +76,10 @@ export function ClientDetail({
   const masterOptions = useFormOptions()
   const canManageMarketing = permission.canManage("/marketing")
   const canManageUnderwriting = permission.canManage("/placement")
+  // Polis dan klaim bisa dibuka dari sini seperti placing slip (MoM review Phase 1, 17 November
+  // 2026); role tanpa akses ke menunya tetap melihat nomornya saja.
+  const canOpenPolicies = permission.canAccess("/policies")
+  const canOpenClaims = permission.canAccess("/claims")
 
   // Data klien dari database; setelah KYC diedit, isinya diganti hasil simpanan.
   const [client, setClient] = React.useState(initialClient ?? null)
@@ -383,7 +387,16 @@ export function ClientDetail({
                 policyPaging.paginatedItems.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="tabular pl-5 font-medium">
-                      {p.policyNo}
+                      {canOpenPolicies ? (
+                        <Link
+                          href={`/policies?policy=${p.id}`}
+                          className="font-semibold text-primary hover:underline"
+                        >
+                          {p.policyNo}
+                        </Link>
+                      ) : (
+                        p.policyNo
+                      )}
                       <span className="block text-xs font-normal text-muted-foreground">
                         {p.type}
                       </span>
@@ -441,7 +454,16 @@ export function ClientDetail({
               claimPaging.paginatedItems.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="tabular pl-5 font-medium">
-                    {c.claimNo}
+                    {canOpenClaims ? (
+                      <Link
+                        href={`/claims?claim=${c.id}`}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        {c.claimNo}
+                      </Link>
+                    ) : (
+                      c.claimNo
+                    )}
                   </TableCell>
                   <TableCell className="tabular">
                     {dateShort(c.lossDate)}

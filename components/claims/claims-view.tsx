@@ -110,7 +110,16 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
     setFilters(next)
     window.history.replaceState(null, "", claimBackHref(next))
   }
-  const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  // /claims?claim=<id> langsung membuka detail klaim, misalnya dari detail client (MoM review
+  // Phase 1, 17 November 2026).
+  const [selectedId, setSelectedId] = React.useState<string | null>(() =>
+    searchParams.get("claim")
+  )
+  function closeDetail() {
+    setSelectedId(null)
+    // Parameter claim dibuang supaya refresh tidak membuka detailnya lagi.
+    window.history.replaceState(null, "", claimBackHref(filters))
+  }
   const [form, setForm] = React.useState<{
     key: number
     claim: ClaimRecord | null
@@ -447,12 +456,12 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
           claim={selected}
           open={selected !== null}
           onOpenChange={(v) => {
-            if (!v) setSelectedId(null)
+            if (!v) closeDetail()
           }}
           onEdit={
             canManage
               ? (c) => {
-                  setSelectedId(null)
+                  closeDetail()
                   const matched = items.find((it) => it.id === c.id)
                   setForm((prev) => ({ key: (prev?.key ?? 0) + 1, claim: matched ?? null }))
                 }
