@@ -173,6 +173,14 @@ const LOOKUPS: {
     ],
   },
   {
+    type: "client_branch",
+    system: true,
+    values: [
+      ["jakarta", "Jakarta"],
+      ["singapore", "Singapore"],
+    ],
+  },
+  {
     type: "id_type",
     system: false,
     values: [

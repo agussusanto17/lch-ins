@@ -54,6 +54,7 @@ type RefModel =
   | "lookupValue"
   | "vehicleBrand"
   | "vehicleType"
+  | "source"
 
 const ENTITY_MODEL: Record<string, RefModel> = {
   users: "user",
@@ -101,6 +102,7 @@ const FIELD_MODEL: Record<string, RefModel> = {
   vehicleBrandId: "vehicleBrand",
   brandId: "vehicleBrand",
   vehicleTypeId: "vehicleType",
+  sourceId: "source",
 }
 
 const UUID_PATTERN =
@@ -197,6 +199,10 @@ const NAME_RESOLVERS: Record<RefModel, (ids: string[]) => NamePairs> = {
         select: { id: true, name: true, brand: { select: { name: true } } },
       })
       .then((rows) => rows.map((r) => [r.id, `${r.brand.name} ${r.name}`])),
+  source: (ids) =>
+    prisma.source
+      .findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+      .then((rows) => rows.map((r) => [r.id, r.name])),
 }
 
 function refModelFor(key: string): RefModel | null {

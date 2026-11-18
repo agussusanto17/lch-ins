@@ -10,6 +10,7 @@ import {
   MAX_DEDUCTIBLES,
   type ChangeSlipLock,
   type ClassOfBusiness as CobType,
+  type ClientBranch,
   type ClauseOverride,
   type EndorsementCalc,
   type LineItem,
@@ -33,6 +34,7 @@ import {
   usesAdditionalFee,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
+import { BRANCH_SOURCE_CODES, CLIENT_BRANCH_CODES } from "@/lib/form-options"
 import { normalizeCob } from "@/lib/format"
 import { cleanDetailRows } from "@/lib/slip-details"
 import { cleanOpenCoverRates } from "@/lib/open-cover"
@@ -111,6 +113,8 @@ export interface PlacingSlipRecord extends PlacingSlip {
 
 export interface PlacingSlipInput {
   clientId: string
+  /** Kosong berarti Source cabang klien. */
+  sourceId?: string | null
   sppaId?: string | null
   cob: CobType | string
   typeOfCover?: string | null
@@ -687,6 +691,7 @@ function toPlacingSlipRecord(
       raw.coverType2?.abbreviation
     ),
     clientId: raw.clientId,
+    sourceId: raw.sourceId,
     sppaId: raw.sppaId,
     insuredName: raw.insuredName,
     correspondenceAddress: raw.correspondenceAddress || "",
@@ -1297,12 +1302,38 @@ async function replaceParticipants(
   })
 }
 
+/**
+ * Source slip: isian slip, atau Source cabang kliennya bila kosong (MoM review Phase 1,
+ * 17 November 2026). Klien lama tanpa cabang terhitung Jakarta.
+ */
+async function resolveSourceId(
+  sourceId: string | null | undefined,
+  clientId: string | null
+): Promise<string | null> {
+  if (sourceId) return sourceId
+  if (!clientId) return null
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    select: { branch: { select: { code: true } } },
+  })
+  const branch =
+    (Object.keys(CLIENT_BRANCH_CODES) as ClientBranch[]).find(
+      (b) => CLIENT_BRANCH_CODES[b] === client?.branch?.code
+    ) ?? "Jakarta"
+  const source = await prisma.source.findFirst({
+    where: { code: BRANCH_SOURCE_CODES[branch], isActive: true },
+    select: { id: true },
+  })
+  return source?.id ?? null
+}
+
 export async function createPlacingSlip(
   input: PlacingSlipInput,
   userId: string
 ): Promise<PlacingSlipRecord> {
   const cache = await getLookupsCache()
   const resolvedClientId = await resolveClientId(input.clientId, input.insuredName)
+  const resolvedSourceId = await resolveSourceId(input.sourceId, resolvedClientId)
   const resolvedCob = await resolveCob(input.cob)
   const resolvedCoverType = await resolveCoverType(resolvedCob.id, input.typeOfCover)
   const coverType2 = await slipCoverType2(resolvedCob, input.typeOfCover2)
@@ -1337,6 +1368,7 @@ export async function createPlacingSlip(
     const slip = await tx.placingSlip.create({
       data: {
         clientId: resolvedClientId,
+        sourceId: resolvedSourceId,
         sppaId: resolvedSppaId,
         cobId: resolvedCob.id,
         coverTypeId: resolvedCoverType?.id || null,
@@ -1699,6 +1731,11 @@ export async function updatePlacingSlip(
   if (lock) throw new Error(changeSlipLockText(lock))
 
   const resolvedClientId = await resolveClientId(input.clientId, input.insuredName)
+  // Isian Source yang tidak dikirim tidak menghapus Source tersimpan.
+  const resolvedSourceId =
+    input.sourceId === undefined
+      ? (existing.sourceId ?? (await resolveSourceId(null, resolvedClientId)))
+      : await resolveSourceId(input.sourceId, resolvedClientId)
   const resolvedCob = await resolveCob(input.cob)
   const resolvedCoverType = await resolveCoverType(resolvedCob.id, input.typeOfCover)
   const coverType2 = await slipCoverType2(resolvedCob, input.typeOfCover2)
@@ -1755,6 +1792,7 @@ export async function updatePlacingSlip(
       data: {
         ...dbDocumentDates(documentDates),
         clientId: resolvedClientId,
+        sourceId: resolvedSourceId,
         sppaId: resolvedSppaId,
         cobId: resolvedCob.id,
         coverTypeId: resolvedCoverType?.id || null,

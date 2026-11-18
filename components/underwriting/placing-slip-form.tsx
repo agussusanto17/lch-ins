@@ -144,6 +144,7 @@ import {
 } from "@/lib/data"
 import { BI_SCALE_OJK } from "@/lib/data/ojk-tariff"
 import {
+  branchSourceId,
   cobLabels,
   coversFor,
   deductibleChoicesFor,
@@ -527,6 +528,12 @@ function SlipEditor({
   // ditampilkan supaya slip lama tidak kehilangan isiannya saat diedit.
   const options = useFormOptions()
   const cobItems = withCurrent(cobLabels(options), slip.cob).map(toItem)
+  // Source kosong mengikuti cabang klien; server menyimpan nilai yang sama.
+  const slipClient = clients.find((c) => c.id === slip.clientId)
+  const defaultSourceId = slip.clientId
+    ? branchSourceId(slipClient?.branch ?? "Jakarta", options.sources)
+    : null
+  const sourceItems = options.sources.map((s) => ({ label: s.name, value: s.id }))
   const currencyItems = withCurrent(
     options.currencies.map((c) => c.code),
     slip.currency
@@ -1237,7 +1244,25 @@ function SlipEditor({
                 insuredName={slip.insuredName}
                 insuredDescription={slip.insuredDescription}
                 correspondenceAddress={slip.correspondenceAddress}
-                onChange={set}
+                onChange={(patch) =>
+                  // Ganti klien: Source kembali mengikuti cabang klien baru.
+                  set(
+                    patch.clientId !== undefined && patch.clientId !== slip.clientId
+                      ? { ...patch, sourceId: null }
+                      : patch
+                  )
+                }
+              />
+
+              {/* Entitas LCH yang menempatkan bisnis (MoM review Phase 1, 17 November 2026). */}
+              <SelectInput
+                className="md:col-span-2"
+                label="Source"
+                description="Terisi dari cabang klien: Jakarta ke PT. LCH Insurance Brokers, Singapore ke LCH Insurance Brokers Pte Ltd. Bisa diubah per slip."
+                items={sourceItems}
+                value={slip.sourceId ?? defaultSourceId}
+                onValueChange={(v) => set({ sourceId: v || null })}
+                placeholder="Pilih source"
               />
 
               <Field orientation="horizontal" className="md:col-span-2">

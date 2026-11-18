@@ -44,8 +44,13 @@ import {
   CLIENT_STATUSES,
   kycMissing,
   type Client,
+  type ClientBranch,
 } from "@/lib/data"
-import { dynamicLookupItems } from "@/lib/form-options"
+import {
+  CLIENT_BRANCH_CODES,
+  dynamicLookupItems,
+  fixedLookupItems,
+} from "@/lib/form-options"
 import type { ExportSpec } from "@/lib/export"
 import { maskEmail, maskMiddle } from "@/lib/format"
 import { store, useCollection } from "@/lib/store"
@@ -70,6 +75,14 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
       value: s,
     })),
   ]
+  // Cabang dari Master Data; klien lama tanpa cabang terhitung Jakarta.
+  const branchOptions = fixedLookupItems(
+    masterOptions.systemLookups.client_branch,
+    CLIENT_BRANCH_CODES
+  )
+  const branchLabel = (b: ClientBranch | undefined) =>
+    branchOptions.find((o) => o.value === (b ?? "Jakarta"))?.label ?? b ?? "Jakarta"
+  const branchItems = [{ label: "Semua cabang", value: "all" }, ...branchOptions]
   React.useEffect(() => {
     store.hydrate("clients", initialClients ?? [])
   }, [initialClients])
@@ -80,18 +93,20 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
   const [query, setQuery] = React.useState("")
   const [cob, setCob] = React.useState("all")
   const [status, setStatus] = React.useState("all")
+  const [branch, setBranch] = React.useState("all")
 
   const rows = React.useMemo(() => {
     const q = query.trim().toLowerCase()
     return clients.filter((c) => {
       if (cob !== "all" && c.cob !== cob) return false
       if (status !== "all" && c.status !== status) return false
+      if (branch !== "all" && (c.branch ?? "Jakarta") !== branch) return false
       if (!q) return true
       return [c.name, c.contactPerson, c.email, c.phone, c.npwp].some((v) =>
         (v ?? "").toLowerCase().includes(q)
       )
     })
-  }, [clients, query, cob, status])
+  }, [clients, query, cob, status, branch])
 
   const {
     page,
@@ -183,6 +198,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
       { header: "Telepon", value: (c) => c.phone },
       { header: "NPWP", value: (c) => c.npwp },
       { header: "COB Utama", value: (c) => c.cob },
+      { header: "Cabang", value: (c) => branchLabel(c.branch) },
       { header: "Status", value: (c) => c.status },
       { header: "Tanggal KYC", value: (c) => c.kycDate, type: "date" },
       {
@@ -237,6 +253,24 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
             </SelectGroup>
           </SelectContent>
         </Select>
+        <Select
+          items={branchItems}
+          value={branch}
+          onValueChange={(v) => setBranch(v as string)}
+        >
+          <SelectTrigger size="sm" className="w-37.5">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {branchItems.map((i) => (
+                <SelectItem key={i.value} value={i.value}>
+                  {i.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <ExportButtons className="ml-auto" spec={exportSpec} />
       </div>
 
@@ -250,6 +284,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
               <TableHead>Nama Klien</TableHead>
               <TableHead>Kontak &amp; PIC</TableHead>
               <TableHead>COB Utama</TableHead>
+              <TableHead>Cabang</TableHead>
               <TableHead>Kelengkapan KYC</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="pr-4">Alamat</TableHead>
@@ -258,7 +293,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
           <TableBody>
             {rows.length === 0 ? (
               <TableEmpty
-                colSpan={7}
+                colSpan={8}
                 message="Tidak ada data klien yang cocok"
               />
             ) : (
@@ -303,6 +338,7 @@ export function ClientTable({ onEdit, initialClients }: ClientTableProps) {
                     <TableCell className="max-w-40">
                       <span className="font-medium">{c.cob}</span>
                     </TableCell>
+                    <TableCell>{branchLabel(c.branch)}</TableCell>
                     <TableCell className="max-w-50">
                       {missing.length === 0 ? (
                         <ToneBadge tone="success">Lengkap</ToneBadge>

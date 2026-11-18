@@ -66,6 +66,8 @@ export type ClaimStage = string
 /** Status klien dari Master Data (lookup client_status), misalnya Active. */
 export type ClientStatus = string
 export type ClientType = "Korporasi" | "Perorangan"
+/** Cabang LCH yang melayani klien (MoM review Phase 1, 17 November 2026). */
+export type ClientBranch = "Jakarta" | "Singapore"
 
 /** Satu klien bisa punya beberapa alamat, misalnya alamat perusahaan dan korespondensi. */
 export interface ClientAddress {
@@ -114,6 +116,8 @@ export interface Client {
   insurancePurposeNote?: string
   kycDate?: string
   cob: ClassOfBusiness
+  /** Klien lama dan perorangan: Jakarta. */
+  branch?: ClientBranch
   status: ClientStatus
   addresses: ClientAddress[]
   documents: ClientDocument[]
@@ -344,6 +348,11 @@ export interface PlacingSlip {
   coverCode: string | null
   /** Klien asal tertanggung. Null bila nama diketik manual (data lama). */
   clientId: string | null
+  /**
+   * Source: entitas LCH yang menempatkan bisnis. Kosong berarti mengikuti cabang klien
+   * (MoM review Phase 1, 17 November 2026).
+   */
+  sourceId?: string | null
   /** SPPA sumber data slip, bila slip dibuat dari SPPA. */
   sppaId?: string | null
   /** Disalin dari klien saat dipilih, jadi perubahan data klien tidak mengubah slip. */
