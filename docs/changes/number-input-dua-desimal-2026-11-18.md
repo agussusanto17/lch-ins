@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `fix/number-input-dua-desimal`
-- **PR:** (belum dibuat)
+- **PR:** #269
 - **Dikerjakan oleh:** Zero dengan Antigravity
 
 ## Latar belakang
