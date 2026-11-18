@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/menu-report-excel`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #268
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
