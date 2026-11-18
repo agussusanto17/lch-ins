@@ -41,6 +41,7 @@ const FIELD_LABELS: Record<string, string> = {
   exclusions: "Exclusions",
   deductibleIntro: "Kalimat pengantar deductible",
   floatingSumInsured: "Floating Sum Insured",
+  locationInsuredNames: "Tertanggung per lokasi",
   clauseGroups: "Kelompok klausul",
   periodLabel: "Label periode",
   periodEndText: "Teks akhir periode",

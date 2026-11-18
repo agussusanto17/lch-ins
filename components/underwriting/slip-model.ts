@@ -41,6 +41,7 @@ import {
   needsConstructionClass,
   slipLocations,
   strictestBounds,
+  type LocationGroup,
 } from "@/lib/slip-locations"
 import {
   GENERIC_RATE_LABEL,
@@ -53,6 +54,7 @@ import {
   missingRateIssue,
   usesItemRates,
 } from "@/lib/slip-items"
+import type { LocationImportRow } from "@/lib/location-import"
 import { openCoverIssues, usesOpenCover } from "@/lib/open-cover"
 import {
   isCascoLine,
@@ -751,6 +753,119 @@ export function floatingSumInsuredPatch(
         )
       ),
     ],
+  }
+}
+
+/** Lokasi yang belum diisi apa pun, misalnya satu-satunya lokasi slip baru. */
+export function isBlankLocationGroup(
+  g: Pick<LocationGroup, "location" | "section1" | "section2" | "rateLines">
+) {
+  return (
+    !g.location.riskLocation.trim() &&
+    !g.location.occupation &&
+    !g.location.insuredName?.trim() &&
+    g.section1.every((i) => !i.description.trim() && !i.amount) &&
+    g.section2.every((i) => !i.description.trim() && !i.amount) &&
+    g.rateLines.every((l) => l.rate == null)
+  )
+}
+
+/** Upload Excel mengganti semua lokasi: diminta, atau satu-satunya lokasi masih kosong. */
+export function importReplacesLocations(slip: PlacingSlip, replace: boolean) {
+  const groups = locationGroups(slip)
+  return replace || (groups.length === 1 && isBlankLocationGroup(groups[0]))
+}
+
+/**
+ * Lokasi dari upload Excel (MoM review Phase 1, poin 6), ditambahkan di akhir daftar atau
+ * mengganti semua lokasi. Baris rate tiap lokasi mengikuti baris rate lokasi pertama (type of
+ * cover slip); deductible dari file, atau disalin dari lokasi pertama bila file tanpa deductible.
+ * Slip floating hanya menerima data lokasi; sum insured dan rate bersama tetap.
+ */
+export function importLocationsPatch(
+  slip: PlacingSlip,
+  rows: readonly LocationImportRow[],
+  options: {
+    replace: boolean
+    /** Period of Indemnity dari file; kosong berarti periode slip tidak diubah. */
+    indemnityMonths?: number | null
+    /** File berisi deductible. */
+    fileDeductibles: boolean
+  }
+): Partial<PlacingSlip> {
+  if (slip.cob !== "Property" || !rows.length) return {}
+  const groups = locationGroups(slip)
+  const replace = importReplacesLocations(slip, options.replace)
+  const imported = rows.map((row) => ({ row, id: uid("loc") }))
+  const added: SlipLocation[] = imported.map(({ row, id }) => ({
+    id,
+    riskLocation: row.riskLocation,
+    ...(row.insuredName ? { insuredName: row.insuredName } : {}),
+    occupation: row.occupation,
+    ...(row.occupationLabel ? { occupationLabel: row.occupationLabel } : {}),
+    ...(row.constructionClass ? { constructionClass: row.constructionClass } : {}),
+  }))
+  const locations = replace ? added : [...slipLocations(slip), ...added]
+  const indemnity = options.indemnityMonths
+    ? { indemnityPeriod: `${options.indemnityMonths} months` }
+    : {}
+
+  if (isFloatingSumInsured(slip)) {
+    // Sum insured dan rate bersama tetap menempel di lokasi pertama.
+    const to = <T extends { locationId?: string | null }>(list: T[]) =>
+      list.map((r) => ({ ...r, locationId: locations[0].id }))
+    return {
+      locations,
+      sumInsuredSection1: to(slip.sumInsuredSection1),
+      sumInsuredSection2: to(slip.sumInsuredSection2),
+      rateLines: to(slip.rateLines),
+      ...indemnity,
+    }
+  }
+
+  const template: Pick<RateLine, "label" | "deductibles">[] = groups[0].rateLines.length
+    ? groups[0].rateLines
+    : PROPERTY_RATE_LINES.map((label) => ({ label }))
+  const items = (prefix: string, section: "section1" | "section2") =>
+    imported.flatMap(({ row, id }) =>
+      row[section].map(
+        (it): LineItem => ({
+          id: uid(prefix),
+          description: it.description,
+          amount: it.amount,
+          locationId: id,
+        })
+      )
+    )
+  const lines = imported.flatMap(({ row, id }) =>
+    template.map((t): RateLine => {
+      const deductibles = options.fileDeductibles ? row.deductibles[t.label] : t.deductibles
+      return {
+        id: uid("r"),
+        label: t.label,
+        rate: row.rates[t.label] ?? null,
+        premium: 0,
+        locationId: id,
+        ...(deductibles?.length ? { deductibles: [...deductibles] } : {}),
+      }
+    })
+  )
+  if (replace) {
+    return {
+      locations,
+      sumInsuredSection1: items("m", "section1"),
+      sumInsuredSection2: items("b", "section2"),
+      rateLines: lines,
+      rateExceptions: {},
+      ...indemnity,
+    }
+  }
+  return {
+    locations,
+    sumInsuredSection1: [...slip.sumInsuredSection1, ...items("m", "section1")],
+    sumInsuredSection2: [...slip.sumInsuredSection2, ...items("b", "section2")],
+    rateLines: [...slip.rateLines, ...lines],
+    ...indemnity,
   }
 }
 

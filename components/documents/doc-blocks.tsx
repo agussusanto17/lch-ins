@@ -48,8 +48,10 @@ import {
   isFloatingSumInsured,
   isMultiLocation,
   locationGroups,
+  locationInsuredName,
   locationsShareRates,
-  slipRiskLocationText,
+  riskLocationItemsText,
+  slipLocations,
   type LocationGroup,
 } from "@/lib/slip-locations"
 import {
@@ -179,7 +181,14 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
   } else {
     const occupation = slipOccupationText(slip)
     if (occupation) rows.push(["Occupation", occupation])
-    const location = addressLines(slip.riskLocation ?? "")
+    // Tertanggung lokasi yang berbeda dari slip dicetak di atas alamatnya (MoM poin 6).
+    const insured =
+      slip.cob === "Property"
+        ? locationInsuredName(slipLocations(slip)[0], slip.insuredName)
+        : ""
+    const location = [insured, addressLines(slip.riskLocation ?? "")]
+      .filter(Boolean)
+      .join("\n")
     // Butir bernomor (tertanggung, nama lokasi, alamat) dicetak sejajar teks
     // setelah nomor dengan jarak antar butir (slip D'BEST, 12 November 2026).
     if (location) rows.push(["Risk Location", location, { numberedItems: true }])
@@ -246,7 +255,10 @@ function floatingLocationRows(slip: PlacingSlip): InfoRow[] {
   if (occupation) rows.push(["Occupation", occupation, { numberedItems: true }])
   rows.push([
     "Risk Location",
-    slipRiskLocationText(groups.map((g) => g.location)),
+    riskLocationItemsText(
+      groups.map((g) => g.location),
+      slip.insuredName
+    ),
     { numberedItems: true },
   ])
   const classes = sameOrNumbered(
@@ -1575,6 +1587,12 @@ export function LocationScheduleAppendix({ slip }: { slip: PlacingSlip }) {
             <tr key={g.no} className="avoid-break border-b border-dashed">
               <td className={cell}>{g.no}</td>
               <td className={cn(cell, "whitespace-pre-line")}>
+                {/* Tertanggung per lokasi seperti lampiran polis SPIL (MoM poin 6). */}
+                {locationInsuredName(g.location, slip.insuredName) ? (
+                  <span className="block font-semibold">
+                    {locationInsuredName(g.location, slip.insuredName)}
+                  </span>
+                ) : null}
                 {addressLines(g.location.riskLocation) || "—"}
               </td>
               <td className={cell}>

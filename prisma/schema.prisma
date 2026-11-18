@@ -1226,6 +1226,9 @@ model SlipLocation {
   slipId              String  @map("slip_id") @db.Uuid
   sortOrder           Int     @default(0) @map("sort_order")
   riskLocation        String? @map("risk_location")
+  /// Nama tertanggung lokasi ini, misalnya "... QQ ..." di lampiran polis SPIL (MoM review
+  /// Phase 1, poin 6). Kosong berarti sama dengan tertanggung slip.
+  insuredName         String? @map("insured_name")
   occupationId        String? @map("occupation_id") @db.Uuid
   /// Nama okupasi yang dicetak untuk lokasi ini; kosong berarti nama OJK.
   occupationLabel     String? @map("occupation_label")

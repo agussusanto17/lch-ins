@@ -241,6 +241,10 @@ const rateLineSchema = z
 const slipLocationSchema = z.object({
   id: z.string(),
   riskLocation: z.string().max(2000, "Alamat lokasi maksimal 2000 karakter"),
+  insuredName: z
+    .string()
+    .max(500, "Nama tertanggung lokasi maksimal 500 karakter")
+    .nullish(),
   occupation: z.string().nullish(),
   occupationLabel: z
     .string()
