@@ -78,6 +78,9 @@ const EMPTY: Draft = {
   claimedAmount: 0,
   paidAmount: 0,
   deductibleAmount: 0,
+  adjustmentAmount: 0,
+  salvageAmount: 0,
+  adjusterFeeAmount: 0,
   adjuster: "",
   status: "Outstanding",
   stage: "Tunggu Dokumen",
@@ -112,6 +115,9 @@ const schema = z
     claimedAmount: z.number().nonnegative("Tidak boleh negatif"),
     paidAmount: z.number().nonnegative("Tidak boleh negatif"),
     deductibleAmount: z.number().nonnegative("Tidak boleh negatif").optional(),
+    adjustmentAmount: z.number().nonnegative("Tidak boleh negatif").optional(),
+    salvageAmount: z.number().nonnegative("Tidak boleh negatif").optional(),
+    adjusterFeeAmount: z.number().nonnegative("Tidak boleh negatif").optional(),
   })
   .refine(
     (d) => !d.reportedDate || d.reportedDate >= d.lossDate,
@@ -323,6 +329,9 @@ export function ClaimForm({
       claimedAmount: draft.claimedAmount || 0,
       paidAmount: draft.paidAmount || 0,
       deductibleAmount: draft.deductibleAmount || 0,
+      adjustmentAmount: draft.adjustmentAmount || 0,
+      salvageAmount: draft.salvageAmount || 0,
+      adjusterFeeAmount: draft.adjusterFeeAmount || 0,
       status: draft.status,
       stage: draft.stage,
       notes: draft.notes || "",
@@ -540,7 +549,7 @@ export function ClaimForm({
         <FieldSeparator />
 
         <FieldGroup title="Nilai Kerugian & Klaim">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <NumberField
               label={`Estimasi Kerugian (${draft.currency})`}
               value={draft.estimatedLoss}
@@ -555,20 +564,47 @@ export function ClaimForm({
               placeholder="0"
               error={errors.claimedAmount}
             />
-            {/* Deductible yang diterapkan pada klaim ini (Agus, 18 November 2026). */}
-            <NumberField
-              label={`Deductible (${draft.currency})`}
-              value={draft.deductibleAmount ?? 0}
-              onValueChange={(v) => set({ deductibleAmount: v ?? 0 })}
-              placeholder="0"
-              error={errors.deductibleAmount}
-            />
             <NumberField
               label={`Nilai Disetujui/Dibayar (${draft.currency})`}
               value={draft.paidAmount}
               onValueChange={(v) => set({ paidAmount: v ?? 0 })}
               placeholder="0"
               error={errors.paidAmount}
+            />
+          </div>
+          {/* Potongan dan biaya dalam nilai klaim, pengertiannya dari Team LCH (18 November 2026). */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <NumberField
+              label={`Adjustment Asuransi (${draft.currency})`}
+              description="Pengurangan oleh asuransi karena tidak dijamin polis."
+              value={draft.adjustmentAmount ?? 0}
+              onValueChange={(v) => set({ adjustmentAmount: v ?? 0 })}
+              placeholder="0"
+              error={errors.adjustmentAmount}
+            />
+            <NumberField
+              label={`Deductible (${draft.currency})`}
+              description="Risiko sendiri sesuai ketentuan polis, bisa berbeda per penyebab kejadian."
+              value={draft.deductibleAmount ?? 0}
+              onValueChange={(v) => set({ deductibleAmount: v ?? 0 })}
+              placeholder="0"
+              error={errors.deductibleAmount}
+            />
+            <NumberField
+              label={`Nilai Salvage (${draft.currency})`}
+              description="Nilai jual kembali barang yang rusak."
+              value={draft.salvageAmount ?? 0}
+              onValueChange={(v) => set({ salvageAmount: v ?? 0 })}
+              placeholder="0"
+              error={errors.salvageAmount}
+            />
+            <NumberField
+              label={`Adjuster Fee (${draft.currency})`}
+              description="Biaya jasa adjuster yang dicatat asuransi dalam nilai klaim."
+              value={draft.adjusterFeeAmount ?? 0}
+              onValueChange={(v) => set({ adjusterFeeAmount: v ?? 0 })}
+              placeholder="0"
+              error={errors.adjusterFeeAmount}
             />
           </div>
           {claimWarnings.length ? (

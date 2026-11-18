@@ -1663,6 +1663,12 @@ model Claim {
   /// Deductible yang diterapkan pada klaim ini, nominal dalam mata uang klaim (Agus,
   /// 18 November 2026). Syarat deductible polis tetap tampil di info polis form klaim.
   deductibleAmount     Decimal   @default(0) @map("deductible_amount") @db.Decimal(18, 2)
+  /// Pengurangan nilai klaim oleh asuransi karena tidak dijamin polis (Team LCH, 18 November 2026).
+  adjustmentAmount     Decimal   @default(0) @map("adjustment_amount") @db.Decimal(18, 2)
+  /// Nilai jual kembali barang yang rusak, lebih rendah dari harga normalnya.
+  salvageAmount        Decimal   @default(0) @map("salvage_amount") @db.Decimal(18, 2)
+  /// Biaya jasa adjuster yang dicatat asuransi dalam nilai klaim; 0 berarti tanpa adjuster fee.
+  adjusterFeeAmount    Decimal   @default(0) @map("adjuster_fee_amount") @db.Decimal(18, 2)
   /// lookup claim_status: Outstanding, Settled, Closed, Rejected
   statusId             String    @map("status_id") @db.Uuid
   /// lookup claim_stage: tahapan dokumen, berjalan sendiri di samping status
