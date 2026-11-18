@@ -1,10 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Banknote, FileSpreadsheet, FileText, ShieldCheck, TriangleAlert } from "lucide-react"
-import { toast } from "sonner"
+import { Banknote, FileText, ShieldCheck, TriangleAlert } from "lucide-react"
 
-import { productionRecapAction } from "@/app/(app)/reports/actions"
 
 import { useToday } from "@/components/layout/today-provider"
 import { CobBar } from "@/components/reports/cob-bar"
@@ -15,7 +13,6 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { TableEmpty } from "@/components/shared/table-empty"
 import { TablePagination, usePagination } from "@/components/shared/table-pagination"
 import { ExportButtons } from "@/components/shared/table-toolbar"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -49,8 +46,7 @@ import {
   type Policy,
 } from "@/lib/data"
 import { yearMonth } from "@/lib/date"
-import { exportXlsx, type ExportColumn } from "@/lib/export"
-import { RECAP_COLUMNS, recapRows } from "@/lib/production-recap"
+import type { ExportColumn } from "@/lib/export"
 import { customRange, rangeDays } from "@/lib/report-range"
 import {
   compactMoney,
@@ -229,32 +225,6 @@ export function ReportView({
     setPeriod(next)
   }
 
-  // Rekap produksi format LCH (contoh Excel Harry): satu baris per polis per
-  // asuransi, untuk periode yang sama dengan report ini.
-  const [recapBusy, setRecapBusy] = React.useState(false)
-  async function exportRecap() {
-    setRecapBusy(true)
-    try {
-      const res = await productionRecapAction(range.start, range.end)
-      if (!res.ok || !res.data) {
-        toast.error("Gagal mengambil rekap produksi", { description: res.error })
-        return
-      }
-      if (!res.data.length) {
-        toast.info("Tidak ada polis di periode ini.")
-        return
-      }
-      await exportXlsx({
-        filename: `rekap-produksi-${range.start}-sd-${range.end}`,
-        sheet: "Rekap Produksi",
-        columns: RECAP_COLUMNS,
-        rows: recapRows(res.data),
-      })
-    } finally {
-      setRecapBusy(false)
-    }
-  }
-
   // Produksi = polis yang mulai berlaku di periode; klaim = tanggal kejadian.
   const policies = allPolicies.filter((p) => inRange(p.inceptionDate))
   const claims = allClaims.filter((c) => inRange(c.lossDate))
@@ -396,16 +366,6 @@ export function ReportView({
             </p>
           </>
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          className="ml-auto"
-          disabled={recapBusy}
-          onClick={exportRecap}
-        >
-          <FileSpreadsheet data-icon="inline-start" />
-          {recapBusy ? "Menyiapkan…" : "Rekap Produksi (Excel)"}
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
