@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/status-klaim-partial-settle`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #278
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
