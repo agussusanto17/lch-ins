@@ -636,7 +636,10 @@ export interface Claim {
   assetDescription: string
   estimatedLoss: number
   claimedAmount: number
+  /** Nilai disetujui/dibayar asuransi. */
   paidAmount: number
+  /** Deductible yang diterapkan pada klaim, nominal dalam mata uang klaim. */
+  deductibleAmount?: number
   adjuster: string
   status: ClaimStatus
   stage: ClaimStage

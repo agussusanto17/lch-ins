@@ -183,14 +183,15 @@ export function ClaimDetailDocument({
             rows={[
               ["Nomor Polis", claim.policyNo || "-"],
               ["Tertanggung", claim.insuredName],
-              // Co-insurance dicetak per asuransi dengan bagian estimasi kerugiannya, sama
-              // dengan detail klaim (MoM review Phase 1, 17 November 2026).
+              // Co-insurance dicetak per asuransi dengan bagian nilai disetujui/dibayar, sama
+              // dengan detail klaim; nominal muncul setelah jumlah dibayar diisi.
               isCoInsurance(claim.insurers)
                 ? [
                     "Penanggung (co-insurance)",
-                    claimInsurerPortions(claim.estimatedLoss, claim.insurers).map(
+                    claimInsurerPortions(claim.paidAmount, claim.insurers).map(
                       (p) =>
-                        `${p.insurer}, ${p.leader ? "Leader" : "Member"} ${num(p.sharePct, 2)}%: ${money(p.amount, claim.currency)}`
+                        `${p.insurer}, ${p.leader ? "Leader" : "Member"} ${num(p.sharePct, 2)}%` +
+                        (claim.paidAmount > 0 ? `: ${money(p.amount, claim.currency)}` : "")
                     ),
                   ]
                 : ["Penanggung (Asuransi)", claim.insurer || "-"],
@@ -225,6 +226,7 @@ export function ClaimDetailDocument({
                 "Jumlah Klaim Diajukan",
                 money(claim.claimedAmount, claim.currency),
               ],
+              ["Deductible", money(claim.deductibleAmount ?? 0, claim.currency)],
               ["Jumlah Telah Dibayar", money(claim.paidAmount, claim.currency)],
             ]}
           />

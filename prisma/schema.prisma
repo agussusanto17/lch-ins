@@ -1660,6 +1660,9 @@ model Claim {
   estimatedLoss        Decimal   @default(0) @map("estimated_loss") @db.Decimal(18, 2)
   claimedAmount        Decimal   @default(0) @map("claimed_amount") @db.Decimal(18, 2)
   paidAmount           Decimal   @default(0) @map("paid_amount") @db.Decimal(18, 2)
+  /// Deductible yang diterapkan pada klaim ini, nominal dalam mata uang klaim (Agus,
+  /// 18 November 2026). Syarat deductible polis tetap tampil di info polis form klaim.
+  deductibleAmount     Decimal   @default(0) @map("deductible_amount") @db.Decimal(18, 2)
   /// lookup claim_status: Outstanding, Settled, Closed, Rejected
   statusId             String    @map("status_id") @db.Uuid
   /// lookup claim_stage: tahapan dokumen, berjalan sendiri di samping status

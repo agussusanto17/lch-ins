@@ -77,6 +77,8 @@ export interface ClaimInput {
   estimatedLoss: number
   claimedAmount: number
   paidAmount: number
+  /** Deductible yang diterapkan pada klaim; kosong berarti 0. */
+  deductibleAmount?: number
   statusId?: string
   stageId?: string
   status?: ClaimStatus
@@ -248,6 +250,7 @@ function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
     estimatedLoss: Number(record.estimatedLoss),
     claimedAmount: Number(record.claimedAmount),
     paidAmount: Number(record.paidAmount),
+    deductibleAmount: Number(record.deductibleAmount),
     adjuster: record.adjuster?.name || "",
     status,
     stage: rawStage,
@@ -609,6 +612,7 @@ export async function createClaim(
         estimatedLoss: input.estimatedLoss,
         claimedAmount: input.claimedAmount,
         paidAmount: input.paidAmount,
+        deductibleAmount: input.deductibleAmount ?? 0,
         statusId,
         stageId,
         notes: input.notes?.trim() || null,
@@ -676,6 +680,7 @@ export async function updateClaim(
         estimatedLoss: input.estimatedLoss,
         claimedAmount: input.claimedAmount,
         paidAmount: input.paidAmount,
+        deductibleAmount: input.deductibleAmount ?? 0,
         statusId,
         stageId,
         notes: input.notes !== undefined ? (input.notes?.trim() || null) : existing.notes,
@@ -698,6 +703,7 @@ export async function updateClaim(
         estimatedLoss: Number(existing.estimatedLoss),
         claimedAmount: Number(existing.claimedAmount),
         paidAmount: Number(existing.paidAmount),
+        deductibleAmount: Number(existing.deductibleAmount),
         participantId: existing.participantId,
         paBenefitId: existing.paBenefitId,
       },
@@ -709,6 +715,7 @@ export async function updateClaim(
         estimatedLoss: Number(record.estimatedLoss),
         claimedAmount: Number(record.claimedAmount),
         paidAmount: Number(record.paidAmount),
+        deductibleAmount: Number(record.deductibleAmount),
         participantId: record.participantId,
         paBenefitId: record.paBenefitId,
       },

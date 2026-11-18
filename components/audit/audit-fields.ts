@@ -164,6 +164,7 @@ const FIELD_LABELS: Record<string, string> = {
   estimatedLoss: "Estimasi kerugian",
   claimedAmount: "Nilai klaim",
   paidAmount: "Nilai dibayar",
+  deductibleAmount: "Deductible",
   document: "Dokumen klaim",
   documentReceived: "Dokumen diterima",
   documentReceivedDate: "Tanggal dokumen diterima",
@@ -201,6 +202,7 @@ const MONEY_FIELDS = new Set([
   "estimatedLoss",
   "claimedAmount",
   "paidAmount",
+  "deductibleAmount",
 ])
 
 /** Daftar teks yang isinya sendiri memuat koma, jadi ditampilkan per baris. */

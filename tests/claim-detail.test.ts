@@ -7,7 +7,7 @@ import {
   isCoInsurance,
 } from "../lib/claim-detail"
 
-test("bagian estimasi kerugian mengikuti share, leader lebih dulu", () => {
+test("bagian nilai dibayar mengikuti share, leader lebih dulu", () => {
   const rows = claimInsurerPortions(350_000_000, [
     { insurer: "PT Member", sharePct: 60, leader: false },
     { insurer: "PT Leader", sharePct: 40, leader: true },
