@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/floating-sum-insured`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #272
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
