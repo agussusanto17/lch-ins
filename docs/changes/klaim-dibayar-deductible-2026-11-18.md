@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/klaim-dibayar-deductible`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #265
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
