@@ -6,7 +6,10 @@ import type { InsuredOption } from "@/lib/server/clients"
 
 export { panelIssues } from "@/components/underwriting/placing-slip-form"
 
-/** PlacingSlipForm in closing mode, with subjectivity, security, and closing instruction panels. */
+/**
+ * Tahap Cover Note & Closing Instruction (MoM review Phase 1, poin 8): PlacingSlipForm mode
+ * closing, satu-satunya tahap dengan isian Closing Instruction dan Catatan Cover Note.
+ */
 export function ClosingDraftForm({
   id,
   initial,

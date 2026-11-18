@@ -10,7 +10,7 @@ import { getPlacingSlipById } from "@/lib/server/placing-slips"
 import { listVehicleOptions } from "@/lib/server/vehicles"
 
 export const metadata: Metadata = {
-  title: "Closing Instruction — LCH Insurance Brokers",
+  title: "Cover Note & Closing Instruction — LCH Insurance Brokers",
 }
 
 export default async function ClosingDraftPage({

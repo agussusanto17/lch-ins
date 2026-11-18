@@ -359,6 +359,11 @@ function SlipEditor({
   const changeSlip = slip.kind === "Endorsement" || slip.kind === "Cancellation"
   const changeSlipLabel = slip.kind === "Cancellation" ? "Cancellation Slip" : "Endorsement Slip"
   const showQuotationSections = isQuotation || isClosing || slip.status !== "Draft"
+  // Tahapan Placing Slip → Quotation Slip → Cover Note & Closing Instruction (MoM review Phase 1,
+  // poin 8): isian Closing Instruction dan Catatan Cover Note milik tahap ketiga, tidak lagi di
+  // Quotation. Halaman edit slip yang sudah Closed tetap menampilkannya.
+  const showClosingSections =
+    !changeSlip && (isClosing || (mode === "edit" && slip.status === "Closed"))
   // Premi − brokerage − additional fee sebelum CI diterbitkan (Agus, 13 November 2026).
   // Endorsement/cancellation slip dan open cover tidak punya premi penutupan utuh.
   const showClosingSummary =
@@ -368,13 +373,16 @@ function SlipEditor({
     const keys = showClosingSummary
       ? SECTION_KEYS
       : SECTION_KEYS.filter((k) => k !== "closingSummary")
+    const closing = showClosingSections
+      ? keys
+      : keys.filter((k) => !["closing", "coverNote"].includes(k))
     if (showQuotationSections) {
-      return keys
+      return closing
     }
-    return keys.filter(
-      (k) => !["subjectivity", "security", "closingSummary", "closing", "coverNote"].includes(k)
+    return closing.filter(
+      (k) => !["subjectivity", "security", "closingSummary"].includes(k)
     )
-  }, [showQuotationSections, showClosingSummary])
+  }, [showQuotationSections, showClosingSummary, showClosingSections])
 
   const [openSections, setOpenSections] = React.useState<
     Record<string, boolean>
@@ -953,7 +961,7 @@ function SlipEditor({
           changeSlip
             ? changeSlipLabel
             : isClosing
-            ? "Closing Instruction"
+            ? "Cover Note & Closing Instruction"
             : isQuotation
               ? "Quotation Slip"
               : mode === "new"
@@ -2614,35 +2622,39 @@ function SlipEditor({
                 </SectionCard>
               ) : null}
 
-              <SectionCard
-                title="Closing Instruction"
-                description="Instruksi penutupan untuk insurer saat slip di-close."
-                {...sectionProps("closing")}
-              >
-                <Textarea
-                  rows={4}
-                  aria-label="Closing instruction"
-                  value={slip.closingInstruction ?? ""}
-                  placeholder="Masukkan closing instruction…"
-                  disabled={locked}
-                  onChange={(e) => set({ closingInstruction: e.target.value })}
-                />
-              </SectionCard>
+              {showClosingSections ? (
+                <>
+                  <SectionCard
+                    title="Closing Instruction"
+                    description="Instruksi penutupan untuk insurer saat slip di-close."
+                    {...sectionProps("closing")}
+                  >
+                    <Textarea
+                      rows={4}
+                      aria-label="Closing instruction"
+                      value={slip.closingInstruction ?? ""}
+                      placeholder="Masukkan closing instruction…"
+                      disabled={locked}
+                      onChange={(e) => set({ closingInstruction: e.target.value })}
+                    />
+                  </SectionCard>
 
-              <SectionCard
-                title="Catatan Draft Cover Note"
-                description="Catatan tambahan untuk cover note (tanpa brokerage)."
-                {...sectionProps("coverNote")}
-              >
-                <Textarea
-                  rows={3}
-                  aria-label="Catatan cover note"
-                  value={slip.coverNoteRemarks ?? ""}
-                  placeholder="Catatan cover note…"
-                  disabled={locked}
-                  onChange={(e) => set({ coverNoteRemarks: e.target.value })}
-                />
-              </SectionCard>
+                  <SectionCard
+                    title="Catatan Cover Note"
+                    description="Dicetak sebagai REMARKS di Draft Cover Note (tanpa brokerage)."
+                    {...sectionProps("coverNote")}
+                  >
+                    <Textarea
+                      rows={3}
+                      aria-label="Catatan cover note"
+                      value={slip.coverNoteRemarks ?? ""}
+                      placeholder="Catatan cover note…"
+                      disabled={locked}
+                      onChange={(e) => set({ coverNoteRemarks: e.target.value })}
+                    />
+                  </SectionCard>
+                </>
+              ) : null}
             </>
           ) : null}
 
@@ -2700,7 +2712,7 @@ function SlipEditor({
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
               <span>
                 {isQuotation
-                  ? "Lengkapi panel asuransi untuk membuka Quotation Slip dan Closing Instruction"
+                  ? "Lengkapi panel asuransi untuk membuka Quotation Slip dan tahap Cover Note & Closing Instruction"
                   : "Lengkapi panel asuransi untuk menerbitkan Closing Instruction"}
                 : {pIssues[0]}
               </span>
@@ -2856,7 +2868,7 @@ function SlipEditor({
                 onClick={() => goTo((id) => `/placement/closing/edit/${id}`)}
               >
                 <Send data-icon="inline-start" />
-                Lanjut ke Closing Instruction
+                Lanjut ke Cover Note & CI
               </Button>
             </>
           ) : (

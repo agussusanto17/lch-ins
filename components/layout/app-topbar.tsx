@@ -63,7 +63,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   edit: "Edit",
   quotation: "Quotation Slip",
   "cover-note": "Cover Note",
-  closing: "Closing Instruction",
+  closing: "Cover Note & Closing Instruction",
   slip: "Placing Slip",
   clients: "Detail Klien",
   "change-password": "Ganti Kata Sandi",
