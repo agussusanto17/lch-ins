@@ -226,8 +226,11 @@ export function ClaimDetailDocument({
                 "Jumlah Klaim Diajukan",
                 money(claim.claimedAmount, claim.currency),
               ],
-              ["Deductible", money(claim.deductibleAmount ?? 0, claim.currency)],
               ["Jumlah Telah Dibayar", money(claim.paidAmount, claim.currency)],
+              ["Adjustment Asuransi", money(claim.adjustmentAmount ?? 0, claim.currency)],
+              ["Deductible", money(claim.deductibleAmount ?? 0, claim.currency)],
+              ["Nilai Salvage", money(claim.salvageAmount ?? 0, claim.currency)],
+              ["Adjuster Fee", money(claim.adjusterFeeAmount ?? 0, claim.currency)],
             ]}
           />
         </section>

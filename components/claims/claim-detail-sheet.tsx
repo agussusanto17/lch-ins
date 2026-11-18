@@ -429,12 +429,24 @@ export function ClaimDetailSheet({
                         value={money(claim.claimedAmount, claim.currency)}
                       />
                       <Row
+                        label="Jumlah dibayar"
+                        value={money(claim.paidAmount, claim.currency)}
+                      />
+                      <Row
+                        label="Adjustment asuransi"
+                        value={money(claim.adjustmentAmount ?? 0, claim.currency)}
+                      />
+                      <Row
                         label="Deductible"
                         value={money(claim.deductibleAmount ?? 0, claim.currency)}
                       />
                       <Row
-                        label="Jumlah dibayar"
-                        value={money(claim.paidAmount, claim.currency)}
+                        label="Nilai salvage"
+                        value={money(claim.salvageAmount ?? 0, claim.currency)}
+                      />
+                      <Row
+                        label="Adjuster fee"
+                        value={money(claim.adjusterFeeAmount ?? 0, claim.currency)}
                       />
                     </div>
                     {/* Peringatan klaim PA di atas UP atau limit manfaat (Harry, 7 November 2026). */}

@@ -79,6 +79,9 @@ export interface ClaimInput {
   paidAmount: number
   /** Deductible yang diterapkan pada klaim; kosong berarti 0. */
   deductibleAmount?: number
+  adjustmentAmount?: number
+  salvageAmount?: number
+  adjusterFeeAmount?: number
   statusId?: string
   stageId?: string
   status?: ClaimStatus
@@ -251,6 +254,9 @@ function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
     claimedAmount: Number(record.claimedAmount),
     paidAmount: Number(record.paidAmount),
     deductibleAmount: Number(record.deductibleAmount),
+    adjustmentAmount: Number(record.adjustmentAmount),
+    salvageAmount: Number(record.salvageAmount),
+    adjusterFeeAmount: Number(record.adjusterFeeAmount),
     adjuster: record.adjuster?.name || "",
     status,
     stage: rawStage,
@@ -613,6 +619,9 @@ export async function createClaim(
         claimedAmount: input.claimedAmount,
         paidAmount: input.paidAmount,
         deductibleAmount: input.deductibleAmount ?? 0,
+        adjustmentAmount: input.adjustmentAmount ?? 0,
+        salvageAmount: input.salvageAmount ?? 0,
+        adjusterFeeAmount: input.adjusterFeeAmount ?? 0,
         statusId,
         stageId,
         notes: input.notes?.trim() || null,
@@ -681,6 +690,9 @@ export async function updateClaim(
         claimedAmount: input.claimedAmount,
         paidAmount: input.paidAmount,
         deductibleAmount: input.deductibleAmount ?? 0,
+        adjustmentAmount: input.adjustmentAmount ?? 0,
+        salvageAmount: input.salvageAmount ?? 0,
+        adjusterFeeAmount: input.adjusterFeeAmount ?? 0,
         statusId,
         stageId,
         notes: input.notes !== undefined ? (input.notes?.trim() || null) : existing.notes,
@@ -704,6 +716,9 @@ export async function updateClaim(
         claimedAmount: Number(existing.claimedAmount),
         paidAmount: Number(existing.paidAmount),
         deductibleAmount: Number(existing.deductibleAmount),
+        adjustmentAmount: Number(existing.adjustmentAmount),
+        salvageAmount: Number(existing.salvageAmount),
+        adjusterFeeAmount: Number(existing.adjusterFeeAmount),
         participantId: existing.participantId,
         paBenefitId: existing.paBenefitId,
       },
@@ -716,6 +731,9 @@ export async function updateClaim(
         claimedAmount: Number(record.claimedAmount),
         paidAmount: Number(record.paidAmount),
         deductibleAmount: Number(record.deductibleAmount),
+        adjustmentAmount: Number(record.adjustmentAmount),
+        salvageAmount: Number(record.salvageAmount),
+        adjusterFeeAmount: Number(record.adjusterFeeAmount),
         participantId: record.participantId,
         paBenefitId: record.paBenefitId,
       },

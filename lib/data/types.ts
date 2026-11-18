@@ -640,6 +640,12 @@ export interface Claim {
   paidAmount: number
   /** Deductible yang diterapkan pada klaim, nominal dalam mata uang klaim. */
   deductibleAmount?: number
+  /** Pengurangan nilai klaim oleh asuransi karena tidak dijamin polis. */
+  adjustmentAmount?: number
+  /** Nilai jual kembali barang yang rusak. */
+  salvageAmount?: number
+  /** Biaya jasa adjuster yang dicatat asuransi dalam nilai klaim. */
+  adjusterFeeAmount?: number
   adjuster: string
   status: ClaimStatus
   stage: ClaimStage
