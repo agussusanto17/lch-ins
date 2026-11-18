@@ -73,13 +73,17 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
-/** Semua asuransi co-insurance dengan bagian estimasi kerugiannya, tanpa informasi fee. */
+/**
+ * Semua asuransi co-insurance dengan bagian nilai disetujui/dibayar, tanpa informasi fee
+ * (koreksi Agus, 18 November 2026: bukan dari estimasi kerugian).
+ */
 function CoInsuranceRows({
   claim,
 }: {
-  claim: Pick<Claim, "estimatedLoss" | "currency" | "insurers">
+  claim: Pick<Claim, "paidAmount" | "currency" | "insurers">
 }) {
-  const portions = claimInsurerPortions(claim.estimatedLoss, claim.insurers)
+  const paid = claim.paidAmount > 0
+  const portions = claimInsurerPortions(claim.paidAmount, claim.insurers)
   return (
     <div className="py-2 text-sm">
       <span className="text-muted-foreground">Asuransi (co-insurance)</span>
@@ -93,13 +97,15 @@ function CoInsuranceRows({
               </span>
             </span>
             <span className="tabular shrink-0 text-right font-medium">
-              {money(p.amount, claim.currency)}
+              {paid ? money(p.amount, claim.currency) : "—"}
             </span>
           </li>
         ))}
       </ul>
       <p className="mt-1.5 text-xs text-muted-foreground">
-        Bagian dari estimasi kerugian {money(claim.estimatedLoss, claim.currency)} sesuai share.
+        {paid
+          ? `Bagian dari jumlah dibayar ${money(claim.paidAmount, claim.currency)} sesuai share.`
+          : "Bagian tiap asuransi muncul setelah jumlah dibayar diisi."}
       </p>
     </div>
   )
@@ -421,6 +427,10 @@ export function ClaimDetailSheet({
                       <Row
                         label="Jumlah klaim diajukan"
                         value={money(claim.claimedAmount, claim.currency)}
+                      />
+                      <Row
+                        label="Deductible"
+                        value={money(claim.deductibleAmount ?? 0, claim.currency)}
                       />
                       <Row
                         label="Jumlah dibayar"

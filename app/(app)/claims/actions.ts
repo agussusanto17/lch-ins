@@ -60,6 +60,7 @@ const claimInputSchema = z.object({
   estimatedLoss: z.coerce.number().nonnegative("Estimasi kerugian tidak boleh negatif"),
   claimedAmount: z.coerce.number().nonnegative("Nilai klaim tidak boleh negatif"),
   paidAmount: z.coerce.number().nonnegative("Nilai dibayar tidak boleh negatif"),
+  deductibleAmount: z.coerce.number().nonnegative("Deductible tidak boleh negatif").optional().default(0),
   status: z.enum(CLAIM_STATUSES as [ClaimStatus, ...ClaimStatus[]]).optional(),
   // Tahapan dari Master Data; server mencocokkan nama atau kodenya.
   stage: z.string().trim().min(1).max(100).optional(),

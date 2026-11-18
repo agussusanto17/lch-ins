@@ -77,6 +77,7 @@ const EMPTY: Draft = {
   estimatedLoss: 0,
   claimedAmount: 0,
   paidAmount: 0,
+  deductibleAmount: 0,
   adjuster: "",
   status: "Outstanding",
   stage: "Tunggu Dokumen",
@@ -110,6 +111,7 @@ const schema = z
     estimatedLoss: z.number().nonnegative("Tidak boleh negatif"),
     claimedAmount: z.number().nonnegative("Tidak boleh negatif"),
     paidAmount: z.number().nonnegative("Tidak boleh negatif"),
+    deductibleAmount: z.number().nonnegative("Tidak boleh negatif").optional(),
   })
   .refine(
     (d) => !d.reportedDate || d.reportedDate >= d.lossDate,
@@ -320,6 +322,7 @@ export function ClaimForm({
       estimatedLoss: draft.estimatedLoss || 0,
       claimedAmount: draft.claimedAmount || 0,
       paidAmount: draft.paidAmount || 0,
+      deductibleAmount: draft.deductibleAmount || 0,
       status: draft.status,
       stage: draft.stage,
       notes: draft.notes || "",
@@ -537,7 +540,7 @@ export function ClaimForm({
         <FieldSeparator />
 
         <FieldGroup title="Nilai Kerugian & Klaim">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <NumberField
               label={`Estimasi Kerugian (${draft.currency})`}
               value={draft.estimatedLoss}
@@ -551,6 +554,14 @@ export function ClaimForm({
               onValueChange={(v) => set({ claimedAmount: v ?? 0 })}
               placeholder="0"
               error={errors.claimedAmount}
+            />
+            {/* Deductible yang diterapkan pada klaim ini (Agus, 18 November 2026). */}
+            <NumberField
+              label={`Deductible (${draft.currency})`}
+              value={draft.deductibleAmount ?? 0}
+              onValueChange={(v) => set({ deductibleAmount: v ?? 0 })}
+              placeholder="0"
+              error={errors.deductibleAmount}
             />
             <NumberField
               label={`Nilai Disetujui/Dibayar (${draft.currency})`}

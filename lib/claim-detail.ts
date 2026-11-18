@@ -1,13 +1,14 @@
 /**
  * Aturan detail klaim dari MoM review Phase 1 (luring, 17 November 2026): co-insurance
- * ditampilkan dengan bagian estimasi kerugiannya (poin 14), dan dokumen yang sudah punya file
- * tetap ditandai diterima (poin 15).
+ * ditampilkan dengan bagian tiap asuransi (poin 14), dan dokumen yang sudah punya file tetap
+ * ditandai diterima (poin 15). Bagiannya dihitung dari nilai disetujui/dibayar, bukan estimasi
+ * kerugian (koreksi Agus, 18 November 2026).
  */
 import { roundCents } from "@/lib/calc"
 import type { ClaimInsurerShare } from "@/lib/data/types"
 
 export interface ClaimInsurerPortion extends ClaimInsurerShare {
-  /** Bagian estimasi kerugian sesuai share, tanpa fee. */
+  /** Bagian nilai klaim sesuai share, tanpa fee. */
   amount: number
 }
 
@@ -21,23 +22,23 @@ export function isCoInsurance(insurers: readonly ClaimInsurerShare[] | undefined
 }
 
 /**
- * Bagian estimasi kerugian per asuransi: leader lebih dulu, lalu share terbesar. Asuransi
- * terakhir menampung selisih pembulatan, sama seperti ringkasan penutupan, supaya jumlahnya
- * tepat sama dengan estimasi kerugian × total share.
+ * Bagian nilai klaim per asuransi: leader lebih dulu, lalu share terbesar. Asuransi terakhir
+ * menampung selisih pembulatan, sama seperti ringkasan penutupan, supaya jumlahnya tepat sama
+ * dengan nilai × total share.
  */
 export function claimInsurerPortions(
-  estimatedLoss: number,
+  amount: number,
   insurers: readonly ClaimInsurerShare[] | undefined
 ): ClaimInsurerPortion[] {
   const rows = sharedInsurers(insurers).sort(
     (a, b) => Number(b.leader) - Number(a.leader) || b.sharePct - a.sharePct
   )
   const totalShare = rows.reduce((sum, r) => sum + r.sharePct, 0)
-  let left = roundCents((estimatedLoss * totalShare) / 100)
+  let left = roundCents((amount * totalShare) / 100)
   return rows.map((r, i) => {
-    const amount = i === rows.length - 1 ? left : roundCents((estimatedLoss * r.sharePct) / 100)
-    left = roundCents(left - amount)
-    return { ...r, amount }
+    const part = i === rows.length - 1 ? left : roundCents((amount * r.sharePct) / 100)
+    left = roundCents(left - part)
+    return { ...r, amount: part }
   })
 }
 
