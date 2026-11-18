@@ -77,6 +77,7 @@ import {
   sectionItemsPatch,
   slipSectionTitles,
   usesSectionSumInsured,
+  vehicleBoundsPatch,
 } from "@/components/underwriting/slip-model"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
@@ -347,8 +348,10 @@ function SlipEditor({
   // Slip baru (termasuk yang terisi dari SPPA) selalu bisa disimpan sebagai draft.
   const canSave = dirty || mode === "new"
 
+  // Data kendaraan, domisili, dan type of cover slip Motor diubah lewat beberapa bagian form.
+  // Semuanya lewat sini, jadi batas OJK tersimpan yang berubah dikosongkan di satu tempat.
   const set = React.useCallback((patch: Partial<PlacingSlip>) => {
-    setSlip((s) => recalc({ ...s, ...patch }))
+    setSlip((s) => recalc({ ...s, ...vehicleBoundsPatch(s, patch) }))
   }, [])
 
   const isQuotation = mode === "quotation"

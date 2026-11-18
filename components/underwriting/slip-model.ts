@@ -1083,6 +1083,50 @@ function withSectionBounds(
   }
 }
 
+/** Batas OJK otomatis tiap baris rate, tanpa batas tersimpan dan pilihan panel: "min|max|asal". */
+function autoBoundKeys(slip: PlacingSlip, lines: RateLine[]) {
+  return new Map(
+    rateLinesWithBounds({ ...slip, rateLines: withoutOjkBounds(lines) }).map((l) => [
+      l.id,
+      [l.min ?? "", l.max ?? "", l.boundSource ?? ""].join("|"),
+    ])
+  )
+}
+
+/**
+ * Patch slip Motor Vehicle, ditambah baris rate yang batas OJK tersimpannya dikosongkan karena
+ * batas otomatisnya berubah oleh patch itu. Batas tersimpan didahulukan saat dihitung
+ * (rateLinesWithBounds, attachSlipRateBounds), padahal batas casco dan perluasan mengikuti merek,
+ * tipe, uraian, TSI, dan nomor polisi kendaraan, domisili slip, serta type of cover
+ * (vehicleTariff). Tanpa ini batas lama tetap dipakai, misalnya setelah plat B diganti BK atau
+ * TSI pindah kategori, dan rate di luar batas baru lolos tanpa alasan. Property memakai
+ * locationsPatch (#273).
+ *
+ * Yang dibandingkan batas otomatisnya, bukan isiannya: nomor rangka, mesin, warna, dan tahun ikut
+ * menyusun uraian kendaraan tetapi tidak mengubah kategori atau wilayah, jadi pilihan panel
+ * Referensi Tarif OJK tetap tersimpan. Batas TPL dan PA hanya dari labelnya, jadi tidak disentuh.
+ * Alasan rate dibiarkan: release tetap meminta alasan bila rate di luar batas baru.
+ */
+export function vehicleBoundsPatch(
+  slip: PlacingSlip,
+  patch: Partial<PlacingSlip>
+): Partial<PlacingSlip> {
+  const next = { ...slip, ...patch }
+  if (slip.cob !== "Motor Vehicle" || next.cob !== "Motor Vehicle") return patch
+  const stored = next.rateLines.filter((l) => l.min != null || l.max != null)
+  if (!stored.length) return patch
+  const before = autoBoundKeys(slip, stored)
+  const after = autoBoundKeys(next, stored)
+  const stale = new Set(
+    stored.filter((l) => before.get(l.id) !== after.get(l.id)).map((l) => l.id)
+  )
+  if (!stale.size) return patch
+  return {
+    ...patch,
+    rateLines: next.rateLines.map((l) => (stale.has(l.id) ? withoutBounds(l) : l)),
+  }
+}
+
 export function isOutOfBounds(line: RateLine) {
   if (line.rate == null) return false
   return (
