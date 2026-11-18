@@ -40,7 +40,7 @@ import {
   type VehicleBrandOption,
 } from "@/lib/data"
 import { dateShort, money } from "@/lib/format"
-import { CLAIM_STATUS_CODES, fixedLookupLabel } from "@/lib/form-options"
+import { CLAIM_STATUS_CODES, CLIENT_BRANCH_CODES, fixedLookupLabel } from "@/lib/form-options"
 import type { SppaRecord } from "@/lib/server/sppa"
 import { store } from "@/lib/store"
 
@@ -174,6 +174,14 @@ export function ClientDetail({
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {corporate ? (
               <>
+                <Item
+                  label="Cabang"
+                  value={fixedLookupLabel(
+                    masterOptions.systemLookups.client_branch,
+                    CLIENT_BRANCH_CODES,
+                    client.branch ?? "Jakarta"
+                  )}
+                />
                 <Item label="NPWP perusahaan" value={client.npwp} />
                 <Item label="Nama PIC" value={client.contactPerson} />
                 <Item

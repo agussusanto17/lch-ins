@@ -1,6 +1,12 @@
 import "server-only"
 
-import { POLICY_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
+import type { ClientBranch } from "@/lib/data/types"
+import {
+  BRANCH_SOURCE_CODES,
+  CLIENT_BRANCH_CODES,
+  POLICY_TYPE_CODES,
+  systemValueFromRow,
+} from "@/lib/form-options"
 import { prisma } from "@/lib/prisma"
 import type { RecapPolicy } from "@/lib/production-recap"
 
@@ -13,6 +19,15 @@ const wibDate = (d: Date) => new Date(d.getTime() + 7 * 3600_000).toISOString().
  * data yang dibutuhkan rekap produksi format LCH (lihat `lib/production-recap.ts`).
  */
 export async function listProductionRecap(start: string, end: string): Promise<RecapPolicy[]> {
+  // Source per cabang klien, untuk slip yang Source-nya kosong (MoM review Phase 1, 17 November 2026).
+  const sources = await prisma.source.findMany({ select: { code: true, name: true } })
+  const branchSource = (branchCode: string | null | undefined) => {
+    const branch =
+      (Object.keys(CLIENT_BRANCH_CODES) as ClientBranch[]).find(
+        (b) => CLIENT_BRANCH_CODES[b] === branchCode
+      ) ?? "Jakarta"
+    return sources.find((s) => s.code === BRANCH_SOURCE_CODES[branch]) ?? null
+  }
   const rows = await prisma.policy.findMany({
     where: { inceptionDate: { gte: new Date(start), lte: new Date(end) } },
     include: {
@@ -20,6 +35,7 @@ export async function listProductionRecap(start: string, end: string): Promise<R
         select: {
           name: true,
           clientType: { select: { name: true } },
+          branch: { select: { code: true } },
           insurerCodes: { select: { code: true, insurer: { select: { name: true } } } },
         },
       },
@@ -57,8 +73,9 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       clientCodes: Object.fromEntries(
         (row.client?.insurerCodes ?? []).map((c) => [c.insurer.name, c.code])
       ),
-      sourceCode: row.placingSlip?.source?.code ?? null,
-      sourceName: row.placingSlip?.source?.name ?? null,
+      // Slip tanpa Source (atau polis tanpa slip) memakai Source cabang kliennya.
+      sourceCode: (row.placingSlip?.source ?? branchSource(row.client?.branch?.code))?.code ?? null,
+      sourceName: (row.placingSlip?.source ?? branchSource(row.client?.branch?.code))?.name ?? null,
       cobCode: row.cob.code,
       cobName: row.cob.name,
       coverCode: row.coverType?.code ?? null,

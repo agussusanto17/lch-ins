@@ -104,6 +104,7 @@ export function slipAuditSummary(
     clauses: clausesText(slip, clauses),
     typeOfCover: text(slip.typeOfCover),
     typeOfCoverLabel: text(slip.typeOfCoverLabel),
+    sourceId: slip.sourceId ?? null,
     insuredDescription: text(slip.insuredDescription),
     correspondenceAddress: text(slip.correspondenceAddress),
     periodLabel: text(slip.periodLabel),

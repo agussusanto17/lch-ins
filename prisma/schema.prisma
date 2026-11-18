@@ -303,6 +303,7 @@ model LookupValue {
   clientIncomeSources   Client[]            @relation("income_source")
   clientPurposes        Client[]            @relation("insurance_purpose")
   clientStatuses        Client[]            @relation("client_status")
+  clientBranches        Client[]            @relation("client_branch")
   addressTypes          ClientAddress[]     @relation("address_type")
   clientDocumentTypes   ClientDocument[]    @relation("client_document_type")
   slipSecurityRoles     SlipSecurityPanel[] @relation("security_role_slip")
@@ -866,6 +867,9 @@ model Client {
   kycDate               DateTime? @map("kyc_date") @db.Date
   /// COB utama klien.
   cobId                 String?   @map("cob_id") @db.Uuid
+  /// lookup client_branch: cabang LCH yang melayani klien, Jakarta atau Singapore (MoM review
+  /// Phase 1, 17 November 2026). Perorangan selalu Jakarta; isian awal Source di placing slip.
+  branchId              String?   @map("branch_id") @db.Uuid
   /// lookup client_status: Prospect, Active, Inactive.
   statusId              String    @map("status_id") @db.Uuid
   notes                 String?
@@ -879,6 +883,7 @@ model Client {
   insurancePurpose LookupValue?     @relation("insurance_purpose", fields: [insurancePurposeId], references: [id])
   status           LookupValue      @relation("client_status", fields: [statusId], references: [id])
   cob              ClassOfBusiness? @relation(fields: [cobId], references: [id])
+  branch           LookupValue?     @relation("client_branch", fields: [branchId], references: [id])
 
   addresses    ClientAddress[]
   documents    ClientDocument[]
@@ -891,6 +896,7 @@ model Client {
 
   @@index([name])
   @@index([statusId])
+  @@index([branchId])
   @@map("clients")
 }
 

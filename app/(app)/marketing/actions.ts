@@ -46,6 +46,7 @@ const clientInputSchema = z.object({
   insurancePurposeNote: z.string().nullish(),
   kycDate: z.string().nullish(),
   cob: z.string().nullish(),
+  branch: z.string().nullish(),
   status: z.string().nullish(),
   notes: z.string().nullish(),
   addresses: z

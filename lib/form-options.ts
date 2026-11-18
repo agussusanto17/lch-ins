@@ -2,7 +2,7 @@
  * Pilihan dropdown dari master data, dimuat di `lib/server/form-options.ts` dan dibagikan lewat
  * `FormOptionsProvider`. Hanya tipe dan helper, aman di client maupun server.
  */
-import type { ClaimStatus, ClientType, PolicyType } from "./data/types"
+import type { ClaimStatus, ClientBranch, ClientType, PolicyType } from "./data/types"
 
 export interface CoverOption {
   id: string
@@ -71,6 +71,7 @@ export const SYSTEM_LOOKUP_TYPES = [
   "policy_type",
   "client_status",
   "client_type",
+  "client_branch",
 ] as const
 
 export type SystemLookupType = (typeof SYSTEM_LOOKUP_TYPES)[number]
@@ -88,6 +89,8 @@ export const FIXED_LOOKUP_TYPES: readonly string[] = [
   "claim_status",
   "policy_type",
   "client_type",
+  // Tiap cabang dipetakan ke satu Source di BRANCH_SOURCE_CODES.
+  "client_branch",
 ]
 
 export function isFixedLookupType(type: string) {
@@ -111,6 +114,28 @@ export const POLICY_TYPE_CODES: Record<PolicyType, string> = {
 export const CLIENT_TYPE_CODES: Record<ClientType, string> = {
   Perorangan: "individual",
   Korporasi: "corporate",
+}
+export const CLIENT_BRANCH_CODES: Record<ClientBranch, string> = {
+  Jakarta: "jakarta",
+  Singapore: "singapore",
+}
+
+/**
+ * Source (entitas LCH yang menempatkan bisnis) yang menjadi isian awal placing slip untuk tiap
+ * cabang klien, dicocokkan lewat kode tabel sources (MoM review Phase 1, 17 November 2026).
+ */
+export const BRANCH_SOURCE_CODES: Record<ClientBranch, string> = {
+  Jakarta: "LCH-ID",
+  Singapore: "LCH-SG",
+}
+
+/** Id Source untuk cabang klien; null bila cabangnya kosong atau Source-nya tidak aktif. */
+export function branchSourceId(
+  branch: ClientBranch | null | undefined,
+  sources: readonly SourceOption[]
+): string | null {
+  if (!branch) return null
+  return sources.find((s) => s.code === BRANCH_SOURCE_CODES[branch])?.id ?? null
 }
 
 /**
@@ -175,6 +200,13 @@ export function dynamicLookupItems(
   return current && !names.includes(current) ? [...names, current] : names
 }
 
+/** Sumber penempatan bisnis (tabel sources), misalnya PT. LCH Insurance Brokers. */
+export interface SourceOption {
+  id: string
+  code: string | null
+  name: string
+}
+
 export interface FormOptions {
   cobs: CobOption[]
   insurers: NamedOption[]
@@ -186,6 +218,8 @@ export interface FormOptions {
   paBenefits: { id: string; code: string; name: string }[]
   /** Status dan tipe klaim, polis, dan klien yang aktif, urut seperti di master. */
   systemLookups: Record<SystemLookupType, LookupOption[]>
+  /** Source aktif untuk isian Source di placing slip. */
+  sources: SourceOption[]
 }
 
 export const EMPTY_FORM_OPTIONS: FormOptions = {
@@ -207,7 +241,9 @@ export const EMPTY_FORM_OPTIONS: FormOptions = {
     policy_type: [],
     client_status: [],
     client_type: [],
+    client_branch: [],
   },
+  sources: [],
 }
 
 /**

@@ -27,12 +27,14 @@ import {
   type ClassOfBusiness,
   type Client,
   type ClientAddress,
+  type ClientBranch,
   type ClientDocument,
   type ClientStatus,
   type ClientType,
 } from "@/lib/data"
 import { todayIso } from "@/lib/date"
 import {
+  CLIENT_BRANCH_CODES,
   CLIENT_TYPE_CODES,
   cobLabels,
   dynamicLookupItems,
@@ -88,6 +90,7 @@ function emptyDraft(options: FormOptions): Draft {
     insurancePurposeNote: "",
     kycDate: todayIso(),
     cob: pick(cobLabels(options), "Property"),
+    branch: "Jakarta",
     status: "Prospect",
     addresses: [
       {
@@ -280,6 +283,8 @@ export function ClientForm({
       insurancePurposeNote: draft.insurancePurposeNote || null,
       kycDate: draft.kycDate || null,
       cob: draft.cob,
+      // Perorangan selalu Jakarta; server memakai aturan yang sama.
+      branch: corporate ? (draft.branch ?? "Jakarta") : "Jakarta",
       status: draft.status,
       notes: draft.notes || null,
       addresses: addresses.map((a) => ({
@@ -388,6 +393,21 @@ export function ClientForm({
             value={draft.status}
             onValueChange={(v) => set({ status: v as ClientStatus })}
           />
+          {/* Cabang klien korporasi, untuk report (MoM review Phase 1, 17 November 2026). */}
+          {corporate ? (
+            <SelectInput
+              label="Cabang"
+              required
+              description="Menjadi isian awal Source di placing slip."
+              items={fixedLookupItems(
+                options.systemLookups.client_branch,
+                CLIENT_BRANCH_CODES,
+                draft.branch
+              )}
+              value={draft.branch ?? "Jakarta"}
+              onValueChange={(v) => set({ branch: v as ClientBranch })}
+            />
+          ) : null}
         </div>
 
         <FieldSeparator>

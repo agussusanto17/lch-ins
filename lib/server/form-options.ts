@@ -17,7 +17,7 @@ import { prisma } from "@/lib/prisma"
  * isian master yang baru ditambah langsung muncul di form berikutnya.
  */
 export const getFormOptions = cache(async (): Promise<FormOptions> => {
-  const [cobs, insurers, currencies, wordingForms, lookupRows, paBenefits, systemRows] =
+  const [cobs, insurers, currencies, wordingForms, lookupRows, paBenefits, systemRows, sources] =
     await Promise.all([
       prisma.classOfBusiness.findMany({
         where: { isActive: true },
@@ -80,6 +80,11 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         select: { lookupType: true, code: true, name: true },
       }),
+      prisma.source.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { id: true, code: true, name: true },
+      }),
     ])
 
   const lookups = Object.fromEntries(
@@ -110,5 +115,6 @@ export const getFormOptions = cache(async (): Promise<FormOptions> => {
           .map((r) => ({ code: r.code, name: r.name })),
       ])
     ) as Record<SystemLookupType, { code: string; name: string }[]>,
+    sources,
   }
 })

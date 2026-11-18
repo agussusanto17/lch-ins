@@ -6,12 +6,13 @@ import type {
   ClassOfBusiness as CobType,
   Client,
   ClientAddress,
+  ClientBranch,
   ClientDocument,
   ClientStatus,
   ClientType,
 } from "@/lib/data/types"
 import { CLIENTS } from "@/lib/data/clients"
-import { CLIENT_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
+import { CLIENT_BRANCH_CODES, CLIENT_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
 import { maskMiddle, normalizeCob } from "@/lib/format"
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
@@ -62,6 +63,8 @@ export interface ClientInput {
   insurancePurposeNote?: string | null
   kycDate?: string | null
   cob?: CobType | string | null
+  /** Cabang klien korporasi; perorangan selalu Jakarta. */
+  branch?: ClientBranch | string | null
   status?: ClientStatus | string
   notes?: string | null
   addresses?: ClientAddressInput[]
@@ -88,6 +91,7 @@ const getLookupsCache = cache(async () => {
         lookupType: {
           in: [
             "client_type",
+            "client_branch",
             "client_status",
             "id_type",
             "income_source",
@@ -155,6 +159,15 @@ function resolveLookupId(
   return null
 }
 
+/** Cabang tersimpan; kosong atau tidak dikenal menjadi Jakarta. */
+function clientBranchId(cache: ClientLookups, branch: string | null | undefined) {
+  const code = CLIENT_BRANCH_CODES[branch as ClientBranch] ?? branch
+  return (
+    resolveLookupId(cache, "client_branch", code) ??
+    resolveLookupId(cache, "client_branch", "jakarta")
+  )
+}
+
 function resolveCobId(
   cache: ClientLookups,
   cobValue: string | null | undefined
@@ -177,6 +190,7 @@ function toDateOnly(d: Date | null | undefined): string | undefined {
 type PrismaClientWithRelations = Prisma.ClientGetPayload<{
   include: {
     clientType: true
+    branch: true
     idType: true
     incomeSource: true
     insurancePurpose: true
@@ -231,6 +245,7 @@ function mapPrismaClientToRecord(
     dbId: c.id,
     // Dicocokkan lewat kode, jadi nama yang diganti di Master Data aman.
     clientType: systemValueFromRow(CLIENT_TYPE_CODES, c.clientType, "Korporasi"),
+    branch: systemValueFromRow(CLIENT_BRANCH_CODES, c.branch, "Jakarta"),
     name: c.name,
     npwp: c.npwp || "",
     idType: c.idType?.name || undefined,
@@ -313,6 +328,7 @@ export async function seedInitialClientsIfEmpty(): Promise<number> {
           insurancePurposeNote: item.insurancePurposeNote || null,
           kycDate: item.kycDate ? new Date(item.kycDate) : null,
           cobId,
+          branchId: resolveLookupId(cache, "client_branch", "jakarta"),
           statusId,
           notes: item.notes || null,
         },
@@ -381,7 +397,7 @@ export async function listClientOptions(): Promise<ClientOption[]> {
 export interface InsuredOption
   extends Pick<
     Client,
-    "id" | "name" | "status" | "clientType" | "contactPerson" | "addresses"
+    "id" | "name" | "status" | "clientType" | "branch" | "contactPerson" | "addresses"
   > {
   npwpMasked: string | null
 }
@@ -399,6 +415,7 @@ export async function listInsuredOptions(): Promise<InsuredOption[]> {
       npwp: true,
       contactPerson: true,
       clientType: { select: { code: true, name: true } },
+      branch: { select: { code: true, name: true } },
       status: { select: { name: true } },
       addresses: {
         select: {
@@ -419,6 +436,8 @@ export async function listInsuredOptions(): Promise<InsuredOption[]> {
     contactPerson: c.contactPerson || "",
     // Dicocokkan lewat kode, jadi nama yang diganti di Master Data aman.
     clientType: systemValueFromRow(CLIENT_TYPE_CODES, c.clientType, "Korporasi"),
+    // Isian awal Source di placing slip (MoM review Phase 1, 17 November 2026).
+    branch: systemValueFromRow(CLIENT_BRANCH_CODES, c.branch, "Jakarta"),
     status: (c.status?.name || "Active") as ClientStatus,
     addresses: c.addresses.map((a) => ({
       id: a.id,
@@ -472,6 +491,7 @@ export async function listClients(
     where,
     include: {
       clientType: true,
+      branch: true,
       idType: true,
       incomeSource: true,
       insurancePurpose: true,
@@ -518,6 +538,7 @@ export async function getClientById(
         where: { name: { equals: mock.name, mode: "insensitive" } },
         include: {
           clientType: true,
+          branch: true,
           idType: true,
           incomeSource: true,
           insurancePurpose: true,
@@ -549,6 +570,7 @@ export async function getClientById(
     where: { id },
     include: {
       clientType: true,
+      branch: true,
       idType: true,
       incomeSource: true,
       insurancePurpose: true,
@@ -671,6 +693,8 @@ export async function createClient(
   const cobId = resolveCobId(cache, input.cob)
 
   const corporate = input.clientType === "Korporasi"
+  // Perorangan selalu Jakarta (MoM review Phase 1, 17 November 2026).
+  const branchId = clientBranchId(cache, corporate ? input.branch : "Jakarta")
 
   const record = await prisma.$transaction(async (tx) => {
     const created = await tx.client.create({
@@ -694,11 +718,13 @@ export async function createClient(
         insurancePurposeNote: input.insurancePurposeNote?.trim() || null,
         kycDate: input.kycDate ? new Date(input.kycDate) : new Date(),
         cobId,
+        branchId,
         statusId,
         notes: input.notes?.trim() || null,
       },
       include: {
         clientType: true,
+        branch: true,
         idType: true,
         incomeSource: true,
         insurancePurpose: true,
@@ -811,6 +837,8 @@ export async function updateClient(
   const cobId = resolveCobId(cache, input.cob)
 
   const corporate = input.clientType === "Korporasi"
+  // Perorangan selalu Jakarta (MoM review Phase 1, 17 November 2026).
+  const branchId = clientBranchId(cache, corporate ? input.branch : "Jakarta")
 
   await prisma.$transaction(async (tx) => {
     const before = await clientAuditSnapshot(tx, existing.dbId)
@@ -837,6 +865,7 @@ export async function updateClient(
         insurancePurposeNote: input.insurancePurposeNote?.trim() || null,
         kycDate: input.kycDate ? new Date(input.kycDate) : undefined,
         cobId,
+        branchId,
         statusId,
         notes: input.notes?.trim() || null,
       },
