@@ -118,6 +118,7 @@ const FIELD_LABELS: Record<string, string> = {
   interestSection2: "Interest Insured Section 2",
   wordingForms: "Wording form",
   discountPct: "Diskon (%)",
+  additionalDiscountPct: "Additional discount Quotation (%)",
   subjectivity: "Subjectivity",
   closingInstruction: "Catatan Closing Instruction",
   coverNoteRemarks: "Catatan Cover Note",

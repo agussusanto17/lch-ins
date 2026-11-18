@@ -181,6 +181,7 @@ export interface PlacingSlipInput {
   rateExceptions?: Record<string, RateException>
   securityPanel?: SecurityPanelRow[]
   discountPct?: number
+  additionalDiscountPct?: number
   adminCost?: number
   stampDuty?: number
   brokeragePct?: number
@@ -755,6 +756,7 @@ function toPlacingSlipRecord(
     rateExceptions: Object.keys(rateExceptions).length > 0 ? rateExceptions : undefined,
     securityPanel,
     discountPct: Number(raw.discountPct),
+    additionalDiscountPct: Number(raw.additionalDiscountPct) || undefined,
     adminCost: Number(raw.adminCost),
     stampDuty: Number(raw.stampDuty),
     brokeragePct: Number(raw.brokeragePct),
@@ -901,6 +903,7 @@ export function copySlipInput(source: PlacingSlipRecord): PlacingSlipInput {
     rateExceptions: source.rateExceptions,
     securityPanel: source.securityPanel,
     discountPct: source.discountPct,
+    additionalDiscountPct: source.additionalDiscountPct,
     adminCost: source.adminCost,
     stampDuty: source.stampDuty,
     brokeragePct: source.brokeragePct,
@@ -1432,6 +1435,7 @@ export async function createPlacingSlip(
         deductibleIntro: input.deductibleIntro?.trim() || null,
         exclusions: input.exclusions?.trim() || null,
         discountPct: new Prisma.Decimal(input.discountPct ?? 0),
+        additionalDiscountPct: new Prisma.Decimal(input.additionalDiscountPct ?? 0),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
@@ -1862,6 +1866,7 @@ export async function updatePlacingSlip(
         deductibleIntro: input.deductibleIntro?.trim() || null,
         exclusions: input.exclusions?.trim() || null,
         discountPct: new Prisma.Decimal(input.discountPct ?? 0),
+        additionalDiscountPct: new Prisma.Decimal(input.additionalDiscountPct ?? 0),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),

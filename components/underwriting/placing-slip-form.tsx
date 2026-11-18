@@ -125,7 +125,9 @@ import {
   discountAmount,
   effectiveBrokeragePct,
   insurerAdditionalFee,
+  internalTotalPayable,
   isParEqvetSlip,
+  MAX_ADDITIONAL_DISCOUNT_PCT,
   parEqvetPolicyCharge,
   sumPercent,
   totalPayable,
@@ -594,6 +596,9 @@ function SlipEditor({
   const premium = totalPremium(slip)
   const discount = discountAmount(slip)
   const payable = totalPayable(slip)
+  // Additional discount Quotation hanya untuk cetakan internal (MoM poin 7).
+  const additionalPct = slip.additionalDiscountPct || 0
+  const internalPayable = internalTotalPayable(slip)
   // Slip PAR + EQVET: Admin Cost dan Stamp Duty dikenakan per polis yang
   // berpremi, jadi ringkasan menyebut jumlah polisnya.
   const parEqvet = isParEqvetSlip(slip) ? calculateParEqvet(slip) : null
@@ -672,6 +677,12 @@ function SlipEditor({
   }
 
   function handleSave() {
+    if (additionalPct > MAX_ADDITIONAL_DISCOUNT_PCT) {
+      toast.error("Additional discount melebihi batas", {
+        description: `Maksimal ${MAX_ADDITIONAL_DISCOUNT_PCT}% dari premi setelah discount.`,
+      })
+      return
+    }
     if (sectionTitles) {
       const clauseIssues = validateClauseUniquenessAcrossSections(
         slip,
@@ -2157,6 +2168,63 @@ function SlipEditor({
                     {money(payable, slip.currency)}
                   </span>
                 </div>
+                {/*
+                 * Additional discount Quotation (MoM review Phase 1, poin 7): dari premi setelah
+                 * discount, hanya dicetak di Quotation Slip Internal LCH.
+                 */}
+                {isQuotation || isClosing ? (
+                  <div className="flex flex-col gap-3 border-t border-dashed pt-3">
+                    <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-3">
+                      <Field>
+                        <FieldLabel htmlFor="additional-disc">
+                          Additional Discount (%)
+                        </FieldLabel>
+                        <NumberInput
+                          id="additional-disc"
+                          preset="percent"
+                          className={PANEL_INPUT}
+                          min={0}
+                          max={MAX_ADDITIONAL_DISCOUNT_PCT}
+                          disabled={locked}
+                          invalid={
+                            additionalPct < 0 ||
+                            additionalPct > MAX_ADDITIONAL_DISCOUNT_PCT
+                          }
+                          value={slip.additionalDiscountPct || null}
+                          onValueChange={(v) =>
+                            set({ additionalDiscountPct: v ?? 0 })
+                          }
+                        />
+                      </Field>
+                      <p className="text-xs text-muted-foreground sm:col-span-2 sm:pt-7">
+                        Maksimal {MAX_ADDITIONAL_DISCOUNT_PCT}%, dihitung dari premi
+                        setelah discount. Hanya dicetak di Quotation Slip Internal
+                        LCH; Closing Instruction, polis, dan report tetap memakai
+                        Discount di atas.
+                      </p>
+                    </div>
+                    {additionalPct > MAX_ADDITIONAL_DISCOUNT_PCT ? (
+                      <p className="text-xs text-destructive">
+                        Additional discount maksimal {MAX_ADDITIONAL_DISCOUNT_PCT}%.
+                      </p>
+                    ) : additionalPct > 0 ? (
+                      <>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Additional Discount {percent(additionalPct)}</span>
+                          <span className="tabular">
+                            ({money(payable - internalPayable, slip.currency)})
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm font-semibold">
+                          <span>Total Payable internal LCH</span>
+                          <span className="tabular">
+                            {money(internalPayable, slip.currency)}
+                          </span>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               )}
             </div>
@@ -2669,6 +2737,15 @@ function SlipEditor({
                 <FileText data-icon="inline-start" />
                 Quotation Slip
               </Button>
+              {/* Quotation dengan additional discount untuk internal LCH (MoM poin 7). */}
+              <Button
+                variant="outline"
+                disabled={isPending}
+                onClick={() => goTo((id) => `/placement/quotation/${id}/internal`)}
+              >
+                <FileText data-icon="inline-start" />
+                Quotation Internal
+              </Button>
               {!locked ? (
                 <Button
                   variant="outline"
@@ -2762,6 +2839,16 @@ function SlipEditor({
               >
                 <FileText data-icon="inline-start" />
                 Quotation Slip
+              </Button>
+              {/* Quotation dengan additional discount untuk internal LCH (MoM poin 7). */}
+              <Button
+                variant="outline"
+                disabled={!panelValid || slip.status === "Draft" || isPending}
+                title={!panelValid ? "Lengkapi panel asuransi dulu" : undefined}
+                onClick={() => goTo((id) => `/placement/quotation/${id}/internal`)}
+              >
+                <FileText data-icon="inline-start" />
+                Quotation Internal
               </Button>
               <Button
                 disabled={!panelValid || slip.status === "Draft" || isPending}

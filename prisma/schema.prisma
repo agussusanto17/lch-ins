@@ -1132,6 +1132,10 @@ model PlacingSlip {
   exclusions        String?
 
   discountPct  Decimal @default(0) @map("discount_pct") @db.Decimal(12, 6)
+  /// Additional discount Quotation (MoM review Phase 1, poin 7), maksimal 15%, dihitung dari premi
+  /// setelah discount. Hanya dicetak di Quotation Slip Internal LCH; CI, polis, dan report tetap
+  /// memakai discount_pct.
+  additionalDiscountPct Decimal @default(0) @map("additional_discount_pct") @db.Decimal(12, 6)
   adminCost    Decimal @default(0) @map("admin_cost") @db.Decimal(18, 2)
   stampDuty    Decimal @default(0) @map("stamp_duty") @db.Decimal(18, 2)
   /// Dibatasi biaya akuisisi OJK: maksimal 15% harta benda, 25% kendaraan

@@ -10,10 +10,12 @@ import {
 } from "@/components/underwriting/slip-model"
 import {
   BI_RATE_LABELS,
+  additionalDiscountFor,
   biRateBasis,
   brokerageAmount,
   calculateParEqvet,
   discountAmount,
+  internalTotalPayable,
   isParEqvetSlip,
   ratePermilText,
   roundCents,
@@ -1080,17 +1082,53 @@ export function PremiumTable({
   )
 }
 
-export function PayableTable({ slip }: { slip: PlacingSlip }) {
+/**
+ * Discount, biaya, dan Total Payable. Cetakan internal (Quotation Slip Internal LCH, MoM poin 7)
+ * menambahkan premi setelah discount, additional discount, dan premi setelah keduanya.
+ */
+export function PayableTable({
+  slip,
+  internal = false,
+}: {
+  slip: PlacingSlip
+  internal?: boolean
+}) {
+  const afterDiscount = roundCents(totalPremium(slip) - discountAmount(slip))
+  const additional = additionalDiscountFor(afterDiscount, slip.additionalDiscountPct)
   return (
     <table className="mt-4 w-full text-[12.5px]">
       <tbody>
-        {slip.discountPct ? (
+        {slip.discountPct || internal ? (
           <tr className="border-b">
-            <td className="py-2">Discount ({num(slip.discountPct, 2)}%)</td>
+            <td className="py-2">Discount ({num(slip.discountPct || 0, 2)}%)</td>
             <td className="tabular py-2 text-right">
               ({moneyCents(discountAmount(slip), slip.currency)})
             </td>
           </tr>
+        ) : null}
+        {internal ? (
+          <>
+            <tr className="border-b">
+              <td className="py-2">Premium after discount</td>
+              <td className="tabular py-2 text-right">
+                {moneyCents(afterDiscount, slip.currency)}
+              </td>
+            </tr>
+            <tr className="border-b">
+              <td className="py-2">
+                Additional Discount ({num(slip.additionalDiscountPct || 0, 2)}%)
+              </td>
+              <td className="tabular py-2 text-right">
+                ({moneyCents(additional, slip.currency)})
+              </td>
+            </tr>
+            <tr className="border-b font-semibold">
+              <td className="py-2">Premium after additional discount</td>
+              <td className="tabular py-2 text-right">
+                {moneyCents(roundCents(afterDiscount - additional), slip.currency)}
+              </td>
+            </tr>
+          </>
         ) : null}
         {slip.adminCost ? (
           <tr className="border-b">
@@ -1111,7 +1149,7 @@ export function PayableTable({ slip }: { slip: PlacingSlip }) {
         <tr className="bg-primary/8 text-primary">
           <td className="px-2 py-2.5 font-bold">Total Payable</td>
           <td className="tabular px-2 py-2.5 text-right font-bold">
-            {moneyCents(totalPayable(slip), slip.currency)}
+            {moneyCents(internal ? internalTotalPayable(slip) : totalPayable(slip), slip.currency)}
           </td>
         </tr>
       </tbody>
@@ -1230,12 +1268,17 @@ function SummaryRow({
 function ParEqvetGroupSection({
   group,
   currency,
+  additionalPct = null,
 }: {
   group: ParEqvetGroup
   currency: string
+  /** Persen additional discount; diisi hanya untuk cetakan internal (MoM poin 7). */
+  additionalPct?: number | null
 }) {
   if (!group.lines.length) return null
   const lastIndex = group.lines.length - 1
+  const internal = additionalPct != null
+  const additional = internal ? additionalDiscountFor(group.afterDiscount, additionalPct) : 0
 
   return (
     <tbody>
@@ -1267,7 +1310,7 @@ function ParEqvetGroupSection({
         currency={currency}
       />
 
-      {group.discountPct > 0 ? (
+      {group.discountPct > 0 || internal ? (
         <>
           <SummaryRow
             label={`Discount (${num(group.discountPct, 2)}%)`}
@@ -1285,6 +1328,25 @@ function ParEqvetGroupSection({
         </>
       ) : null}
 
+      {internal ? (
+        <>
+          <SummaryRow
+            label={`Additional Discount (${num(additionalPct, 2)}%)`}
+            className="text-muted-foreground"
+            value={additional}
+            currency={currency}
+            negative
+            sign="-"
+          />
+          <SummaryRow
+            label="Premium after additional discount"
+            className="font-semibold"
+            value={roundCents(group.afterDiscount - additional)}
+            currency={currency}
+          />
+        </>
+      ) : null}
+
       <SummaryRow
         label="Policy Cost + Stamp Duty"
         value={group.policyCost}
@@ -1295,7 +1357,7 @@ function ParEqvetGroupSection({
       <SummaryRow
         label={`Total Premium ${group.name}`}
         className="border-t border-b font-bold"
-        value={group.total}
+        value={roundCents(group.total - additional)}
         currency={currency}
       />
     </tbody>
@@ -1303,13 +1365,21 @@ function ParEqvetGroupSection({
 }
 
 /** Grouped PAR and EQVET calculation with open formulas, group deductions, and grand total. */
-export function ParEqvetCalculationBlock({ slip }: { slip: PlacingSlip }) {
+export function ParEqvetCalculationBlock({
+  slip,
+  internal = false,
+}: {
+  slip: PlacingSlip
+  /** Quotation Slip Internal LCH: tiap kelompok ikut additional discount (MoM poin 7). */
+  internal?: boolean
+}) {
   const calc = calculateParEqvet(slip)
+  const additionalPct = internal ? slip.additionalDiscountPct || 0 : null
 
   return (
     // One table so PAR, EQVET, and the grand total share column widths.
     <table className="w-full text-[12.5px]">
-      <ParEqvetGroupSection group={calc.par} currency={calc.currency} />
+      <ParEqvetGroupSection group={calc.par} currency={calc.currency} additionalPct={additionalPct} />
       {calc.par.lines.length > 0 && calc.eqvet.lines.length > 0 ? (
         <tbody aria-hidden>
           <tr>
@@ -1317,7 +1387,7 @@ export function ParEqvetCalculationBlock({ slip }: { slip: PlacingSlip }) {
           </tr>
         </tbody>
       ) : null}
-      <ParEqvetGroupSection group={calc.eqvet} currency={calc.currency} />
+      <ParEqvetGroupSection group={calc.eqvet} currency={calc.currency} additionalPct={additionalPct} />
       <tbody>
         <tr aria-hidden>
           <td colSpan={9} className="h-4" />
@@ -1325,7 +1395,7 @@ export function ParEqvetCalculationBlock({ slip }: { slip: PlacingSlip }) {
         <SummaryRow
           label="GRAND TOTAL PREMIUM (PAR+EQVET)"
           className="border-t-2 border-primary/40 text-[13px] font-bold"
-          value={calc.grandTotal}
+          value={internal ? internalTotalPayable(slip) : calc.grandTotal}
           currency={calc.currency}
         />
       </tbody>
@@ -1383,7 +1453,14 @@ function AttachedTotal({ label, value }: { label: string; value: string }) {
  * Badan dokumen Property multi lokasi: RATE bila semua lokasi sama, premi "As Attached", Grand Total.
  * Jadwal premi per lokasi di lampiran DAFTAR LOKASI (Opsi B; Harry 5 dan Agus 9 November 2026).
  */
-export function LocationPremiumAttached({ slip }: { slip: PlacingSlip }) {
+export function LocationPremiumAttached({
+  slip,
+  internal = false,
+}: {
+  slip: PlacingSlip
+  /** Quotation Slip Internal LCH: total setelah additional discount (MoM poin 7). */
+  internal?: boolean
+}) {
   const calc = calculateParEqvet(slip)
   const groups = locationGroups(slip)
   const sharedRates = locationsShareRates(slip)
@@ -1409,7 +1486,7 @@ export function LocationPremiumAttached({ slip }: { slip: PlacingSlip }) {
       </div>
       <AttachedTotal
         label={isParEqvetSlip(slip) ? "Grand Total Premium (PAR+EQVET)" : "Total Payable"}
-        value={moneyCents(calc.grandTotal, calc.currency)}
+        value={moneyCents(internal ? internalTotalPayable(slip) : calc.grandTotal, calc.currency)}
       />
     </>
   )
@@ -1419,8 +1496,21 @@ export function LocationPremiumAttached({ slip }: { slip: PlacingSlip }) {
  * Jadwal premi per lokasi dan cover, PAR dan EQVET terpisah, lalu Discount,
  * Policy Cost, dan Stamp Duty sebelum Grand Total.
  */
-function LocationScheduleTable({ slip }: { slip: PlacingSlip }) {
+function LocationScheduleTable({
+  slip,
+  internal = false,
+}: {
+  slip: PlacingSlip
+  internal?: boolean
+}) {
   const calc = calculateParEqvet(slip)
+  const additionalPct = slip.additionalDiscountPct || 0
+  const additional = roundCents(
+    [calc.par, calc.eqvet].reduce(
+      (sum, g) => sum + additionalDiscountFor(g.afterDiscount, additionalPct),
+      0
+    )
+  )
   const parEqvet = isParEqvetSlip(slip)
   const groups = locationGroups(slip)
   const currency = calc.currency
@@ -1483,7 +1573,7 @@ function LocationScheduleTable({ slip }: { slip: PlacingSlip }) {
               </tr>
             </Fragment>
           ))}
-          {calc.par.discountPct > 0 ? (
+          {calc.par.discountPct > 0 || internal ? (
             <tr className="avoid-break border-b">
               <td colSpan={4} className="py-1.5 pr-2">
                 Discount
@@ -1493,6 +1583,19 @@ function LocationScheduleTable({ slip }: { slip: PlacingSlip }) {
               </td>
               <td className="tabular py-1.5 text-right whitespace-nowrap">
                 ({amount(discount)})
+              </td>
+            </tr>
+          ) : null}
+          {internal ? (
+            <tr className="avoid-break border-b">
+              <td colSpan={4} className="py-1.5 pr-2">
+                Additional Discount
+              </td>
+              <td className="tabular py-1.5 pr-2 text-right">
+                {num(additionalPct, 0, 2)}%
+              </td>
+              <td className="tabular py-1.5 text-right whitespace-nowrap">
+                ({amount(additional)})
               </td>
             </tr>
           ) : null}
@@ -1517,7 +1620,7 @@ function LocationScheduleTable({ slip }: { slip: PlacingSlip }) {
               Grand Total Premium (PAR+EQVET)
             </td>
             <td className="tabular px-2 py-2 text-right whitespace-nowrap">
-              {amount(calc.grandTotal)}
+              {amount(internal ? internalTotalPayable(slip) : calc.grandTotal)}
             </td>
           </tr>
         </tbody>
@@ -1543,7 +1646,14 @@ function AppendixTitle({ slip, title }: { slip: PlacingSlip; title: string }) {
  * Lampiran DAFTAR LOKASI Property multi lokasi: alamat, okupasi, kelas, objek, lalu jadwal premi.
  * Badan dokumen cukup menulis "As Attached" (Agus, 9 November 2026).
  */
-export function LocationScheduleAppendix({ slip }: { slip: PlacingSlip }) {
+export function LocationScheduleAppendix({
+  slip,
+  internal = false,
+}: {
+  slip: PlacingSlip
+  /** Quotation Slip Internal LCH: jadwal premi ikut additional discount (MoM poin 7). */
+  internal?: boolean
+}) {
   if (!isMultiLocation(slip)) return null
   const groups = locationGroups(slip)
   const currency = slip.currency || "IDR"
@@ -1621,7 +1731,7 @@ export function LocationScheduleAppendix({ slip }: { slip: PlacingSlip }) {
         </tbody>
       </table>
       <SectionHeading>PREMIUM CALCULATION</SectionHeading>
-      <LocationScheduleTable slip={slip} />
+      <LocationScheduleTable slip={slip} internal={internal} />
     </section>
   )
 }
@@ -1658,13 +1768,23 @@ function VehiclesAttachedInterest({ slip }: { slip: PlacingSlip }) {
 }
 
 /** Badan dokumen slip Motor Vehicle multi kendaraan: "As Attached" dan Total Payable. */
-export function VehiclePremiumAttached({ slip }: { slip: PlacingSlip }) {
+export function VehiclePremiumAttached({
+  slip,
+  internal = false,
+}: {
+  slip: PlacingSlip
+  /** Quotation Slip Internal LCH: total setelah additional discount (MoM poin 7). */
+  internal?: boolean
+}) {
   return (
     <>
       <div className="mt-6">
         <InfoTable rows={[["Rate & Premium", AS_ATTACHED]]} />
       </div>
-      <AttachedTotal label="Total Payable" value={moneyCents(totalPayable(slip), slip.currency)} />
+      <AttachedTotal
+        label="Total Payable"
+        value={moneyCents(internal ? internalTotalPayable(slip) : totalPayable(slip), slip.currency)}
+      />
     </>
   )
 }
@@ -1673,7 +1793,14 @@ export function VehiclePremiumAttached({ slip }: { slip: PlacingSlip }) {
  * DAFTAR UNIT KENDARAAN (Agus, 9 November 2026): kolom ditumpuk agar muat A4 portrait, karena Chrome
  * tetap memakai lebar portrait di halaman landscape. Lebar kolom ikut isi agar angka utuh (SIT-089).
  */
-export function VehicleScheduleAppendix({ slip }: { slip: PlacingSlip }) {
+export function VehicleScheduleAppendix({
+  slip,
+  internal = false,
+}: {
+  slip: PlacingSlip
+  /** Quotation Slip Internal LCH: total ikut additional discount (MoM poin 7). */
+  internal?: boolean
+}) {
   if (!isMultiVehicle(slip)) return null
   const { extensionLabels, rows } = vehicleSchedule(slip)
   const currency = slip.currency || "IDR"
@@ -1789,10 +1916,28 @@ export function VehicleScheduleAppendix({ slip }: { slip: PlacingSlip }) {
             <td className="py-1">Total Premium</td>
             <td className="tabular py-1 text-right">{moneyCents(totalPremium(slip), currency)}</td>
           </tr>
-          {slip.discountPct ? (
+          {slip.discountPct || internal ? (
             <tr className="border-b">
-              <td className="py-1">Discount ({num(slip.discountPct, 2)}%)</td>
+              <td className="py-1">Discount ({num(slip.discountPct || 0, 2)}%)</td>
               <td className="tabular py-1 text-right">({moneyCents(discountAmount(slip), currency)})</td>
+            </tr>
+          ) : null}
+          {internal ? (
+            <tr className="border-b">
+              <td className="py-1">
+                Additional Discount ({num(slip.additionalDiscountPct || 0, 2)}%)
+              </td>
+              <td className="tabular py-1 text-right">
+                (
+                {moneyCents(
+                  additionalDiscountFor(
+                    roundCents(totalPremium(slip) - discountAmount(slip)),
+                    slip.additionalDiscountPct
+                  ),
+                  currency
+                )}
+                )
+              </td>
             </tr>
           ) : null}
           {slip.adminCost ? (
@@ -1809,7 +1954,9 @@ export function VehicleScheduleAppendix({ slip }: { slip: PlacingSlip }) {
           ) : null}
           <tr className="font-bold">
             <td className="py-1">Total Payable</td>
-            <td className="tabular py-1 text-right">{moneyCents(totalPayable(slip), currency)}</td>
+            <td className="tabular py-1 text-right">
+              {moneyCents(internal ? internalTotalPayable(slip) : totalPayable(slip), currency)}
+            </td>
           </tr>
         </tbody>
       </table>

@@ -205,19 +205,26 @@ function Missing() {
  * Brokerage tidak dicetak di bawah GRAND TOTAL PREMIUM (Harry, 5 November 2026).
  * Placing Slip dan Closing Instruction mencetaknya di BrokerageBlock.
  */
-function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
+function SlipRateAndPremium({
+  slip,
+  internal = false,
+}: {
+  slip: PlacingSlip
+  /** Quotation Slip Internal LCH: perhitungan premi ikut additional discount (MoM poin 7). */
+  internal?: boolean
+}) {
   // Open cover: rate per kategori, premi per deklarasi.
   if (usesOpenCover(slip)) return <OpenCoverRateBlock slip={slip} />
   // Multi lokasi atau kendaraan: badan dokumen menulis "As Attached" (Opsi B), jadwal premi
   // dicetak di lampiran DAFTAR LOKASI atau DAFTAR UNIT KENDARAAN.
-  if (isMultiLocation(slip)) return <LocationPremiumAttached slip={slip} />
-  if (isMultiVehicle(slip)) return <VehiclePremiumAttached slip={slip} />
+  if (isMultiLocation(slip)) return <LocationPremiumAttached slip={slip} internal={internal} />
+  if (isMultiVehicle(slip)) return <VehiclePremiumAttached slip={slip} internal={internal} />
   // Slip multi objek COB lain: jadwal premi per objek, lalu diskon dan biaya.
   if (isMultiItem(slip)) {
     return (
       <>
         <ObjectPremiumSchedule slip={slip} />
-        <PayableTable slip={slip} />
+        <PayableTable slip={slip} internal={internal} />
       </>
     )
   }
@@ -227,7 +234,7 @@ function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
         <SectionHeading>RATE</SectionHeading>
         <ParEqvetRateBlock slip={slip} />
         <SectionHeading>PREMIUM CALCULATION</SectionHeading>
-        <ParEqvetCalculationBlock slip={slip} />
+        <ParEqvetCalculationBlock slip={slip} internal={internal} />
       </>
     )
   }
@@ -240,7 +247,7 @@ function SlipRateAndPremium({ slip }: { slip: PlacingSlip }) {
         rows={premiumRows(slip)}
         unitLabel={rateUnitFor(slip.cob)}
       />
-      <PayableTable slip={slip} />
+      <PayableTable slip={slip} internal={internal} />
     </>
   )
 }
@@ -298,7 +305,15 @@ export function PlacingSlipDocument(props: DocProps) {
   )
 }
 
-export function QuotationSlipDocument(props: DocProps) {
+/**
+ * Quotation Slip. `internal` mencetak Quotation Slip Internal LCH: format yang sama, dengan
+ * additional discount di PREMIUM CALCULATION (MoM review Phase 1, poin 7). Format biasa untuk
+ * tertanggung tidak memuat additional discount.
+ */
+export function QuotationSlipDocument({
+  internal = false,
+  ...props
+}: DocProps & { internal?: boolean }) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
   const number = derivedDocNumber(slip.slipNo, "QS")
@@ -309,7 +324,7 @@ export function QuotationSlipDocument(props: DocProps) {
     <DocumentShell slip backHref={`/placement/quotation/edit/${slip.id}`} variant={kop}>
       <Letterhead variant={kop} />
       <DocTitle
-        title="QUOTATION SLIP"
+        title={internal ? "QUOTATION SLIP — INTERNAL LCH" : "QUOTATION SLIP"}
         number={number ? `No. ${number}` : "DRAFT"}
         muted={!number}
       />
@@ -322,7 +337,7 @@ export function QuotationSlipDocument(props: DocProps) {
       <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
 
-      <SlipRateAndPremium slip={slip} />
+      <SlipRateAndPremium slip={slip} internal={internal} />
 
       <SubjectivityBlock slip={slip} />
 
@@ -338,9 +353,9 @@ export function QuotationSlipDocument(props: DocProps) {
 
       <ParticipantAppendix slip={slip} />
 
-      <LocationScheduleAppendix slip={slip} />
+      <LocationScheduleAppendix slip={slip} internal={internal} />
 
-      <VehicleScheduleAppendix slip={slip} />
+      <VehicleScheduleAppendix slip={slip} internal={internal} />
 
       <ClauseWordingAppendix slip={slip} />
 
