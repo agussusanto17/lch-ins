@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils"
 
 /** Pola format angka yang dipakai di seluruh form. */
 const PRESETS = {
-  /** Nominal uang sampai sen: 13.440.000,50 */
-  money: { minimumFractionDigits: 0, maximumFractionDigits: 2 },
+  /** Nominal uang selalu 2 angka di belakang koma: 13.440.000,00 atau 13.440.000,50 */
+  money: { minimumFractionDigits: 2, maximumFractionDigits: 2 },
   /** Rate per mil atau persen, presisi numeric(12,6) di ERD. */
   rate: { minimumFractionDigits: 0, maximumFractionDigits: 6 },
   /** Persentase seperti diskon, brokerage, dan share. */
