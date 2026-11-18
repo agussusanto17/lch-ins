@@ -14,6 +14,7 @@ import {
   ClaimPolicyInfoPanel,
   useClaimPolicyInfo,
 } from "@/components/claims/claim-policy-info"
+import { LossRatioPanel } from "@/components/claims/loss-ratio-panel"
 import { FormDrawer } from "@/components/shared/form-drawer"
 import {
   NumberField,
@@ -618,6 +619,13 @@ export function ClaimForm({
                   <li key={w}>{w}</li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+          {/* Loss ratio polis, ikut isian di atas dan status klaim (MoM review Phase 1, poin 13). */}
+          {policyInfo ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">Loss Ratio Polis</p>
+              <LossRatioPanel data={policyInfo.lossRatio} claimId={draft.id} claim={draft} />
             </div>
           ) : null}
         </FieldGroup>

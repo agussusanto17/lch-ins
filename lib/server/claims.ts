@@ -25,6 +25,7 @@ import { prisma } from "@/lib/prisma"
 import { rosterPolicyId } from "@/lib/server/policies"
 import { getPlacingSlipById } from "@/lib/server/placing-slips"
 import { deductibleGroups, type DeductibleGroupText } from "@/lib/slip-deductibles"
+import type { LossRatioData } from "@/lib/loss-ratio"
 import { recordAudit } from "@/server/services/audit"
 import { nextDocumentNumber } from "@/server/services/number-generator"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
@@ -415,6 +416,133 @@ export interface ClaimPolicyInfo {
    * tampil saat polis dipilih di form klaim (Agus, 13 November 2026).
    */
   policyFiles: ClaimPolicyFile[]
+  /** Premi dan klaim per tahun polis untuk loss ratio (MoM review Phase 1, poin 13). */
+  lossRatio: LossRatioData
+}
+
+const policyLinkSelect = {
+  id: true,
+  parentPolicyId: true,
+  policyType: { select: { code: true, name: true } },
+} satisfies Prisma.PolicySelect
+
+/** Endorsement, pembatalan, dan deklarasi masuk tahun polis induknya. */
+function followsParentYear(row: Prisma.PolicyGetPayload<{ select: typeof policyLinkSelect }>) {
+  const type = systemValueFromRow(POLICY_TYPE_CODES, row.policyType, "Baru")
+  return Boolean(row.parentPolicyId) && (isPolicyChange(type) || type === "Deklarasi")
+}
+
+/**
+ * Premi dan klaim per tahun polis untuk loss ratio (MoM review Phase 1, poin 13; sheet
+ * Perhitungan LOSS RATIO dari Team LCH). Tahun polisnya rantai renewal polis klaim, sebelum
+ * dan sesudahnya. Tiap tahun berisi polis Baru/Renewal, endorsement, pembatalan, dan deklarasinya.
+ */
+async function lossRatioData(policyId: string): Promise<LossRatioData> {
+  // Naik ke polis tahun pertama: lewati perubahan dan deklarasi, lalu ikuti renewal ke induknya.
+  let currentRoot: string | null = null
+  let firstRoot: string | null = null
+  const visited = new Set<string>()
+  let id: string | null = policyId
+  while (id && !visited.has(id) && visited.size < 100) {
+    visited.add(id)
+    const row: Prisma.PolicyGetPayload<{ select: typeof policyLinkSelect }> | null =
+      await prisma.policy.findUnique({ where: { id }, select: policyLinkSelect })
+    if (!row) break
+    if (!followsParentYear(row)) {
+      currentRoot ??= row.id
+      firstRoot = row.id
+      const type = systemValueFromRow(POLICY_TYPE_CODES, row.policyType, "Baru")
+      if (type !== "Renewal") break
+    }
+    id = row.parentPolicyId
+  }
+  if (!currentRoot || !firstRoot) return { currentPolicyId: policyId, years: [] }
+
+  // Turun dari tahun pertama: renewal membuka tahun baru, sisanya ikut tahun induknya.
+  const yearOf = new Map<string, string>([[firstRoot, firstRoot]])
+  let frontier = [firstRoot]
+  for (let depth = 0; depth < 100 && frontier.length; depth++) {
+    const children = await prisma.policy.findMany({
+      where: { parentPolicyId: { in: frontier } },
+      select: policyLinkSelect,
+    })
+    frontier = []
+    for (const child of children) {
+      const parentYear = child.parentPolicyId ? yearOf.get(child.parentPolicyId) : undefined
+      if (yearOf.has(child.id) || !parentYear) continue
+      yearOf.set(child.id, followsParentYear(child) ? parentYear : child.id)
+      frontier.push(child.id)
+    }
+  }
+  if (!yearOf.has(currentRoot)) yearOf.set(currentRoot, currentRoot)
+
+  const ids = [...yearOf.keys()]
+  const [policies, claims] = await Promise.all([
+    prisma.policy.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        policyNo: true,
+        inceptionDate: true,
+        expiryDate: true,
+        premium: true,
+        discountAmount: true,
+        brokeragePct: true,
+        additionalFee: true,
+        currencyCode: true,
+      },
+    }),
+    prisma.claim.findMany({
+      where: { policyId: { in: ids } },
+      select: {
+        id: true,
+        policyId: true,
+        estimatedLoss: true,
+        paidAmount: true,
+        adjusterFeeAmount: true,
+        salvageAmount: true,
+        currencyCode: true,
+        status: { select: { code: true, name: true } },
+      },
+    }),
+  ])
+  const isoDate = (d: Date) => d.toISOString().slice(0, 10)
+  const roots = policies
+    .filter((p) => yearOf.get(p.id) === p.id)
+    .sort(
+      (a, b) =>
+        a.inceptionDate.getTime() - b.inceptionDate.getTime() ||
+        a.policyNo.localeCompare(b.policyNo)
+    )
+  return {
+    currentPolicyId: currentRoot,
+    years: roots.map((root) => ({
+      policyId: root.id,
+      policyNo: root.policyNo,
+      inceptionDate: isoDate(root.inceptionDate),
+      expiryDate: isoDate(root.expiryDate),
+      policies: policies
+        .filter((p) => yearOf.get(p.id) === root.id)
+        .map((p) => ({
+          premium: Number(p.premium),
+          discountAmount: Number(p.discountAmount),
+          brokeragePct: Number(p.brokeragePct),
+          additionalFee: Number(p.additionalFee),
+          currency: p.currencyCode,
+        })),
+      claims: claims
+        .filter((c) => c.policyId && yearOf.get(c.policyId) === root.id)
+        .map((c) => ({
+          id: c.id,
+          status: claimStatusOf(c.status),
+          estimatedLoss: Number(c.estimatedLoss),
+          paidAmount: Number(c.paidAmount),
+          adjusterFeeAmount: Number(c.adjusterFeeAmount),
+          salvageAmount: Number(c.salvageAmount),
+          currency: c.currencyCode,
+        })),
+    })),
+  }
 }
 
 const familySelect = {
@@ -535,6 +663,7 @@ export async function getClaimPolicyInfo(policyId: string): Promise<ClaimPolicyI
       ? { policyNo: cancellation.policyNo, effectiveDate: cancellation.effectiveDate }
       : null,
     policyFiles,
+    lossRatio: await lossRatioData(policyId),
   }
 }
 

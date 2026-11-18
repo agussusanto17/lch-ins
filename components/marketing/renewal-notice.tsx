@@ -37,6 +37,7 @@ import {
   premiumIdr,
   type Policy,
 } from "@/lib/data"
+import { grossPremium } from "@/lib/calc"
 import { daysBetween } from "@/lib/date"
 import type { ExportSpec } from "@/lib/export"
 import { dateShort, rupiah } from "@/lib/format"
@@ -103,7 +104,7 @@ export function RenewalNotice({
         type: "number",
       },
       { header: "Mata Uang", value: (p) => p.currency },
-      { header: "Premium", value: (p) => p.premium, type: "money" },
+      { header: "Gross Premium", value: (p) => grossPremium(p), type: "money" },
     ],
   }
 
@@ -169,7 +170,7 @@ export function RenewalNotice({
         <CalendarClock className="size-5 shrink-0 text-primary" />
         <p className="text-sm">
           <span className="font-semibold">{rows.length} polis</span> jatuh tempo
-          dalam {period} hari ke depan dengan total premium{" "}
+          dalam {period} hari ke depan dengan total Gross Premium{" "}
           <span className="tabular font-semibold">{rupiah(totalPremium)}</span>.
         </p>
       </Card>
@@ -186,7 +187,7 @@ export function RenewalNotice({
               <TableHead>COB</TableHead>
               <TableHead>Asuransi</TableHead>
               <TableHead>Tanggal Berakhir</TableHead>
-              <TableHead className="text-right">Premium</TableHead>
+              <TableHead className="text-right">Gross Premium</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>

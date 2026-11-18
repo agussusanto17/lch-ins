@@ -103,6 +103,7 @@ const FIELD_LABELS: Record<string, string> = {
   currencyCode: "Mata uang",
   sumInsured: "Nilai pertanggungan",
   premium: "Premi",
+  discountAmount: "Diskon",
   // Ringkasan isi placing slip, lihat lib/slip-audit.ts.
   totalSumInsured: "Total nilai pertanggungan",
   totalPremium: "Total premi",
@@ -206,6 +207,7 @@ const FIELD_LABELS: Record<string, string> = {
 const MONEY_FIELDS = new Set([
   "sumInsured",
   "premium",
+  "discountAmount",
   "additionalFee",
   "adminCost",
   "stampDuty",

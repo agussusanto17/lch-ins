@@ -40,7 +40,7 @@ export function RenewalListDocument({
             <th className="py-2 pr-2 text-right font-semibold whitespace-nowrap">
               Sisa Hari
             </th>
-            <th className="py-2 text-right font-semibold">Premium (IDR)</th>
+            <th className="py-2 text-right font-semibold">Gross Premium (IDR)</th>
           </tr>
         </thead>
         <tbody>

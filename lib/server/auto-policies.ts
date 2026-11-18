@@ -182,6 +182,8 @@ export async function recordEndorsementFromSlip(
       expiryDate: parent.expiryDate,
       sumInsured: adjustment.sumInsuredChange,
       premium: adjustment.premium,
+      // Diskon atas selisih premi, bertanda sama dengan selisihnya (MoM review Phase 1, poin 19).
+      discountAmount: -adjustment.discount,
       // Additional fee dihitung server: premi endorsement × fee (%) asuransi polis induk.
       rate: null,
       premiumBasis: null,

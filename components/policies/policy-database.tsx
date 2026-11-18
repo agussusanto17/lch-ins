@@ -71,6 +71,7 @@ import {
 } from "@/lib/data"
 import { addMonths } from "@/lib/date"
 import type { ExportSpec } from "@/lib/export"
+import { grossPremium } from "@/lib/calc"
 import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
 import { MAIN_POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
@@ -384,6 +385,8 @@ export function PolicyDatabase({
       { header: "Mata Uang", value: (p) => p.currency },
       { header: "Sum Insured", value: (p) => p.sumInsured, type: "money" },
       { header: "Premium", value: (p) => p.premium, type: "money" },
+      { header: "Diskon", value: (p) => p.discountAmount ?? 0, type: "money" },
+      { header: "Gross Premium", value: (p) => grossPremium(p), type: "money" },
       {
         header: "Brokerage (%)",
         value: (p) => p.brokeragePct,
@@ -546,7 +549,7 @@ export function PolicyDatabase({
                     <TableHead>Tertanggung</TableHead>
                     <TableHead>COB</TableHead>
                     <TableHead>Periode</TableHead>
-                    <TableHead className="text-right">Premium</TableHead>
+                    <TableHead className="text-right">Gross Premium</TableHead>
                     <TableHead>Tipe</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="pr-4">Berkas</TableHead>
@@ -604,14 +607,20 @@ export function PolicyDatabase({
                               s/d {dateShort(p.expiryDate)}
                             </span>
                           </TableCell>
+                          {/* Gross Premium = premi − diskon (MoM review Phase 1, poin 19). */}
                           <TableCell
                             className={
-                              p.premium < 0
+                              grossPremium(p) < 0
                                 ? "tabular text-right font-medium text-destructive"
                                 : "tabular text-right font-medium"
                             }
                           >
-                            {money(p.premium, p.currency)}
+                            {money(grossPremium(p), p.currency)}
+                            {p.discountAmount ? (
+                              <span className="block text-xs font-normal text-muted-foreground">
+                                Diskon {money(p.discountAmount, p.currency)}
+                              </span>
+                            ) : null}
                           </TableCell>
                           <TableCell>
                             <StatusBadge
@@ -684,7 +693,7 @@ export function PolicyDatabase({
 
         <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground">
           <span>
-            Total premium (setara IDR):{" "}
+            Total Gross Premium (setara IDR):{" "}
             <span className="tabular font-medium text-foreground">
               {rupiah(totalPremium)}
             </span>

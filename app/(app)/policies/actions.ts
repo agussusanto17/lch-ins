@@ -62,6 +62,8 @@ const policyInputSchema = z
     // Endorsement dan pembatalan mencatat selisih, jadi pengurangan UP negatif.
     sumInsured: z.number(),
     premium: z.number(),
+    // Diskon nominal, bertanda sama dengan premi (MoM review Phase 1, poin 19).
+    discountAmount: z.number().optional(),
     brokeragePct: z.number().min(0).max(100),
     includeVat: z.boolean().optional(),
     // Nominal fee dihitung server dari premi dan fee (%) per asuransi.
@@ -199,6 +201,7 @@ export async function importDeclarationsAction(
         inceptionDate: row.inceptionDate,
         sumInsured: row.sumInsured,
         premium: row.premium,
+        discountAmount: 0,
         additionalFee: 0,
         rate: null,
         premiumBasis: null,

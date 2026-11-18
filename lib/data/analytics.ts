@@ -1,4 +1,4 @@
-import { toIdr } from "../calc"
+import { grossPremium, toIdr } from "../calc"
 import { policyStatus } from "./policy-status"
 import { OPEN_CLAIM_STATUSES } from "./reference"
 import type { Claim, Client, PlacingSlip, Policy } from "./types"
@@ -8,16 +8,21 @@ import type { Claim, Client, PlacingSlip, Policy } from "./types"
  * dari Server Component (query database) maupun Client Component (store sesi).
  */
 
-export function premiumIdr(p: { premium: number; currency: string }) {
-  return toIdr(p.premium, p.currency)
+/**
+ * Gross Premium polis dalam IDR: premi − diskon (MoM review Phase 1, poin 19). Dipakai Dashboard,
+ * report, Policy Database, dan pengingat renewal.
+ */
+export function premiumIdr(p: { premium: number; discountAmount?: number; currency: string }) {
+  return toIdr(grossPremium(p), p.currency)
 }
 
+/** Brokerage dalam IDR, dari premi sebelum diskon (sejalan batas OJK brokerage + diskon). */
 export function brokerageIdr(p: {
   premium: number
   currency: string
   brokeragePct: number
 }) {
-  return (premiumIdr(p) * p.brokeragePct) / 100
+  return (toIdr(p.premium, p.currency) * p.brokeragePct) / 100
 }
 
 /** Additional fee polis dalam IDR; polis tanpa fee bernilai 0. */

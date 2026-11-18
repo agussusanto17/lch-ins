@@ -114,6 +114,7 @@ function toPolicyRecord(
     currency: row.currencyCode,
     sumInsured: Number(row.sumInsured),
     premium: Number(row.premium),
+    discountAmount: Number(row.discountAmount),
     brokeragePct: Number(row.brokeragePct),
     includeVat: row.includeVat,
     additionalFee: Number(row.additionalFee),
@@ -157,6 +158,7 @@ function auditSnapshot(p: PolicyRecord) {
     expiryDate: p.expiryDate,
     sumInsured: p.sumInsured,
     premium: p.premium,
+    discountAmount: p.discountAmount ?? 0,
     brokeragePct: p.brokeragePct,
     additionalFee: p.additionalFee ?? 0,
     additionalFeePanel: additionalFeePanelText(p.insurers),
@@ -284,6 +286,15 @@ function insurerRows(input: PolicyInput): SecurityPanelRow[] {
 async function policyData(tx: Tx, input: PolicyInput) {
   // Endorsement dengan rate: premi prorata dihitung ulang di server.
   const premium = endorsementPremium(input) ?? input.premium
+  // Diskon bertanda sama dengan premi dan tidak melebihinya (MoM review Phase 1, poin 19).
+  // Deklarasi MOP tidak berdiskon: preminya dihitung per pengiriman.
+  const discountAmount = input.type === "Deklarasi" ? 0 : (input.discountAmount ?? 0)
+  if (
+    discountAmount !== 0 &&
+    (Math.sign(discountAmount) !== Math.sign(premium) || Math.abs(discountAmount) > Math.abs(premium))
+  ) {
+    throw new Error("Diskon harus bertanda sama dengan premi dan tidak melebihi premi.")
+  }
   const cobId = await resolveCobId(tx, input.cob)
   return {
     policyNo: input.policyNo.trim(),
@@ -302,6 +313,7 @@ async function policyData(tx: Tx, input: PolicyInput) {
     currencyCode: input.currency,
     sumInsured: input.sumInsured,
     premium,
+    discountAmount,
     brokeragePct: input.brokeragePct,
     includeVat: input.includeVat ?? false,
     // Nominal = premi × fee (%) per asuransi (Harry, 12 November 2026), jadi

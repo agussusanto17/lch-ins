@@ -1455,6 +1455,9 @@ model Policy {
   sumInsured          Decimal  @default(0) @map("sum_insured") @db.Decimal(18, 2)
   /// Negatif untuk pengembalian premi pada pembatalan.
   premium             Decimal  @default(0) @db.Decimal(18, 2)
+  /// Diskon dalam mata uang polis, bertanda sama dengan premi (MoM review Phase 1, poin 19).
+  /// Gross Premium = premium − discount_amount; brokerage dan additional fee tetap dari premium.
+  discountAmount      Decimal  @default(0) @map("discount_amount") @db.Decimal(18, 2)
   brokeragePct        Decimal  @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
   /// Brokerage sudah termasuk PPN 2,2%, mengikuti Include VAT di slip.
   includeVat          Boolean  @default(false) @map("include_vat")

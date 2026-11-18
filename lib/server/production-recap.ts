@@ -88,6 +88,7 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       paidDate: row.premiumPaidDate ? isoDate(row.premiumPaidDate) : null,
       currency: row.currencyCode,
       premium: Number(row.premium),
+      discount: Number(row.discountAmount),
       brokeragePct: Number(row.brokeragePct),
       remarks: row.remarks,
       groupingInsured: row.groupingInsured,
