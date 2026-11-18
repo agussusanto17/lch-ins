@@ -54,8 +54,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { todayIso } from "@/lib/date"
 import { Textarea } from "@/components/ui/textarea"
+import { claimInsurerPortions, documentReceiptLocked, isCoInsurance } from "@/lib/claim-detail"
 import type { Claim } from "@/lib/data"
-import { dateShort, money } from "@/lib/format"
+import { dateShort, money, num } from "@/lib/format"
 import { CLAIM_STATUS_CODES, fixedLookupLabel } from "@/lib/form-options"
 import { paClaimWarnings } from "@/lib/pa-benefits"
 import type { ClaimDocumentRecord, ClaimFollowupRecord } from "@/lib/server/claims"
@@ -68,6 +69,38 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="flex items-start justify-between gap-4 py-2 text-sm">
       <span className="shrink-0 text-muted-foreground">{label}</span>
       <span className="text-right font-medium">{value}</span>
+    </div>
+  )
+}
+
+/** Semua asuransi co-insurance dengan bagian estimasi kerugiannya, tanpa informasi fee. */
+function CoInsuranceRows({
+  claim,
+}: {
+  claim: Pick<Claim, "estimatedLoss" | "currency" | "insurers">
+}) {
+  const portions = claimInsurerPortions(claim.estimatedLoss, claim.insurers)
+  return (
+    <div className="py-2 text-sm">
+      <span className="text-muted-foreground">Asuransi (co-insurance)</span>
+      <ul className="mt-1.5 divide-y rounded-md border">
+        {portions.map((p) => (
+          <li key={p.insurer} className="flex items-start justify-between gap-3 px-3 py-2">
+            <span className="min-w-0">
+              <span className="font-medium">{p.insurer}</span>
+              <span className="block text-xs text-muted-foreground">
+                {p.leader ? "Leader" : "Member"} · {num(p.sharePct, 2)}%
+              </span>
+            </span>
+            <span className="tabular shrink-0 text-right font-medium">
+              {money(p.amount, claim.currency)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1.5 text-xs text-muted-foreground">
+        Bagian dari estimasi kerugian {money(claim.estimatedLoss, claim.currency)} sesuai share.
+      </p>
     </div>
   )
 }
@@ -466,7 +499,11 @@ export function ClaimDetailSheet({
                         label="No. polis"
                         value={<span className="tabular">{claim.policyNo}</span>}
                       />
-                      <Row label="Asuransi" value={claim.insurer} />
+                      {isCoInsurance(claim.insurers) ? (
+                        <CoInsuranceRows claim={claim} />
+                      ) : (
+                        <Row label="Asuransi" value={claim.insurer} />
+                      )}
                       {policyInfo ? (
                         <>
                           <Row
@@ -554,10 +591,17 @@ export function ClaimDetailSheet({
                             key={doc.id}
                             className="flex items-start gap-3 p-3.5 transition-colors hover:bg-muted/40"
                           >
-                            <div className="pt-0.5">
+                            <div
+                              className="pt-0.5"
+                              title={
+                                documentReceiptLocked(doc)
+                                  ? "Sudah ada file, jadi tetap diterima. Ganti file bila perlu."
+                                  : undefined
+                              }
+                            >
                               <Checkbox
                                 checked={doc.isReceived}
-                                disabled={isToggling || !canManage}
+                                disabled={isToggling || !canManage || documentReceiptLocked(doc)}
                                 onCheckedChange={(checked) =>
                                   handleToggleDocument(doc, checked === true)
                                 }

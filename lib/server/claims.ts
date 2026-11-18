@@ -1,6 +1,7 @@
 import "server-only"
 
 import { coverCodeFor } from "@/components/underwriting/slip-model"
+import { documentReceiptLocked } from "@/lib/claim-detail"
 import type { Claim, ClaimStage, ClaimStatus } from "@/lib/data/types"
 import { todayIso } from "@/lib/date"
 import { CLAIM_STATUS_CODES, POLICY_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
@@ -230,6 +231,11 @@ function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
     policyNo: record.policy?.policyNo || "",
     insuredName: record.policy?.insuredName || "",
     insurer: primaryInsurer,
+    insurers: (record.policy?.insurers ?? []).map((i) => ({
+      insurer: i.insurer?.name ?? "",
+      sharePct: Number(i.sharePct),
+      leader: i.position.code === "leader",
+    })),
     cob: normalizeCob(record.policy?.cob?.name),
     currency: record.currencyCode as Claim["currency"],
     lossDate: record.lossDate.toISOString().slice(0, 10),
@@ -1168,6 +1174,11 @@ export async function toggleClaimDocument(
   userId: string
 ): Promise<ClaimDocumentRecord> {
   const before = await findClaimDocument(documentId)
+  if (!isReceived && documentReceiptLocked(before)) {
+    throw new Error(
+      `"${before.documentTypeName}" sudah punya file, jadi tetap ditandai diterima. Ganti file-nya bila perlu.`
+    )
+  }
   // Tanggal tanpa jam, hari ini di WIB (bukan UTC, yang sebelum pukul 07.00 masih kemarin).
   const dateVal = isReceived ? new Date(receivedDate || todayIso()) : null
 

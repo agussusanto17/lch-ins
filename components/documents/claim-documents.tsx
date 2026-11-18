@@ -2,9 +2,10 @@ import { DocumentShell } from "@/components/documents/document-shell"
 import { DocTitle, HangingIndentText, InfoTable } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
 import { toIdr } from "@/lib/calc"
+import { claimInsurerPortions, isCoInsurance } from "@/lib/claim-detail"
 import type { ClaimFilterParams } from "@/lib/claim-filter"
 import { claimBackHref } from "@/lib/claim-filter"
-import { dateLong, dateShort, money } from "@/lib/format"
+import { dateLong, dateShort, money, num } from "@/lib/format"
 import type {
   ClaimDocumentRecord,
   ClaimFollowupRecord,
@@ -182,7 +183,17 @@ export function ClaimDetailDocument({
             rows={[
               ["Nomor Polis", claim.policyNo || "-"],
               ["Tertanggung", claim.insuredName],
-              ["Penanggung (Asuransi)", claim.insurer || "-"],
+              // Co-insurance dicetak per asuransi dengan bagian estimasi kerugiannya, sama
+              // dengan detail klaim (MoM review Phase 1, 17 November 2026).
+              isCoInsurance(claim.insurers)
+                ? [
+                    "Penanggung (co-insurance)",
+                    claimInsurerPortions(claim.estimatedLoss, claim.insurers).map(
+                      (p) =>
+                        `${p.insurer}, ${p.leader ? "Leader" : "Member"} ${num(p.sharePct, 2)}%: ${money(p.amount, claim.currency)}`
+                    ),
+                  ]
+                : ["Penanggung (Asuransi)", claim.insurer || "-"],
               ["Class of Business (COB)", claim.cob],
             ]}
           />
