@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/dashboard-card-brokerage`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #264
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
