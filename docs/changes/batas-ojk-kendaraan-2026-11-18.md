@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `fix/batas-ojk-motor`
-- **PR:** belum dibuka. Stacked di atas #273, merge setelah #273.
+- **PR:** #276, stacked di atas #273. Merge setelah #273.
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
