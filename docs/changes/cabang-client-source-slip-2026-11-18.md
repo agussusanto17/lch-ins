@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/cabang-client-source-slip`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #267
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
