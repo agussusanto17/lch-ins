@@ -122,6 +122,9 @@ export const ACCESS_MATRIX: Record<string, readonly AccessLevel[]> = {
   // Lihat sudah mencakup filter, print, dan export karena tanpa aksi ubah (10 November 2026).
   // Bagian Klaim diatur `canSeeReportClaims`.
   "/reports": [K, L, K, L, T, T, L, T],
+  // Menu Report (MoM review Phase 1, 17 November 2026): setiap report di dalamnya mengikuti
+  // menu sumber datanya (lib/report-catalog.ts); Rekap Produksi mengikuti Report Operational.
+  "/report-excel": [K, L, K, L, T, T, L, T],
   "/users": [K, T, T, T, T, T, L, T],
 
   // Menu audit trail dan pengaturan dibatasi Admin karena berdampak lintas modul.

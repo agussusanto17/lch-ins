@@ -4,6 +4,7 @@ import {
   Calculator,
   ChartColumn,
   Database,
+  FileSpreadsheet,
   FileText,
   History,
   LayoutDashboard,
@@ -114,6 +115,7 @@ export const NAV_GROUPS: NavGroup[] = [
         ],
       },
       // Report keuangan dan akuntansi nanti jadi menu sendiri (Agus, 9 November 2026).
+      { title: "Report", href: "/report-excel", icon: FileSpreadsheet },
       { title: "Report Operational", href: "/reports", icon: ChartColumn },
     ],
   },
