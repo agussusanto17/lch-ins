@@ -239,6 +239,8 @@ export interface RateLine {
 export interface SlipLocation {
   id: string
   riskLocation: string
+  /** Nama tertanggung lokasi ini; kosong berarti sama dengan tertanggung slip. */
+  insuredName?: string
   /** Okupasi OJK "kode - nama", seperti `PlacingSlip.occupation`. */
   occupation?: string
   /** Nama okupasi di dokumen, tanpa kode. Kosong berarti nama OJK. */

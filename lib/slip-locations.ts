@@ -168,6 +168,43 @@ export function addressLines(text: string) {
 }
 
 /**
+ * Nama tertanggung lokasi yang dicetak: diisi dan berbeda dari tertanggung slip (MoM review
+ * Phase 1, poin 6). Kosong berarti lokasi itu atas nama tertanggung slip.
+ */
+export function locationInsuredName(
+  location: Pick<SlipLocation, "insuredName">,
+  slipInsuredName: string
+) {
+  const name = location.insuredName?.trim() ?? ""
+  return name && name.toLowerCase() !== slipInsuredName.trim().toLowerCase() ? name : ""
+}
+
+/**
+ * Daftar lokasi bernomor untuk Risk Location di dokumen: nama tertanggung lokasi (bila berbeda)
+ * lalu alamatnya di baris berikutnya, seperti "1. PT A QQ B / Jl. ..., Surabaya".
+ */
+export function riskLocationItemsText(
+  locations: Pick<SlipLocation, "riskLocation" | "insuredName">[],
+  slipInsuredName: string
+) {
+  return locations
+    .map((l, i) => {
+      const insured = locationInsuredName(l, slipInsuredName)
+      return `${i + 1}. ${insured ? `${insured}\n` : ""}${oneLineAddress(l.riskLocation)}`
+    })
+    .join("\n")
+}
+
+/**
+ * Kunci lokasi untuk upload Excel: alamat satu baris dan nama tertanggung, huruf kecil. Baris file
+ * dengan kunci yang sudah ada di slip dilewati supaya file yang sama bisa diupload ulang.
+ */
+export function locationKey(location: Pick<SlipLocation, "riskLocation" | "insuredName">) {
+  const clean = (text: string) => text.toLowerCase().replace(/\s+/g, " ").trim()
+  return `${clean(oneLineAddress(location.riskLocation))}|${clean(location.insuredName ?? "")}`
+}
+
+/**
  * Risk location sebagai satu nilai untuk polis, daftar slip, dan pencarian: alamat lokasi
  * pertama, atau semua alamat bernomor bila lokasinya lebih dari satu.
  */

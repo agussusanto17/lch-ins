@@ -652,6 +652,7 @@ function toPlacingSlipRecord(
     ? raw.locations.map((loc) => ({
         id: loc.id,
         riskLocation: loc.riskLocation ?? "",
+        insuredName: loc.insuredName || undefined,
         occupation: loc.occupation
           ? `${loc.occupation.code} - ${loc.occupation.name}`
           : undefined,
@@ -1082,6 +1083,7 @@ interface SavedLocation {
   /** Id lokasi di form, yang dirujuk `locationId` baris sum insured dan rate. */
   sourceId: string
   riskLocation: string | null
+  insuredName: string | null
   occupationId: string | null
   occupationLabel: string | null
   constructionClassId: string | null
@@ -1110,6 +1112,7 @@ async function resolveSlipLocations(
         id: randomUUID(),
         sourceId: "",
         riskLocation: input.riskLocation?.trim() || null,
+        insuredName: null,
         occupationId: input.occupationId || occupationIdFor(input.occupation),
         occupationLabel: input.occupationLabel?.trim() || null,
         constructionClassId: classIdFor(input.constructionClass),
@@ -1120,6 +1123,7 @@ async function resolveSlipLocations(
     id: randomUUID(),
     sourceId: loc.id,
     riskLocation: loc.riskLocation.trim() || null,
+    insuredName: loc.insuredName?.trim() || null,
     occupationId: occupationIdFor(loc.occupation),
     occupationLabel: loc.occupationLabel?.trim() || null,
     constructionClassId: classIdFor(loc.constructionClass),
@@ -1156,6 +1160,7 @@ async function insertSlipLocations(
       slipId,
       sortOrder: i,
       riskLocation: l.riskLocation,
+      insuredName: l.insuredName,
       occupationId: l.occupationId,
       occupationLabel: l.occupationLabel,
       constructionClassId: l.constructionClassId,

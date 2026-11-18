@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Trash2 } from "lucide-react"
+import { FileSpreadsheet, Plus, Trash2 } from "lucide-react"
 
 import { SelectInput } from "@/components/shared/form-fields"
 import {
@@ -20,6 +20,7 @@ import {
   OjkReference,
   type RateBounds,
 } from "@/components/underwriting/ojk-reference"
+import { LocationUpload } from "@/components/underwriting/location-upload"
 import { CoverRateTable } from "@/components/underwriting/rate-tables"
 import {
   addLocationPatch,
@@ -150,11 +151,12 @@ export function SlipLocations({
 
   // Kartu terbuka dicatat per urutan, bukan per id, karena id lokasi berganti setiap disimpan.
   // Slip multi lokasi mulai terlipat; lokasi yang baru ditambah langsung terbuka.
-  const [startOpen] = React.useState(() => groups.length <= 1)
+  const [startOpen, setStartOpen] = React.useState(() => groups.length <= 1)
   const [openAt, setOpenAt] = React.useState<Record<number, boolean>>({})
   const isOpen = (index: number) => openAt[index] ?? startOpen
   const allOpen = groups.every((_, i) => isOpen(i))
   const [confirmFloating, setConfirmFloating] = React.useState(false)
+  const [uploadOpen, setUploadOpen] = React.useState(false)
 
   function addLocation() {
     setOpenAt((o) => ({ ...o, [groups.length]: true }))
@@ -379,6 +381,11 @@ export function SlipLocations({
             }
             summary={
               <>
+                {location.insuredName?.trim() ? (
+                  <span className="block truncate font-medium text-foreground">
+                    {location.insuredName.trim()}
+                  </span>
+                ) : null}
                 <span className="block truncate">
                   {oneLineAddress(location.riskLocation) || "Alamat belum diisi"}
                 </span>
@@ -403,6 +410,21 @@ export function SlipLocations({
             }
           >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Tertanggung per lokasi seperti lampiran polis SPIL (MoM review Phase 1, poin 6). */}
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor={`${key}-insured`}>Nama Tertanggung</FieldLabel>
+                <Input
+                  id={`${key}-insured`}
+                  maxLength={500}
+                  value={location.insuredName ?? ""}
+                  placeholder={slip.insuredName.trim() || "Sama dengan tertanggung slip"}
+                  onChange={(e) => update({ insuredName: e.target.value || undefined })}
+                />
+                <FieldDescription>
+                  Isi bila tertanggung lokasi ini berbeda, misalnya PT A QQ B. Kosong berarti sama
+                  dengan tertanggung slip.
+                </FieldDescription>
+              </Field>
               <Field className="md:col-span-2">
                 <FieldLabel htmlFor={`${key}-risk`}>Risk Location *</FieldLabel>
                 <Textarea
@@ -501,7 +523,7 @@ export function SlipLocations({
       })}
 
       {!locked ? (
-        <div>
+        <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             variant="outline"
@@ -510,6 +532,15 @@ export function SlipLocations({
           >
             <Plus data-icon="inline-start" />
             Tambah lokasi
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setUploadOpen(true)}
+          >
+            <FileSpreadsheet data-icon="inline-start" />
+            Upload Excel
           </Button>
         </div>
       ) : null}
@@ -544,6 +575,20 @@ export function SlipLocations({
         }
         value={money(totalSumInsured(slip), slip.currency)}
       />
+
+      {!locked ? (
+        <LocationUpload
+          slip={slip}
+          open={uploadOpen}
+          onOpenChange={setUploadOpen}
+          onImport={(patch) => {
+            // Puluhan lokasi dari Excel ditampilkan terlipat.
+            setStartOpen(false)
+            setOpenAt({})
+            onChange(patch)
+          }}
+        />
+      ) : null}
 
       <AlertDialog open={confirmFloating} onOpenChange={setConfirmFloating}>
         <AlertDialogContent>
