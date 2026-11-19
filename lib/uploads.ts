@@ -1,17 +1,9 @@
-/**
- * Batas satu berkas unggahan. Vercel menolak body request di atas 4,5 MB,
- * jadi batasnya dibuat di bawah itu supaya pesan errornya tetap dari aplikasi.
- */
-export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024
-
-/**
- * Berkas polis (Polis, Premium Note, Commission Note) boleh sampai 25 MB (Agus, 9 November 2026),
- * dikirim per potongan UPLOAD_PART_BYTES karena satu request Vercel maksimal 4,5 MB.
- */
-export const MAX_POLICY_FILE_BYTES = 25 * 1024 * 1024
+/** Batas total per berkas; seluruh modul mengirim berkas per potongan. */
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
 /** Di bawah batas Server Action (5 MB) dan request Vercel (4,5 MB), plus overhead multipart. */
 export const UPLOAD_PART_BYTES = 3 * 1024 * 1024
+export const MAX_PENDING_UPLOAD_PARTS = 51
 
 /** Pemakaian berkas. Menentukan menu yang hak aksesnya dipakai saat dibuka. */
 export type FilePurpose =
@@ -28,10 +20,13 @@ export const FILE_PURPOSES: FilePurpose[] = [
 ]
 
 export function maxUploadBytes(purpose: FilePurpose) {
-  return purpose === "policy_file" ? MAX_POLICY_FILE_BYTES : MAX_UPLOAD_BYTES
+  if (!FILE_PURPOSES.includes(purpose)) {
+    throw new Error("Jenis berkas tidak dikenal.")
+  }
+  return MAX_UPLOAD_BYTES
 }
 
-/** "Ukuran file maksimal 25 MB." untuk batas yang diberikan. */
+/** Pesan ukuran berkas untuk batas yang diberikan. */
 export function sizeLimitMessage(maxBytes: number) {
   return `Ukuran file maksimal ${Math.round(maxBytes / (1024 * 1024))} MB.`
 }
@@ -40,9 +35,7 @@ export function sizeLimitMessage(maxBytes: number) {
 export const UPLOAD_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp"
 
 export const UPLOAD_HINT =
-  "PDF, JPG, PNG, atau WebP, maksimal 4 MB. Foto yang lebih besar diperkecil otomatis."
-
-export const POLICY_FILE_HINT = "PDF, JPG, PNG, atau WebP, maksimal 25 MB."
+  "PDF, JPG, PNG, atau WebP, maksimal 50 MB. Foto yang lebih besar diperkecil otomatis."
 
 /** Workbook Excel, hanya untuk lampiran slip. */
 export const XLSX_MIME =
@@ -52,7 +45,7 @@ export const XLSX_MIME =
 export const ATTACHMENT_ACCEPT = `${UPLOAD_ACCEPT},${XLSX_MIME},.xlsx`
 
 export const ATTACHMENT_HINT =
-  "PDF, JPG, PNG, WebP, atau Excel (.xlsx), maksimal 4 MB. Foto yang lebih besar diperkecil otomatis."
+  "PDF, JPG, PNG, WebP, atau Excel (.xlsx), maksimal 50 MB. Foto yang lebih besar diperkecil otomatis."
 
 /** Pemeriksaan lampiran slip di browser; server memeriksa ulang dari isinya. */
 export function attachmentUploadProblem(file: {

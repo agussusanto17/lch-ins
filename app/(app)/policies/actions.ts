@@ -22,6 +22,7 @@ import {
   type PolicyRecord,
 } from "@/lib/server/policies"
 import { requireAccess, requireManage } from "@/lib/server/session"
+import { discardOwnedUpload } from "@/lib/server/stored-files"
 import type { PolicyFileKind } from "@/lib/data/types"
 import { parentPolicyIssue } from "@/lib/policy-parent"
 
@@ -259,24 +260,33 @@ export async function deletePolicyAction(id: string): Promise<ActionResponse<voi
 const policyFileKindSchema = z.enum(["Policy", "PremiumNote", "CommissionNote", "Slip"])
 
 /**
- * Tautkan berkas polis yang sudah diunggah per potongan (lib/upload-client.ts) sebagai versi
- * berikutnya dari jenisnya. Isinya tidak lewat action ini: 25 MB tak muat satu request Vercel.
+ * Tautkan berkas polis hasil upload bertahap sebagai versi berikutnya dari jenisnya. File ID
+ * diperiksa server-side; isinya tak melewati action ini karena total berkas bisa 50 MB.
  */
 export async function attachPolicyFileAction(
   id: string,
   fileId: string,
   kind: PolicyFileKind
 ): Promise<ActionResponse<PolicyRecord>> {
+  let userId: string | null = null
   try {
     const user = await requireManage("/policies")
+    userId = user.id
     const policyId = policyIdSchema.safeParse(id)
-    if (!policyId.success) return { ok: false, error: "ID polis tidak valid" }
+    if (!policyId.success) {
+      await discardOwnedUpload(fileId, "policy_file", user.id).catch(() => undefined)
+      return { ok: false, error: "ID polis tidak valid" }
+    }
     const fileKind = policyFileKindSchema.safeParse(kind)
-    if (!fileKind.success) return { ok: false, error: "Jenis berkas polis tidak dikenal" }
+    if (!fileKind.success) {
+      await discardOwnedUpload(fileId, "policy_file", user.id).catch(() => undefined)
+      return { ok: false, error: "Jenis berkas polis tidak dikenal" }
+    }
     const data = await addPolicyFile(policyId.data, fileId, user.id, fileKind.data)
     revalidatePath("/policies")
     return { ok: true, data }
   } catch (err) {
+    if (userId) await discardOwnedUpload(fileId, "policy_file", userId).catch(() => undefined)
     return fail(err, "Gagal menyimpan berkas polis")
   }
 }

@@ -63,6 +63,7 @@ import type { ClaimDocumentRecord, ClaimFollowupRecord } from "@/lib/server/clai
 import { cn } from "@/lib/utils"
 import { compressImage } from "@/lib/image-compress"
 import { UPLOAD_ACCEPT, UPLOAD_HINT, uploadProblem } from "@/lib/uploads"
+import { uploadInParts } from "@/lib/upload-client"
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -270,9 +271,13 @@ export function ClaimDetailSheet({
     }
 
     setUploadingDocId(doc.id)
-    const body = new FormData()
-    body.append("file", file)
-    const res = await uploadClaimDocumentFileAction(doc.id, body)
+    const staged = await uploadInParts(file, "claim_document")
+    if (!staged.ok || !staged.data) {
+      setUploadingDocId(null)
+      toast.error(`Gagal mengunggah ${file.name}`, { description: staged.error })
+      return
+    }
+    const res = await uploadClaimDocumentFileAction(doc.id, staged.data.id)
     setUploadingDocId(null)
 
     if (!res.ok || !res.data) {

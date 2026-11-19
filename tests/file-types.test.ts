@@ -30,6 +30,7 @@ test("pemeriksaan di browser: lampiran slip menerima Excel, unggahan lain tidak"
   // Sebagian browser tidak mengisi jenis file Excel; ekstensinya cukup.
   assert.equal(attachmentUploadProblem({ ...xlsx, type: "" }), null)
   assert.match(attachmentUploadProblem({ name: "a.docx", size: 10, type: "application/msword" }) ?? "", /Excel/)
-  assert.match(attachmentUploadProblem({ ...xlsx, size: 5 * 1024 * 1024 }) ?? "", /4 MB/)
+  assert.equal(attachmentUploadProblem({ ...xlsx, size: 50 * 1024 * 1024 }), null)
+  assert.match(attachmentUploadProblem({ ...xlsx, size: 50 * 1024 * 1024 + 1 }) ?? "", /50 MB/)
   assert.match(uploadProblem(xlsx) ?? "", /Hanya PDF/)
 })

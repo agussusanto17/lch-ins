@@ -25,15 +25,15 @@ import {
 import { store } from "@/lib/store"
 import { uploadInParts } from "@/lib/upload-client"
 import {
-  MAX_POLICY_FILE_BYTES,
-  POLICY_FILE_HINT,
+  MAX_UPLOAD_BYTES,
+  UPLOAD_HINT,
   UPLOAD_ACCEPT,
   uploadProblem,
 } from "@/lib/uploads"
 
 /**
  * Berkas polis (PRD A-17): Polis, Premium Note, dan Commission Note (Agus, 9 November 2026).
- * Tiap upload menambah versi baru per jenis tanpa menghapus yang lama; sampai 25 MB per potongan.
+ * Tiap upload menambah versi baru per jenis tanpa menghapus yang lama; file dikirim per potongan.
  */
 export function PolicyFilesSheet({
   policy,
@@ -54,7 +54,7 @@ export function PolicyFilesSheet({
 
   async function upload(file: File, kind: PolicyFileKind, label: string) {
     if (!policy) return
-    const problem = uploadProblem(file, MAX_POLICY_FILE_BYTES)
+    const problem = uploadProblem(file, MAX_UPLOAD_BYTES)
     if (problem) {
       toast.error(problem, { description: file.name })
       return
@@ -188,7 +188,7 @@ export function PolicyFilesSheet({
               }}
             />
             <p className="text-center text-xs text-muted-foreground">
-              {POLICY_FILE_HINT} File baru disimpan sebagai versi berikutnya.
+              {UPLOAD_HINT} File baru disimpan sebagai versi berikutnya.
             </p>
           </div>
         )}

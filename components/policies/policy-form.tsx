@@ -77,8 +77,8 @@ import type { PolicyFormOptions, PolicyInput } from "@/lib/server/policies"
 import { newId, store } from "@/lib/store"
 import { uploadInParts } from "@/lib/upload-client"
 import {
-  MAX_POLICY_FILE_BYTES,
-  POLICY_FILE_HINT,
+  MAX_UPLOAD_BYTES,
+  UPLOAD_HINT,
   UPLOAD_ACCEPT,
   uploadProblem,
 } from "@/lib/uploads"
@@ -1200,7 +1200,7 @@ export function PolicyForm({
           <div>
             <p className="text-sm font-medium">Berkas Polis</p>
             <p className="text-xs text-muted-foreground">
-              {POLICY_FILE_HINT} File baru disimpan sebagai versi berikutnya.
+              {UPLOAD_HINT} File baru disimpan sebagai versi berikutnya.
               {draft.placingSlipId
                 ? null
                 : " Slip diisi dokumen slip kalau slipnya dibuat di luar sistem."}
@@ -1228,7 +1228,7 @@ export function PolicyForm({
                       onChange={(e) => {
                         const next = e.target.files?.[0] ?? null
                         const problem = next
-                          ? uploadProblem(next, MAX_POLICY_FILE_BYTES)
+                          ? uploadProblem(next, MAX_UPLOAD_BYTES)
                           : null
                         if (problem) {
                           toast.error(problem, { description: next?.name })

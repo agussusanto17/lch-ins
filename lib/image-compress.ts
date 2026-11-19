@@ -1,5 +1,5 @@
 /**
- * Foto HP (4–8 MB) dikompres di browser supaya lolos batas unggah 4 MB.
+ * Foto HP dikompres di browser sebelum validasi batas unggah.
  * PDF dan Excel tidak disentuh, supaya kualitas cap dan tanda tangan tidak turun.
  */
 

@@ -240,6 +240,32 @@ export async function deleteStoredFiles(
   scheduleObjectCleanup(rows.map((r) => r.storageKey!))
 }
 
+/** Buang file staged milik pengguna ini bila belum ditautkan ke data. */
+export async function discardOwnedUpload(
+  id: string,
+  purpose: FilePurpose,
+  userId: string
+) {
+  const file = UUID_RE.test(id)
+    ? await prisma.storedFile.findUnique({
+        where: { id },
+        select: { purpose: true, uploadedBy: true },
+      })
+    : null
+  if (!file || file.purpose !== purpose || file.uploadedBy !== userId) {
+    throw new Error("Berkas unggahan tidak ditemukan.")
+  }
+  const filePath = storedFilePath(id)
+  const [client, claim, slip, policy] = await Promise.all([
+    prisma.clientDocument.findFirst({ where: { filePath }, select: { id: true } }),
+    prisma.claimDocument.findFirst({ where: { filePath }, select: { id: true } }),
+    prisma.slipFile.findFirst({ where: { filePath }, select: { id: true } }),
+    prisma.policyFile.findFirst({ where: { filePath }, select: { id: true } }),
+  ])
+  if (client || claim || slip || policy) return
+  await discardStoredFile(id)
+}
+
 /** Hapus satu berkas yang belum sempat ditautkan ke data mana pun. */
 export async function discardStoredFile(id: string) {
   const row = await prisma.storedFile

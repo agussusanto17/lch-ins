@@ -58,8 +58,8 @@ export async function GET(
     return new Response("Akses ditolak.", { status: 403 })
   }
 
-  // Isi dari database dikirim sebagai stream: Vercel menolak response biasa
-  // di atas 4,5 MB, sedangkan berkas polis boleh sampai 25 MB.
+  // Isi dari database dikirim sebagai stream: Vercel membatasi response biasa
+  // pada 4,5 MB; berkas di semua modul bisa mencapai 50 MB.
   const body = file.data instanceof Uint8Array ? streamBytes(file.data) : file.data
   return new Response(body, {
     headers: {

@@ -5,7 +5,11 @@ import { z } from "zod"
 
 import { requireManage } from "@/lib/server/session"
 import { purposeMenu } from "@/lib/server/stored-files"
-import { completeUpload, saveUploadPart } from "@/lib/server/upload-parts"
+import {
+  completeUpload,
+  discardUploadParts,
+  saveUploadPart,
+} from "@/lib/server/upload-parts"
 import { FILE_PURPOSES, type FilePurpose } from "@/lib/uploads"
 
 /*
@@ -54,6 +58,21 @@ export async function uploadFilePartAction(
     return { ok: true, data: null }
   } catch (err) {
     return fail(err, "Gagal mengunggah berkas")
+  }
+}
+
+export async function cancelFileUploadAction(
+  uploadId: string,
+  purpose: FilePurpose
+): Promise<ActionResponse<void>> {
+  try {
+    const parsedPurpose = purposeSchema.safeParse(purpose)
+    if (!parsedPurpose.success) return { ok: false, error: "Jenis berkas tidak dikenal." }
+    const user = await requirePurposeManage(parsedPurpose.data)
+    await discardUploadParts(uploadId, user.id)
+    return { ok: true }
+  } catch (err) {
+    return fail(err, "Gagal membersihkan potongan unggahan")
   }
 }
 

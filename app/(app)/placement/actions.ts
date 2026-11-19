@@ -34,9 +34,9 @@ import {
   syncPoliciesFromSlipRevision,
 } from "@/lib/server/auto-policies"
 import { prisma } from "@/lib/prisma"
+import { discardOwnedUpload } from "@/lib/server/stored-files"
 import { requireManage } from "@/lib/server/session"
 import {
-  ATTACHMENT_LIMITS,
   deleteSlipAttachment,
   setSlipAttachmentPrint,
   uploadSlipAttachment,
@@ -425,24 +425,23 @@ const attachmentIdSchema = z.uuid()
 /** Unggah lampiran slip, misalnya vessel schedule, daftar unit, atau klausul hasil scan. */
 export async function uploadSlipAttachmentAction(
   slipId: string,
-  formData: FormData
+  fileId: string,
+  description: string
 ): Promise<ActionResponse<SlipAttachment[]>> {
+  let userId: string | null = null
   try {
     const user = await requireManage("/placement")
+    userId = user.id
     if (!attachmentIdSchema.safeParse(slipId).success) {
+      await discardOwnedUpload(fileId, "slip_attachment", user.id).catch(() => undefined)
       return { ok: false, error: "Simpan draft slip dulu sebelum menambah lampiran." }
     }
-    const file = formData.get("file")
-    if (!(file instanceof File)) return { ok: false, error: "File tidak ditemukan." }
-    const description = String(formData.get("description") ?? "").slice(
-      0,
-      ATTACHMENT_LIMITS.description
-    )
-    const data = await uploadSlipAttachment(slipId, file, description, user.id)
+    const data = await uploadSlipAttachment(slipId, fileId, description, user.id)
     revalidateUnderwritingPaths(slipId)
     return { ok: true, data }
   } catch (err: unknown) {
     unstable_rethrow(err)
+    if (userId) await discardOwnedUpload(fileId, "slip_attachment", userId).catch(() => undefined)
     return { ok: false, error: err instanceof Error ? err.message : "Gagal mengunggah lampiran." }
   }
 }
