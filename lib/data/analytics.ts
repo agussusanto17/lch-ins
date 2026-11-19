@@ -9,10 +9,10 @@ import type { Claim, Client, PlacingSlip, Policy } from "./types"
  */
 
 /**
- * Gross Premium polis dalam IDR: premi − diskon (MoM review Phase 1, poin 19). Dipakai Dashboard,
- * report, Policy Database, dan pengingat renewal.
+ * Gross Premium polis dalam IDR: total premi sebelum diskon, brokerage, dan additional fee (Team
+ * LCH, 19 November 2026). Dipakai Dashboard, report, Policy Database, dan pengingat renewal.
  */
-export function premiumIdr(p: { premium: number; discountAmount?: number; currency: string }) {
+export function premiumIdr(p: { premium: number; currency: string }) {
   return toIdr(grossPremium(p), p.currency)
 }
 

@@ -127,14 +127,10 @@ function YearTable({
   )
 }
 
-/** Dari nilai mana klaim yang sedang dibuka ikut dihitung. */
+/** Nilai klaim yang sedang dibuka yang ikut dihitung. */
 function currentClaimText(claim: ClaimValues) {
   if (claim.status === "Rejected") return "Klaim ini Rejected, jadi tidak dihitung."
-  const source =
-    claim.status === "Settled" || claim.status === "Closed"
-      ? "jumlah dibayar"
-      : "estimasi kerugian"
-  return `Klaim ini dihitung dari ${source}, ${money(lossRatioClaimValue(claim), claim.currency || "IDR")}.`
+  return `Klaim ini dihitung dari nilai disetujui/dibayar, ${money(lossRatioClaimValue(claim), claim.currency || "IDR")}.`
 }
 
 /**
@@ -196,19 +192,20 @@ export function LossRatioPanel({
         <div className="mt-1 border-t pt-1.5">
           <Row
             label="Gross Premium"
-            hint={
-              r.discount
-                ? `Premi ${money(r.premium, cur)} − diskon ${money(r.discount, cur)}`
-                : "Premi, tanpa diskon"
-            }
+            hint="Total premi sebelum diskon, brokerage, dan additional fee"
             value={money(r.grossPremium, cur)}
             strong
           />
           <Row
             label="Nett Premium"
-            hint={`Gross Premium − brokerage ${money(r.brokerage, cur)}${
-              r.additionalFee ? ` − additional fee ${money(r.additionalFee, cur)}` : ""
-            }`}
+            hint={[
+              "Gross Premium",
+              r.discount ? `diskon ${money(r.discount, cur)}` : null,
+              `brokerage ${money(r.brokerage, cur)}`,
+              r.additionalFee ? `additional fee ${money(r.additionalFee, cur)}` : null,
+            ]
+              .filter(Boolean)
+              .join(" − ")}
             value={money(r.nettPremium, cur)}
             strong
           />
@@ -219,8 +216,8 @@ export function LossRatioPanel({
 
       <p className="text-xs text-muted-foreground">
         {currentClaimText(claim)} Satu tahun polis berisi polis Baru atau Renewal beserta
-        endorsement, pembatalan, dan deklarasinya. Klaim Settled dan Closed dihitung dari jumlah
-        dibayar, klaim berjalan dari estimasi kerugian, dan klaim Rejected tidak dihitung.
+        endorsement, pembatalan, dan deklarasinya. Semua klaim dihitung dari nilai
+        disetujui/dibayar; klaim Rejected tidak dihitung.
         {r.converted ? " Mata uang polis dan klaim berbeda, jadi semua nilai dikonversi ke IDR." : ""}
       </p>
     </div>

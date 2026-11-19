@@ -526,9 +526,8 @@ export function ReportView({
                   type: "date",
                 },
                 { header: "Mata Uang", value: (p) => p.currency },
-                { header: "Premium", value: (p) => p.premium, type: "money" },
-                { header: "Diskon", value: (p) => p.discountAmount ?? 0, type: "money" },
                 { header: "Gross Premium", value: (p) => grossPremium(p), type: "money" },
+                { header: "Diskon", value: (p) => p.discountAmount ?? 0, type: "money" },
                 {
                   header: "Brokerage (IDR)",
                   value: (p) => brokerageIdr(p),

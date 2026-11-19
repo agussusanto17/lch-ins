@@ -41,43 +41,47 @@ const claim = (patch: Partial<LossRatioClaim>): LossRatioClaim => ({
   ...patch,
 })
 
-test("Gross dan Nett Premium sesuai contoh MoM poin 19", () => {
-  assert.equal(grossPremium(POLICY), 90_000_000)
+test("Gross Premium = total premi sebelum diskon, brokerage, dan fee; Nett = Gross − diskon − brokerage − fee", () => {
+  // Definisi Team LCH, 19 November 2026.
+  assert.equal(grossPremium(POLICY), 100_000_000)
   assert.equal(nettPremium(POLICY), 70_000_000)
   // Pengembalian premi: diskon ikut negatif.
-  assert.equal(grossPremium({ premium: -1_000_000, discountAmount: -100_000 }), -900_000)
+  const refund = { premium: -1_000_000, discountAmount: -100_000, brokeragePct: 15, additionalFee: 0 }
+  assert.equal(grossPremium(refund), -1_000_000)
+  assert.equal(nettPremium(refund), -750_000)
 })
 
-test("loss ratio contoh MoM: Gross 45,56%, Nett 58,57%", () => {
+test("loss ratio contoh MoM: Gross 41,00%, Nett 58,57%", () => {
   const r = lossRatio(
     [POLICY],
     [claim({ paidAmount: 40_000_000, adjusterFeeAmount: 2_000_000, salvageAmount: 1_000_000 })]
   )
-  assert.equal(r.grossPremium, 90_000_000)
+  assert.equal(r.grossPremium, 100_000_000)
   assert.equal(r.nettPremium, 70_000_000)
   assert.equal(r.incurred, 41_000_000)
-  assert.equal(r.grossRatio?.toFixed(2), "45.56")
+  assert.equal(r.grossRatio?.toFixed(2), "41.00")
   assert.equal(r.nettRatio?.toFixed(2), "58.57")
 })
 
-test("nilai klaim per status: dibayar untuk Settled/Closed, estimasi untuk yang berjalan, Rejected 0", () => {
-  const base = { estimatedLoss: 50, paidAmount: 30 }
+test("nilai klaim = nilai disetujui/dibayar untuk semua status; Rejected tidak dihitung", () => {
+  // Team LCH, 19 November 2026: bukan estimasi kerugian.
+  const base = { estimatedLoss: 17_000_000, paidAmount: 8_820_000 }
   assert.deepEqual(
     (["Outstanding", "Partial Settle", "Settled", "Closed", "Rejected"] as const).map((status) =>
       lossRatioClaimValue({ ...base, status })
     ),
-    [50, 50, 30, 30, 0]
+    [8_820_000, 8_820_000, 8_820_000, 8_820_000, 0]
   )
   const r = lossRatio(
     [POLICY],
     [
-      claim({ id: "a", status: "Outstanding", estimatedLoss: 9_000_000 }),
-      claim({ id: "b", status: "Rejected", estimatedLoss: 50_000_000, adjusterFeeAmount: 1_000_000 }),
+      claim({ id: "a", status: "Outstanding", estimatedLoss: 17_000_000, paidAmount: 9_000_000 }),
+      claim({ id: "b", status: "Rejected", paidAmount: 50_000_000, adjusterFeeAmount: 1_000_000 }),
     ]
   )
   assert.equal(r.claimCount, 1)
   assert.equal(r.incurred, 9_000_000)
-  assert.equal(r.grossRatio, 10)
+  assert.equal(r.grossRatio, 9)
 })
 
 const year = (policyId: string, start: string, patch: Partial<LossRatioYear> = {}): LossRatioYear => ({
@@ -102,12 +106,12 @@ test("isian form menggantikan klaim tersimpan dan masuk ke tahun polis klaim; pr
   assert.deepEqual(
     edited.years.map((y) => [y.policyId, y.current, y.incurred, y.grossRatio]),
     [
-      ["y1", false, 9_000_000, 10],
-      ["y2", true, 18_000_000, 20],
+      ["y1", false, 9_000_000, 9],
+      ["y2", true, 18_000_000, 18],
     ]
   )
   assert.equal(edited.total.incurred, 27_000_000)
-  assert.equal(edited.total.grossRatio, 15)
+  assert.equal(edited.total.grossRatio, 13.5)
   // Klaim baru di form ditambahkan ke tahun polisnya.
   const added = lossRatioTable(data, claim({ id: "draft", paidAmount: 4_500_000 }))
   assert.deepEqual(added.years.map((y) => y.claimCount), [1, 2])
@@ -170,7 +174,8 @@ test("diskon slip ikut tercatat di polis dan Ringkasan Penutupan", () => {
   assert.equal(policyFieldsFromSlip(slip, null).discountAmount, 1_000_000)
   const s = closingSummary(slip)
   assert.equal(s.discount, 1_000_000)
-  assert.equal(s.gross, 9_000_000)
+  // Gross Premium = premi sebelum diskon.
+  assert.equal(s.gross, 10_000_000)
   // Brokerage dari premi sebelum diskon: 10.000.000 × 15%.
   assert.equal(s.brokerage, 1_500_000)
   assert.equal(s.net, 7_500_000)
@@ -235,4 +240,23 @@ test("Rekap Produksi: Premium_Discount negatif sesuai share", () => {
       [4_000_000, -400_000, -600_000],
     ]
   )
+})
+
+test("contoh koreksi Team LCH 19 November 2026: klaim dari nilai disetujui, Gross Premium tanpa potongan", () => {
+  const policy = {
+    premium: 252_038_548.73,
+    discountAmount: 37_805_782.31,
+    brokeragePct: 0,
+    additionalFee: 25_518_903.06,
+    currency: "IDR",
+  }
+  const r = lossRatio(
+    [policy],
+    [claim({ status: "Outstanding", estimatedLoss: 17_000_000, paidAmount: 8_820_000 })]
+  )
+  assert.equal(r.claimValue, 8_820_000)
+  assert.equal(r.grossPremium, 252_038_548.73)
+  assert.equal(r.nettPremium, 188_713_863.36)
+  assert.equal(r.grossRatio?.toFixed(2), "3.50")
+  assert.equal(r.nettRatio?.toFixed(2), "4.67")
 })

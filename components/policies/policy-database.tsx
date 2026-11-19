@@ -384,9 +384,8 @@ export function PolicyDatabase({
       { header: "Berakhir", value: (p) => p.expiryDate, type: "date" },
       { header: "Mata Uang", value: (p) => p.currency },
       { header: "Sum Insured", value: (p) => p.sumInsured, type: "money" },
-      { header: "Premium", value: (p) => p.premium, type: "money" },
-      { header: "Diskon", value: (p) => p.discountAmount ?? 0, type: "money" },
       { header: "Gross Premium", value: (p) => grossPremium(p), type: "money" },
+      { header: "Diskon", value: (p) => p.discountAmount ?? 0, type: "money" },
       {
         header: "Brokerage (%)",
         value: (p) => p.brokeragePct,
@@ -607,7 +606,7 @@ export function PolicyDatabase({
                               s/d {dateShort(p.expiryDate)}
                             </span>
                           </TableCell>
-                          {/* Gross Premium = premi − diskon (MoM review Phase 1, poin 19). */}
+                          {/* Gross Premium = premi sebelum diskon; diskon tampil di bawahnya (Team LCH, 19 November 2026). */}
                           <TableCell
                             className={
                               grossPremium(p) < 0

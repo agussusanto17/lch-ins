@@ -49,19 +49,21 @@ export function ClosingSummaryPanel({
   return (
     <div className="flex flex-col gap-3 text-sm">
       <div className="rounded-lg border bg-muted/50 px-4 py-2">
-        <Row label="Premi" value={money(s.premium, currency)} />
+        {/* Gross Premium = total premi sebelum diskon, brokerage, dan additional fee (Team LCH, 19 November 2026). */}
+        <Row
+          label="Gross Premium"
+          hint="Total premi sebelum diskon, brokerage, dan additional fee"
+          value={money(s.gross, currency)}
+        />
         {s.discount ? (
-          <>
-            <Row
-              label={`Diskon ${num(slip.discountPct || 0, 2)}%`}
-              value={`− ${money(s.discount, currency)}`}
-            />
-            <Row label="Gross Premium" hint="Premi − diskon" value={money(s.gross, currency)} />
-          </>
+          <Row
+            label={`Diskon ${num(slip.discountPct || 0, 2)}%`}
+            value={`− ${money(s.discount, currency)}`}
+          />
         ) : null}
         <Row
           label={`Brokerage ${num(slip.brokeragePct || 0, 2)}% (${vatText})`}
-          hint={s.discount ? "Dari premi sebelum diskon" : undefined}
+          hint={s.discount ? "Dari Gross Premium, sebelum diskon" : undefined}
           value={`− ${money(s.brokerage, currency)}`}
         />
         {withFee ? (
@@ -70,7 +72,7 @@ export function ClosingSummaryPanel({
         <div className="mt-1 border-t pt-1">
           <Row
             label="Nett Premium ke asuransi"
-            hint={`Premi${s.discount ? " − diskon" : ""} − brokerage${withFee ? " − additional fee" : ""}`}
+            hint={`Gross Premium${s.discount ? " − diskon" : ""} − brokerage${withFee ? " − additional fee" : ""}`}
             value={money(s.net, currency)}
             strong
           />
@@ -97,7 +99,7 @@ export function ClosingSummaryPanel({
             <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 font-medium">Asuransi</th>
-                <th className="px-3 py-2 text-right font-medium">Premi</th>
+                <th className="px-3 py-2 text-right font-medium">Gross Premium</th>
                 {s.discount ? <th className="px-3 py-2 text-right font-medium">Diskon</th> : null}
                 <th className="px-3 py-2 text-right font-medium">Brokerage</th>
                 {withFee ? <th className="px-3 py-2 text-right font-medium">Additional fee</th> : null}
@@ -131,7 +133,7 @@ export function ClosingSummaryPanel({
         <p className="text-xs text-muted-foreground">
           Hitungan internal LCH, tidak dicetak di dokumen.
           {s.discount
-            ? " Brokerage dan additional fee dari premi sebelum diskon; Nett Premium = Gross Premium − brokerage − additional fee."
+            ? " Brokerage dan additional fee dihitung dari Gross Premium; Nett Premium = Gross Premium − diskon − brokerage − additional fee."
             : ""}
         </p>
       ) : null}

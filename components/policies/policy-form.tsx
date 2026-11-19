@@ -1009,7 +1009,7 @@ export function PolicyForm({
               }
             />
             {declaration ? null : (
-              // Gross Premium = premi − diskon; brokerage dan fee tetap dari premi (MoM poin 19).
+              // Gross Premium = premi sebelum diskon; Nett = gross − diskon − brokerage − fee (Team LCH, 19 November 2026).
               <NumberField
                 label="Diskon"
                 value={draft.discountAmount ?? 0}
@@ -1021,7 +1021,7 @@ export function PolicyForm({
                 )} · Nett Premium ${money(
                   nettPremium({ ...draft, additionalFee: feeNominal }),
                   draft.currency
-                )} (gross − brokerage − additional fee).`}
+                )} (gross − diskon − brokerage − additional fee).`}
               />
             )}
             {isEndorsement ? (
