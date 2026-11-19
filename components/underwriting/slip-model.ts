@@ -25,10 +25,8 @@ import { getOccupationBounds, propertyRateLinesWithBounds } from "@/lib/property
 import type { CoverOption } from "@/lib/form-options"
 import {
   buildVehicleDescription,
-  findMotorTariffBounds,
   findMotorExtensionBounds,
   findMotorPaBounds,
-  matchMotorRegion,
 } from "@/lib/data/ojk-motor"
 import { addDays, todayIso } from "@/lib/date"
 import { dateEn, normalizeCob } from "@/lib/format"
@@ -59,9 +57,11 @@ import type { LocationImportRow } from "@/lib/location-import"
 import type { VehicleImportRow } from "@/lib/vehicle-import"
 import { openCoverIssues, usesOpenCover } from "@/lib/open-cover"
 import {
-  isCascoLine,
+  hasMixedCasco,
   isMultiVehicle,
-  vehicleTariff,
+  motorRateLinesWithBounds,
+  withTotalLossLabel,
+  withTotalLossLines,
 } from "@/lib/slip-vehicles"
 
 export { GENERIC_RATE_LABEL }
@@ -892,10 +892,15 @@ export function importReplacesVehicles(slip: PlacingSlip, replace: boolean) {
   return replace || !groups.length || (groups.length === 1 && isBlankVehicleGroup(groups[0]))
 }
 
-/** Label cover kendaraan: mengikuti kendaraan pertama, atau cover standar Motor Vehicle. */
+/**
+ * Label cover kendaraan: mengikuti kendaraan pertama, atau cover standar Motor Vehicle. Total Loss
+ * Only selalu ada setelah Comprehensive Casco, juga untuk slip yang dibuat sebelum cover itu ada.
+ */
 export function vehicleRateLabels(slip: PlacingSlip) {
   const first = itemGroups(slip)[0]
-  return first?.rateLines.length ? first.rateLines.map((l) => l.label) : [...MOTOR_RATE_LINES]
+  return withTotalLossLabel(
+    first?.rateLines.length ? first.rateLines.map((l) => l.label) : MOTOR_RATE_LINES
+  )
 }
 
 /**
@@ -1147,49 +1152,8 @@ export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
   if (!usesOjkTariff(slip)) return withoutOjkBounds(slip.rateLines)
   if (slip.cob === "Property") return propertyRateLinesWithBounds(slip)
 
-  if (slip.cob === "Motor Vehicle") {
-    // Kategori dan wilayah OJK dihitung per kendaraan.
-    const owner = itemOwner(slip)
-    const tariffs = new Map(
-      slip.interestItems.map((v) => [v.id, vehicleTariff(slip, v)])
-    )
-    const fallback = {
-      coverType: slip.typeOfCover || slip.coverage || "Comprehensive",
-      region: matchMotorRegion(slip.riskLocation ?? ""),
-      casco: findMotorTariffBounds({
-        vehicleDesc: "",
-        tsi: totalSumInsured(slip),
-        locationOrPlate: slip.riskLocation ?? "",
-        coverType: slip.typeOfCover || slip.coverage || "Comprehensive",
-      }),
-    }
-
-    return slip.rateLines.map((l) => {
-      if (l.min != null || l.max != null) return l
-      const { coverType, region, casco: motorBounds } =
-        tariffs.get(owner(l.vehicleId) ?? "") ?? fallback
-      if (isCascoLine(l.label)) {
-        if (motorBounds) {
-          return {
-            ...l,
-            min: motorBounds.min,
-            max: motorBounds.max,
-            boundSource: motorBounds.source,
-          }
-        }
-      }
-      const extBounds = findMotorExtensionBounds(l.label, coverType, region)
-      if (extBounds) {
-        return {
-          ...l,
-          min: extBounds.min,
-          max: extBounds.max,
-          boundSource: extBounds.source,
-        }
-      }
-      return l
-    })
-  }
+  // Motor Vehicle juga memakai fungsi yang sama dengan pengecekan release di server.
+  if (slip.cob === "Motor Vehicle") return motorRateLinesWithBounds(slip)
 
   return slip.rateLines
 }
@@ -1326,14 +1290,31 @@ export function locationIssues(slip: PlacingSlip): string[] {
  * Slip satu kendaraan cukup dicek oleh pemeriksaan sum insured dan rate slip.
  */
 export function vehicleIssues(slip: PlacingSlip): string[] {
-  if (!isMultiVehicle(slip)) return []
+  if (slip.cob !== "Motor Vehicle") return []
+  const multi = isMultiVehicle(slip)
   return itemGroups(slip).flatMap(({ item, no, rateLines }) => {
     const issues: string[] = []
-    if ((item.amount || 0) <= 0) issues.push(`Isi TSI kendaraan ${no}.`)
-    if (!rateLines.some((l) => (l.rate ?? 0) > 0))
+    if (multi && (item.amount || 0) <= 0) issues.push(`Isi TSI kendaraan ${no}.`)
+    if (multi && !rateLines.some((l) => (l.rate ?? 0) > 0))
       issues.push(`Isi minimal satu rate untuk kendaraan ${no}.`)
+    // Kendaraan dijamin Comprehensive atau TLO, bukan keduanya (Harry, 19 November 2026).
+    if (hasMixedCasco(rateLines))
+      issues.push(
+        `Isi salah satu rate casco${multi ? ` kendaraan ${no}` : ""}: Comprehensive Casco atau Total Loss Only.`
+      )
     return issues
   })
+}
+
+/**
+ * Slip yang dibuka di form. Kendaraan slip yang masih bisa diubah mendapat baris Total Loss Only
+ * bila belum punya (slip sebelum 19 November 2026); slip Closed, Cancelled, atau terkunci slip
+ * perubahan dibiarkan apa adanya supaya revisinya tidak berisi baris kosong baru.
+ */
+export function slipForForm(slip: PlacingSlip) {
+  const editable =
+    slip.status !== "Closed" && slip.status !== "Cancelled" && !slip.changeSlipLock
+  return recalc(editable ? withTotalLossLines(slip) : slip)
 }
 
 /**

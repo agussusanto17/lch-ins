@@ -77,6 +77,7 @@ import {
   usesAdditionalFee,
   usesPropertyBlocks,
   sectionItemsPatch,
+  slipForForm,
   slipSectionTitles,
   usesSectionSumInsured,
 } from "@/components/underwriting/slip-model"
@@ -340,11 +341,12 @@ function SlipEditor({
   const router = useRouter()
   const today = useToday()
   const [isPending, startTransition] = React.useTransition()
-  const [slip, setSlip] = React.useState<PlacingSlip>(() => recalc(initial))
+  // Kendaraan slip lama mendapat baris Total Loss Only (slipForForm) tanpa membuat form berubah.
+  const [slip, setSlip] = React.useState<PlacingSlip>(() => slipForForm(initial))
   // Lampiran tersimpan langsung lewat aksinya, terpisah dari Simpan Draft.
   const [attachments, setAttachments] = React.useState(initial.attachments ?? [])
   const [savedJson, setSavedJson] = React.useState(() =>
-    JSON.stringify(recalc(initial))
+    JSON.stringify(slipForForm(initial))
   )
   const dirty = JSON.stringify(slip) !== savedJson
   // Slip baru (termasuk yang terisi dari SPPA) selalu bisa disimpan sebagai draft.

@@ -30,6 +30,7 @@ import {
 } from "@/lib/data/ojk-tariff"
 import { matchEqZone, matchFloodRegion } from "@/lib/data/ojk-zones"
 import { num } from "@/lib/format"
+import { TOTAL_LOSS_LINE } from "@/lib/slip-vehicles"
 import { cn } from "@/lib/utils"
 
 /*
@@ -482,6 +483,8 @@ export function MotorPanel({
   const [regionPick, setRegionPick] = React.useState<string | null>(null)
   const [bandPick, setBandPick] = React.useState<string | null>(null)
   const [cover, setCover] = React.useState<MotorCover>("Comprehensive")
+  // Rate TLO masuk ke baris Total Loss Only, bukan Comprehensive Casco.
+  const cascoLabel = cover === "Total Loss Only" ? TOTAL_LOSS_LINE : "Comprehensive Casco"
 
   const location = riskLocation ?? ""
   const regionMatch = React.useMemo(
@@ -589,7 +592,7 @@ export function MotorPanel({
                 value={row.min}
                 title={`Isi rate casco dengan batas bawah ${cover}`}
                 onPick={() =>
-                  onPickRate?.("Comprehensive Casco", row.min, {
+                  onPickRate?.(cascoLabel, row.min, {
                     min: row.min,
                     max: row.max,
                     source: `${cover} ${row.category}, ${region}`,
@@ -601,7 +604,7 @@ export function MotorPanel({
                 value={row.max}
                 title={`Isi rate casco dengan batas atas ${cover}`}
                 onPick={() =>
-                  onPickRate?.("Comprehensive Casco", row.max, {
+                  onPickRate?.(cascoLabel, row.max, {
                     min: row.min,
                     max: row.max,
                     source: `${cover} ${row.category}, ${region}`,

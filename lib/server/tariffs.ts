@@ -7,9 +7,9 @@ import {
   vehicleIssues,
 } from "@/components/underwriting/slip-model"
 import { openCoverIssues, usesOpenCover } from "@/lib/open-cover"
-import { coverNameIssues, itemOwner, missingRateIssue } from "@/lib/slip-items"
+import { coverNameIssues, missingRateIssue } from "@/lib/slip-items"
 import { participantIssues } from "@/lib/slip-participants"
-import { isCascoLine, vehicleTariff } from "@/lib/slip-vehicles"
+import { motorRateLinesWithBounds } from "@/lib/slip-vehicles"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
 import {
   brokerageLimitIssue,
@@ -28,7 +28,6 @@ import {
   findMotorTariffBounds,
   findMotorExtensionBounds,
   findMotorPaBounds,
-  matchMotorRegion,
 } from "@/lib/data/ojk-motor"
 
 // Batas Property dipakai bersama form dan server (lib/property-rate-bounds.ts).
@@ -58,46 +57,8 @@ export function attachSlipRateBounds(slip: PlacingSlip): RateLine[] {
   if (!usesOjkTariff(slip)) return withoutOjkBounds(slip.rateLines)
   if (slip.cob === "Property") return propertyRateLinesWithBounds(slip)
 
-  if (slip.cob === "Motor Vehicle") {
-    // Kategori dan wilayah OJK dihitung per kendaraan.
-    const owner = itemOwner(slip)
-    const tariffs = new Map(
-      slip.interestItems.map((v) => [v.id, vehicleTariff(slip, v)])
-    )
-    const fallback = {
-      coverType: slip.typeOfCover || slip.coverage || "Comprehensive",
-      region: matchMotorRegion(slip.riskLocation ?? ""),
-      casco: getMotorRateBounds(slip),
-    }
-    return slip.rateLines.map((l) => {
-      if (l.min != null || l.max != null) return l
-      const {
-        coverType,
-        region,
-        casco: motorCascoBounds,
-      } = tariffs.get(owner(l.vehicleId) ?? "") ?? fallback
-      if (isCascoLine(l.label)) {
-        if (motorCascoBounds) {
-          return {
-            ...l,
-            min: motorCascoBounds.min,
-            max: motorCascoBounds.max,
-            boundSource: motorCascoBounds.source,
-          }
-        }
-      }
-      const extBounds = findMotorExtensionBounds(l.label, coverType, region)
-      if (extBounds) {
-        return {
-          ...l,
-          min: extBounds.min,
-          max: extBounds.max,
-          boundSource: extBounds.source,
-        }
-      }
-      return l
-    })
-  }
+  // Motor Vehicle memakai fungsi yang sama dengan form (lib/slip-vehicles.ts).
+  if (slip.cob === "Motor Vehicle") return motorRateLinesWithBounds(slip)
 
   return slip.rateLines
 }

@@ -283,7 +283,8 @@ test("kendaraan baru mendapat baris rate, TPL, dan PA sendiri", () => {
     interestItems: [...slip.interestItems, { id: "v3", description: "", amount: 100_000_000 }],
   })
   const three = itemGroups(added)[2]
-  assert.equal(three.rateLines.length, 8)
+  // Cover standar Motor Vehicle, termasuk Total Loss Only (Harry, 19 November 2026).
+  assert.equal(three.rateLines.length, 9)
   assert.equal(three.tplLines.length, 2)
   assert.deepEqual(three.paLines.map((l) => l.label), ["Driver", "Passenger"])
   assert.equal(totalPremium(added), totalPremium(slip))
@@ -304,7 +305,7 @@ test("hapus kendaraan pertama membuang baris dan deductible-nya; kendaraan lain 
     ),
   })
   slip = recalcSlip({ ...slip, interestItems: slip.interestItems.slice(1) })
-  assert.equal(slip.rateLines.length, 8)
+  assert.equal(slip.rateLines.length, 9)
   assert.equal(totalPremium(slip), 15_290_000)
   assert.deepEqual(deductibleRows(slip)[0].deductibles, ["IDR 1.000.000 any one accident"])
 })

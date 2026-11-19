@@ -22,7 +22,7 @@ import { rateUnitFor, sumPremium, usesOjkTariff } from "@/lib/calc"
 import type { PlacingSlip, RateException, RateLine } from "@/lib/data"
 import { money } from "@/lib/format"
 import { itemGroups } from "@/lib/slip-items"
-import { vehicleTariff, vehicleTitle } from "@/lib/slip-vehicles"
+import { cascoSwitchPatch, vehicleTariff, vehicleTitle } from "@/lib/slip-vehicles"
 
 /**
  * Rate Motor Vehicle per kendaraan; data dan TSI diisi di Interest Insured (Harry, 5 November 2026).
@@ -61,10 +61,13 @@ export function SlipVehicles({
     openAt[index] ?? (startCount <= 1 || index >= startCount)
   const allOpen = groups.every((_, i) => isOpen(i))
 
+  // Kendaraan yang pindah Comprehensive ↔ TLO dihitung ulang batas perluasannya.
   const setRate = (id: string, rate: number | null) =>
-    onChange({
-      rateLines: slip.rateLines.map((l) => (l.id === id ? { ...l, rate } : l)),
-    })
+    onChange(
+      cascoSwitchPatch(slip, {
+        rateLines: slip.rateLines.map((l) => (l.id === id ? { ...l, rate } : l)),
+      })
+    )
 
   if (!groups.length) {
     return (
@@ -149,9 +152,16 @@ export function SlipVehicles({
                 mode="motor"
                 riskLocation={tariff.locationOrPlate}
                 sumInsured={vehicle.amount || 0}
-                onPickRate={(label, value, bounds) =>
+                onPickRate={(label, value, bounds) => {
+                  // Rate casco dari panel bisa memindahkan kendaraan Comprehensive ↔ TLO:
+                  // batas perluasannya dihitung ulang dulu, lalu rate dan batas pilihan diisi.
+                  const rateLines = slip.rateLines.map((l) =>
+                    ids.has(l.id) && l.label.startsWith(label) ? { ...l, rate: value } : l
+                  )
+                  const patch = cascoSwitchPatch(slip, { rateLines })
+                  if (patch.rateLines !== rateLines) onChange(patch)
                   onPickRate(vehicle.id, label, value, bounds)
-                }
+                }}
               />
             ) : null}
 
