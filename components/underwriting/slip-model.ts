@@ -21,7 +21,7 @@ import {
   type SlipLocation,
   type Sppa,
 } from "@/lib/data"
-import { OCCUPATION_TARIFFS } from "@/lib/data/ojk-tariff"
+import { getOccupationBounds, propertyRateLinesWithBounds } from "@/lib/property-rate-bounds"
 import type { CoverOption } from "@/lib/form-options"
 import {
   buildVehicleDescription,
@@ -41,7 +41,6 @@ import {
   locationOwner,
   needsConstructionClass,
   slipLocations,
-  strictestBounds,
   type LocationGroup,
 } from "@/lib/slip-locations"
 import {
@@ -1130,57 +1129,23 @@ export function usesAdditionalFee(cob: ClassOfBusiness) {
 
 // Batas tarif OJK dan validasi release
 
-/** Batas FLEXAS dari tabel okupasi OJK untuk okupasi dan kelas konstruksi slip. */
+/** Batas FLEXAS dari okupasi dan kelas konstruksi lokasi. */
 export function occupationBounds(
   occupation: string | undefined,
   constructionClass: string | undefined
 ) {
-  const code = (occupation ?? "").trim().split(/[^0-9A-Za-z]/)[0]
-  const klas = (constructionClass ?? "").toLowerCase() as "k1" | "k2" | "k3"
-  if (!code || !["k1", "k2", "k3"].includes(klas)) return null
-  const tariff = OCCUPATION_TARIFFS.find((o) => o.code === code)
-  const range = tariff?.[klas]
-  if (!range) return null
-  return {
-    min: range[0],
-    max: range[1],
-    source: `FLEXAS okupasi ${code} ${klas.toUpperCase()}`,
-  }
+  return getOccupationBounds(occupation ?? "", constructionClass)
 }
 
 /**
- * Baris rate beserta batas OJK: batas dari panel referensi didahulukan, lalu FLEXAS dari okupasi
- * dan kelas konstruksi supaya rate manual tetap tervalidasi. Tanpa tarif OJK berarti tanpa batas.
+ * Baris rate beserta batas OJK: batas dari panel referensi didahulukan, lalu batas otomatis.
+ * Property memakai fungsi yang sama dengan pengecekan release di server: FLEXAS dari okupasi dan
+ * kelas konstruksi, EQVET dari zona gempa, dan FWTWD dari batas bawah banjir alamat lokasi, supaya
+ * rate yang lolos di form tidak ditolak saat release. Tanpa tarif OJK berarti tanpa batas.
  */
 export function rateLinesWithBounds(slip: PlacingSlip): RateLine[] {
   if (!usesOjkTariff(slip)) return withoutOjkBounds(slip.rateLines)
-  if (slip.cob === "Property") {
-    // Tiap lokasi punya okupasi dan kelas konstruksi sendiri. Rate slip floating berlaku di
-    // semua lokasi, jadi batasnya dari lokasi paling berisiko.
-    const owner = locationOwner(slip)
-    const locations = slipLocations(slip)
-    const bounds = locations.map((location) =>
-      occupationBounds(location.occupation, location.constructionClass)
-    )
-    const auto = new Map(
-      isFloatingSumInsured(slip)
-        ? [[locations[0].id, strictestBounds(bounds)]]
-        : locations.map((location, i) => [location.id, bounds[i]])
-    )
-    return slip.rateLines.map((l) => {
-      if (l.min != null || l.max != null) return l
-      const bounds = auto.get(owner(l.locationId))
-      if (bounds && l.label === "FLEXAS") {
-        return {
-          ...l,
-          min: bounds.min,
-          max: bounds.max,
-          boundSource: bounds.source,
-        }
-      }
-      return l
-    })
-  }
+  if (slip.cob === "Property") return propertyRateLinesWithBounds(slip)
 
   if (slip.cob === "Motor Vehicle") {
     // Kategori dan wilayah OJK dihitung per kendaraan.
