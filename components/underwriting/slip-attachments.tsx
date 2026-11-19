@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input"
 import type { SlipAttachment } from "@/lib/data/types"
 import { dateShort } from "@/lib/format"
 import { compressImage } from "@/lib/image-compress"
+import { uploadInParts } from "@/lib/upload-client"
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_HINT,
@@ -68,11 +69,15 @@ export function SlipAttachments({
       return
     }
     if (!slipId) return
-    const form = new FormData()
-    form.set("file", file)
-    form.set("description", description)
     setPending(true)
-    const res = await uploadSlipAttachmentAction(slipId, form)
+    const staged = await uploadInParts(file, "slip_attachment")
+    if (!staged.ok || !staged.data) {
+      setPending(false)
+      if (inputRef.current) inputRef.current.value = ""
+      toast.error("Gagal mengunggah lampiran", { description: staged.error })
+      return
+    }
+    const res = await uploadSlipAttachmentAction(slipId, staged.data.id, description)
     setPending(false)
     if (inputRef.current) inputRef.current.value = ""
     if (!res.ok || !res.data) {

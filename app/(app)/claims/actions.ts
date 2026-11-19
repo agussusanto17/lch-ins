@@ -30,7 +30,7 @@ import {
 } from "@/lib/server/claims"
 import { getPolicyRoster, type PolicyRoster } from "@/lib/server/policies"
 import { requireAccess, requireManage } from "@/lib/server/session"
-import { saveUploadedFile } from "@/lib/server/stored-files"
+import { discardOwnedUpload } from "@/lib/server/stored-files"
 
 export interface ActionResponse<T = unknown> {
   ok: boolean
@@ -282,20 +282,18 @@ export async function updateClaimDocumentAction(
 
 export async function uploadClaimDocumentFileAction(
   documentId: string,
-  formData: FormData
+  fileId: string
 ): Promise<ActionResponse<ClaimDocumentRecord>> {
+  let userId: string | null = null
   try {
     const session = await requireManage("/claims")
-    const file = formData.get("file")
-    if (!(file instanceof File)) {
-      return { ok: false, error: "File tidak ditemukan." }
-    }
-    const stored = await saveUploadedFile(file, "claim_document", session.id)
-    const doc = await attachClaimDocumentFile(documentId, stored.id, session.id)
+    userId = session.id
+    const doc = await attachClaimDocumentFile(documentId, fileId, session.id)
     revalidatePath("/claims")
     return { ok: true, data: doc }
   } catch (err) {
     unstable_rethrow(err)
+    if (userId) await discardOwnedUpload(fileId, "claim_document", userId).catch(() => undefined)
     const message = err instanceof Error ? err.message : "Gagal mengunggah berkas klaim"
     return { ok: false, error: message }
   }

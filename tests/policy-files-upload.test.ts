@@ -11,7 +11,7 @@ import {
   policyFilesOfKind,
 } from "../lib/policy-files"
 import {
-  MAX_POLICY_FILE_BYTES,
+  MAX_PENDING_UPLOAD_PARTS,
   MAX_UPLOAD_BYTES,
   UPLOAD_PART_BYTES,
   joinUploadParts,
@@ -48,16 +48,18 @@ test("potongan yang hilang, berlebih, atau melewati batas ditolak", () => {
   )
 })
 
-test("berkas polis boleh 25 MB, berkas lain tetap 4 MB", () => {
-  assert.equal(maxUploadBytes("policy_file"), 25 * 1024 * 1024)
-  assert.equal(maxUploadBytes("client_document"), MAX_UPLOAD_BYTES)
-  assert.equal(maxUploadBytes("slip_attachment"), MAX_UPLOAD_BYTES)
+test("semua jenis unggahan menerima 50 MB dan menolak ukuran di atasnya", () => {
+  const purposes = ["client_document", "claim_document", "policy_file", "slip_attachment"] as const
+  for (const purpose of purposes) {
+    assert.equal(maxUploadBytes(purpose), 50 * 1024 * 1024)
+  }
   const pdf = (size: number) => ({ size, type: "application/pdf" })
-  assert.equal(uploadProblem(pdf(10 * 1024 * 1024), MAX_POLICY_FILE_BYTES), null)
-  assert.equal(uploadProblem(pdf(26 * 1024 * 1024), MAX_POLICY_FILE_BYTES), "Ukuran file maksimal 25 MB.")
-  assert.equal(uploadProblem(pdf(5 * 1024 * 1024)), "Ukuran file maksimal 4 MB.")
+  assert.equal(uploadProblem(pdf(MAX_UPLOAD_BYTES)), null)
+  assert.equal(uploadProblem(pdf(MAX_UPLOAD_BYTES + 1)), "Ukuran file maksimal 50 MB.")
   // Satu potongan harus muat dalam satu request Vercel (4,5 MB).
   assert.ok(UPLOAD_PART_BYTES < 4.5 * 1024 * 1024)
+  assert.equal(Math.ceil(MAX_UPLOAD_BYTES / UPLOAD_PART_BYTES), 17)
+  assert.equal(MAX_PENDING_UPLOAD_PARTS, 51)
 })
 
 const file = (kind: PolicyFile["kind"], version: number): PolicyFile => ({

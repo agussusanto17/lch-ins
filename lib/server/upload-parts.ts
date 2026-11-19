@@ -3,6 +3,7 @@ import "server-only"
 import { prisma } from "@/lib/prisma"
 import { saveUploadedBytes } from "@/lib/server/stored-files"
 import {
+  MAX_PENDING_UPLOAD_PARTS,
   UPLOAD_PART_BYTES,
   joinUploadParts,
   maxUploadBytes,
@@ -22,11 +23,9 @@ const UUID_RE =
 const STALE_MS = 24 * 60 * 60 * 1000
 
 /**
- * Potongan tertunda per pengguna, sekitar tiga berkas 25 MB. Mencegah
- * unggahan yang tidak pernah diselesaikan memenuhi database.
+ * Potongan tertunda per pengguna, sekitar tiga berkas 50 MB. Ini batas agregat,
+ * bukan reservasi slot untuk satu unggahan.
  */
-const MAX_PENDING_PARTS = 30
-
 export async function saveUploadPart({
   uploadId,
   partNo,
@@ -54,7 +53,7 @@ export async function saveUploadPart({
     where: { createdAt: { lt: new Date(Date.now() - STALE_MS) } },
   })
   const pending = await prisma.uploadPart.count({ where: { uploadedBy: userId } })
-  if (pending >= MAX_PENDING_PARTS) {
+  if (pending >= MAX_PENDING_UPLOAD_PARTS) {
     throw new Error(
       "Terlalu banyak unggahan yang belum selesai. Coba lagi beberapa saat lagi."
     )
@@ -73,6 +72,11 @@ export async function saveUploadPart({
  * Gabungkan semua potongan menjadi satu berkas tersimpan. Potongannya
  * dihapus, berhasil atau tidak, supaya tabel tidak menumpuk.
  */
+export async function discardUploadParts(uploadId: string, userId: string) {
+  if (!UUID_RE.test(uploadId)) return
+  await prisma.uploadPart.deleteMany({ where: { uploadId, uploadedBy: userId } })
+}
+
 export async function completeUpload({
   uploadId,
   parts,

@@ -7,9 +7,10 @@ import * as z from "zod"
 
 import {
   createClientAction,
+  discardClientUploadAction,
   updateClientAction,
-  uploadClientDocumentAction,
 } from "@/app/(app)/marketing/actions"
+import { uploadInParts } from "@/lib/upload-client"
 import { FormDrawer } from "@/components/shared/form-drawer"
 import { SelectInput, TextField } from "@/components/shared/form-fields"
 import { useFormOptions } from "@/components/shared/form-options-provider"
@@ -215,6 +216,13 @@ export function ClientForm({
     })
   }
 
+  function removeDocument(id: string) {
+    const fileId = draft.documents.find((d) => d.id === id)?.fileId
+    if (fileId) void discardClientUploadAction(fileId)
+    dropPendingFile(id)
+    set({ documents: draft.documents.filter((d) => d.id !== id) })
+  }
+
   function patchAddress(id: string, patch: Partial<ClientAddress>) {
     set({
       addresses: draft.addresses.map((a) =>
@@ -241,22 +249,33 @@ export function ClientForm({
     setErrors(result.errors)
     if (!result.ok) return false
 
-    // File dikirim dulu satu per satu dan id-nya langsung dicatat di draft,
-    // jadi bila simpan diulang, file yang sudah terkirim tidak diunggah lagi.
+    // Upload KYC per potongan; file staged dibuang jika penyimpanan klien gagal.
     const fileIds: Record<string, string> = {}
+    const staged: Array<{ documentId: string; fileId: string }> = []
+    const discardStaged = async () => {
+      await Promise.all(
+        staged.map(({ fileId }) => discardClientUploadAction(fileId).catch(() => undefined))
+      )
+      const ids = new Set(staged.map(({ documentId }) => documentId))
+      setDraft((dr) => ({
+        ...dr,
+        documents: dr.documents.map((x) =>
+          ids.has(x.id) ? { ...x, fileId: undefined } : x
+        ),
+      }))
+    }
     for (const d of draft.documents) {
       const file = pendingFiles[d.id]
       if (!file) continue
-      const body = new FormData()
-      body.append("file", file)
-      const res = await uploadClientDocumentAction(body)
+      const res = await uploadInParts(file, "client_document")
       if (!res.ok || !res.data) {
+        await discardStaged()
         toast.error(`Gagal mengunggah ${file.name}`, { description: res.error })
         return false
       }
       const fileId = res.data.id
       fileIds[d.id] = fileId
-      dropPendingFile(d.id)
+      staged.push({ documentId: d.id, fileId })
       setDraft((dr) => ({
         ...dr,
         documents: dr.documents.map((x) =>
@@ -313,10 +332,12 @@ export function ClientForm({
     if (draft.id) {
       const res = await updateClientAction(draft.id, payload)
       if (!res.ok || !res.data) {
+        await discardStaged()
         toast.error(res.error || "Gagal memperbarui data klien")
         return false
       }
       const record = res.data
+      for (const { documentId } of staged) dropPendingFile(documentId)
       store.upsert("clients", record)
       toast.success("Data klien diperbarui", { description: record.name })
       onSaved?.(record)
@@ -325,10 +346,12 @@ export function ClientForm({
     } else {
       const res = await createClientAction(payload)
       if (!res.ok || !res.data) {
+        await discardStaged()
         toast.error(res.error || "Gagal menambahkan klien baru")
         return false
       }
       const record = res.data
+      for (const { documentId } of staged) dropPendingFile(documentId)
       store.upsert("clients", record)
       toast.success("Klien tersimpan", { description: record.name })
       onSaved?.(record)
@@ -680,6 +703,7 @@ export function ClientForm({
                       })
                       return
                     }
+                    if (d.fileId) void discardClientUploadAction(d.fileId)
                     setPendingFiles((files) => ({ ...files, [d.id]: file }))
                     patchDocument(d.id, {
                       fileName: file.name,
@@ -703,12 +727,7 @@ export function ClientForm({
                 size="icon"
                 aria-label="Hapus berkas"
                 className="self-end text-muted-foreground hover:text-destructive"
-                onClick={() => {
-                  dropPendingFile(d.id)
-                  set({
-                    documents: draft.documents.filter((x) => x.id !== d.id),
-                  })
-                }}
+                onClick={() => removeDocument(d.id)}
               >
                 <Trash2 />
               </Button>

@@ -1,4 +1,5 @@
 import {
+  cancelFileUploadAction,
   completeFileUploadAction,
   uploadFilePartAction,
   type ActionResponse,
@@ -16,19 +17,32 @@ export async function uploadInParts(
 ): Promise<ActionResponse<{ id: string; fileName: string }>> {
   const uploadId = crypto.randomUUID()
   const parts = Math.max(1, Math.ceil(file.size / UPLOAD_PART_BYTES))
-  for (let i = 0; i < parts; i++) {
-    const body = new FormData()
-    body.append("uploadId", uploadId)
-    body.append("partNo", String(i))
-    body.append("purpose", purpose)
-    body.append(
-      "chunk",
-      file.slice(i * UPLOAD_PART_BYTES, (i + 1) * UPLOAD_PART_BYTES),
-      file.name
-    )
-    const res = await uploadFilePartAction(body)
-    if (!res.ok) return { ok: false, error: res.error }
-    onProgress?.(i + 1, parts)
+  try {
+    for (let i = 0; i < parts; i++) {
+      const body = new FormData()
+      body.append("uploadId", uploadId)
+      body.append("partNo", String(i))
+      body.append("purpose", purpose)
+      body.append(
+        "chunk",
+        file.slice(i * UPLOAD_PART_BYTES, (i + 1) * UPLOAD_PART_BYTES),
+        file.name
+      )
+      const res = await uploadFilePartAction(body)
+      if (!res.ok) {
+        await cancelFileUploadAction(uploadId, purpose)
+        return { ok: false, error: res.error }
+      }
+      onProgress?.(i + 1, parts)
+    }
+    const result = await completeFileUploadAction({ uploadId, parts, fileName: file.name, purpose })
+    if (!result.ok) await cancelFileUploadAction(uploadId, purpose)
+    return result
+  } catch (error) {
+    await cancelFileUploadAction(uploadId, purpose).catch(() => undefined)
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Gagal mengunggah berkas.",
+    }
   }
-  return completeFileUploadAction({ uploadId, parts, fileName: file.name, purpose })
 }
