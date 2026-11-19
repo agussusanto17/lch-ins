@@ -11,19 +11,27 @@ export type FilePurpose =
   | "claim_document"
   | "policy_file"
   | "slip_attachment"
+  | "signature"
 
 export const FILE_PURPOSES: FilePurpose[] = [
   "client_document",
   "claim_document",
   "policy_file",
   "slip_attachment",
+  "signature",
 ]
+
+/**
+ * Gambar tanda tangan dan cap dimuat di setiap halaman cetak dokumen penutupan, jadi dibatasi
+ * kecil. Gambar 400 × 130 piksel cukup tajam untuk dicetak setinggi 1,5 cm.
+ */
+export const MAX_SIGNATURE_BYTES = 2 * 1024 * 1024
 
 export function maxUploadBytes(purpose: FilePurpose) {
   if (!FILE_PURPOSES.includes(purpose)) {
     throw new Error("Jenis berkas tidak dikenal.")
   }
-  return MAX_UPLOAD_BYTES
+  return purpose === "signature" ? MAX_SIGNATURE_BYTES : MAX_UPLOAD_BYTES
 }
 
 /** Pesan ukuran berkas untuk batas yang diberikan. */
@@ -36,6 +44,21 @@ export const UPLOAD_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp"
 
 export const UPLOAD_HINT =
   "PDF, JPG, PNG, atau WebP, maksimal 50 MB. Foto yang lebih besar diperkecil otomatis."
+
+/** Gambar tanda tangan: tanpa PDF, karena dicetak sebagai gambar di blok tanda tangan. */
+export const SIGNATURE_ACCEPT = "image/png,image/jpeg,image/webp"
+
+export const SIGNATURE_HINT =
+  "PNG berlatar transparan disarankan, sekitar 400 × 130 piksel, maksimal 2 MB."
+
+/** Pemeriksaan gambar tanda tangan di browser; server memeriksa ulang dari isinya. */
+export function signatureUploadProblem(file: { size: number; type: string }) {
+  if (!SIGNATURE_ACCEPT.split(",").includes(file.type)) {
+    return "Hanya gambar PNG, JPG, atau WebP yang bisa diunggah."
+  }
+  if (file.size > MAX_SIGNATURE_BYTES) return sizeLimitMessage(MAX_SIGNATURE_BYTES)
+  return null
+}
 
 /** Workbook Excel, hanya untuk lampiran slip. */
 export const XLSX_MIME =

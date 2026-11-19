@@ -1,5 +1,6 @@
 import { Fragment } from "react"
 
+import { SignatureSlot } from "@/components/documents/signature"
 import {
   coverLabel,
   exclusionItems,
@@ -2089,7 +2090,9 @@ export function SignatureGrid({
     <div className="avoid-break mt-10 grid grid-cols-1 gap-8 text-[13px] sm:grid-cols-2">
       <div>
         <p className="mb-1">{place}</p>
-        <p className="mb-14 text-muted-foreground">{preparedBy}</p>
+        <p className="text-muted-foreground">{preparedBy}</p>
+        {/* Tanda tangan yang dipilih di halaman cetak; kosong untuk ditandatangani basah. */}
+        <SignatureSlot />
         <p className="border-t pt-1 font-bold">{company}</p>
         <p className="text-xs text-muted-foreground">Authorized Signatory</p>
       </div>

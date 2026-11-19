@@ -9,8 +9,14 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CompanyLogo } from "@/components/documents/letterhead"
 import { PrintedAt } from "@/components/documents/printed-at"
+import {
+  SignaturePicker,
+  SignatoryProvider,
+  useSignatoryChoice,
+} from "@/components/documents/signature"
 import { hasAppShellHistory } from "@/lib/app-shell-history"
 import type { LetterheadVariant } from "@/lib/document-dates"
+import type { DocumentSignatory } from "@/lib/document-signatories"
 import { repeatsPrintHeaderFooter } from "@/lib/print-support"
 import { pendingPrintTasks, subscribePrintTasks } from "@/lib/print-tasks"
 
@@ -24,6 +30,7 @@ export function DocumentShell({
   variant = "lch",
   notice,
   slip = false,
+  signatories,
 }: {
   backHref: string
   children: React.ReactNode
@@ -37,6 +44,11 @@ export function DocumentShell({
   notice?: React.ReactNode
   /** Dokumen slip: Arial, margin cetak kiri-kanan 10mm (default 18mm), padding kartu lebih kecil. */
   slip?: boolean
+  /**
+   * Tanda tangan LCH yang bisa dipilih di toolbar (Placing Slip, Quotation Slip, Closing
+   * Instruction). Tanpa prop ini blok tanda tangan dicetak kosong seperti biasa.
+   */
+  signatories?: DocumentSignatory[]
 }) {
   // Server dan render pertama menganggap browser mendukung, jadi tidak ada
   // hydration mismatch; peringatan baru muncul setelah user agent terbaca.
@@ -49,6 +61,7 @@ export function DocumentShell({
   // Isi lampiran (gambar, halaman PDF) yang belum selesai dimuat belum ikut
   // tercetak, jadi tombol cetak menunggu.
   const pendingContent = useSyncExternalStore(subscribePrintTasks, pendingPrintTasks, () => 0)
+  const signature = useSignatoryChoice(signatories)
 
   return (
     <div
@@ -74,7 +87,7 @@ export function DocumentShell({
           <ArrowLeft data-icon="inline-start" />
           Kembali
         </Button>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {repeatsHeaderFooter ? null : (
             <p className="flex max-w-xs items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
@@ -82,6 +95,13 @@ export function DocumentShell({
               atau Edge supaya muncul di setiap halaman.
             </p>
           )}
+          {signatories?.length ? (
+            <SignaturePicker
+              signatories={signatories}
+              value={signature.value}
+              onValueChange={signature.setValue}
+            />
+          ) : null}
           <Button size="sm" disabled={pendingContent > 0} onClick={() => window.print()}>
             {pendingContent > 0 ? (
               <Loader2 data-icon="inline-start" className="animate-spin" />
@@ -133,7 +153,7 @@ export function DocumentShell({
           <tbody className="print:table-row-group">
             <tr>
               <td className="border-0 p-0 align-top print:px-[var(--print-x,18mm)]">
-                {children}
+                <SignatoryProvider value={signature.selected}>{children}</SignatoryProvider>
               </td>
             </tr>
           </tbody>

@@ -21,6 +21,7 @@ export const ENTITY_LABELS: Record<string, string> = {
   wording_forms: "Wording",
   vehicle_brands: "Merek Kendaraan",
   vehicle_types: "Tipe Kendaraan",
+  document_signatories: "Tanda Tangan Dokumen",
 }
 
 export const ACTION_LABELS: Record<string, string> = {
@@ -55,6 +56,8 @@ const FIELD_LABELS: Record<string, string> = {
   roles: "Peran",
   roleId: "Peran",
   isActive: "Aktif",
+  isDefault: "Default",
+  image: "Gambar",
   mustChangePassword: "Wajib ganti sandi",
   description: "Keterangan",
   notes: "Catatan",

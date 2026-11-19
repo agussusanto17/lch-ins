@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { ClosingInstructionDocument } from "@/components/documents/slip-documents"
 import { canManage } from "@/lib/access"
 import { policyNosForSlip } from "@/lib/server/auto-policies"
+import { listDocumentSignatories } from "@/lib/server/document-signatories"
 import { getPlacingSlipById } from "@/lib/server/placing-slips"
 import { currentUser } from "@/lib/server/session"
 import { slipAttachmentPrints } from "@/lib/server/slip-attachment-print"
@@ -15,7 +16,11 @@ export default async function Page({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const slip = await getPlacingSlipById(id)
+  // Tanda tangan LCH yang bisa dipilih di toolbar cetak (Harry, 19 November 2026).
+  const [slip, signatories] = await Promise.all([
+    getPlacingSlipById(id),
+    listDocumentSignatories(),
+  ])
   const prints = slip ? await slipAttachmentPrints(slip.dbId ?? slip.id) : undefined
   // Polis yang tercatat dari CI ini, ditampilkan di atas dokumen (tidak tercetak).
   const linkedPolicies = slip ? await policyNosForSlip(slip.dbId ?? slip.id) : undefined
@@ -29,6 +34,7 @@ export default async function Page({
       prints={prints}
       linkedPolicies={linkedPolicies}
       canRecordPolicy={canRecordPolicy}
+      signatories={signatories}
     />
   )
 }
