@@ -689,6 +689,24 @@ async function policyCoverCode(tx: Prisma.TransactionClient, policyId: string) {
   )
 }
 
+/** Batas percobaan saat nomor otomatis ternyata sudah dipakai klaim lain. */
+const CLAIM_NO_ATTEMPTS = 50
+
+/**
+ * Nomor klaim berurutan per COB, yaitu per kode cover di nomornya: CLM-LCH001/MV/XI/2026,
+ * CLM-LCH002/MV/XI/2026, dan CLM-LCH001/PAR/XI/2026 untuk PAR (Team LCH, 19 November 2026).
+ * Nomor yang sudah dipakai, misalnya diketik manual, dilewati.
+ */
+async function nextClaimNo(tx: Prisma.TransactionClient, policyId: string) {
+  const coverCode = await policyCoverCode(tx, policyId)
+  for (let i = 0; i < CLAIM_NO_ATTEMPTS; i++) {
+    const claimNo = await nextDocumentNumber(tx, { code: "CLM", coverCode, perCover: true })
+    const taken = await tx.claim.findUnique({ where: { claimNo }, select: { id: true } })
+    if (!taken) return claimNo
+  }
+  throw new Error("Nomor klaim otomatis sudah terpakai. Isi Nomor Klaim secara manual.")
+}
+
 const isoDay = (d: Date) => d.toISOString().slice(0, 10)
 
 /**
@@ -740,13 +758,7 @@ export async function createClaim(
     // Klaim dicatat ke polis induk (13 November 2026). Form yang dibuka
     // sebelum pilihan polis digabung masih bisa mengirim endorsement.
     const policyId = await rosterPolicyId(tx, input.policyId)
-    let claimNo = input.claimNo?.trim()
-    if (!claimNo) {
-      claimNo = await nextDocumentNumber(tx, {
-        code: "CLM",
-        coverCode: await policyCoverCode(tx, policyId),
-      })
-    }
+    const claimNo = input.claimNo?.trim() || (await nextClaimNo(tx, policyId))
 
     const { participantId, paBenefitId } = await checkedPaClaim(tx, { ...input, policyId })
     const [statusId, stageId, adjusterId] = await Promise.all([

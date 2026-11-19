@@ -65,6 +65,19 @@ export function counterPeriod(
 }
 
 /**
+ * Kunci baris number_counters. Dokumen yang nomornya berurutan per COB memakai counter sendiri
+ * per kode cover di nomornya, misalnya `2026-11/MV` dan `2026-11/PAR` untuk klaim (Team LCH,
+ * 19 November 2026). Tanpa kode cover, counter periode biasa yang dipakai.
+ */
+export function counterKey(
+  period: string,
+  { coverCode, perCover = false }: { coverCode?: string | null; perCover?: boolean } = {}
+) {
+  const cover = coverCode?.trim()
+  return perCover && cover ? `${period}/${cover}` : period
+}
+
+/**
  * Susun nomor dari pola jenis dokumen. Token yang didukung:
  * {seq:N} atau {seq} (4 digit), {MM}, {MMROMAN}, {YYYY}, dan {COVER}.
  *
@@ -109,7 +122,14 @@ export async function nextDocumentNumber(
     code,
     date = new Date(),
     coverCode,
-  }: { code: DocumentTypeCode; date?: Date; coverCode?: string | null }
+    perCover = false,
+  }: {
+    code: DocumentTypeCode
+    date?: Date
+    coverCode?: string | null
+    /** Nomor berurutan per kode cover, bukan satu urutan untuk semua COB. */
+    perCover?: boolean
+  }
 ) {
   const docType = await tx.documentType.findUnique({
     where: { code },
@@ -122,7 +142,10 @@ export async function nextDocumentNumber(
   }
 
   const { year, month } = wibYearMonth(date)
-  const period = counterPeriod(docType.resetPeriod.code, { year, month })
+  const period = counterKey(counterPeriod(docType.resetPeriod.code, { year, month }), {
+    coverCode,
+    perCover,
+  })
 
   const [row] = await tx.$queryRaw<{ last_number: number }[]>`
     INSERT INTO number_counters (document_type_code, period, last_number, updated_at)
@@ -149,7 +172,8 @@ export async function previewDocumentNumber(
     code,
     date = new Date(),
     coverCode,
-  }: { code: DocumentTypeCode; date?: Date; coverCode?: string | null }
+    perCover = false,
+  }: { code: DocumentTypeCode; date?: Date; coverCode?: string | null; perCover?: boolean }
 ) {
   const docType = await db.documentType.findUnique({
     where: { code },
@@ -158,7 +182,10 @@ export async function previewDocumentNumber(
   if (!docType) return null
 
   const { year, month } = wibYearMonth(date)
-  const period = counterPeriod(docType.resetPeriod.code, { year, month })
+  const period = counterKey(counterPeriod(docType.resetPeriod.code, { year, month }), {
+    coverCode,
+    perCover,
+  })
   const counter = await db.numberCounter.findUnique({
     where: { documentTypeCode_period: { documentTypeCode: code, period } },
     select: { lastNumber: true },

@@ -92,6 +92,14 @@ test("pivot: urut klaim terbanyak, atau mengikuti urutan tahapan Master Data", (
       ["Property", 2, 0, 0, 2],
     ]
   )
+  // Nilai klaim per COB dalam IDR (Team LCH, 19 November 2026).
+  assert.deepEqual(
+    byCob.map((r) => [r.label, r.values.estimatedLoss, r.values.claimedAmount, r.values.paidAmount]),
+    [
+      ["Motor Vehicle", 5_000_000, 0, 40_000_000],
+      ["Property", 11_620_000, 0, 0],
+    ]
+  )
   const byStage = claimStatusPivot(CLAIMS, (c) => c.stage, DATA.stages)
   assert.deepEqual(
     byStage.map((r) => r.label),
@@ -126,6 +134,22 @@ test("workbook: sheet Ringkasan dan Daftar Klaim seperti register LCH", async ()
   )
   assert.deepEqual([sum.getCell("A13").value, sum.getCell("B13").value], ["Total", 4])
   assert.equal(sum.getCell("A15").value, "Per COB")
+  // Per COB: jumlah per status, Total, lalu tiga kolom nilai klaim.
+  assert.deepEqual(
+    ["G16", "H16", "I16", "J16"].map((ref) => sum.getCell(ref).value),
+    ["Total", "Estimasi Kerugian", "Nilai Diajukan", "Nilai Disetujui/Dibayar"]
+  )
+  assert.deepEqual(
+    ["A17", "G17", "H17", "I17", "J17"].map((ref) => sum.getCell(ref).value),
+    ["Motor Vehicle", 2, 5_000_000, 0, 40_000_000]
+  )
+  assert.deepEqual(
+    ["A19", "G19", "H19", "I19", "J19"].map((ref) => sum.getCell(ref).value),
+    ["Total", 4, 16_620_000, 0, 40_000_000]
+  )
+  // Tabel lain tetap tanpa kolom nilai.
+  assert.equal(sum.getCell("A21").value, "Per asuransi (leader)")
+  assert.deepEqual([sum.getCell("G22").value, sum.getCell("H22").value], ["Total", null])
 
   const list = read.getWorksheet("Daftar Klaim")!
   assert.deepEqual(
