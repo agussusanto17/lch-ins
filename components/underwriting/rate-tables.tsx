@@ -35,8 +35,11 @@ import { isOutOfBounds } from "./slip-model"
 
 function boundsLabel(line: RateLine) {
   if (line.min == null && line.max == null) return "—"
-  if (line.min === line.max) return num(line.min ?? 0, 3)
-  return `${num(line.min ?? 0, 3)} – ${num(line.max ?? 0, 3)}`
+  // Banjir hanya punya batas bawah Zona 1; batas atas kosong bukan 0.
+  if (line.max == null) return `min ${num(line.min ?? 0, 3)}`
+  if (line.min == null) return `maks ${num(line.max, 3)}`
+  if (line.min === line.max) return num(line.min, 3)
+  return `${num(line.min, 3)} – ${num(line.max, 3)}`
 }
 
 /**
