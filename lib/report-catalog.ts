@@ -4,7 +4,9 @@
  * sini setelah template dari Team LCH diterima.
  */
 
-export type ReportId = "rekap-produksi"
+import { canSeeReportClaims } from "./access"
+
+export type ReportId = "rekap-produksi" | "statistik-klaim"
 
 export interface ReportDefinition {
   id: ReportId
@@ -17,6 +19,11 @@ export interface ReportDefinition {
    * LCH. Rekap Produksi mengikuti Report Operational, tempat tombolnya sebelumnya.
    */
   access: string
+  /**
+   * Report berisi data klaim: hanya role yang melihat bagian Klaim di Report Operational
+   * (`canSeeReportClaims`), walaupun role lain punya akses menu.
+   */
+  claims?: boolean
   /** Dasar tanggal parameter periode, ditulis di dialog. */
   dateBasis: string
 }
@@ -31,6 +38,16 @@ export const REPORTS: readonly ReportDefinition[] = [
     access: "/reports",
     dateBasis: "tanggal mulai polis",
   },
+  {
+    id: "statistik-klaim",
+    title: "Statistik Klaim per Status",
+    description:
+      "Jumlah dan nilai klaim per status, per COB, per asuransi, dan per tahapan dokumen, beserta daftar klaim seperti register LCH.",
+    division: "Klaim",
+    access: "/reports",
+    claims: true,
+    dateBasis: "tanggal lapor klaim (tanggal kejadian bila tanggal lapor kosong)",
+  },
 ]
 
 export interface ReportGroup {
@@ -39,10 +56,14 @@ export interface ReportGroup {
 }
 
 /** Report yang boleh dilihat role, dikelompokkan per divisi dengan urutan daftar. */
-export function visibleReports(canAccess: (path: string) => boolean): ReportGroup[] {
+export function visibleReports(
+  canAccess: (path: string) => boolean,
+  roles: readonly string[]
+): ReportGroup[] {
   const groups = new Map<string, ReportDefinition[]>()
   for (const report of REPORTS) {
     if (!canAccess(report.access)) continue
+    if (report.claims && !canSeeReportClaims([...roles])) continue
     groups.set(report.division, [...(groups.get(report.division) ?? []), report])
   }
   return [...groups].map(([division, reports]) => ({ division, reports }))

@@ -105,11 +105,19 @@ export async function exportXlsx<T>(spec: ExportSpec<T>) {
     to: { row: 1, column: spec.columns.length },
   }
 
+  await downloadWorkbook(workbook, spec.filename)
+}
+
+/** Unduh workbook ExcelJS sebagai .xlsx; nama file diberi tanggal unduh seperti export tabel. */
+export async function downloadWorkbook(
+  workbook: { xlsx: { writeBuffer(): Promise<ArrayBuffer | Uint8Array> } },
+  filename: string
+) {
   const buffer = await workbook.xlsx.writeBuffer()
   download(
-    new Blob([buffer], {
+    new Blob([buffer as BlobPart], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     }),
-    `${spec.filename}-${stamp()}.xlsx`
+    `${filename}-${stamp()}.xlsx`
   )
 }

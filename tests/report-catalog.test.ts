@@ -9,12 +9,24 @@ import {
 } from "../lib/report-catalog"
 
 test("report tampil sesuai hak akses menu sumbernya", () => {
-  const all = visibleReports(() => true)
+  const all = visibleReports(() => true, ["admin"])
   assert.deepEqual(
     all.map((g) => [g.division, g.reports.map((r) => r.id)]),
-    [["Produksi", ["rekap-produksi"]]]
+    [
+      ["Produksi", ["rekap-produksi"]],
+      ["Klaim", ["statistik-klaim"]],
+    ]
   )
-  assert.deepEqual(visibleReports((path) => path !== "/reports"), [])
+  assert.deepEqual(visibleReports((path) => path !== "/reports", ["admin"]), [])
+})
+
+test("report klaim hanya untuk role yang melihat bagian Klaim di Report Operational", () => {
+  const ids = (roles: string[]) =>
+    visibleReports(() => true, roles).flatMap((g) => g.reports.map((r) => r.id))
+  for (const role of ["admin", "marketing", "claim", "direksi"]) {
+    assert.ok(ids([role]).includes("statistik-klaim"), role)
+  }
+  assert.deepEqual(ids(["placement"]), ["rekap-produksi"])
 })
 
 test("setiap report punya menu hak akses", () => {

@@ -2,7 +2,10 @@
 
 import { unstable_rethrow } from "next/navigation"
 
+import { canSeeReportClaims } from "@/lib/access"
+import type { ClaimStatisticsData } from "@/lib/claim-statistics"
 import type { RecapPolicy } from "@/lib/production-recap"
+import { listClaimStatistics } from "@/lib/server/claim-statistics"
 import { listProductionRecap } from "@/lib/server/production-recap"
 import { requireAccess } from "@/lib/server/session"
 
@@ -28,6 +31,30 @@ export async function productionRecapAction(
   } catch (err: unknown) {
     unstable_rethrow(err)
     const message = err instanceof Error ? err.message : "Gagal mengambil rekap produksi."
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Data Statistik Klaim per Status (MoM review Phase 1, poin 17). Role yang boleh sama dengan
+ * bagian Klaim di Report Operational.
+ */
+export async function claimStatisticsAction(
+  start: string,
+  end: string
+): Promise<ActionResponse<ClaimStatisticsData>> {
+  try {
+    const user = await requireAccess("/reports")
+    if (!canSeeReportClaims(user.roles)) {
+      return { ok: false, error: "Role Anda tidak bisa melihat data klaim di report." }
+    }
+    if (!ISO_DATE.test(start) || !ISO_DATE.test(end) || start > end) {
+      return { ok: false, error: "Periode report tidak valid." }
+    }
+    return { ok: true, data: await listClaimStatistics(start, end) }
+  } catch (err: unknown) {
+    unstable_rethrow(err)
+    const message = err instanceof Error ? err.message : "Gagal mengambil data klaim."
     return { ok: false, error: message }
   }
 }
