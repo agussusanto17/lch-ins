@@ -4,7 +4,7 @@ import * as React from "react"
 import { Download, FileSpreadsheet, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
-import { productionRecapAction } from "@/app/(app)/reports/actions"
+import { claimStatisticsAction, productionRecapAction } from "@/app/(app)/reports/actions"
 import { usePermission } from "@/components/auth/permission-provider"
 import { useToday } from "@/components/layout/today-provider"
 import { Button } from "@/components/ui/button"
@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { exportXlsx } from "@/lib/export"
+import { fillClaimStatistics } from "@/lib/claim-statistics"
+import { downloadWorkbook, exportXlsx } from "@/lib/export"
 import { dateShort } from "@/lib/format"
 import { RECAP_COLUMNS, recapRows } from "@/lib/production-recap"
 import {
@@ -36,8 +37,11 @@ interface ReportResult {
   unit: string
 }
 
-/** Pembuat file Excel per report untuk periode yang dipilih. */
-const GENERATORS: Record<ReportId, (start: string, end: string) => Promise<ReportResult>> = {
+/** Pembuat file Excel per report untuk periode yang dipilih; `today` dicetak sebagai tanggal buat. */
+const GENERATORS: Record<
+  ReportId,
+  (start: string, end: string, today: string) => Promise<ReportResult>
+> = {
   "rekap-produksi": async (start, end) => {
     const res = await productionRecapAction(start, end)
     if (!res.ok || !res.data) throw new Error(res.error ?? "Gagal mengambil rekap produksi.")
@@ -51,12 +55,25 @@ const GENERATORS: Record<ReportId, (start: string, end: string) => Promise<Repor
     }
     return { count: res.data.length, unit: "polis" }
   },
+  "statistik-klaim": async (start, end, today) => {
+    const res = await claimStatisticsAction(start, end)
+    if (!res.ok || !res.data) throw new Error(res.error ?? "Gagal mengambil data klaim.")
+    if (res.data.claims.length) {
+      const { default: ExcelJS } = await import("exceljs")
+      const wb = new ExcelJS.Workbook()
+      wb.creator = "PT. LCH Insurance Brokers"
+      wb.created = new Date()
+      fillClaimStatistics(wb, res.data, { start, end }, today)
+      await downloadWorkbook(wb, `statistik-klaim-${start}-sd-${end}`)
+    }
+    return { count: res.data.claims.length, unit: "klaim" }
+  },
 }
 
 export function ReportCatalog() {
   const permission = usePermission()
   const today = useToday()
-  const groups = visibleReports(permission.canAccess)
+  const groups = visibleReports(permission.canAccess, permission.roles)
   const [active, setActive] = React.useState<ReportDefinition | null>(null)
   const [period, setPeriod] = React.useState(() => defaultReportPeriod(today))
   const [error, setError] = React.useState<string | null>(null)
@@ -83,7 +100,7 @@ export function ReportCatalog() {
     const range = `${dateShort(period.start)} s/d ${dateShort(period.end)}`
     setBusy(true)
     try {
-      const result = await GENERATORS[active.id](period.start, period.end)
+      const result = await GENERATORS[active.id](period.start, period.end, today)
       if (!result.count) {
         toast.info(`Tidak ada ${result.unit} di periode ini`, { description: range })
         return
