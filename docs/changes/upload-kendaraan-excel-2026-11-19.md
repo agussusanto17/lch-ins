@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `feat/upload-kendaraan-excel`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #282
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
