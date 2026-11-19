@@ -78,6 +78,21 @@ test("letterhead footer applies full-width bleed on screen and --print-x print p
     letterhead.includes('-mx-8 -mb-8 md:-mx-12 md:-mb-12'),
     "on-screen footer should break out to card boundary"
   )
+
+  assert.ok(
+    letterhead.includes('loading="eager"') &&
+      letterhead.includes('[print-color-adjust:exact]'),
+    "print footer badges should load eagerly and force exact print color"
+  )
+
+  const sppaDocs = fs.readFileSync(
+    path.join(process.cwd(), "components/documents/sppa-documents.tsx"),
+    "utf-8"
+  )
+  assert.ok(
+    sppaDocs.includes("overflow-x-auto print:overflow-visible"),
+    "SPPA list table wrapper should reset overflow when printing"
+  )
 })
 
 test("doc-blocks prints clause list titles unbolded without wording and keeps bold titles in the wording appendix", () => {
