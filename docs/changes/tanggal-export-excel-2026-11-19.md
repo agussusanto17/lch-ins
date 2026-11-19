@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `fix/tanggal-export-excel`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #281
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
