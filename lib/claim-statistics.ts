@@ -117,11 +117,13 @@ export interface StatusPivotRow {
   label: string
   counts: Record<ClaimStatus, number>
   total: number
+  /** Nilai klaim kelompok ini dalam IDR, kurs tetap report. */
+  values: ClaimTotals
 }
 
 /**
- * Jumlah klaim per kelompok (COB, asuransi, atau tahapan dokumen) dan status. Tanpa `order`,
- * kelompok diurutkan dari klaim terbanyak; dengan `order`, mengikuti urutan itu.
+ * Jumlah dan nilai klaim per kelompok (COB, asuransi, atau tahapan dokumen) dan status. Tanpa
+ * `order`, kelompok diurutkan dari klaim terbanyak; dengan `order`, mengikuti urutan itu.
  */
 export function claimStatusPivot(
   claims: readonly ClaimStatRow[],
@@ -137,20 +139,24 @@ export function claimStatusPivot(
         label,
         counts: Object.fromEntries(CLAIM_STATUSES.map((s) => [s, 0])) as Record<ClaimStatus, number>,
         total: 0,
+        values: emptyTotals(),
       } satisfies StatusPivotRow)
     row.counts[c.status] = (row.counts[c.status] ?? 0) + 1
     row.total += 1
+    addClaim(row.values, c)
     groups.set(label, row)
   }
   const rank = (label: string) => {
     const i = order?.indexOf(label) ?? -1
     return i < 0 ? Number.MAX_SAFE_INTEGER : i
   }
-  return [...groups.values()].sort((a, b) =>
-    order
-      ? rank(a.label) - rank(b.label) || a.label.localeCompare(b.label)
-      : b.total - a.total || a.label.localeCompare(b.label)
-  )
+  return [...groups.values()]
+    .map((row) => ({ ...row, values: rounded(row.values) }))
+    .sort((a, b) =>
+      order
+        ? rank(a.label) - rank(b.label) || a.label.localeCompare(b.label)
+        : b.total - a.total || a.label.localeCompare(b.label)
+    )
 }
 
 /** Klaim di sheet Daftar Klaim: urut status, lalu tanggal dasar periode, lalu nomor klaim. */
@@ -237,7 +243,7 @@ function fillSummarySheet(
   period: { start: string; end: string },
   printedOn: string
 ) {
-  ws.columns = [{ width: 38 }, ...Array.from({ length: 7 }, () => ({ width: 20 }))]
+  ws.columns = [{ width: 38 }, ...Array.from({ length: 9 }, () => ({ width: 20 }))]
   const title = ws.getRow(1).getCell(1)
   title.value = "STATISTIK KLAIM PER STATUS"
   title.font = { bold: true, size: 14 }
@@ -285,29 +291,59 @@ function fillSummarySheet(
     ]
   )
 
-  const pivots: Array<[string, string, StatusPivotRow[]]> = [
-    ["Per COB", "COB", claimStatusPivot(data.claims, (c) => c.cob)],
-    ["Per asuransi (leader)", "Asuransi", claimStatusPivot(data.claims, (c) => c.insurer)],
-    [
-      "Per tahapan dokumen",
-      "Tahapan Dokumen",
-      claimStatusPivot(data.claims, (c) => c.stage, data.stages),
-    ],
+  // Per COB juga memuat nilai klaimnya (Team LCH, 19 November 2026).
+  const pivots: Array<{ heading: string; first: string; rows: StatusPivotRow[]; withValues?: boolean }> = [
+    {
+      heading: "Per COB",
+      first: "COB",
+      rows: claimStatusPivot(data.claims, (c) => c.cob),
+      withValues: true,
+    },
+    {
+      heading: "Per asuransi (leader)",
+      first: "Asuransi",
+      rows: claimStatusPivot(data.claims, (c) => c.insurer),
+    },
+    {
+      heading: "Per tahapan dokumen",
+      first: "Tahapan Dokumen",
+      rows: claimStatusPivot(data.claims, (c) => c.stage, data.stages),
+    },
   ]
-  for (const [heading, first, rows] of pivots) {
+  for (const { heading, first, rows, withValues } of pivots) {
     next += 1
     writeSectionTitle(ws, next, heading)
     const totals = CLAIM_STATUSES.map((s) => rows.reduce((sum, r) => sum + r.counts[s], 0))
+    const values = withValues ? PIVOT_VALUES : []
+    const valueTotal = (key: (typeof PIVOT_VALUES)[number][0]) =>
+      roundCents(rows.reduce((sum, r) => sum + r.values[key], 0))
     next = writeTable(
       ws,
       next + 1,
-      [first, ...CLAIM_STATUSES.map(label), "Total"],
-      rows.map((r) => [r.label, ...CLAIM_STATUSES.map((s) => r.counts[s]), r.total]),
-      [null, ...CLAIM_STATUSES.map(() => COUNT_FMT), COUNT_FMT],
-      ["Total", ...totals, rows.reduce((sum, r) => sum + r.total, 0)]
+      [first, ...CLAIM_STATUSES.map(label), "Total", ...values.map(([, text]) => text)],
+      rows.map((r) => [
+        r.label,
+        ...CLAIM_STATUSES.map((s) => r.counts[s]),
+        r.total,
+        ...values.map(([key]) => r.values[key]),
+      ]),
+      [null, ...CLAIM_STATUSES.map(() => COUNT_FMT), COUNT_FMT, ...values.map(() => IDR_FMT)],
+      [
+        "Total",
+        ...totals,
+        rows.reduce((sum, r) => sum + r.total, 0),
+        ...values.map(([key]) => valueTotal(key)),
+      ]
     )
   }
 }
+
+/** Kolom nilai di tabel Per COB, judulnya sama dengan tabel Per status. */
+const PIVOT_VALUES = [
+  ["estimatedLoss", "Estimasi Kerugian"],
+  ["claimedAmount", "Nilai Diajukan"],
+  ["paidAmount", "Nilai Disetujui/Dibayar"],
+] as const satisfies ReadonlyArray<readonly [keyof ClaimTotals, string]>
 
 /** Kolom sheet Daftar Klaim: judul English (baris 1) dan Indonesia (baris 2) seperti register LCH. */
 const LIST_COLUMNS: Array<{
