@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `fix/perataan-titik-dua-object-of-insured`
-- **PR:** (belum dibuat)
+- **PR:** #289
 - **Dikerjakan oleh:** Zero dengan Antigravity
 
 ## Latar belakang
