@@ -670,6 +670,11 @@ export interface Claim {
   reportedDate: string | null
   documentCompleteDate: string | null
   spkDate: string | null
+  /**
+   * Tanggal LOD (Letter of Discharge, persetujuan tertanggung atas nilai pembayaran klaim) dikirim
+   * ke asuransi. Batas bayar asuransi dihitung dari tanggal ini (`lodPaymentDueDate`).
+   */
+  lodDate?: string | null
   location: string
   lossDescription: string
   assetDescription: string

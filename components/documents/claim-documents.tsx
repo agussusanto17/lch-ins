@@ -2,7 +2,7 @@ import { DocumentShell } from "@/components/documents/document-shell"
 import { DocTitle, HangingIndentText, InfoTable } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
 import { toIdr } from "@/lib/calc"
-import { claimInsurerPortions, isCoInsurance } from "@/lib/claim-detail"
+import { claimInsurerPortions, isCoInsurance, lodPaymentDueDate } from "@/lib/claim-detail"
 import type { ClaimFilterParams } from "@/lib/claim-filter"
 import { claimBackHref } from "@/lib/claim-filter"
 import { dateLong, dateShort, money, num } from "@/lib/format"
@@ -257,6 +257,12 @@ export function ClaimDetailDocument({
               [
                 "SPK / SPGR Terbit",
                 claim.spkDate ? dateLong(claim.spkDate) : "Belum terbit",
+              ],
+              [
+                "LOD Dikirim ke Asuransi",
+                claim.lodDate
+                  ? `${dateLong(claim.lodDate)}, batas bayar asuransi ${dateLong(lodPaymentDueDate(claim.lodDate))}`
+                  : "Belum dikirim",
               ],
             ]}
           />

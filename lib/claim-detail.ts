@@ -5,7 +5,9 @@
  * kerugian (koreksi Agus, 18 November 2026).
  */
 import { roundCents } from "@/lib/calc"
+import { OPEN_CLAIM_STATUSES } from "@/lib/data/reference"
 import type { ClaimInsurerShare, ClaimStatus } from "@/lib/data/types"
+import { addDays, daysBetween } from "@/lib/date"
 
 /**
  * Klaim Settled bersifat final dan terkunci: data klaim, dokumen, dan tindak lanjut tidak bisa
@@ -57,4 +59,28 @@ export function claimInsurerPortions(
 /** Dokumen klaim yang sudah punya file tidak bisa dilepas centang diterimanya. */
 export function documentReceiptLocked(doc: { isReceived: boolean; filePath: string | null }) {
   return doc.isReceived && Boolean(doc.filePath)
+}
+
+/**
+ * Asuransi umumnya membayar klaim paling lambat 30 hari kalender sejak LOD (Letter of Discharge,
+ * persetujuan tertanggung atas nilai pembayaran klaim) dikirim ke asuransi (Agus, 19 November 2026).
+ */
+export const LOD_PAYMENT_DAYS = 30
+
+/** Batas bayar asuransi: tanggal LOD dikirim + 30 hari kalender; kosong bila LOD belum dikirim. */
+export function lodPaymentDueDate(lodDate: string | null | undefined) {
+  return lodDate ? addDays(lodDate, LOD_PAYMENT_DAYS) : null
+}
+
+/**
+ * Jumlah hari klaim berjalan (Outstanding atau Partial Settle) melewati batas bayar asuransi.
+ * 0 bila LOD belum dikirim, batasnya belum lewat, atau klaimnya sudah selesai.
+ */
+export function lodDaysOverdue(
+  claim: { lodDate?: string | null; status: ClaimStatus },
+  today: string
+) {
+  const due = lodPaymentDueDate(claim.lodDate)
+  if (!due || !OPEN_CLAIM_STATUSES.includes(claim.status)) return 0
+  return Math.max(0, daysBetween(due, today))
 }

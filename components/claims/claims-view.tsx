@@ -20,7 +20,7 @@ import { deleteClaimAction } from "@/app/(app)/claims/actions"
 import { usePermission } from "@/components/auth/permission-provider"
 import { ClaimDetailSheet } from "@/components/claims/claim-detail-sheet"
 import { ClaimForm } from "@/components/claims/claim-form"
-import { isClaimLocked } from "@/lib/claim-detail"
+import { isClaimLocked, lodPaymentDueDate } from "@/lib/claim-detail"
 import { PageHeader } from "@/components/layout/page-header"
 import { useToday } from "@/components/layout/today-provider"
 import { ACTION_COL_CLASS, RowActions } from "@/components/shared/row-actions"
@@ -208,6 +208,12 @@ export function ClaimsView({ initialClaims, formOptions }: ClaimsViewProps) {
         type: "date",
       },
       { header: "Tgl SPK/SPGR", value: (c) => c.spkDate, type: "date" },
+      { header: "Tgl LOD ke Asuransi", value: (c) => c.lodDate ?? null, type: "date" },
+      {
+        header: "Batas Bayar Asuransi",
+        value: (c) => lodPaymentDueDate(c.lodDate),
+        type: "date",
+      },
       { header: "Mata Uang", value: (c) => c.currency },
       { header: "Estimasi Kerugian", value: (c) => c.estimatedLoss, type: "money" },
       { header: "Nilai Klaim", value: (c) => c.claimedAmount, type: "money" },
