@@ -3,13 +3,13 @@
  * LOSS RATIO" dari Team LCH: dihitung per tahun polis, lalu total semua tahun.
  * - Satu tahun polis = polis Baru atau Renewal beserta endorsement, pembatalan, dan deklarasinya.
  *   Tahun-tahunnya diambil dari rantai renewal polis klaim, sebelum dan sesudahnya.
- * - Nilai klaim memakai jumlah dibayar untuk klaim Settled dan Closed, dan estimasi kerugian
- *   untuk klaim yang masih berjalan (Outstanding dan Partial Settle).
+ * - Nilai klaim memakai nilai disetujui/dibayar (Team LCH, 19 November 2026).
  * - Klaim Rejected tidak dihitung.
  *
  * Gross Loss Ratio = (Klaim + Adjuster/Surveyor Fee − Salvage) / Gross Premium
  * Nett Loss Ratio  = (Klaim + Adjuster/Surveyor Fee − Salvage) / Nett Premium
- * Gross Premium = Premi − Diskon; Nett Premium = Gross Premium − Brokerage − Additional Fee.
+ * Gross Premium = total premi sebelum diskon, brokerage, dan additional fee;
+ * Nett Premium = Gross Premium − Diskon − Brokerage − Additional Fee (Team LCH, 19 November 2026).
  */
 import { grossPremium, policyBrokerage, roundCents, toIdr } from "./calc"
 import type { ClaimStatus } from "./data/types"
@@ -62,7 +62,7 @@ export interface LossRatioResult {
   brokerage: number
   additionalFee: number
   nettPremium: number
-  /** Nilai klaim sesuai status, tanpa adjuster fee dan salvage. */
+  /** Nilai disetujui/dibayar klaim yang dihitung, tanpa adjuster fee dan salvage. */
   claimValue: number
   adjusterFee: number
   salvage: number
@@ -89,11 +89,10 @@ export interface LossRatioTable {
   total: LossRatioResult
 }
 
-/** Nilai klaim untuk loss ratio: dibayar bila Settled/Closed, estimasi bila masih berjalan. */
-export function lossRatioClaimValue(c: Pick<LossRatioClaim, "status" | "estimatedLoss" | "paidAmount">) {
+/** Nilai klaim untuk loss ratio: nilai disetujui/dibayar; klaim Rejected tidak dihitung. */
+export function lossRatioClaimValue(c: Pick<LossRatioClaim, "status" | "paidAmount">) {
   if (c.status === "Rejected") return 0
-  if (c.status === "Settled" || c.status === "Closed") return c.paidAmount || 0
-  return c.estimatedLoss || 0
+  return c.paidAmount || 0
 }
 
 /** `inIdr` memaksa semua nilai ke IDR, supaya baris per tahun sejalan dengan totalnya. */
@@ -118,7 +117,7 @@ export function lossRatio(
   const gross = sum(policies, (p) => conv(grossPremium(p), p.currency))
   const brokerage = sum(policies, (p) => conv(policyBrokerage(p), p.currency))
   const additionalFee = sum(policies, (p) => conv(p.additionalFee, p.currency))
-  const nett = roundCents(gross - brokerage - additionalFee)
+  const nett = roundCents(gross - discount - brokerage - additionalFee)
 
   const counted = claims.filter((c) => c.status !== "Rejected")
   const claimValue = sum(counted, (c) => conv(lossRatioClaimValue(c), c.currency))

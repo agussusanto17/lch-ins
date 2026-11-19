@@ -165,11 +165,12 @@ export function slipPolicyDiscount(slip: PlacingSlip, part: SlipPart | null) {
 }
 
 /**
- * Gross Premium = Premi − Diskon (MoM review Phase 1, poin 19). Dipakai Policy Database,
- * Dashboard, report, dan loss ratio. Negatif pada pengembalian premi.
+ * Gross Premium = total premi sebelum dikurangi diskon, brokerage, dan additional fee (Team LCH,
+ * 19 November 2026; MoM review Phase 1, poin 19). Dipakai Policy Database, Dashboard, report,
+ * Renewal Notice, dan loss ratio. Negatif pada pengembalian premi.
  */
-export function grossPremium(p: { premium: number; discountAmount?: number }) {
-  return roundCents(p.premium - (p.discountAmount ?? 0))
+export function grossPremium(p: { premium: number }) {
+  return roundCents(p.premium)
 }
 
 /** Brokerage polis: dari premi sebelum diskon, sejalan batas OJK brokerage + diskon. */
@@ -178,8 +179,8 @@ export function policyBrokerage(p: { premium: number; brokeragePct: number }) {
 }
 
 /**
- * Nett Premium = Premi − Diskon − Brokerage − Additional Fee (MoM review Phase 1, poin 19).
- * Brokerage dan additional fee tetap dihitung dari premi sebelum diskon.
+ * Nett Premium = Gross Premium − Diskon − Brokerage − Additional Fee (Team LCH, 19 November 2026).
+ * Brokerage dan additional fee dihitung dari Gross Premium, yaitu premi sebelum diskon.
  */
 export function nettPremium(p: {
   premium: number
@@ -187,7 +188,9 @@ export function nettPremium(p: {
   brokeragePct: number
   additionalFee?: number
 }) {
-  return roundCents(grossPremium(p) - policyBrokerage(p) - (p.additionalFee ?? 0))
+  return roundCents(
+    grossPremium(p) - (p.discountAmount ?? 0) - policyBrokerage(p) - (p.additionalFee ?? 0)
+  )
 }
 
 export function isParEqvetSlip(slip: PlacingSlip): boolean {

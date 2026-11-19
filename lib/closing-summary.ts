@@ -32,14 +32,14 @@ export interface ClosingSummary {
   premium: number
   /** Diskon slip (MoM review Phase 1, poin 19). */
   discount: number
-  /** Gross Premium = premi − diskon. */
+  /** Gross Premium = total premi sebelum diskon, brokerage, dan additional fee (Team LCH). */
   gross: number
   brokerage: number
   /** Nol untuk COB tanpa additional fee (selain Property dan Motor Vehicle). */
   fee: number
   /**
-   * Nett Premium yang disetor ke asuransi: premi − diskon − brokerage − additional fee
-   * (MoM review Phase 1, poin 19).
+   * Nett Premium yang disetor ke asuransi: Gross Premium − diskon − brokerage − additional fee
+   * (Team LCH, 19 November 2026; MoM review Phase 1, poin 19).
    */
   net: number
   /** Pendapatan LCH: brokerage + additional fee. */
@@ -93,7 +93,7 @@ export function closingSummary(slip: PlacingSlip): ClosingSummary {
   return {
     premium,
     discount,
-    gross: roundCents(premium - discount),
+    gross: premium,
     brokerage,
     fee,
     net: roundCents(premium - discount - brokerage - fee),
