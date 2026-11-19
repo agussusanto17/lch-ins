@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `feat/tanda-tangan-dokumen`
-- **PR:** #<nomor>
+- **PR:** #290
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
