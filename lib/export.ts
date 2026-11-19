@@ -67,6 +67,22 @@ const NUM_FMT: Partial<Record<ExportCellType, string>> = {
   number: "#,##0",
   money: "#,##0.00",
   percent: "0.00##",
+  // Tanpa format eksplisit ExcelJS memakai format tanggal bawaan yang ikut locale komputer.
+  date: "dd/mm/yyyy",
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Tanggal sebagai tengah malam UTC. ExcelJS menyimpan Date sebagai serial UTC, jadi tengah malam
+ * waktu lokal di browser WIB tersimpan sebagai pukul 17.00 hari sebelumnya dan tampil mundur
+ * sehari. Nilai berjam (updatedAt ISO) memakai tanggal lokalnya, sama dengan tampilan tabel.
+ */
+function excelDate(value: string) {
+  if (DATE_ONLY.test(value)) return new Date(`${value}T00:00:00.000Z`)
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
 }
 
 export async function exportXlsx<T>(spec: ExportSpec<T>) {
@@ -92,7 +108,7 @@ export async function exportXlsx<T>(spec: ExportSpec<T>) {
         spec.columns.map((c, i) => {
           const value = c.value(row)
           if (c.type === "date" && typeof value === "string" && value) {
-            return [`c${i}`, new Date(`${value}T00:00:00`)]
+            return [`c${i}`, excelDate(value)]
           }
           return [`c${i}`, value ?? ""]
         })
