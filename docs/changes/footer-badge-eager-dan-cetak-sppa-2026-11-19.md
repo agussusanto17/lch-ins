@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `fix/footer-badge-eager-dan-cetak-sppa`
-- **PR:** (belum dibuat)
+- **PR:** #288
 - **Dikerjakan oleh:** Zero dengan Antigravity
 
 ## Latar belakang
