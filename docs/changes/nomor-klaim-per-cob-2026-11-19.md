@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `feat/klaim-per-cob`
-- **PR:** #<nomor>
+- **PR:** #291
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
