@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `feat/statistik-klaim-status`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #280
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
