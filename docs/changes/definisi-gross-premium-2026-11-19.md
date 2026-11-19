@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `fix/definisi-gross-premium`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #285
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
