@@ -3,7 +3,13 @@
  * terbit (meeting LCH, 10 November 2026), supaya keduanya menyalin data yang sama.
  */
 
-import { additionalFeeFor, slipPolicyPremium, totalSumInsured, weightedFeePct } from "@/lib/calc"
+import {
+  additionalFeeFor,
+  slipPolicyDiscount,
+  slipPolicyPremium,
+  totalSumInsured,
+  weightedFeePct,
+} from "@/lib/calc"
 import type { PlacingSlip, Policy, SlipPart } from "@/lib/data/types"
 import { usesOpenCover } from "@/lib/open-cover"
 import { isExistingPolicyLabel } from "@/lib/slip-details"
@@ -21,6 +27,7 @@ export type PolicySlipFields = Pick<
   | "expiryDate"
   | "sumInsured"
   | "premium"
+  | "discountAmount"
   | "brokeragePct"
   | "includeVat"
   | "additionalFee"
@@ -59,6 +66,8 @@ export function policyFieldsFromSlip(
     expiryDate: slip.expiryDate ?? "",
     sumInsured: openCover ? 0 : totalSumInsured(slip),
     premium,
+    // Diskon slip ikut tercatat di polis (MoM review Phase 1, poin 19).
+    discountAmount: openCover ? 0 : slipPolicyDiscount(slip, part),
     brokeragePct: slip.brokeragePct,
     includeVat: slip.includeVat,
     additionalFee: additionalFeeFor(premium, panel),

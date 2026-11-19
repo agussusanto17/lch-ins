@@ -41,6 +41,7 @@ import {
   PremiumStatusBadge,
   useClaimPolicyInfo,
 } from "@/components/claims/claim-policy-info"
+import { LossRatioPanel } from "@/components/claims/loss-ratio-panel"
 import { usePermission } from "@/components/auth/permission-provider"
 import { useFormOptions } from "@/components/shared/form-options-provider"
 import { SelectInput } from "@/components/shared/form-fields"
@@ -592,6 +593,20 @@ export function ClaimDetailSheet({
                       <PaClaimWarnings claim={claim} />
                     ) : null}
                   </section>
+
+                  {/* Loss ratio polis klaim (MoM review Phase 1, poin 13). */}
+                  {policyInfo ? (
+                    <section>
+                      <h3 className="mb-2 text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+                        Loss ratio polis
+                      </h3>
+                      <LossRatioPanel
+                        data={policyInfo.lossRatio}
+                        claimId={claim.id}
+                        claim={claim}
+                      />
+                    </section>
+                  ) : null}
 
                   <section>
                     <h3 className="mb-2 text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">

@@ -10,6 +10,7 @@ import {
   brokerageVatAmount,
   insurerAdditionalFee,
   roundCents,
+  slipDiscountAmount,
   totalPremium,
 } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data/types"
@@ -19,19 +20,27 @@ export interface InsurerClosingSummary {
   insurer: string
   share: number
   premium: number
+  discount: number
   brokerage: number
   fee: number
-  /** Premi − brokerage − additional fee bagian asuransi ini. */
+  /** Premi − diskon − brokerage − additional fee bagian asuransi ini. */
   net: number
 }
 
 export interface ClosingSummary {
-  /** Premi bruto, dasar brokerage dan additional fee. */
+  /** Premi sebelum diskon, dasar brokerage dan additional fee. */
   premium: number
+  /** Diskon slip (MoM review Phase 1, poin 19). */
+  discount: number
+  /** Gross Premium = premi − diskon. */
+  gross: number
   brokerage: number
   /** Nol untuk COB tanpa additional fee (selain Property dan Motor Vehicle). */
   fee: number
-  /** Net premi yang disetor ke asuransi: premi − brokerage − additional fee. */
+  /**
+   * Nett Premium yang disetor ke asuransi: premi − diskon − brokerage − additional fee
+   * (MoM review Phase 1, poin 19).
+   */
   net: number
   /** Pendapatan LCH: brokerage + additional fee. */
   income: number
@@ -44,6 +53,7 @@ export interface ClosingSummary {
 export function closingSummary(slip: PlacingSlip): ClosingSummary {
   const withFee = usesAdditionalFee(slip.cob)
   const premium = totalPremium(slip)
+  const discount = slipDiscountAmount(slip)
   const brokerage = brokerageAmount(slip)
   const fee = withFee ? additionalFeeAmount(slip) : 0
   const incomeVat = roundCents(
@@ -56,32 +66,37 @@ export function closingSummary(slip: PlacingSlip): ClosingSummary {
   const insurers: InsurerClosingSummary[] = []
   if (rows.length > 1) {
     let premiumLeft = premium
+    let discountLeft = discount
     let brokerageLeft = brokerage
     let feeLeft = fee
     rows.forEach((r, i) => {
       const last = i === rows.length - 1
       const part = {
         premium: last ? premiumLeft : roundCents((premium * r.share) / 100),
+        discount: last ? discountLeft : roundCents((discount * r.share) / 100),
         brokerage: last ? brokerageLeft : roundCents((brokerage * r.share) / 100),
         fee: last ? feeLeft : withFee ? insurerAdditionalFee(premium, r) : 0,
       }
       premiumLeft = roundCents(premiumLeft - part.premium)
+      discountLeft = roundCents(discountLeft - part.discount)
       brokerageLeft = roundCents(brokerageLeft - part.brokerage)
       feeLeft = roundCents(feeLeft - part.fee)
       insurers.push({
         insurer: r.insurer,
         share: r.share,
         ...part,
-        net: roundCents(part.premium - part.brokerage - part.fee),
+        net: roundCents(part.premium - part.discount - part.brokerage - part.fee),
       })
     })
   }
 
   return {
     premium,
+    discount,
+    gross: roundCents(premium - discount),
     brokerage,
     fee,
-    net: roundCents(premium - brokerage - fee),
+    net: roundCents(premium - discount - brokerage - fee),
     income: roundCents(brokerage + fee),
     incomeVat,
     insurers,

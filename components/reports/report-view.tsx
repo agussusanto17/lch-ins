@@ -33,7 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { toIdr } from "@/lib/calc"
+import { grossPremium, toIdr } from "@/lib/calc"
 import {
   breakdownByCob,
   breakdownByInsurer,
@@ -125,7 +125,7 @@ function breakdownColumns<T extends BreakdownRow>(
       value: (r) => r.sumInsured,
       type: "money",
     },
-    { header: "Premium (IDR)", value: (r) => r.premium, type: "money" },
+    { header: "Gross Premium (IDR)", value: (r) => r.premium, type: "money" },
     { header: "Brokerage (IDR)", value: (r) => r.brokerage, type: "money" },
     { header: "Additional Fee (IDR)", value: (r) => r.fee, type: "money" },
   ]
@@ -147,7 +147,7 @@ function BreakdownTable<T extends BreakdownRow>({
           <TableHead className="pl-5">{label}</TableHead>
           <TableHead className="text-right">Polis</TableHead>
           <TableHead className="text-right">Total Sum Insured</TableHead>
-          <TableHead className="text-right">Premium</TableHead>
+          <TableHead className="text-right">Gross Premium</TableHead>
           <TableHead className="text-right">Brokerage</TableHead>
           <TableHead className="pr-5 text-right">Additional Fee</TableHead>
         </TableRow>
@@ -265,7 +265,7 @@ export function ReportView({
 
   const summary: [string, string][] = [
     ["Polis diproduksi", String(policies.length)],
-    ["Total Premium", rupiah(totalPremium)],
+    ["Total Gross Premium", rupiah(totalPremium)],
     ["Total Brokerage", rupiah(totalBrokerage)],
     ["Total Additional Fee", rupiah(totalFee)],
     ["Pendapatan (Brokerage + Fee)", rupiah(totalBrokerage + totalFee)],
@@ -376,7 +376,7 @@ export function ReportView({
           icon={ShieldCheck}
         />
         <StatCard
-          label="Total Premium"
+          label="Total Gross Premium"
           value={`Rp ${compactMoney(totalPremium)}`}
           icon={Banknote}
         />
@@ -527,6 +527,8 @@ export function ReportView({
                 },
                 { header: "Mata Uang", value: (p) => p.currency },
                 { header: "Premium", value: (p) => p.premium, type: "money" },
+                { header: "Diskon", value: (p) => p.discountAmount ?? 0, type: "money" },
+                { header: "Gross Premium", value: (p) => grossPremium(p), type: "money" },
                 {
                   header: "Brokerage (IDR)",
                   value: (p) => brokerageIdr(p),
@@ -552,7 +554,7 @@ export function ReportView({
                   <TableHead>Tertanggung</TableHead>
                   <TableHead>COB</TableHead>
                   <TableHead>Berakhir</TableHead>
-                  <TableHead className="text-right">Premium</TableHead>
+                  <TableHead className="text-right">Gross Premium</TableHead>
                   <TableHead className="text-right">Brokerage</TableHead>
                   <TableHead className="text-right">Additional Fee</TableHead>
                   <TableHead>Status</TableHead>
@@ -580,7 +582,7 @@ export function ReportView({
                         {dateShort(p.expiryDate)}
                       </TableCell>
                       <TableCell className="tabular text-right whitespace-nowrap">
-                        {money(p.premium, p.currency)}
+                        {money(grossPremium(p), p.currency)}
                       </TableCell>
                       <TableCell className="tabular text-right whitespace-nowrap">
                         {rupiah(brokerageIdr(p))}

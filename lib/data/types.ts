@@ -587,6 +587,11 @@ export interface Policy {
   sumInsured: number
   /** Tambahan premi positif, pengembalian premi negatif (endorsement dan pembatalan). */
   premium: number
+  /**
+   * Diskon dalam mata uang polis, bertanda sama dengan premi (MoM review Phase 1, poin 19).
+   * Gross Premium = premi − diskon; brokerage dan additional fee tetap dari premi.
+   */
+  discountAmount?: number
   brokeragePct: number
   /** Brokerage sudah termasuk PPN 2,2%, mengikuti slip. */
   includeVat?: boolean

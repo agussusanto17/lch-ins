@@ -28,6 +28,8 @@ import {
   brokerageCapFor,
   additionalFeeVatFor,
   feeVatInside,
+  grossPremium,
+  nettPremium,
   slipPolicyParts,
   sumPercent,
 } from "@/lib/calc"
@@ -162,6 +164,7 @@ const schema = z
     // Endorsement mencatat selisih: pengurangan UP negatif, seperti premi dan fee.
     sumInsured: z.number(),
     premium: z.number(),
+    discountAmount: z.number().optional(),
     brokeragePct: z
       .number()
       .min(0, "Brokerage tidak boleh negatif")
@@ -219,6 +222,18 @@ const schema = z
         code: "custom",
         path: ["sumInsured"],
         message: "Nilai deklarasi harus lebih dari 0",
+      })
+    }
+    // Diskon bertanda sama dengan premi dan tidak melebihinya (MoM review Phase 1, poin 19).
+    const discount = d.discountAmount ?? 0
+    if (
+      discount !== 0 &&
+      (Math.sign(discount) !== Math.sign(d.premium) || Math.abs(discount) > Math.abs(d.premium))
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["discountAmount"],
+        message: "Diskon harus bertanda sama dengan premi dan tidak melebihi premi",
       })
     }
     if (d.type === "Deklarasi" && !(d.premium > 0)) {
@@ -993,6 +1008,22 @@ export function PolicyForm({
                         : money(draft.premium, draft.currency)
               }
             />
+            {declaration ? null : (
+              // Gross Premium = premi − diskon; brokerage dan fee tetap dari premi (MoM poin 19).
+              <NumberField
+                label="Diskon"
+                value={draft.discountAmount ?? 0}
+                onValueChange={(v) => set({ discountAmount: v ?? 0 })}
+                error={errors.discountAmount}
+                description={`Nominal, bertanda sama dengan premi. Gross Premium ${money(
+                  grossPremium(draft),
+                  draft.currency
+                )} · Nett Premium ${money(
+                  nettPremium({ ...draft, additionalFee: feeNominal }),
+                  draft.currency
+                )} (gross − brokerage − additional fee).`}
+              />
+            )}
             {isEndorsement ? (
               <>
                 <NumberField

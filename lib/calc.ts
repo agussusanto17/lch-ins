@@ -147,6 +147,49 @@ export function slipPolicyPremium(slip: PlacingSlip, part: SlipPart | null) {
   return part === "PAR" ? par.subtotal : eqvet.subtotal
 }
 
+/** Diskon slip dalam nominal: per kelompok PAR dan EQVET untuk slip PAR + EQVET, selain itu total. */
+export function slipDiscountAmount(slip: PlacingSlip) {
+  if (!isParEqvetSlip(slip)) return discountAmount(slip)
+  const { par, eqvet } = calculateParEqvet(slip)
+  return roundCents(par.discountAmount + eqvet.discountAmount)
+}
+
+/**
+ * Diskon polis dari slip (MoM review Phase 1, poin 19), pasangan slipPolicyPremium: per bagian
+ * untuk slip PAR + EQVET, selain itu diskon seluruh slip.
+ */
+export function slipPolicyDiscount(slip: PlacingSlip, part: SlipPart | null) {
+  if (!part) return slipDiscountAmount(slip)
+  const { par, eqvet } = calculateParEqvet(slip)
+  return part === "PAR" ? par.discountAmount : eqvet.discountAmount
+}
+
+/**
+ * Gross Premium = Premi − Diskon (MoM review Phase 1, poin 19). Dipakai Policy Database,
+ * Dashboard, report, dan loss ratio. Negatif pada pengembalian premi.
+ */
+export function grossPremium(p: { premium: number; discountAmount?: number }) {
+  return roundCents(p.premium - (p.discountAmount ?? 0))
+}
+
+/** Brokerage polis: dari premi sebelum diskon, sejalan batas OJK brokerage + diskon. */
+export function policyBrokerage(p: { premium: number; brokeragePct: number }) {
+  return roundCents((p.premium * (p.brokeragePct || 0)) / 100)
+}
+
+/**
+ * Nett Premium = Premi − Diskon − Brokerage − Additional Fee (MoM review Phase 1, poin 19).
+ * Brokerage dan additional fee tetap dihitung dari premi sebelum diskon.
+ */
+export function nettPremium(p: {
+  premium: number
+  discountAmount?: number
+  brokeragePct: number
+  additionalFee?: number
+}) {
+  return roundCents(grossPremium(p) - policyBrokerage(p) - (p.additionalFee ?? 0))
+}
+
 export function isParEqvetSlip(slip: PlacingSlip): boolean {
   if (slip.cob !== "Property") return false
   return (

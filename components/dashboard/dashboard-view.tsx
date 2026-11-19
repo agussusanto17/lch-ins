@@ -155,7 +155,7 @@ export function DashboardView({
         <StatCard
           label="Total Brokerage"
           value={`Rp ${compactMoney(totals.totalBrokerage)}`}
-          sub={`Premium Rp ${compactMoney(totals.totalPremium)}`}
+          sub={`Gross Premium Rp ${compactMoney(totals.totalPremium)}`}
           icon={TrendingUp}
         />
       </div>

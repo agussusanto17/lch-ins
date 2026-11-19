@@ -42,6 +42,8 @@ export interface RecapPolicy {
   paidDate: string | null
   currency: string
   premium: number
+  /** Diskon polis, bertanda sama dengan premi (MoM review Phase 1, poin 19). */
+  discount?: number
   brokeragePct: number
   remarks: string | null
   groupingInsured: string | null
@@ -145,6 +147,9 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
       // Nilai mentah dibulatkan sekali per kolom, supaya kolom Rupiah sama
       // dengan contoh LCH (komisi OC × kurs, bukan komisi OC yang sudah dibulatkan).
       const grossRaw = (p.premium * ins.share) / 100
+      // Diskon ditulis negatif seperti komisi dan fee: potongan dari premi bruto. Komisi dan
+      // fee tetap dari premi sebelum diskon (MoM review Phase 1, poin 19).
+      const discountRaw = -((p.discount ?? 0) * ins.share) / 100
       const commissionRaw = -(grossRaw * p.brokeragePct) / 100
       const feeRaw = -(grossRaw * ins.additionalFeePct) / 100
       const gross = roundCents(grossRaw)
@@ -180,8 +185,8 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
         rate,
         Premium_Gross_OC: gross,
         Premium_Gross: idr(grossRaw),
-        Premium_Discount_OC: 0,
-        Premium_Discount: 0,
+        Premium_Discount_OC: roundCents(discountRaw),
+        Premium_Discount: idr(discountRaw),
         Premium_Commission_OC: commission,
         Premium_Commission: idr(commissionRaw),
         RM_Fee_OC: fee,
