@@ -165,9 +165,9 @@ test("nomor rangka: yang sudah ada di slip dilewati, kembar di file gagal", () =
 
 test("kolom rate yang bukan cover slip dicatat, bukan diam-diam dibuang", () => {
   const rows = sheet([AVANZA])
-  rows[1] = [...rows[1], "Rate Total Loss Only (%)"]
+  rows[1] = [...rows[1], "Rate Hail Damage (%)"]
   const result = vehiclesFromRows(rows, ctx())
-  assert.deepEqual(result.ignoredColumns, ["rate total loss only (%)"])
+  assert.deepEqual(result.ignoredColumns, ["rate hail damage (%)"])
 })
 
 test("kendaraan masuk ke slip: cover kendaraan pertama, premi seperti form, deductible disalin", () => {

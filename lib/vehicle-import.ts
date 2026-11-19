@@ -9,6 +9,7 @@ import type { Cell, Workbook, Worksheet } from "exceljs"
 import { MAX_DEDUCTIBLES, type VehicleBrandOption } from "./data/types"
 import { parseRate } from "./location-import"
 import { cellText, cellValue, parseParticipantAmount } from "./slip-participants"
+import { isCascoLine, isTotalLossLine } from "./slip-vehicles"
 
 /** Batas kendaraan per file, sama dengan jumlah baris template. */
 export const VEHICLE_IMPORT_LIMIT = 500
@@ -47,6 +48,25 @@ export type LimitLineKey = (typeof LIMIT_LINES)[number]["key"]
 
 const norm = (s: string) =>
   s.toLowerCase().replace(/\s+/g, " ").replace(/[*:]/g, "").trim()
+
+/** Label casco Comprehensive dan Total Loss Only di antara cover slip, bila ada. */
+function cascoLabels(rateLabels: readonly string[]) {
+  return {
+    comprehensive: rateLabels.find((l) => isCascoLine(l) && !isTotalLossLine(l)),
+    totalLoss: rateLabels.find(isTotalLossLine),
+  }
+}
+
+/** Catatan kolom rate: kolom casco menjelaskan pilihan Comprehensive atau TLO. */
+function rateNote(label: string, rateLabels: readonly string[]) {
+  const { comprehensive, totalLoss } = cascoLabels(rateLabels)
+  const percent = `Rate ${label} dalam persen, misalnya 1,5 berarti 1,5%.`
+  if (comprehensive && totalLoss && label === comprehensive)
+    return `${percent} Kendaraan TLO: kosongkan kolom ini dan isi Rate ${totalLoss}.`
+  if (comprehensive && totalLoss && label === totalLoss)
+    return `Rate ${label} dalam persen untuk kendaraan TLO. Isi salah satu: kolom ini atau Rate ${comprehensive}.`
+  return `${percent} Kosongkan bila cover ini tidak dijamin.`
+}
 
 /** Kolom template untuk cover slip; rate dan deductible mengikuti cover kendaraan pertama. */
 export function vehicleColumns(rateLabels: readonly string[]): VehicleColumn[] {
@@ -151,7 +171,7 @@ export function vehicleColumns(rateLabels: readonly string[]): VehicleColumn[] {
         width: 16,
         kind: "rate",
         names: [norm(`rate ${label}`)],
-        note: `Rate ${label} dalam persen, misalnya 1,5 berarti 1,5%. Kosongkan bila cover ini tidak dijamin.`,
+        note: rateNote(label, rateLabels),
       })
     ),
     ...LIMIT_LINES.flatMap((l): VehicleColumn[] => [
@@ -400,6 +420,12 @@ export function vehiclesFromRows(
       const rate = percent(`rate:${label}`, `Rate ${label}`)
       if (rate != null) rates[label] = rate
     }
+    // Kendaraan dijamin Comprehensive atau TLO, bukan keduanya (Harry, 19 November 2026).
+    const casco = ctx.rateLabels.filter((label) => isCascoLine(label) && (rates[label] ?? 0) > 0)
+    const tlo = casco.find(isTotalLossLine)
+    const comprehensive = casco.find((label) => !isTotalLossLine(label))
+    if (tlo && comprehensive)
+      fail(`Rate ${comprehensive} dan Rate ${tlo} terisi bersamaan. Isi salah satu saja.`)
 
     const limits: VehicleImportRow["limits"] = {}
     for (const l of LIMIT_LINES) {
@@ -678,6 +704,7 @@ export function fillVehicleTemplate(
     `Untuk placing slip ${info.insuredName.trim() || "Motor Vehicle"}, mata uang ${info.currency}. Satu baris di sheet Kendaraan berisi satu kendaraan, lengkap dengan sum insured, rate, TPL, PA, dan deductible-nya.`
   )
   line(`Cover slip ini: ${info.rateLabels.join(", ")}.`)
+  const { comprehensive, totalLoss } = cascoLabels(info.rateLabels)
   line("")
   line("Cara mengisi", true)
   for (const text of [
@@ -694,6 +721,11 @@ export function fillVehicleTemplate(
     "No. Rangka wajib dan tidak boleh kembar. Kendaraan yang nomor rangkanya sudah ada di slip dilewati, jadi file yang sama boleh diupload ulang setelah baris yang gagal diperbaiki.",
     "Sum insured dan limit diisi angka saja tanpa mata uang dan titik ribuan. Mata uang mengikuti slip.",
     "Rate diisi dalam persen, sama dengan form slip: 1,5 berarti 1,5%. Kosongkan cover yang tidak dijamin.",
+    ...(comprehensive && totalLoss
+      ? [
+          `Casco diisi salah satu: Rate ${comprehensive} untuk kendaraan comprehensive, atau Rate ${totalLoss} untuk kendaraan TLO. Baris yang mengisi keduanya gagal. Batas tarif OJK casco dan perluasan kendaraan TLO memakai tarif TLO.`,
+        ]
+      : []),
     "TPL punya dua baris seperti di form, untuk lapis dengan rate berbeda. PA Driver dan PA Passenger diisi limit dan rate-nya.",
     `Deductible diisi per cover. Bila lebih dari satu, pisahkan dengan baris baru (Alt+Enter), maksimal ${MAX_DEDUCTIBLES} baris per cover. Bila deductible sama untuk semua kendaraan, kosongkan semua kolom deductible; kendaraan baru memakai deductible kendaraan pertama di form.`,
     "Premi tidak diisi di Excel. Sistem menghitung premi = sum insured × rate untuk casco dan perluasan, dan limit × rate untuk TPL dan PA. Cek Premi memakai cara hitung yang sama.",

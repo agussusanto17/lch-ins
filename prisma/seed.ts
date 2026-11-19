@@ -669,6 +669,7 @@ async function seedCobRateLines() {
     ],
     "02": [
       [rateKind, "Comprehensive Casco"],
+      [rateKind, "Total Loss Only"],
       [rateKind, "Loading Rate Comprehensive"],
       [rateKind, "Flood, Windstorm, Tempest & Water Damage"],
       [rateKind, "Earthquake, Volcanic Eruption & Tsunami"],

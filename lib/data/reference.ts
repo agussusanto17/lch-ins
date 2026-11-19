@@ -331,9 +331,13 @@ export const PAR_EQVET_FORMULA_NAMES: Record<string, string> = {
   "BI EQVET": "BI EQVET",
 }
 
-/** Baris rate default untuk COB Motor Vehicle. */
+/**
+ * Baris rate default untuk COB Motor Vehicle. Kendaraan mengisi rate Comprehensive Casco atau
+ * Total Loss Only, salah satu saja (Harry, 19 November 2026).
+ */
 export const MOTOR_RATE_LINES = [
   "Comprehensive Casco",
+  "Total Loss Only",
   "Loading Rate Comprehensive",
   "Flood, Windstorm, Tempest & Water Damage",
   "Earthquake, Volcanic Eruption & Tsunami",
