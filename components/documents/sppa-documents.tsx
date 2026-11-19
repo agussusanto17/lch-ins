@@ -484,7 +484,7 @@ export function SppaExcelDocument({
         muted
       />
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto print:overflow-visible">
         <table className="w-full border-collapse border border-neutral-400 text-[10.5px] leading-tight text-neutral-900 dark:border-neutral-600 dark:text-neutral-100">
           <thead>
             <tr className="border-b-2 border-neutral-700 bg-neutral-100 text-left dark:border-neutral-400 dark:bg-neutral-800">

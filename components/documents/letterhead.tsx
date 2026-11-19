@@ -113,9 +113,11 @@ function FooterContent({
           <p className="text-white/85">{kop.phone}</p>
         </div>
         <div className="shrink-0 flex items-center">
+          {/* Footer cetak berada di container hidden print:block, jadi harus dimuat eager. */}
           <Image
             src={kop.badges}
             alt={kop.badgesAlt}
+            loading="eager"
             className="h-10 sm:h-12 w-auto object-contain"
             unoptimized
           />
@@ -147,7 +149,12 @@ export function DocumentFooter({
   if (isPrintFixed) {
     // Padding mengikuti margin isi cetak (--print-x dari .doc-slip, default 18mm).
     return (
-      <footer className={cn("w-full px-[var(--print-x,18mm)] py-2.5 text-white", band)}>
+      <footer
+        className={cn(
+          "w-full px-[var(--print-x,18mm)] py-2.5 text-white [print-color-adjust:exact] [-webkit-print-color-adjust:exact]",
+          band
+        )}
+      >
         <FooterContent variant={variant} printedAt={printedAt} />
       </footer>
     )
