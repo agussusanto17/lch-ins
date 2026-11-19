@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `fix/batas-ojk-property-form`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #284
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
