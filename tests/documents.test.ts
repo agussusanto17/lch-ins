@@ -322,6 +322,17 @@ test("InterestBlock and ExclusionsBlock format items with text-justify and Hangi
   assert.ok(exclusionsBlock.includes('className="flex-1 min-w-0 text-justify"'))
 })
 
+test("VehiclesAttachedInterest renders aligned colon table for Object of Insured fields", () => {
+  const docBlocks = fs.readFileSync(
+    path.join(process.cwd(), "components/documents/doc-blocks.tsx"),
+    "utf-8"
+  )
+  const start = docBlocks.indexOf("function VehiclesAttachedInterest")
+  const block = docBlocks.slice(start, docBlocks.indexOf("export function VehiclePremiumAttached", start))
+  assert.ok(block.includes("VEHICLE_ATTACHED_FIELDS.map"), "should iterate vehicle attached fields")
+  assert.ok(block.includes('<td className={cn("w-3"'), "should render dedicated colon column for alignment")
+})
+
 test("groupNumberedItems keeps location name and address under each numbered risk location", async () => {
   const { groupNumberedItems } = await import("../lib/document-format.js")
   const text = [

@@ -343,7 +343,7 @@ export function NumberedItemsText({ text }: { text: string }) {
 /** Baris InfoTable: label, nilai, dan opsi tampilan nilai. */
 export type InfoRow = [
   string,
-  string | string[],
+  string | string[] | React.ReactNode,
   {
     /** Nilai berisi butir bernomor yang masing-masing beberapa baris. */
     numberedItems?: boolean
@@ -368,7 +368,9 @@ export function InfoTable({
             <td className={cn("w-[190px] text-muted-foreground", cell)}>{k}</td>
             <td className={cn("w-3", cell)}>:</td>
             <td className={cn("text-justify", cell)}>
-              {opts?.numberedItems && typeof v === "string" ? (
+              {typeof v !== "string" && !Array.isArray(v) ? (
+                v
+              ) : opts?.numberedItems && typeof v === "string" ? (
                 <NumberedItemsText text={v} />
               ) : Array.isArray(v) && v.length > 1 ? (
                 v.some((item) => typeof item === "string" && parseBulletLine(item) !== null) ? (
@@ -1736,6 +1738,14 @@ export function LocationScheduleAppendix({
   )
 }
 
+const VEHICLE_ATTACHED_FIELDS = [
+  "Merk / Model / Sub Model",
+  "Type / Year of Built",
+  "Police No.",
+  "Chassis No. / Engine No.",
+  "Colour",
+] as const
+
 /**
  * Badan dokumen slip Motor Vehicle multi kendaraan, seperti CI LCH Truckindo
  * dan SBI Fleet: rincian kendaraan "As Attached", lalu Total Sum Insured.
@@ -1748,14 +1758,19 @@ function VehiclesAttachedInterest({ slip }: { slip: PlacingSlip }) {
         rows={[
           [
             "Object of Insured",
-            // Teks berbaris, bukan daftar: InfoTable menomori isi berbentuk array.
-            [
-              `Merk / Model / Sub Model : ${AS_ATTACHED}`,
-              `Type / Year of Built : ${AS_ATTACHED}`,
-              `Police No. : ${AS_ATTACHED}`,
-              `Chassis No. / Engine No. : ${AS_ATTACHED}`,
-              `Colour : ${AS_ATTACHED}`,
-            ].join("\n"),
+            <table key="vehicle-attached-fields" className="w-full border-collapse">
+              <tbody>
+                {VEHICLE_ATTACHED_FIELDS.map((label, idx) => (
+                  <tr key={label} className="align-top">
+                    <td className={cn("w-px pr-3 whitespace-nowrap", idx > 0 && "pt-1")}>
+                      {label}
+                    </td>
+                    <td className={cn("w-3", idx > 0 && "pt-1")}>:</td>
+                    <td className={cn(idx > 0 && "pt-1")}>{AS_ATTACHED}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>,
           ],
         ]}
       />
