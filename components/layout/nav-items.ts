@@ -111,6 +111,7 @@ export const NAV_GROUPS: NavGroup[] = [
           { title: "Asuransi & Adjuster", href: "/master-data/partners" },
           { title: "Rekening & Mata Uang", href: "/master-data/finance-docs" },
           { title: "Kendaraan", href: "/master-data/vehicles" },
+          { title: "Tanda Tangan", href: "/master-data/signatures" },
           { title: "Nilai Pilihan Dropdown", href: "/master-data/lookups" },
         ],
       },

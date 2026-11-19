@@ -39,11 +39,13 @@ import {
   VehicleScheduleAppendix,
 } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
+import { SignatureSlot } from "@/components/documents/signature"
 import { derivedDocNumber } from "@/components/underwriting/slip-model"
 import { Button } from "@/components/ui/button"
 import { rateUnitFor } from "@/lib/calc"
 import type { AttachmentPrints } from "@/lib/attachment-print"
 import type { PlacingSlip } from "@/lib/data"
+import type { DocumentSignatory } from "@/lib/document-signatories"
 import {
   LETTERHEAD_COMPANY,
   letterheadFor,
@@ -71,6 +73,8 @@ type DocProps = {
   linkedPolicies?: string[]
   /** User boleh mengelola Policy Database, jadi tombol "Catat polis" tampil. */
   canRecordPolicy?: boolean
+  /** Tanda tangan LCH yang bisa dipilih di halaman cetak (Harry, 19 November 2026). */
+  signatories?: DocumentSignatory[]
 }
 
 /**
@@ -259,7 +263,12 @@ export function PlacingSlipDocument(props: DocProps) {
   const date = slipDocumentDate(slip, "placing")
   const kop = letterheadFor(date)
   return (
-    <DocumentShell slip backHref={`/placement/edit/${slip.id}`} variant={kop}>
+    <DocumentShell
+      slip
+      backHref={`/placement/edit/${slip.id}`}
+      variant={kop}
+      signatories={props.signatories}
+    >
       <Letterhead variant={kop} />
       <DocTitle
         title="PLACING SLIP"
@@ -321,7 +330,12 @@ export function QuotationSlipDocument({
   const kop = letterheadFor(date)
 
   return (
-    <DocumentShell slip backHref={`/placement/quotation/edit/${slip.id}`} variant={kop}>
+    <DocumentShell
+      slip
+      backHref={`/placement/quotation/edit/${slip.id}`}
+      variant={kop}
+      signatories={props.signatories}
+    >
       <Letterhead variant={kop} />
       <DocTitle
         title={internal ? "QUOTATION SLIP — INTERNAL LCH" : "QUOTATION SLIP"}
@@ -433,6 +447,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       slip
       backHref={`/placement/closing/edit/${slip.id}`}
       variant={kop}
+      signatories={props.signatories}
       notice={
         slip.status === "Closed" && props.linkedPolicies ? (
           <LinkedPoliciesNotice
@@ -485,9 +500,8 @@ export function ClosingInstructionDocument(props: DocProps) {
        */}
       <div className="avoid-break mt-4 grid grid-cols-1 gap-x-8 gap-y-10 text-[13px] sm:grid-cols-2">
         <div>
-          <p className="mb-14 text-muted-foreground">
-            Disiapkan oleh / Prepared by,
-          </p>
+          <p className="text-muted-foreground">Disiapkan oleh / Prepared by,</p>
+          <SignatureSlot />
           <p className="border-t pt-1 font-bold">{LETTERHEAD_COMPANY[kop]}</p>
           <p className="text-xs text-muted-foreground">Authorized Signatory</p>
         </div>

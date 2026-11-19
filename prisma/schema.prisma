@@ -977,6 +977,21 @@ model StoredFile {
   @@map("stored_files")
 }
 
+/// Tanda tangan dan cap LCH yang dipilih saat mencetak Placing Slip, Quotation Slip, dan Closing
+/// Instruction (Harry, 19 November 2026). Gambarnya di stored_files (purpose signature), dirujuk
+/// lewat file_path seperti berkas lain. Baris default terpilih otomatis di halaman cetak.
+model DocumentSignatory {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique
+  fileName  String   @map("file_name")
+  filePath  String   @map("file_path")
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("document_signatories")
+}
+
 /// Kode nasabah di sistem masing-masing asuransi (ERD client_insurer_codes).
 /// Contoh D45BL00001 di Asuransi Sinar Mas.
 model ClientInsurerCode {

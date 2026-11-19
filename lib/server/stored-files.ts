@@ -25,6 +25,15 @@ const PURPOSE_MENU: Record<FilePurpose, string> = {
   claim_document: "/claims",
   policy_file: "/policies",
   slip_attachment: "/placement",
+  signature: "/master-data",
+}
+
+/**
+ * Menu tambahan yang boleh membuka berkas. Tanda tangan dikelola di Master Data, tapi gambarnya
+ * dimuat di cetak Placing Slip, Quotation Slip, dan Closing Instruction.
+ */
+const PURPOSE_READ_MENUS: Partial<Record<FilePurpose, string[]>> = {
+  signature: ["/placement"],
 }
 
 /**
@@ -36,6 +45,12 @@ const ALLOWED_TYPES: Record<FilePurpose, string[]> = {
   claim_document: INLINE_TYPES,
   policy_file: INLINE_TYPES,
   slip_attachment: [...INLINE_TYPES, XLSX_TYPE],
+  signature: ["image/png", "image/jpeg", "image/webp"],
+}
+
+const TYPE_MESSAGES: Partial<Record<FilePurpose, string>> = {
+  slip_attachment: "Hanya PDF, JPG, PNG, WebP, atau Excel (.xlsx) yang bisa diunggah.",
+  signature: "Hanya gambar PNG, JPG, atau WebP yang bisa diunggah.",
 }
 
 /** Berkas yang aman dibuka di tab browser; jenis lain diunduh. */
@@ -66,6 +81,13 @@ export function storedFileUrl(filePath: string | null | undefined) {
 
 export function purposeMenu(purpose: string) {
   return purpose in PURPOSE_MENU ? PURPOSE_MENU[purpose as FilePurpose] : null
+}
+
+/** Menu yang aksesnya cukup untuk membuka berkas: menu pemiliknya plus menu pembaca tambahan. */
+export function purposeReadMenus(purpose: string) {
+  const menu = purposeMenu(purpose)
+  if (!menu) return []
+  return [menu, ...(PURPOSE_READ_MENUS[purpose as FilePurpose] ?? [])]
 }
 
 /** Nama file tanpa folder dan karakter kontrol. */
@@ -117,9 +139,7 @@ export async function saveUploadedBytes({
   const contentType = detectContentType(data)
   if (!contentType || !ALLOWED_TYPES[purpose].includes(contentType)) {
     throw new Error(
-      purpose === "slip_attachment"
-        ? "Hanya PDF, JPG, PNG, WebP, atau Excel (.xlsx) yang bisa diunggah."
-        : "Hanya PDF, JPG, PNG, atau WebP yang bisa diunggah."
+      TYPE_MESSAGES[purpose] ?? "Hanya PDF, JPG, PNG, atau WebP yang bisa diunggah."
     )
   }
 
@@ -256,13 +276,14 @@ export async function discardOwnedUpload(
     throw new Error("Berkas unggahan tidak ditemukan.")
   }
   const filePath = storedFilePath(id)
-  const [client, claim, slip, policy] = await Promise.all([
+  const [client, claim, slip, policy, signatory] = await Promise.all([
     prisma.clientDocument.findFirst({ where: { filePath }, select: { id: true } }),
     prisma.claimDocument.findFirst({ where: { filePath }, select: { id: true } }),
     prisma.slipFile.findFirst({ where: { filePath }, select: { id: true } }),
     prisma.policyFile.findFirst({ where: { filePath }, select: { id: true } }),
+    prisma.documentSignatory.findFirst({ where: { filePath }, select: { id: true } }),
   ])
-  if (client || claim || slip || policy) return
+  if (client || claim || slip || policy || signatory) return
   await discardStoredFile(id)
 }
 

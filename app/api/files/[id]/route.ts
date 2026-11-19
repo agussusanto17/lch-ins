@@ -1,7 +1,7 @@
 import { canAccess } from "@/lib/access"
 import { isStorageUnavailableError } from "@/lib/server/object-storage"
 import { currentUser } from "@/lib/server/session"
-import { opensInline, purposeMenu, readStoredFile } from "@/lib/server/stored-files"
+import { opensInline, purposeReadMenus, readStoredFile } from "@/lib/server/stored-files"
 
 /**
  * Rute /api tidak melewati proxy, jadi login dan hak akses diperiksa di sini.
@@ -50,11 +50,11 @@ export async function GET(
     })
   }
 
-  const menu = file ? purposeMenu(file.purpose) : null
-  if (!file || !menu) {
+  const menus = file ? purposeReadMenus(file.purpose) : []
+  if (!file || !menus.length) {
     return new Response("Berkas tidak ditemukan.", { status: 404 })
   }
-  if (!canAccess(user.roles, menu)) {
+  if (!menus.some((menu) => canAccess(user.roles, menu))) {
     return new Response("Akses ditolak.", { status: 403 })
   }
 

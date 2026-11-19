@@ -15,11 +15,19 @@ import type {
   VehicleType,
   WordingForm,
 } from "@/lib/generated/prisma/client"
+import type { DocumentSignatory } from "@/lib/document-signatories"
 import {
   createCobOjkClass,
   updateCobOjkClass,
   type CobOjkClassRecord,
 } from "@/lib/server/cob-ojk-classes"
+import {
+  createDocumentSignatory,
+  deleteDocumentSignatory,
+  listDocumentSignatories,
+  setDefaultDocumentSignatory,
+  updateDocumentSignatory,
+} from "@/lib/server/document-signatories"
 import {
   createAdjuster,
   createBankAccount,
@@ -50,6 +58,7 @@ import {
   type DeductibleOptionRecord,
 } from "@/lib/server/master-data"
 import { requireManage } from "@/lib/server/session"
+import { discardOwnedUpload } from "@/lib/server/stored-files"
 import {
   createVehicleBrand,
   createVehicleType,
@@ -819,4 +828,87 @@ export async function deleteDeductibleOptionAction(
       error: err instanceof Error ? err.message : "Gagal menghapus deductible",
     }
   }
+}
+
+// Tanda tangan dokumen (Harry, 19 November 2026)
+
+const signatoryIdSchema = z.uuid("Tanda tangan tidak valid")
+
+const signatorySchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Nama minimal 2 karakter")
+    .max(60, "Nama maksimal 60 karakter"),
+  /** Gambar baru hasil unggahan; kosong saat edit berarti gambar lama tetap. */
+  fileId: z.uuid("Unggah ulang gambar tanda tangan").nullish(),
+  isDefault: z.boolean().optional(),
+})
+
+/**
+ * Kelola Master Data, jalankan perubahan, lalu kembalikan daftar terbaru. Gambar yang sudah
+ * terunggah tapi gagal ditautkan dibuang supaya tidak tertinggal di storage.
+ */
+async function signatoryAction(
+  fallbackError: string,
+  fileId: unknown,
+  run: (userId: string) => Promise<void>
+): Promise<ActionResponse<DocumentSignatory[]>> {
+  let userId: string | null = null
+  try {
+    const session = await requireManage("/master-data")
+    userId = session.id
+    await run(session.id)
+    revalidatePath("/master-data/signatures")
+    return { ok: true, data: await listDocumentSignatories() }
+  } catch (err) {
+    unstable_rethrow(err)
+    if (userId && typeof fileId === "string") {
+      await discardOwnedUpload(fileId, "signature", userId).catch(() => undefined)
+    }
+    return { ok: false, error: err instanceof Error ? err.message : fallbackError }
+  }
+}
+
+export async function createDocumentSignatoryAction(
+  data: z.input<typeof signatorySchema>
+): Promise<ActionResponse<DocumentSignatory[]>> {
+  return signatoryAction("Gagal menambah tanda tangan", data?.fileId, async (userId) => {
+    const parsed = parseOrThrow(signatorySchema, data)
+    if (!parsed.fileId) throw new Error("Pilih gambar tanda tangan.")
+    await createDocumentSignatory(
+      { name: parsed.name, fileId: parsed.fileId, isDefault: parsed.isDefault ?? false },
+      userId
+    )
+  })
+}
+
+export async function updateDocumentSignatoryAction(
+  id: string,
+  data: z.input<typeof signatorySchema>
+): Promise<ActionResponse<DocumentSignatory[]>> {
+  return signatoryAction("Gagal memperbarui tanda tangan", data?.fileId, async (userId) => {
+    const parsed = parseOrThrow(signatorySchema, data)
+    await updateDocumentSignatory(
+      parseOrThrow(signatoryIdSchema, id),
+      { name: parsed.name, fileId: parsed.fileId },
+      userId
+    )
+  })
+}
+
+export async function setDefaultDocumentSignatoryAction(
+  id: string
+): Promise<ActionResponse<DocumentSignatory[]>> {
+  return signatoryAction("Gagal mengubah tanda tangan default", null, (userId) =>
+    setDefaultDocumentSignatory(parseOrThrow(signatoryIdSchema, id), userId)
+  )
+}
+
+export async function deleteDocumentSignatoryAction(
+  id: string
+): Promise<ActionResponse<DocumentSignatory[]>> {
+  return signatoryAction("Gagal menghapus tanda tangan", null, (userId) =>
+    deleteDocumentSignatory(parseOrThrow(signatoryIdSchema, id), userId)
+  )
 }
