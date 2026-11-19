@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-18
 - **Branch:** `feat/upload-50mb`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #283
 - **Dikerjakan oleh:** ZoD3V dengan Claude Code
 
 ## Latar belakang
