@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `feat/tanggal-lod-klaim`
-- **PR:** belum ada
+- **PR:** #286
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
