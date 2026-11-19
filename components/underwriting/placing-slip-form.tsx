@@ -11,6 +11,7 @@ import {
   CircleCheck,
   Eye,
   FileCheck2,
+  FileSpreadsheet,
   FileText,
   Info,
   Lock,
@@ -55,6 +56,7 @@ import { effectivePaBenefitLimits } from "@/lib/pa-benefits"
 import { participantsInterestItem, usesParticipants } from "@/lib/slip-participants"
 import { SlipDetailRows } from "@/components/underwriting/slip-detail-rows"
 import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
+import { VehicleUpload } from "@/components/underwriting/vehicle-upload"
 import { type RateBounds } from "@/components/underwriting/ojk-reference"
 import {
   coverCodeFor,
@@ -411,6 +413,9 @@ function SlipEditor({
   const [confirmDestroy, setConfirmDestroy] = React.useState(false)
   const [confirmClose, setConfirmClose] = React.useState(false)
   const [confirmCloseChange, setConfirmCloseChange] = React.useState(false)
+  // Upload kendaraan Excel (MoM poin 20); kunci daftar rate kendaraan diganti supaya kartu terlipat.
+  const [vehicleUploadOpen, setVehicleUploadOpen] = React.useState(false)
+  const [vehicleListKey, setVehicleListKey] = React.useState(0)
   const [masterClauses, setMasterClauses] = React.useState<ClausePickerItem[]>([])
 
   React.useEffect(() => {
@@ -1728,6 +1733,22 @@ function SlipEditor({
                     limitToggle={usesOpenCover(slip)}
                   />
                 )}
+                {isMotor && !locked ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setVehicleUploadOpen(true)}
+                    >
+                      <FileSpreadsheet data-icon="inline-start" />
+                      Upload Excel
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Isi banyak kendaraan sekaligus dari template Excel.
+                    </span>
+                  </div>
+                ) : null}
                 {/*
                  * Objek "limit saja" tidak ikut total. Diatur lewat Dasar di
                  * Rate & Premium, atau centang di atas untuk slip open cover.
@@ -2065,6 +2086,7 @@ function SlipEditor({
 
               {isMotor ? (
                 <SlipVehicles
+                  key={vehicleListKey}
                   slip={slip}
                   lines={lines}
                   locked={locked}
@@ -2073,6 +2095,18 @@ function SlipEditor({
                     applyOjkRate(label, value, bounds, { vehicleId })
                   }
                   onExceptionChange={setException}
+                />
+              ) : null}
+              {isMotor && !locked ? (
+                <VehicleUpload
+                  slip={slip}
+                  brands={vehicleOptions ?? []}
+                  open={vehicleUploadOpen}
+                  onOpenChange={setVehicleUploadOpen}
+                  onImport={(patch) => {
+                    set(patch)
+                    setVehicleListKey((k) => k + 1)
+                  }}
                 />
               ) : null}
 
