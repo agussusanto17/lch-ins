@@ -75,6 +75,7 @@ export interface ClaimInput {
   reportedDate?: string | null
   documentCompleteDate?: string | null
   spkDate?: string | null
+  lodDate?: string | null
   location?: string | null
   lossDescription?: string | null
   assetDescription?: string | null
@@ -252,6 +253,7 @@ function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
     reportedDate: record.reportedDate ? record.reportedDate.toISOString().slice(0, 10) : null,
     documentCompleteDate: record.documentCompleteDate ? record.documentCompleteDate.toISOString().slice(0, 10) : null,
     spkDate: record.spkDate ? record.spkDate.toISOString().slice(0, 10) : null,
+    lodDate: record.lodDate ? record.lodDate.toISOString().slice(0, 10) : null,
     location: record.location || "",
     lossDescription: record.lossDescription || "",
     assetDescription: record.assetDescription || "",
@@ -762,6 +764,7 @@ export async function createClaim(
         reportedDate: input.reportedDate ? new Date(input.reportedDate) : null,
         documentCompleteDate: input.documentCompleteDate ? new Date(input.documentCompleteDate) : null,
         spkDate: input.spkDate ? new Date(input.spkDate) : null,
+        lodDate: input.lodDate ? new Date(input.lodDate) : null,
         location: input.location?.trim() || null,
         lossDescription: input.lossDescription?.trim() || null,
         assetDescription: input.assetDescription?.trim() || null,
@@ -836,6 +839,7 @@ export async function updateClaim(
         reportedDate: input.reportedDate ? new Date(input.reportedDate) : null,
         documentCompleteDate: input.documentCompleteDate ? new Date(input.documentCompleteDate) : null,
         spkDate: input.spkDate ? new Date(input.spkDate) : null,
+        lodDate: input.lodDate ? new Date(input.lodDate) : null,
         location: input.location?.trim() || null,
         lossDescription: input.lossDescription?.trim() || null,
         assetDescription: input.assetDescription?.trim() || null,

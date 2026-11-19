@@ -1683,6 +1683,9 @@ model Claim {
   reportedDate         DateTime? @map("reported_date") @db.Date
   documentCompleteDate DateTime? @map("document_complete_date") @db.Date
   spkDate              DateTime? @map("spk_date") @db.Date
+  /// Tanggal LOD (Letter of Discharge) dikirim ke asuransi (Agus, 19 November 2026). Asuransi
+  /// umumnya membayar klaim paling lambat 30 hari kalender sesudahnya.
+  lodDate              DateTime? @map("lod_date") @db.Date
   location             String?
   lossDescription      String?   @map("loss_description")
   assetDescription     String?   @map("asset_description")

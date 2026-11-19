@@ -54,6 +54,7 @@ const claimInputSchema = z.object({
   reportedDate: isoDateNullable,
   documentCompleteDate: isoDateNullable,
   spkDate: isoDateNullable,
+  lodDate: isoDateNullable,
   location: z.string().optional().default(""),
   lossDescription: z.string().trim().min(1, "Deskripsi kerugian wajib diisi"),
   assetDescription: z.string().optional().default(""),

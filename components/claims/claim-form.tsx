@@ -23,6 +23,7 @@ import {
   TextField,
 } from "@/components/shared/form-fields"
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
+import { LOD_PAYMENT_DAYS, lodPaymentDueDate } from "@/lib/claim-detail"
 import { claimPolicyChoices, claimPolicyLabel } from "@/lib/claim-policy-files"
 import {
   CLAIM_STAGES,
@@ -72,6 +73,7 @@ const EMPTY: Draft = {
   reportedDate: null,
   documentCompleteDate: null,
   spkDate: null,
+  lodDate: null,
   location: "",
   lossDescription: "",
   assetDescription: "",
@@ -111,6 +113,7 @@ const schema = z
     reportedDate: dateOrEmpty,
     documentCompleteDate: dateOrEmpty,
     spkDate: dateOrEmpty,
+    lodDate: dateOrEmpty.optional(),
     lossDescription: requiredText("Deskripsi kerugian"),
     estimatedLoss: z.number().nonnegative("Tidak boleh negatif"),
     claimedAmount: z.number().nonnegative("Tidak boleh negatif"),
@@ -147,6 +150,10 @@ const schema = z
       path: ["spkDate"],
     }
   )
+  .refine((d) => !d.lodDate || d.lodDate >= d.lossDate, {
+    message: "Tanggal LOD tidak boleh mendahului tanggal kejadian",
+    path: ["lodDate"],
+  })
 
 export interface ClaimFormProps {
   claim?: Claim | ClaimRecord | null
@@ -322,6 +329,7 @@ export function ClaimForm({
       reportedDate: draft.reportedDate || null,
       documentCompleteDate: draft.documentCompleteDate || null,
       spkDate: draft.spkDate || null,
+      lodDate: draft.lodDate || null,
       location: draft.location || "",
       lossDescription: draft.lossDescription || "",
       assetDescription: draft.assetDescription || "",
@@ -686,14 +694,29 @@ export function ClaimForm({
             />
           </div>
 
-          <TextField
-            label="Tanggal Terbit SPK / SPGR"
-            type="date"
-            value={draft.spkDate ?? ""}
-            onChange={(v) => set({ spkDate: v || null })}
-            placeholder="YYYY-MM-DD"
-            error={errors.spkDate}
-          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TextField
+              label="Tanggal Terbit SPK / SPGR"
+              type="date"
+              value={draft.spkDate ?? ""}
+              onChange={(v) => set({ spkDate: v || null })}
+              placeholder="YYYY-MM-DD"
+              error={errors.spkDate}
+            />
+            <TextField
+              label="Tanggal LOD ke Asuransi"
+              type="date"
+              value={draft.lodDate ?? ""}
+              onChange={(v) => set({ lodDate: v || null })}
+              placeholder="YYYY-MM-DD"
+              error={errors.lodDate}
+              description={
+                draft.lodDate
+                  ? `Batas bayar asuransi ${dateShort(lodPaymentDueDate(draft.lodDate))}, ${LOD_PAYMENT_DAYS} hari kalender sejak LOD dikirim.`
+                  : `Letter of Discharge yang ditandatangani tertanggung. Asuransi umumnya membayar paling lambat ${LOD_PAYMENT_DAYS} hari kalender sejak LOD dikirim.`
+              }
+            />
+          </div>
 
           <TextField
             label="Catatan Tambahan"

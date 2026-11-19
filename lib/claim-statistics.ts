@@ -6,6 +6,7 @@
 import type { Workbook, Worksheet } from "exceljs"
 
 import { roundCents, toIdr } from "./calc"
+import { lodPaymentDueDate } from "./claim-detail"
 import { CLAIM_STATUSES } from "./data/reference"
 import type { ClaimStatus } from "./data/types"
 import { dateShort } from "./format"
@@ -30,6 +31,8 @@ export interface ClaimStatRow {
   reportedDate: string | null
   documentCompleteDate: string | null
   spkDate: string | null
+  /** Tanggal LOD dikirim ke asuransi. */
+  lodDate: string | null
   status: ClaimStatus
   /** Tahapan dokumen, nama dari Master Data. */
   stage: string
@@ -365,6 +368,20 @@ const LIST_COLUMNS: Array<{
     width: 14,
     fmt: DATE_FMT,
     value: (c) => excelDate(c.spkDate),
+  },
+  {
+    en: "Date LOD to Insurer",
+    id: "Tanggal LOD ke Asuransi",
+    width: 14,
+    fmt: DATE_FMT,
+    value: (c) => excelDate(c.lodDate),
+  },
+  {
+    en: "Payment Due",
+    id: "Batas Bayar Asuransi",
+    width: 14,
+    fmt: DATE_FMT,
+    value: (c) => excelDate(lodPaymentDueDate(c.lodDate)),
   },
   {
     en: "Status",

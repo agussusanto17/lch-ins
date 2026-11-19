@@ -73,6 +73,8 @@ import {
   documentReceiptLocked,
   isClaimLocked,
   isCoInsurance,
+  lodDaysOverdue,
+  lodPaymentDueDate,
 } from "@/lib/claim-detail"
 import { CLAIM_STATUSES } from "@/lib/data/reference"
 import type { Claim, ClaimStatus } from "@/lib/data"
@@ -142,7 +144,21 @@ const TIMELINE: { key: keyof Claim; label: string }[] = [
   { key: "reportedDate", label: "Dilaporkan" },
   { key: "documentCompleteDate", label: "Dokumen lengkap" },
   { key: "spkDate", label: "SPK / SPGR terbit" },
+  { key: "lodDate", label: "LOD dikirim ke asuransi" },
 ]
+
+/** Batas bayar asuransi di bawah tanggal LOD, dengan tanda bila klaim berjalan sudah lewat batas. */
+function LodPaymentDue({ claim }: { claim: Claim }) {
+  const due = lodPaymentDueDate(claim.lodDate)
+  if (!due) return null
+  const overdue = lodDaysOverdue(claim, todayIso())
+  return (
+    <p className="tabular mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      Batas bayar asuransi {dateShort(due)}
+      {overdue ? <ToneBadge tone="danger">Lewat {overdue} hari</ToneBadge> : null}
+    </p>
+  )
+}
 
 export function ClaimDetailSheet({
   claim,
@@ -635,6 +651,7 @@ export function ClaimDetailSheet({
                               <p className="tabular text-xs text-muted-foreground">
                                 {value ? dateShort(value) : "Belum ada"}
                               </p>
+                              {t.key === "lodDate" ? <LodPaymentDue claim={claim} /> : null}
                             </div>
                           </li>
                         )
