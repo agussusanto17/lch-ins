@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-19
 - **Branch:** `feat/total-loss-only-kendaraan`
-- **PR:** belum ada
+- **PR:** #287
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
