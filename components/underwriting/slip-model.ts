@@ -24,6 +24,7 @@ import {
 import { OCCUPATION_TARIFFS } from "@/lib/data/ojk-tariff"
 import type { CoverOption } from "@/lib/form-options"
 import {
+  buildVehicleDescription,
   findMotorTariffBounds,
   findMotorExtensionBounds,
   findMotorPaBounds,
@@ -47,6 +48,7 @@ import {
   GENERIC_RATE_LABEL,
   allowsFlatPremium,
   itemGroups,
+  type ItemGroup,
   itemOwner,
   itemSection,
   coverNameIssues,
@@ -55,6 +57,7 @@ import {
   usesItemRates,
 } from "@/lib/slip-items"
 import type { LocationImportRow } from "@/lib/location-import"
+import type { VehicleImportRow } from "@/lib/vehicle-import"
 import { openCoverIssues, usesOpenCover } from "@/lib/open-cover"
 import {
   isCascoLine,
@@ -866,6 +869,129 @@ export function importLocationsPatch(
     sumInsuredSection2: [...slip.sumInsuredSection2, ...items("b", "section2")],
     rateLines: [...slip.rateLines, ...lines],
     ...indemnity,
+  }
+}
+
+/** Kendaraan yang belum diisi apa pun, misalnya kendaraan awal slip baru. */
+export function isBlankVehicleGroup(g: ItemGroup) {
+  const i = g.item
+  const empty = (v: unknown) => v == null || String(v).trim() === ""
+  return (
+    !i.vehicleBrandId &&
+    !i.vehicleTypeId &&
+    [i.description, i.vehicleModel, i.year, i.color, i.licensePlate, i.chassisNumber, i.engineNumber].every(empty) &&
+    !((i.amount || 0) > 0) &&
+    [...g.rateLines, ...g.tplLines, ...g.paLines].every(
+      (l) => l.rate == null && !Number(l.basis ?? 0)
+    )
+  )
+}
+
+/** Upload kendaraan mengganti semua kendaraan: diminta, atau slip hanya berisi kendaraan kosong. */
+export function importReplacesVehicles(slip: PlacingSlip, replace: boolean) {
+  const groups = itemGroups(slip)
+  return replace || !groups.length || (groups.length === 1 && isBlankVehicleGroup(groups[0]))
+}
+
+/** Label cover kendaraan: mengikuti kendaraan pertama, atau cover standar Motor Vehicle. */
+export function vehicleRateLabels(slip: PlacingSlip) {
+  const first = itemGroups(slip)[0]
+  return first?.rateLines.length ? first.rateLines.map((l) => l.label) : [...MOTOR_RATE_LINES]
+}
+
+/**
+ * Kendaraan dari upload Excel (MoM review Phase 1, poin 20), ditambahkan di akhir daftar atau
+ * mengganti semua kendaraan. Setiap kendaraan mendapat cover kendaraan pertama, dua baris TPL, dan
+ * PA Driver serta Passenger seperti kendaraan yang ditambah di form. Deductible dari file, atau
+ * disalin dari kendaraan pertama bila file tanpa deductible.
+ */
+export function importVehiclesPatch(
+  slip: PlacingSlip,
+  rows: readonly VehicleImportRow[],
+  options: { replace: boolean; fileDeductibles: boolean }
+): Partial<PlacingSlip> {
+  if (slip.cob !== "Motor Vehicle" || !rows.length) return {}
+  const first = itemGroups(slip)[0]
+  const replace = importReplacesVehicles(slip, options.replace)
+  const labels = vehicleRateLabels(slip)
+  const tplLabels = [0, 1].map((n) => first?.tplLines[n]?.label || "Third Party Liability")
+  const paLabels = ["Driver", "Passenger"].map((label, n) => first?.paLines[n]?.label || label)
+  // Deductible kendaraan pertama, dicocokkan per label cover seperti kendaraan yang ditambah di form.
+  const firstDeductible = (label: string) =>
+    first?.rateLines.find((l) => l.label === label)?.deductibles
+  const withDeductibles = (line: RateLine, list: string[] | undefined) =>
+    list?.length ? { ...line, deductibles: [...list] } : line
+
+  const interestItems: LineItem[] = []
+  const rateLines: RateLine[] = []
+  const tplLines: RateLine[] = []
+  const paLines: RateLine[] = []
+  for (const row of rows) {
+    const id = uid("i")
+    interestItems.push({
+      id,
+      description: buildVehicleDescription({
+        vehicleModel: row.model,
+        year: row.year,
+        licensePlate: row.plate,
+        chassisNumber: row.chassis,
+        engineNumber: row.engine,
+        color: row.color,
+      }),
+      amount: row.sumInsured,
+      vehicleBrandId: row.brandId,
+      vehicleBrandName: row.brandName,
+      vehicleTypeId: row.typeId,
+      vehicleTypeName: row.typeName,
+      vehicleModel: row.model ?? null,
+      year: row.year ?? null,
+      color: row.color ?? null,
+      licensePlate: row.plate ?? null,
+      chassisNumber: row.chassis,
+      engineNumber: row.engine ?? null,
+    })
+    labels.forEach((label, i) => {
+      rateLines.push(
+        withDeductibles(
+          { id: `${id}-r${i + 1}`, label, rate: row.rates[label] ?? null, premium: 0, vehicleId: id },
+          options.fileDeductibles ? row.deductibles[label] : firstDeductible(label)
+        )
+      )
+    })
+    const limitLine = (
+      key: "tpl1" | "tpl2" | "paDriver" | "paPassenger",
+      lineId: string,
+      label: string
+    ): RateLine => ({
+      id: lineId,
+      label,
+      rate: row.limits[key]?.rate ?? null,
+      premium: 0,
+      basis: String(row.limits[key]?.limit ?? 0),
+      vehicleId: id,
+    })
+    tplLines.push(
+      withDeductibles(
+        limitLine("tpl1", `${id}-t1`, tplLabels[0]),
+        options.fileDeductibles ? row.deductibles.tpl : first?.tplLines[0]?.deductibles
+      ),
+      limitLine("tpl2", `${id}-t2`, tplLabels[1])
+    )
+    paLines.push(
+      withDeductibles(
+        limitLine("paDriver", `${id}-p1`, paLabels[0]),
+        options.fileDeductibles ? row.deductibles.pa : first?.paLines[0]?.deductibles
+      ),
+      limitLine("paPassenger", `${id}-p2`, paLabels[1])
+    )
+  }
+
+  if (replace) return { interestItems, rateLines, tplLines, paLines, rateExceptions: {} }
+  return {
+    interestItems: [...slip.interestItems, ...interestItems],
+    rateLines: [...slip.rateLines, ...rateLines],
+    tplLines: [...slip.tplLines, ...tplLines],
+    paLines: [...slip.paLines, ...paLines],
   }
 }
 
