@@ -66,6 +66,17 @@ const policyInputSchema = z
     // Diskon nominal, bertanda sama dengan premi (MoM review Phase 1, poin 19).
     discountAmount: z.number().optional(),
     brokeragePct: z.number().min(0).max(100),
+    // Premi installment 2 sampai 10 kali (Agus, 20 November 2026); server memeriksa jumlah persen.
+    premiumInstallments: z
+      .array(
+        z.object({
+          no: z.number().int(),
+          dueDate: isoDate.nullable(),
+          pct: z.number().min(0, "Persen cicilan tidak boleh negatif").max(100, "Persen cicilan maksimal 100%"),
+        })
+      )
+      .max(10, "Cicilan premi maksimal 10 kali")
+      .optional(),
     includeVat: z.boolean().optional(),
     // Nominal fee dihitung server dari premi dan fee (%) per asuransi.
     additionalFee: z.number().optional(),

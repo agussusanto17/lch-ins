@@ -427,6 +427,20 @@ const placingSlipSchema = z.object({
     .min(0, "Penyusutan per tahun tidak boleh negatif")
     .max(100, "Penyusutan per tahun maksimal 100%")
     .optional(),
+  // Premi installment 2 sampai 10 kali (Agus, 20 November 2026); server memeriksa jumlah persen.
+  premiumInstallments: z
+    .array(
+      z.object({
+        no: z.coerce.number().int(),
+        dueDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Format jatuh tempo cicilan tidak valid.")
+          .nullable(),
+        pct: z.coerce.number().min(0, "Persen cicilan tidak boleh negatif").max(100, "Persen cicilan maksimal 100%"),
+      })
+    )
+    .max(10, "Cicilan premi maksimal 10 kali")
+    .optional(),
   adminCost: z.coerce.number().optional(),
   stampDuty: z.coerce.number().optional(),
   brokeragePct: z.coerce.number().optional(),

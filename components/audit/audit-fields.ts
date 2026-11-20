@@ -124,6 +124,7 @@ const FIELD_LABELS: Record<string, string> = {
   discountPct: "Diskon (%)",
   additionalDiscountPct: "Additional discount Quotation (%)",
   multiYearDepreciationPct: "Penyusutan nilai per tahun polis (%)",
+  premiumInstallments: "Premi installment",
   settledUnlockReason: "Alasan buka kunci klaim Settled",
   subjectivity: "Subjectivity",
   closingInstruction: "Catatan Closing Instruction",

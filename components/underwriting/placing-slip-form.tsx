@@ -26,6 +26,7 @@ import { toast } from "sonner"
 import { PageShell } from "@/components/layout/page-header"
 import { useToday } from "@/components/layout/today-provider"
 import { NumberField, SelectInput } from "@/components/shared/form-fields"
+import { InstallmentEditor } from "@/components/shared/installment-editor"
 import { useFormOptions } from "@/components/shared/form-options-provider"
 import { SectionCard } from "@/components/shared/section-card"
 import {
@@ -52,6 +53,7 @@ import { SlipAttachments } from "@/components/underwriting/slip-attachments"
 import { SlipParticipants } from "@/components/underwriting/slip-participants"
 import { changeSlipLockText } from "@/lib/endorsement-slip"
 import { usesOpenCover } from "@/lib/open-cover"
+import { installmentsError, slipInstallmentBase } from "@/lib/premium-installments"
 import { effectivePaBenefitLimits } from "@/lib/pa-benefits"
 import { participantsInterestItem, usesParticipants } from "@/lib/slip-participants"
 import { SlipDetailRows } from "@/components/underwriting/slip-detail-rows"
@@ -621,6 +623,8 @@ function SlipEditor({
   // Additional discount Quotation hanya untuk cetakan internal (MoM poin 7).
   const additionalPct = slip.additionalDiscountPct || 0
   const internalPayable = internalTotalPayable(slip)
+  // Premi installment (Agus, 20 November 2026): bukan untuk open cover dan slip perubahan.
+  const installmentsEnabled = !usesOpenCover(slip) && !changeSlip
   // Slip PAR + EQVET: Admin Cost dan Stamp Duty dikenakan per polis yang
   // berpremi, jadi ringkasan menyebut jumlah polisnya.
   const parEqvet = isParEqvetSlip(slip) ? calculateParEqvet(slip) : null
@@ -699,6 +703,13 @@ function SlipEditor({
   }
 
   function handleSave() {
+    const installmentIssue = installmentsEnabled
+      ? installmentsError(slip.premiumInstallments)
+      : null
+    if (installmentIssue) {
+      toast.error("Premi installment belum lengkap", { description: installmentIssue })
+      return
+    }
     if (additionalPct > MAX_ADDITIONAL_DISCOUNT_PCT) {
       toast.error("Additional discount melebihi batas", {
         description: `Maksimal ${MAX_ADDITIONAL_DISCOUNT_PCT}% dari premi setelah discount.`,
@@ -2274,6 +2285,28 @@ function SlipEditor({
                     {money(payable, slip.currency)}
                   </span>
                 </div>
+                {installmentsEnabled ? (
+                  <div className="border-t border-dashed pt-3">
+                    <InstallmentEditor
+                      value={slip.premiumInstallments}
+                      onChange={(rows) => set({ premiumInstallments: rows })}
+                      base={slipInstallmentBase(slip)}
+                      currency={slip.currency}
+                      inceptionDate={slip.periodTba ? null : slip.inceptionDate}
+                      expiryDate={slip.periodTba ? null : slip.expiryDate}
+                      disabled={locked}
+                      hint="Jadwalnya ikut ke Policy Database saat polis dicatat dari CI."
+                      note={
+                        payable - slipInstallmentBase(slip) > 0
+                          ? `Admin cost dan stamp duty (${money(
+                              payable - slipInstallmentBase(slip),
+                              slip.currency
+                            )}) ditagih bersama cicilan pertama.`
+                          : undefined
+                      }
+                    />
+                  </div>
+                ) : null}
                 {/*
                  * Additional discount Quotation (MoM review Phase 1, poin 7): dari premi setelah
                  * discount, hanya dicetak di Quotation Slip Internal LCH.

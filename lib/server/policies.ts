@@ -22,6 +22,7 @@ import {
 } from "@/lib/calc"
 import { addDays } from "@/lib/date"
 import { normalizeCob } from "@/lib/format"
+import { cleanInstallments, installmentAuditLines, installmentsError } from "@/lib/premium-installments"
 import { prisma } from "@/lib/prisma"
 import { MAX_RENEWAL_DAYS } from "@/lib/renewal"
 import { seedInitialClientsIfEmpty } from "@/lib/server/clients"
@@ -134,6 +135,7 @@ function toPolicyRecord(
     placementLocationId: row.placementLocationId,
     groupingInsured: row.groupingInsured ?? "",
     premiumPaidDate: row.premiumPaidDate ? isoDate(row.premiumPaidDate) : null,
+    premiumInstallments: cleanInstallments(row.premiumInstallments),
     remarks: row.remarks ?? null,
     files: row.files.map((f) => ({
       id: f.id,
@@ -172,6 +174,7 @@ function auditSnapshot(p: PolicyRecord) {
     placementLocationId: p.placementLocationId,
     groupingInsured: p.groupingInsured,
     premiumPaidDate: p.premiumPaidDate ?? null,
+    premiumInstallments: installmentAuditLines(p.premiumInstallments).join("\n"),
     remarks: p.remarks ?? null,
   }
 }
@@ -283,6 +286,19 @@ function insurerRows(input: PolicyInput): SecurityPanelRow[] {
       ]
 }
 
+/**
+ * Jadwal premi installment polis (Agus, 20 November 2026). Hanya polis Baru dan Renewal; tipe lain
+ * selalu sekaligus. Undefined berarti tidak diubah.
+ */
+function policyInstallmentsData(input: PolicyInput) {
+  if (input.premiumInstallments === undefined) return undefined
+  if (input.type !== "Baru" && input.type !== "Renewal") return []
+  const rows = cleanInstallments(input.premiumInstallments)
+  const error = installmentsError(rows)
+  if (error) throw new Error(error)
+  return rows.map((r) => ({ no: r.no, dueDate: r.dueDate, pct: r.pct }))
+}
+
 async function policyData(tx: Tx, input: PolicyInput) {
   // Endorsement dengan rate: premi prorata dihitung ulang di server.
   const premium = endorsementPremium(input) ?? input.premium
@@ -335,6 +351,7 @@ async function policyData(tx: Tx, input: PolicyInput) {
     placementLocationId: await findPlacementLocationId(tx, input.placementLocationId),
     groupingInsured: input.groupingInsured?.trim() || null,
     premiumPaidDate: input.premiumPaidDate ? new Date(input.premiumPaidDate) : null,
+    premiumInstallments: policyInstallmentsData(input),
     // Remarks untuk endorsement dan pembatalan, serta keterangan pengiriman deklarasi MOP
     // (barang, kapal, rute, ETD, B/L, invoice).
     remarks:

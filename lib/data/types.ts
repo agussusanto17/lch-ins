@@ -501,6 +501,11 @@ export interface PlacingSlip {
    * nilai tahun sebelumnya (contoh polis MAG PT Diraja Traillindo: 10%). Kosong berarti 0.
    */
   multiYearDepreciationPct?: number
+  /**
+   * Premi installment 2 sampai 10 kali (Agus, 20 November 2026): persen dari premi setelah diskon
+   * dan jatuh tempo per cicilan. Kosong berarti premi dibayar sekaligus.
+   */
+  premiumInstallments?: PremiumInstallment[]
   adminCost: number
   stampDuty: number
   brokeragePct: number
@@ -565,6 +570,19 @@ export interface PolicyFile {
   uploadedAt: string
   /** Kosong untuk file data contoh yang isinya tidak tersimpan. */
   url?: string
+}
+
+/**
+ * Satu cicilan premi installment (Agus, 20 November 2026): persen dari premi setelah diskon dan
+ * jatuh temponya. Nominalnya dihitung dari premi slip atau polis (`installmentAmounts`).
+ */
+export interface PremiumInstallment {
+  /** Cicilan ke-, mulai 1. */
+  no: number
+  /** "YYYY-MM-DD"; kosong selama belum diisi. */
+  dueDate: string | null
+  /** Persen dari premi setelah diskon, misalnya 25. */
+  pct: number
 }
 
 export interface Policy {
@@ -639,6 +657,11 @@ export interface Policy {
    * saat klaim dicatat (meeting LCH, 10 November 2026).
    */
   premiumPaidDate?: string | null
+  /**
+   * Jadwal premi installment, disalin dari slip saat polis dibuat dari CI. Kosong berarti premi
+   * dibayar sekaligus. Hanya polis Baru dan Renewal.
+   */
+  premiumInstallments?: PremiumInstallment[]
   /** Uraian perubahan endorsement atau alasan pembatalan, teks bebas. */
   remarks?: string | null
   files: PolicyFile[]
