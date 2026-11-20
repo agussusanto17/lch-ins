@@ -51,10 +51,12 @@ import {
   coverNameIssues,
   isLimitOnlyItem,
   missingRateIssue,
+  supportsObjectUpload,
   usesItemRates,
 } from "@/lib/slip-items"
 import type { LocationImportRow } from "@/lib/location-import"
 import type { VehicleImportRow } from "@/lib/vehicle-import"
+import type { ObjectImportRow } from "@/lib/object-import"
 import { openCoverIssues, usesOpenCover } from "@/lib/open-cover"
 import {
   hasMixedCasco,
@@ -996,6 +998,103 @@ export function importVehiclesPatch(
     rateLines: [...slip.rateLines, ...rateLines],
     tplLines: [...slip.tplLines, ...tplLines],
     paLines: [...slip.paLines, ...paLines],
+  }
+}
+
+/** Objek berpremi pertama Section 1: sumber cover dan deductible objek dari upload Excel. */
+function firstPricedObject(slip: PlacingSlip) {
+  return itemGroups(slip).find(
+    (g) =>
+      itemSection(g.item) === 1 &&
+      !isLimitOnlyItem(slip.cob, g.item) &&
+      g.rateLines.length > 0
+  )
+}
+
+/** Label cover objek upload: mengikuti objek pertama, atau satu cover standar. */
+export function objectRateLabels(slip: PlacingSlip) {
+  const labels = firstPricedObject(slip)?.rateLines.map((l) => l.label) ?? []
+  return labels.length ? labels : [GENERIC_RATE_LABEL]
+}
+
+/** Objek yang belum diisi apa pun, misalnya objek awal slip baru. */
+export function isBlankObjectGroup(g: ItemGroup) {
+  return (
+    !g.item.description.trim() &&
+    !((g.item.amount || 0) > 0) &&
+    g.rateLines.every((l) => l.rate == null && !(l.flatPremium && l.premium > 0))
+  )
+}
+
+/** Objek Section 1 slip; slip tanpa section hanya punya Section 1. */
+const section1Groups = (slip: PlacingSlip) =>
+  itemGroups(slip).filter((g) => itemSection(g.item) === 1)
+
+/** Upload objek mengganti objek Section 1: diminta, atau isinya hanya satu objek kosong. */
+export function importReplacesObjects(slip: PlacingSlip, replace: boolean) {
+  const groups = section1Groups(slip)
+  return replace || !groups.length || (groups.length === 1 && isBlankObjectGroup(groups[0]))
+}
+
+/**
+ * Objek dari upload Excel (Agus, 20 November 2026), ditambahkan di akhir daftar atau mengganti
+ * objek Section 1. Setiap objek mendapat cover objek pertama dengan rate dari file, dan deductible
+ * objek pertama seperti objek yang ditambah di form. Slip ber-section menyimpan deductible per
+ * section di objek pertama section itu, jadi saat objek diganti deductible-nya pindah ke objek
+ * baru pertama. Limit Section 2 tidak ikut diganti.
+ */
+export function importObjectsPatch(
+  slip: PlacingSlip,
+  rows: readonly ObjectImportRow[],
+  options: { replace: boolean }
+): Partial<PlacingSlip> {
+  if (!supportsObjectUpload(slip.cob) || !rows.length) return {}
+  const labels = objectRateLabels(slip)
+  const source = firstPricedObject(slip)
+  const sectioned = Boolean(slip.usesSections) && allowsFlatPremium(slip.cob)
+  const replace = importReplacesObjects(slip, options.replace)
+  const deductiblesOf = (label: string, nth: number) =>
+    source?.rateLines.filter((l) => l.label === label)[nth]?.deductibles
+
+  const interestItems: LineItem[] = []
+  const rateLines: RateLine[] = []
+  rows.forEach((row, index) => {
+    const id = uid("i")
+    interestItems.push({ id, description: row.description, amount: row.sumInsured })
+    const seen = new Map<string, number>()
+    // Slip tanpa section: setiap objek menyalin deductible. Slip ber-section: hanya objek baru
+    // pertama, dan hanya saat objek lama diganti.
+    const copy = sectioned ? replace && index === 0 : true
+    labels.forEach((label, i) => {
+      const nth = seen.get(label) ?? 0
+      seen.set(label, nth + 1)
+      const line: RateLine = {
+        id: `${id}-r${i + 1}`,
+        label,
+        rate: row.rates[label] ?? null,
+        premium: 0,
+        vehicleId: id,
+      }
+      const deductibles = copy ? deductiblesOf(label, nth) : undefined
+      rateLines.push(deductibles?.length ? { ...line, deductibles: [...deductibles] } : line)
+    })
+  })
+
+  if (!replace) {
+    return {
+      interestItems: [...slip.interestItems, ...interestItems],
+      rateLines: [...slip.rateLines, ...rateLines],
+    }
+  }
+  const kept = slip.interestItems.filter((i) => itemSection(i) === 2)
+  const keptIds = new Set(kept.map((i) => i.id))
+  const owner = itemOwner(slip)
+  const keep = (list: RateLine[]) => list.filter((l) => keptIds.has(owner(l.vehicleId) ?? ""))
+  return {
+    interestItems: [...kept, ...interestItems],
+    rateLines: [...keep(slip.rateLines), ...rateLines],
+    tplLines: keep(slip.tplLines),
+    paLines: keep(slip.paLines),
   }
 }
 
