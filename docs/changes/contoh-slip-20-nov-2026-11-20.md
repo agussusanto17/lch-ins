@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-20
 - **Branch:** `feat/contoh-slip-20-nov`
-- **PR:** #<nomor>
+- **PR:** #292
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
