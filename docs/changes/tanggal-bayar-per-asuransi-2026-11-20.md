@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-20
 - **Branch:** `feat/tanggal-bayar-per-asuransi`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #295
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
