@@ -45,7 +45,9 @@ import {
   wordingText,
   type SlipParticipant,
 } from "@/lib/data"
-import { CURRENCY_SYMBOL, money, moneyCents, num } from "@/lib/format"
+import { CURRENCY_SYMBOL, dateShort, money, moneyCents, num } from "@/lib/format"
+import { depreciationPct, isMultiYearMotor } from "@/lib/multi-year"
+import { multiYearSchedule } from "@/lib/multi-year-schedule"
 import {
   addressLines,
   isFloatingSumInsured,
@@ -85,7 +87,7 @@ import {
   sameOrAttached,
   vehicleSchedule,
 } from "@/lib/slip-schedule"
-import { isMultiVehicle } from "@/lib/slip-vehicles"
+import { isMultiVehicle, vehicleTitle } from "@/lib/slip-vehicles"
 import {
   groupNumberedItems,
   hangNumberedWording,
@@ -1973,6 +1975,106 @@ export function VehicleScheduleAppendix({
             <td className="tabular py-1 text-right">
               {moneyCents(internal ? internalTotalPayable(slip) : totalPayable(slip), currency)}
             </td>
+          </tr>
+        </tbody>
+      </table>
+      {isMultiYearMotor(slip) ? (
+        <p className="mt-2 text-[10px] text-muted-foreground">
+          Premi per kendaraan adalah jumlah semua tahun polis; rinciannya di lampiran PERHITUNGAN
+          PREMI PER TAHUN POLIS.
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+/**
+ * Lampiran PERHITUNGAN PREMI PER TAHUN POLIS untuk polis Motor Vehicle multi tahun (Agus,
+ * 20 November 2026), seperti lampiran polis MAG PT Diraja Traillindo: per kendaraan, per tahun
+ * polis, nilai atau limit × rate = premi.
+ */
+export function MultiYearPremiumAppendix({ slip }: { slip: PlacingSlip }) {
+  const schedules = multiYearSchedule(slip)
+  if (!schedules.length) return null
+  const currency = slip.currency || "IDR"
+  const yearCount = schedules[0].years.length
+  const depreciation = depreciationPct(slip.multiYearDepreciationPct)
+  const amount = (value: number) => <span className="whitespace-nowrap">{num(value, 2)}</span>
+  const th = "border px-1.5 py-1.5 text-left align-bottom font-semibold"
+  const td = "border px-1.5 py-1 align-top"
+  const right = "text-right tabular"
+  const coverName = (kind: string, label: string) => (kind === "pa" ? `PA ${label}` : label)
+
+  return (
+    <section className="print-break mt-10">
+      <AppendixTitle slip={slip} title="PERHITUNGAN PREMI PER TAHUN POLIS" />
+      <p className="mb-3 text-[11px] text-muted-foreground">
+        {yearCount} tahun polis.{" "}
+        {depreciation
+          ? `Nilai kendaraan turun ${num(depreciation, 0, 2)}% per tahun dari nilai tahun sebelumnya. `
+          : "Nilai kendaraan sama setiap tahun. "}
+        Rate sama setiap tahun; TPL dan PA dihitung setiap tahun dengan limit yang sama.
+      </p>
+      <table className="w-full border-collapse text-[10px] leading-snug">
+        <thead className="bg-muted/60">
+          <tr>
+            <th className={cn(th, "w-8")}>No</th>
+            <th className={th}>Tahun Polis</th>
+            <th className={th}>Coverage</th>
+            <th className={cn(th, "text-right")}>Nilai / Limit ({currency})</th>
+            <th className={cn(th, "text-right")}>Rate</th>
+            <th className={cn(th, "text-right")}>Premi ({currency})</th>
+          </tr>
+        </thead>
+        <tbody>
+          {schedules.map((v) => (
+            <Fragment key={v.item.id}>
+              <tr className="avoid-break bg-muted/30">
+                <td className={cn(td, "text-center font-semibold")}>{v.no}</td>
+                <td colSpan={5} className={cn(td, "font-semibold")}>
+                  {vehicleTitle(v.item) || v.item.description.split("\n")[0] || `Kendaraan ${v.no}`}
+                </td>
+              </tr>
+              {v.years.map((y) =>
+                y.rows.map((r, i) => (
+                  <tr key={`${y.year.no}-${i}`} className="avoid-break">
+                    <td className={td} />
+                    <td className={td}>
+                      {i === 0 ? (
+                        <>
+                          Tahun {y.year.no}
+                          <span className="block whitespace-nowrap text-muted-foreground">
+                            {dateShort(y.year.start)} – {dateShort(y.year.end)}
+                          </span>
+                          {y.year.factor < 1 ? (
+                            <span className="block text-muted-foreground">
+                              prorata {num(y.year.factor * 365, 0)}/365 hari
+                            </span>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </td>
+                    <td className={td}>{coverName(r.kind, r.label)}</td>
+                    <td className={cn(td, right)}>{amount(r.basis)}</td>
+                    <td className={cn(td, right)}>{rateText(r.rate)}%</td>
+                    <td className={cn(td, right)}>{amount(r.premium)}</td>
+                  </tr>
+                ))
+              )}
+              <tr className="avoid-break font-semibold">
+                <td className={td} />
+                <td colSpan={4} className={cn(td, "text-right")}>
+                  Total Kendaraan {v.no}
+                </td>
+                <td className={cn(td, right)}>{amount(v.total)}</td>
+              </tr>
+            </Fragment>
+          ))}
+          <tr className="avoid-break font-bold">
+            <td colSpan={5} className={cn(td, "text-right")}>
+              Total Premium
+            </td>
+            <td className={cn(td, right)}>{amount(totalPremium(slip))}</td>
           </tr>
         </tbody>
       </table>

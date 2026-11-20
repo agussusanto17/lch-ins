@@ -496,6 +496,11 @@ export interface PlacingSlip {
    * discount. Hanya untuk Quotation Slip Internal LCH; CI, polis, dan report memakai discount saja.
    */
   additionalDiscountPct?: number
+  /**
+   * Polis multi tahun Motor Vehicle: penyusutan nilai kendaraan per tahun polis dalam persen, dari
+   * nilai tahun sebelumnya (contoh polis MAG PT Diraja Traillindo: 10%). Kosong berarti 0.
+   */
+  multiYearDepreciationPct?: number
   adminCost: number
   stampDuty: number
   brokeragePct: number

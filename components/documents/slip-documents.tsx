@@ -22,6 +22,7 @@ import {
   InterestBlock,
   LocationPremiumAttached,
   LocationScheduleAppendix,
+  MultiYearPremiumAppendix,
   ObjectPremiumSchedule,
   ParEqvetCalculationBlock,
   ParEqvetRateBlock,
@@ -57,6 +58,7 @@ import { isMultiLocation } from "@/lib/slip-locations"
 import { isMultiItem } from "@/lib/slip-items"
 import { usesOpenCover } from "@/lib/open-cover"
 import { isMultiVehicle } from "@/lib/slip-vehicles"
+import { isMultiYearMotor } from "@/lib/multi-year"
 import { useRecord } from "@/lib/store"
 
 /*
@@ -222,7 +224,9 @@ function SlipRateAndPremium({
   // Multi lokasi atau kendaraan: badan dokumen menulis "As Attached" (Opsi B), jadwal premi
   // dicetak di lampiran DAFTAR LOKASI atau DAFTAR UNIT KENDARAAN.
   if (isMultiLocation(slip)) return <LocationPremiumAttached slip={slip} internal={internal} />
-  if (isMultiVehicle(slip)) return <VehiclePremiumAttached slip={slip} internal={internal} />
+  // Polis multi tahun: premi per tahun polis ada di lampiran PERHITUNGAN PREMI PER TAHUN POLIS.
+  if (isMultiVehicle(slip) || isMultiYearMotor(slip))
+    return <VehiclePremiumAttached slip={slip} internal={internal} />
   // Slip multi objek COB lain: jadwal premi per objek, lalu diskon dan biaya.
   if (isMultiItem(slip)) {
     return (
@@ -307,6 +311,9 @@ export function PlacingSlipDocument(props: DocProps) {
 
       <VehicleScheduleAppendix slip={slip} />
 
+
+      <MultiYearPremiumAppendix slip={slip} />
+
       <ClauseWordingAppendix slip={slip} />
 
       <AttachmentContents slip={slip} prints={props.prints} />
@@ -371,6 +378,9 @@ export function QuotationSlipDocument({
 
       <VehicleScheduleAppendix slip={slip} internal={internal} />
 
+
+      <MultiYearPremiumAppendix slip={slip} />
+
       <ClauseWordingAppendix slip={slip} />
 
       <AttachmentContents slip={slip} prints={props.prints} />
@@ -427,6 +437,9 @@ export function CoverNoteDocument(props: DocProps) {
       <LocationScheduleAppendix slip={slip} />
 
       <VehicleScheduleAppendix slip={slip} />
+
+
+      <MultiYearPremiumAppendix slip={slip} />
 
       <ClauseWordingAppendix slip={slip} />
 
@@ -524,6 +537,9 @@ export function ClosingInstructionDocument(props: DocProps) {
       <LocationScheduleAppendix slip={slip} />
 
       <VehicleScheduleAppendix slip={slip} />
+
+
+      <MultiYearPremiumAppendix slip={slip} />
 
       <ClauseWordingAppendix slip={slip} />
 

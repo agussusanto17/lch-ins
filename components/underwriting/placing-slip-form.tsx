@@ -155,7 +155,8 @@ import {
   deductibleChoicesFor,
   withCurrent,
 } from "@/lib/form-options"
-import { money, num, percent } from "@/lib/format"
+import { dateShort, money, num, percent } from "@/lib/format"
+import { policyYears } from "@/lib/multi-year"
 import { cleanDetailLabels, withDetailLabels } from "@/lib/slip-details"
 import {
   isFloatingSumInsured,
@@ -544,6 +545,9 @@ function SlipEditor({
   const locked = slip.status === "Cancelled" || Boolean(changeLock)
   const isProperty = slip.cob === "Property"
   const isMotor = slip.cob === "Motor Vehicle"
+  // Polis multi tahun Motor Vehicle: premi per tahun polis (contoh polis MAG PT Diraja Traillindo).
+  const multiYears = isMotor ? policyYears(slip) : []
+  const lastYear = multiYears[multiYears.length - 1]
 
   // Pilihan dari master data. Nilai slip yang sudah tidak ada di master tetap
   // ditampilkan supaya slip lama tidak kehilangan isiannya saat diedit.
@@ -1358,6 +1362,36 @@ function SlipEditor({
                       }
                     />
                   </Field>
+                  {multiYears.length > 1 ? (
+                    <Field className="md:col-span-2">
+                      <FieldLabel htmlFor="multi-year-depreciation">
+                        Penyusutan nilai kendaraan per tahun polis (%)
+                      </FieldLabel>
+                      <NumberInput
+                        id="multi-year-depreciation"
+                        preset="percent"
+                        className="max-w-48"
+                        min={0}
+                        max={100}
+                        disabled={locked}
+                        invalid={
+                          (slip.multiYearDepreciationPct ?? 0) < 0 ||
+                          (slip.multiYearDepreciationPct ?? 0) > 100
+                        }
+                        value={slip.multiYearDepreciationPct || null}
+                        onValueChange={(v) => set({ multiYearDepreciationPct: v ?? undefined })}
+                      />
+                      <FieldDescription>
+                        Polis {multiYears.length} tahun: premi dihitung per tahun polis lalu
+                        dijumlah. Nilai casco tiap tahun turun sebesar persen ini dari nilai tahun
+                        sebelumnya, misalnya 10%; TPL dan PA dihitung setiap tahun dengan limit
+                        yang sama. Kosongkan bila nilainya tetap.
+                        {lastYear && lastYear.factor < 1
+                          ? ` Tahun ke-${lastYear.no} tidak penuh (${dateShort(lastYear.start)} s/d ${dateShort(lastYear.end)}), preminya prorata hari.`
+                          : ""}
+                      </FieldDescription>
+                    </Field>
+                  ) : null}
                   <Field className="md:col-span-2">
                     <FieldLabel htmlFor="period-note">
                       Keterangan periode

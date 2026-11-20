@@ -537,6 +537,7 @@ export function switchCob(
     locations: undefined,
     floatingSumInsured: false,
     floatingSumInsuredText: undefined,
+    multiYearDepreciationPct: undefined,
     rateLines: makeRateLines(normCob),
     ...sub,
   })
