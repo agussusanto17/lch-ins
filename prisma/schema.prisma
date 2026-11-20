@@ -1155,6 +1155,9 @@ model PlacingSlip {
   /// Polis multi tahun Motor Vehicle: penyusutan nilai kendaraan per tahun polis (%), dari nilai
   /// tahun sebelumnya. Premi dihitung per tahun polis bila periode lebih dari satu tahun.
   multiYearDepreciationPct Decimal @default(0) @map("multi_year_depreciation_pct") @db.Decimal(5, 2)
+  /// Premi installment 2 sampai 10 kali: [{ no, dueDate, pct }] dari premi setelah diskon
+  /// (Agus, 20 November 2026). Daftar kosong berarti premi dibayar sekaligus.
+  premiumInstallments Json @default("[]") @map("premium_installments") @db.JsonB
   adminCost    Decimal @default(0) @map("admin_cost") @db.Decimal(18, 2)
   stampDuty    Decimal @default(0) @map("stamp_duty") @db.Decimal(18, 2)
   /// Dibatasi biaya akuisisi OJK: maksimal 15% harta benda, 25% kendaraan
@@ -1499,6 +1502,9 @@ model Policy {
   /// Tanggal premi dibayar (kosong = belum), tampil saat klaim (meeting LCH, 10 November 2026).
   /// Diisi manual; Bagian B bisa mengisinya dari pencatatan pembayaran premi.
   premiumPaidDate     DateTime? @map("premium_paid_date") @db.Date
+  /// Jadwal premi installment [{ no, dueDate, pct }], disalin dari slip saat polis dibuat dari CI
+  /// (Agus, 20 November 2026). Daftar kosong berarti sekaligus; hanya polis Baru dan Renewal.
+  premiumInstallments Json @default("[]") @map("premium_installments") @db.JsonB
   /// Uraian perubahan endorsement atau alasan pembatalan, teks bebas (meeting
   /// LCH, 10 November 2026). Hanya untuk tipe Endorsement dan Cancellation.
   remarks             String?

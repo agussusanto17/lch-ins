@@ -7,6 +7,7 @@ import { slipSectionTitles } from "@/components/underwriting/slip-model"
 import { totalPremium, totalSumInsured } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data/types"
 import { money } from "@/lib/format"
+import { installmentAuditLines } from "@/lib/premium-installments"
 import { deductibleGroups, deductiblesByUnit } from "@/lib/slip-deductibles"
 import { printedDetailRows } from "@/lib/slip-details"
 import { isFloatingSumInsured, slipLocations } from "@/lib/slip-locations"
@@ -143,6 +144,7 @@ export function slipAuditSummary(
     discountPct: slip.discountPct,
     additionalDiscountPct: slip.additionalDiscountPct ?? 0,
     multiYearDepreciationPct: slip.multiYearDepreciationPct ?? 0,
+    premiumInstallments: installmentAuditLines(slip.premiumInstallments).join("\n"),
     adminCost: slip.adminCost,
     stampDuty: slip.stampDuty,
     subjectivity: text(slip.subjectivity),

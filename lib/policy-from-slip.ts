@@ -28,6 +28,7 @@ export type PolicySlipFields = Pick<
   | "sumInsured"
   | "premium"
   | "discountAmount"
+  | "premiumInstallments"
   | "brokeragePct"
   | "includeVat"
   | "additionalFee"
@@ -68,6 +69,8 @@ export function policyFieldsFromSlip(
     premium,
     // Diskon slip ikut tercatat di polis (MoM review Phase 1, poin 19).
     discountAmount: openCover ? 0 : slipPolicyDiscount(slip, part),
+    // Premi installment ikut ke polis (Agus, 20 November 2026); open cover dibayar per deklarasi.
+    premiumInstallments: openCover ? [] : (slip.premiumInstallments ?? []),
     brokeragePct: slip.brokeragePct,
     includeVat: slip.includeVat,
     additionalFee: additionalFeeFor(premium, panel),

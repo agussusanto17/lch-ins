@@ -19,6 +19,7 @@ import {
   TextField,
   type Option,
 } from "@/components/shared/form-fields"
+import { InstallmentEditor } from "@/components/shared/installment-editor"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field"
 import { Switch } from "@/components/ui/switch"
@@ -68,6 +69,7 @@ import {
 import { parentPolicyIssue, parentPolicyLabel } from "@/lib/policy-parent"
 import { cancellationSuggestion } from "@/lib/policy-cancellation"
 import { isProvisionalPolicyNo, policyFieldsFromSlip } from "@/lib/policy-from-slip"
+import { installmentsError, policyInstallmentBase } from "@/lib/premium-installments"
 import {
   POLICY_FILE_KINDS,
   latestPolicyFile,
@@ -516,6 +518,14 @@ export function PolicyForm({
     if (duplicate) errs.policyNo = "No. polis sudah terdaftar"
     setErrors(errs)
     if (Object.keys(errs).length > 0) return false
+    const installmentIssue =
+      draft.type === "Baru" || draft.type === "Renewal"
+        ? installmentsError(draft.premiumInstallments)
+        : null
+    if (installmentIssue) {
+      toast.error("Premi installment belum lengkap", { description: installmentIssue })
+      return false
+    }
     const incomplete = participantChangesOn
       ? addedParticipants.findIndex((p) => !p.name.trim() || !(p.sumInsured > 0))
       : -1
@@ -1065,6 +1075,25 @@ export function PolicyForm({
               />
             ) : null}
           </fieldset>
+          {/* Premi installment dari slip, atau diisi di sini untuk polis tanpa slip (Agus, 20 November 2026). */}
+          {(draft.type === "Baru" || draft.type === "Renewal") && !openCoverSlip ? (
+            <div className="rounded-lg border bg-muted/40 p-3 sm:col-span-2">
+              <InstallmentEditor
+                value={draft.premiumInstallments}
+                onChange={(rows) => set({ premiumInstallments: rows })}
+                base={policyInstallmentBase(draft)}
+                currency={draft.currency}
+                inceptionDate={draft.inceptionDate}
+                expiryDate={draft.expiryDate}
+                disabled={slipLocked}
+                note={
+                  slipLocked
+                    ? "Jadwal dari placing slip. Ubah lewat revisi slip."
+                    : undefined
+                }
+              />
+            </div>
+          ) : null}
           {cancellation ? (
             <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted/60 px-3 py-2.5 text-sm sm:col-span-2">
               <p className="mr-auto">

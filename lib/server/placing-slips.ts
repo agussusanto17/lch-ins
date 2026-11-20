@@ -15,6 +15,7 @@ import {
   type EndorsementCalc,
   type LineItem,
   type PlacingSlip,
+  type PremiumInstallment,
   type RateException,
   type RateExceptionReason,
   type RateLine,
@@ -38,6 +39,7 @@ import { BRANCH_SOURCE_CODES, CLIENT_BRANCH_CODES } from "@/lib/form-options"
 import { normalizeCob } from "@/lib/format"
 import { cleanDetailRows } from "@/lib/slip-details"
 import { cleanOpenCoverRates } from "@/lib/open-cover"
+import { cleanInstallments, installmentsError } from "@/lib/premium-installments"
 import { cleanPaBenefitLimits } from "@/lib/pa-benefits"
 import { loadCancelledPolicies } from "@/lib/server/cancelled-policies"
 import { slipFilesOrder, toSlipAttachment } from "@/lib/server/slip-files"
@@ -183,6 +185,8 @@ export interface PlacingSlipInput {
   discountPct?: number
   additionalDiscountPct?: number
   multiYearDepreciationPct?: number
+  /** Jadwal premi installment; undefined berarti tidak diubah. */
+  premiumInstallments?: PremiumInstallment[]
   adminCost?: number
   stampDuty?: number
   brokeragePct?: number
@@ -759,6 +763,7 @@ function toPlacingSlipRecord(
     discountPct: Number(raw.discountPct),
     additionalDiscountPct: Number(raw.additionalDiscountPct) || undefined,
     multiYearDepreciationPct: Number(raw.multiYearDepreciationPct) || undefined,
+    premiumInstallments: cleanInstallments(raw.premiumInstallments),
     adminCost: Number(raw.adminCost),
     stampDuty: Number(raw.stampDuty),
     brokeragePct: Number(raw.brokeragePct),
@@ -907,6 +912,7 @@ export function copySlipInput(source: PlacingSlipRecord): PlacingSlipInput {
     discountPct: source.discountPct,
     additionalDiscountPct: source.additionalDiscountPct,
     multiYearDepreciationPct: source.multiYearDepreciationPct,
+    premiumInstallments: source.premiumInstallments,
     adminCost: source.adminCost,
     stampDuty: source.stampDuty,
     brokeragePct: source.brokeragePct,
@@ -986,6 +992,8 @@ export async function createEndorsementSlip(
       baseSlipId: source.dbId,
       effectiveDate: dbDate(todayIso()),
       beforeCalc: slipCalc(source) as unknown as Prisma.InputJsonValue,
+      // Premi endorsement dan pembatalan dibayar sekaligus.
+      premiumInstallments: [],
     },
   })
   const full = await getPlacingSlipById(created.dbId)
@@ -1036,6 +1044,22 @@ function openCoverRatesData(rates: OpenCoverRate[] | undefined) {
     rate: r.rate,
     ...(r.unit ? { unit: r.unit } : {}),
   }))
+}
+
+/**
+ * Jadwal premi installment yang disimpan; undefined berarti tidak diubah. Slip open cover (premi per
+ * deklarasi) dan slip endorsement atau pembatalan selalu sekaligus.
+ */
+function installmentsData(
+  rows: PremiumInstallment[] | undefined,
+  slip: { openCover?: boolean; changeSlip?: boolean }
+) {
+  if (rows === undefined) return undefined
+  if (slip.openCover || slip.changeSlip) return []
+  const clean = cleanInstallments(rows)
+  const error = installmentsError(clean)
+  if (error) throw new Error(error)
+  return clean.map((r) => ({ no: r.no, dueDate: r.dueDate, pct: r.pct }))
 }
 
 /** Limit manfaat PA yang valid; kosong disimpan sebagai NULL (memakai bawaan). */
@@ -1440,6 +1464,7 @@ export async function createPlacingSlip(
         discountPct: new Prisma.Decimal(input.discountPct ?? 0),
         additionalDiscountPct: new Prisma.Decimal(input.additionalDiscountPct ?? 0),
         multiYearDepreciationPct: new Prisma.Decimal(input.multiYearDepreciationPct ?? 0),
+        premiumInstallments: installmentsData(input.premiumInstallments, { openCover: input.openCover }),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
@@ -1872,6 +1897,10 @@ export async function updatePlacingSlip(
         discountPct: new Prisma.Decimal(input.discountPct ?? 0),
         additionalDiscountPct: new Prisma.Decimal(input.additionalDiscountPct ?? 0),
         multiYearDepreciationPct: new Prisma.Decimal(input.multiYearDepreciationPct ?? 0),
+        premiumInstallments: installmentsData(input.premiumInstallments, {
+          openCover: input.openCover ?? before.openCover,
+          changeSlip: Boolean(before.kind && before.kind !== "Placing"),
+        }),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),

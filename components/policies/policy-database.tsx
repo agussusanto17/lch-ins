@@ -76,6 +76,8 @@ import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
 import { MAIN_POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
 import { parentPolicyNote } from "@/lib/policy-parent"
+import { InstallmentSchedule } from "@/components/policies/installment-schedule"
+import { installmentLabel, installmentScheduleText } from "@/lib/premium-installments"
 import { declarationPreset, isOpenCoverMaster } from "@/lib/open-cover"
 import { isRenewable } from "@/lib/renewal"
 import type { PolicyFormOptions } from "@/lib/server/policies"
@@ -386,6 +388,13 @@ export function PolicyDatabase({
       { header: "Sum Insured", value: (p) => p.sumInsured, type: "money" },
       { header: "Gross Premium", value: (p) => grossPremium(p), type: "money" },
       { header: "Diskon", value: (p) => p.discountAmount ?? 0, type: "money" },
+      // Premi installment (Agus, 20 November 2026).
+      { header: "Pembayaran Premi", value: (p) => installmentLabel(p.premiumInstallments) },
+      {
+        header: "Jadwal Cicilan",
+        value: (p) => installmentScheduleText(p),
+        width: 48,
+      },
       {
         header: "Brokerage (%)",
         value: (p) => p.brokeragePct,
@@ -620,6 +629,7 @@ export function PolicyDatabase({
                                 Diskon {money(p.discountAmount, p.currency)}
                               </span>
                             ) : null}
+                            <InstallmentSchedule policy={p} today={today} />
                           </TableCell>
                           <TableCell>
                             <StatusBadge
