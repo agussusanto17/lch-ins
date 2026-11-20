@@ -61,6 +61,7 @@ import {
   totalPremium,
 } from "@/lib/endorsement-premium"
 import {
+  declarationMargin,
   isOpenCoverMaster,
   openCoverPremium,
   openCoverRateText,
@@ -911,7 +912,10 @@ export function PolicyForm({
                 set({
                   sumInsured: v ?? 0,
                   ...(ocRate?.basis === "percent"
-                    ? { premium: openCoverPremium(ocRate, v ?? 0) }
+                    ? {
+                        premium: openCoverPremium(ocRate, v ?? 0),
+                        insurerPremium: openCoverPremium(ocRate, v ?? 0),
+                      }
                     : {}),
                 })
               }
@@ -939,12 +943,11 @@ export function PolicyForm({
                     const rate = ocRates.find((r) => r.id === v) ?? null
                     setOcRateId(rate?.id ?? null)
                     if (rate) {
-                      set({
-                        premium: openCoverPremium(
-                          rate,
-                          rate.basis === "percent" ? draft.sumInsured : (ocUnits ?? 0)
-                        ),
-                      })
+                      const ratePremium = openCoverPremium(
+                        rate,
+                        rate.basis === "percent" ? draft.sumInsured : (ocUnits ?? 0)
+                      )
+                      set({ premium: ratePremium, insurerPremium: ratePremium })
                     }
                   }}
                   description="Rate dari slip open cover. Premi dihitung otomatis dan tetap bisa diubah."
@@ -957,7 +960,8 @@ export function PolicyForm({
                     value={ocUnits}
                     onValueChange={(v) => {
                       setOcUnits(v)
-                      set({ premium: openCoverPremium(ocRate, v ?? 0) })
+                      const ratePremium = openCoverPremium(ocRate, v ?? 0)
+                      set({ premium: ratePremium, insurerPremium: ratePremium })
                     }}
                   />
                 ) : null}
@@ -1018,6 +1022,24 @@ export function PolicyForm({
                         : money(draft.premium, draft.currency)
               }
             />
+            {declaration ? (
+              // Rate ke klien bisa beda dari rate MOP ke asuransi; selisihnya margin (Agus, 20 November 2026).
+              <NumberField
+                label="Premi ke Asuransi"
+                min={0}
+                value={draft.insurerPremium ?? null}
+                onValueChange={(v) => set({ insurerPremium: v })}
+                error={errors.insurerPremium}
+                description={
+                  draft.insurerPremium == null
+                    ? "Premi menurut rate MOP, terisi saat Kategori Rate dipilih. Kosongkan bila tidak diketahui."
+                    : `Premi menurut rate MOP. Margin rate ${money(
+                        declarationMargin(draft) ?? 0,
+                        draft.currency
+                      )} (Premium − Premi ke Asuransi).`
+                }
+              />
+            ) : null}
             {declaration ? null : (
               // Gross Premium = premi sebelum diskon; Nett = gross − diskon − brokerage − fee (Team LCH, 19 November 2026).
               <NumberField

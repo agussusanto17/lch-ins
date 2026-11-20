@@ -1499,6 +1499,10 @@ model Policy {
   /// keduanya. Premi produksi tetap kolom premium.
   adminCost           Decimal  @default(0) @map("admin_cost") @db.Decimal(18, 2)
   stampDuty           Decimal  @default(0) @map("stamp_duty") @db.Decimal(18, 2)
+  /// Deklarasi MOP: premi yang dibayar ke asuransi menurut rate MOP (Agus, 20 November 2026).
+  /// Premi deklarasi mengikuti rate ke klien, misalnya 0,1% dari polis Merimen, sedangkan rate
+  /// MOP 0,085%; selisihnya margin LCH di Rekap Produksi. Kosong untuk polis lain.
+  insurerPremium      Decimal? @map("insurer_premium") @db.Decimal(18, 2)
   /// Tanggal premi dibayar (kosong = belum), tampil saat klaim (meeting LCH, 10 November 2026).
   /// Diisi manual; Bagian B bisa mengisinya dari pencatatan pembayaran premi.
   premiumPaidDate     DateTime? @map("premium_paid_date") @db.Date

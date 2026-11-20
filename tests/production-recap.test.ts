@@ -43,12 +43,14 @@ function policy(over: Partial<RecapPolicy> = {}): RecapPolicy {
   }
 }
 
-test("the recap has the 49 headers of the LCH sample, in order", () => {
-  assert.equal(RECAP_HEADERS.length, 49)
-  assert.equal(RECAP_COLUMNS.length, 49)
+test("the recap has the 49 headers of the LCH sample, in order, then the MOP rate margin", () => {
+  // 49 kolom contoh LCH, lalu dua kolom margin rate deklarasi MOP (Agus, 20 November 2026).
+  assert.equal(RECAP_HEADERS.length, 51)
+  assert.equal(RECAP_COLUMNS.length, 51)
   assert.deepEqual(RECAP_HEADERS.slice(0, 5), ["refno", "voucher", "thn", "mth", "insured"])
   assert.equal(RECAP_HEADERS[30], "RM_Fee_OC")
   assert.equal(RECAP_HEADERS[48], "Perusahaan/Perorangan")
+  assert.deepEqual(RECAP_HEADERS.slice(49), ["Margin_Rate_OC", "Margin_Rate"])
 })
 
 test("dates follow the sample format MM/DD/YYYY", () => {

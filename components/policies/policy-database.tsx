@@ -78,7 +78,7 @@ import { MAIN_POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
 import { parentPolicyNote } from "@/lib/policy-parent"
 import { InstallmentSchedule } from "@/components/policies/installment-schedule"
 import { installmentLabel, installmentScheduleText } from "@/lib/premium-installments"
-import { declarationPreset, isOpenCoverMaster } from "@/lib/open-cover"
+import { declarationMargin, declarationPreset, isOpenCoverMaster } from "@/lib/open-cover"
 import { isRenewable } from "@/lib/renewal"
 import type { PolicyFormOptions } from "@/lib/server/policies"
 import { store } from "@/lib/store"
@@ -395,6 +395,9 @@ export function PolicyDatabase({
         value: (p) => installmentScheduleText(p),
         width: 48,
       },
+      // Deklarasi MOP: premi menurut rate MOP dan margin rate (Agus, 20 November 2026).
+      { header: "Premi ke Asuransi", value: (p) => p.insurerPremium ?? null, type: "money" },
+      { header: "Margin Rate", value: (p) => declarationMargin(p), type: "money" },
       {
         header: "Brokerage (%)",
         value: (p) => p.brokeragePct,
@@ -627,6 +630,12 @@ export function PolicyDatabase({
                             {p.discountAmount ? (
                               <span className="block text-xs font-normal text-muted-foreground">
                                 Diskon {money(p.discountAmount, p.currency)}
+                              </span>
+                            ) : null}
+                            {/* Margin rate deklarasi MOP (Agus, 20 November 2026). */}
+                            {declarationMargin(p) ? (
+                              <span className="block text-xs font-normal text-muted-foreground">
+                                Margin {money(declarationMargin(p)!, p.currency)}
                               </span>
                             ) : null}
                             <InstallmentSchedule policy={p} today={today} />
