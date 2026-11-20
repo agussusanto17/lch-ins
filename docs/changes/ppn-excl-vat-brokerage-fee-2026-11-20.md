@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-20
 - **Branch:** `fix/ppn-brokerage-fee-excl`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #298
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
