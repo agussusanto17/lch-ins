@@ -422,6 +422,11 @@ const placingSlipSchema = z.object({
     .min(0, "Additional discount tidak boleh negatif")
     .max(15, "Additional discount maksimal 15%")
     .optional(),
+  multiYearDepreciationPct: z.coerce
+    .number()
+    .min(0, "Penyusutan per tahun tidak boleh negatif")
+    .max(100, "Penyusutan per tahun maksimal 100%")
+    .optional(),
   adminCost: z.coerce.number().optional(),
   stampDuty: z.coerce.number().optional(),
   brokeragePct: z.coerce.number().optional(),

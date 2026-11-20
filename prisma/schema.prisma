@@ -1151,6 +1151,9 @@ model PlacingSlip {
   /// setelah discount. Hanya dicetak di Quotation Slip Internal LCH; CI, polis, dan report tetap
   /// memakai discount_pct.
   additionalDiscountPct Decimal @default(0) @map("additional_discount_pct") @db.Decimal(12, 6)
+  /// Polis multi tahun Motor Vehicle: penyusutan nilai kendaraan per tahun polis (%), dari nilai
+  /// tahun sebelumnya. Premi dihitung per tahun polis bila periode lebih dari satu tahun.
+  multiYearDepreciationPct Decimal @default(0) @map("multi_year_depreciation_pct") @db.Decimal(5, 2)
   adminCost    Decimal @default(0) @map("admin_cost") @db.Decimal(18, 2)
   stampDuty    Decimal @default(0) @map("stamp_duty") @db.Decimal(18, 2)
   /// Dibatasi biaya akuisisi OJK: maksimal 15% harta benda, 25% kendaraan

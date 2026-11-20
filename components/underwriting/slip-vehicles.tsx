@@ -20,7 +20,8 @@ import { UnitCard } from "@/components/underwriting/unit-card"
 import { Button } from "@/components/ui/button"
 import { rateUnitFor, sumPremium, usesOjkTariff } from "@/lib/calc"
 import type { PlacingSlip, RateException, RateLine } from "@/lib/data"
-import { money } from "@/lib/format"
+import { dateShort, money, num } from "@/lib/format"
+import { multiYearSchedule, type VehicleYearSchedule } from "@/lib/multi-year-schedule"
 import { itemGroups } from "@/lib/slip-items"
 import { cascoSwitchPatch, vehicleTariff, vehicleTitle } from "@/lib/slip-vehicles"
 
@@ -28,6 +29,67 @@ import { cascoSwitchPatch, vehicleTariff, vehicleTitle } from "@/lib/slip-vehicl
  * Rate Motor Vehicle per kendaraan; data dan TSI diisi di Interest Insured (Harry, 5 November 2026).
  * Type of cover tanpa tarif OJK, misalnya Heavy Equipment, tidak menampilkan bagian OJK.
  */
+/**
+ * Rincian premi per tahun polis satu kendaraan (polis multi tahun): nilai casco tahun itu, premi
+ * casco dan perluasan, premi TPL dan PA, dan total tahun itu. Jumlahnya sama dengan premi per baris
+ * di atas, yang berisi total semua tahun.
+ */
+function YearBreakdown({ schedule, currency }: { schedule: VehicleYearSchedule; currency: string }) {
+  const th = "px-2 py-1.5 text-left font-medium text-muted-foreground"
+  const td = "px-2 py-1.5 tabular-nums whitespace-nowrap"
+  // Mata uang di judul kolom supaya angka muat tanpa patah baris.
+  const amount = (value: number) => num(value, Number.isInteger(value) ? 0 : 2)
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm font-medium">Rincian per tahun polis</p>
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full text-xs">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className={th}>Tahun</th>
+              <th className={th}>Periode</th>
+              <th className={`${th} text-right`}>Nilai casco ({currency})</th>
+              <th className={`${th} text-right`}>Casco &amp; perluasan</th>
+              <th className={`${th} text-right`}>TPL &amp; PA</th>
+              <th className={`${th} text-right`}>Premi ({currency})</th>
+            </tr>
+          </thead>
+          <tbody>
+            {schedule.years.map(({ year, sumInsured, rows, total }) => {
+              const casco = rows.filter((r) => r.kind === "casco").reduce((a, r) => a + r.premium, 0)
+              return (
+                <tr key={year.no} className="border-t">
+                  <td className={td}>
+                    {year.no}
+                    {year.factor < 1 ? (
+                      <span className="block text-[11px] text-muted-foreground">
+                        prorata {num(year.factor * 365, 0)} hari
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className={td}>
+                    {dateShort(year.start)} – {dateShort(year.end)}
+                  </td>
+                  <td className={`${td} text-right`}>{amount(sumInsured)}</td>
+                  <td className={`${td} text-right`}>{amount(casco)}</td>
+                  <td className={`${td} text-right`}>{amount(total - casco)}</td>
+                  <td className={`${td} text-right font-medium`}>{amount(total)}</td>
+                </tr>
+              )
+            })}
+            <tr className="border-t bg-muted/30 font-medium">
+              <td className={td} colSpan={5}>
+                Total {schedule.years.length} tahun polis
+              </td>
+              <td className={`${td} text-right`}>{amount(schedule.total)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 export function SlipVehicles({
   slip,
   lines,
@@ -51,6 +113,8 @@ export function SlipVehicles({
 }) {
   const groups = itemGroups(slip)
   const multi = groups.length > 1
+  // Polis multi tahun: rincian premi per tahun polis tiap kendaraan.
+  const yearSchedules = new Map(multiYearSchedule(slip).map((v) => [v.item.id, v]))
   const ojk = usesOjkTariff(slip)
 
   // Seperti kartu lokasi: dicatat per urutan, slip multi kendaraan mulai
@@ -219,6 +283,9 @@ export function SlipVehicles({
               Limit PA: IDR 5.000.000/orang, maks. 4 orang (selain truck &amp;
               motorcycle) · maks. 2 orang (truck).
             </p>
+            {yearSchedules.get(vehicle.id) ? (
+              <YearBreakdown schedule={yearSchedules.get(vehicle.id)!} currency={slip.currency} />
+            ) : null}
             {multi ? (
               <TotalBar
                 label={`Premi kendaraan ${g.no}`}
@@ -233,6 +300,9 @@ export function SlipVehicles({
       <p className="text-xs text-muted-foreground">
         Rate dalam persen (%). Premi casco dan perluasan = TSI kendaraan ×
         rate; TPL dan PA = limit × rate.
+        {yearSchedules.size
+          ? " Polis multi tahun: premi per baris adalah jumlah semua tahun polis, dengan nilai casco yang menyusut per tahun."
+          : null}
         {ojk ? " Kategori dan wilayah OJK dihitung per kendaraan." : null} Data
         kendaraan, TSI, dan tombol Tambah kendaraan ada di bagian Interest
         Insured.

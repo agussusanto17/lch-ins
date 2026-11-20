@@ -5,6 +5,7 @@ import {
 import { BI_SCALE_OJK } from "./data/ojk-tariff"
 import type { PlacingSlip, RateLine, SecurityPanelRow, SlipPart } from "./data/types"
 import { num } from "./format"
+import { multiYearPremium, policyYears, yearlySumInsured } from "./multi-year"
 import { usesOpenCover } from "./open-cover"
 import { locationGroups, locationOwner, withLocations } from "./slip-locations"
 import {
@@ -563,6 +564,9 @@ export function recalcSlip(input: PlacingSlip): PlacingSlip {
 
   // Open cover tidak punya premi di slip; premi dicatat per deklarasi di polis.
   const openCover = usesOpenCover(slip)
+  // Polis multi tahun Motor Vehicle: premi per tahun polis dijumlah, nilai casco menyusut.
+  const years = slip.cob === "Motor Vehicle" ? policyYears(slip) : []
+  const multiYear = years.length > 1
   const rateLines = (property ? withBiRates(slip) : slip.rateLines).map((l) => {
     if (openCover) return { ...l, flatPremium: undefined, premium: 0 }
     if (!property) {
@@ -575,6 +579,14 @@ export function recalcSlip(input: PlacingSlip): PlacingSlip {
         return { ...l, rate: null, premium: roundCents(Math.max(0, l.premium || 0)) }
       }
       const value = itemValue.get(itemOf(l.vehicleId) ?? "") ?? 0
+      if (multiYear) {
+        const values = yearlySumInsured(value, slip.multiYearDepreciationPct, years.length)
+        return {
+          ...l,
+          flatPremium: undefined,
+          premium: multiYearPremium(years, (i) => premiumFromRate(values[i], l.rate, mode)),
+        }
+      }
       return { ...l, flatPremium: undefined, premium: premiumFromRate(value, l.rate, mode) }
     }
     const location = bases.get(owner(l.locationId))!
@@ -586,11 +598,12 @@ export function recalcSlip(input: PlacingSlip): PlacingSlip {
     }
   })
 
+  // TPL dan PA: limitnya sama setiap tahun polis.
   const withBasis = (lines: RateLine[]) =>
-    lines.map((l) => ({
-      ...l,
-      premium: premiumFromRate(Number(l.basis ?? 0), l.rate, "percent"),
-    }))
+    lines.map((l) => {
+      const yearly = premiumFromRate(Number(l.basis ?? 0), l.rate, "percent")
+      return { ...l, premium: multiYear ? multiYearPremium(years, () => yearly) : yearly }
+    })
 
   return {
     ...slip,
