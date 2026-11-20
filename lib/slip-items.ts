@@ -29,6 +29,11 @@ export function allowsFlatPremium(cob: ClassOfBusiness) {
   return usesItemRates(cob) && cob !== "Motor Vehicle"
 }
 
+/** COB yang punya upload objek dari Excel. Engineering dulu (alat berat CPM, mesin MB, peralatan EEI). */
+export function supportsObjectUpload(cob: ClassOfBusiness) {
+  return cob === "Engineering"
+}
+
 /** Section objek di slip ber-section: 2 untuk Third Party Liability, selain itu 1. */
 export function itemSection(item: Pick<LineItem, "section">): 1 | 2 {
   return item.section === 2 ? 2 : 1

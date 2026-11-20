@@ -57,6 +57,7 @@ import { participantsInterestItem, usesParticipants } from "@/lib/slip-participa
 import { SlipDetailRows } from "@/components/underwriting/slip-detail-rows"
 import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
 import { VehicleUpload } from "@/components/underwriting/vehicle-upload"
+import { ObjectUpload } from "@/components/underwriting/object-upload"
 import { type RateBounds } from "@/components/underwriting/ojk-reference"
 import {
   coverCodeFor,
@@ -167,6 +168,7 @@ import {
   isLimitOnlyItem,
   itemOwner,
   itemSection,
+  supportsObjectUpload,
 } from "@/lib/slip-items"
 import type { InsuredOption } from "@/lib/server/clients"
 import { closingSummary } from "@/lib/closing-summary"
@@ -417,6 +419,7 @@ function SlipEditor({
   const [confirmCloseChange, setConfirmCloseChange] = React.useState(false)
   // Upload kendaraan Excel (MoM poin 20); kunci daftar rate kendaraan diganti supaya kartu terlipat.
   const [vehicleUploadOpen, setVehicleUploadOpen] = React.useState(false)
+  const [objectUploadOpen, setObjectUploadOpen] = React.useState(false)
   const [vehicleListKey, setVehicleListKey] = React.useState(0)
   const [masterClauses, setMasterClauses] = React.useState<ClausePickerItem[]>([])
 
@@ -1751,6 +1754,23 @@ function SlipEditor({
                     </span>
                   </div>
                 ) : null}
+                {supportsObjectUpload(slip.cob) && !locked ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setObjectUploadOpen(true)}
+                    >
+                      <FileSpreadsheet data-icon="inline-start" />
+                      Upload Excel
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Isi banyak objek sekaligus, misalnya daftar unit alat berat, dari template
+                      Excel.
+                    </span>
+                  </div>
+                ) : null}
                 {/*
                  * Objek "limit saja" tidak ikut total. Diatur lewat Dasar di
                  * Rate & Premium, atau centang di atas untuk slip open cover.
@@ -2109,6 +2129,14 @@ function SlipEditor({
                     set(patch)
                     setVehicleListKey((k) => k + 1)
                   }}
+                />
+              ) : null}
+              {supportsObjectUpload(slip.cob) && !locked ? (
+                <ObjectUpload
+                  slip={slip}
+                  open={objectUploadOpen}
+                  onOpenChange={setObjectUploadOpen}
+                  onImport={set}
                 />
               ) : null}
 
