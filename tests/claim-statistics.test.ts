@@ -16,6 +16,7 @@ const claim = (patch: Partial<ClaimStatRow>): ClaimStatRow => ({
   claimNo: "CLM/2026/11/0001",
   insuredName: "PT A",
   insurer: "PT Asuransi X",
+  insurers: [],
   policyNo: "P-1",
   cob: "Property",
   currency: "IDR",
@@ -157,7 +158,7 @@ test("workbook: sheet Ringkasan dan Daftar Klaim seperti register LCH", async ()
     ["Register No", "No. Registrasi", "DOL", "Tanggal Kejadian"]
   )
   assert.deepEqual(
-    [list.getCell("A6").value, list.getCell("B6").value, list.getCell("G6").value, list.getCell("T6").value],
+    [list.getCell("A6").value, list.getCell("B6").value, list.getCell("G6").value, list.getCell("U6").value],
     [1, "C-2", "USD", "Outstanding"]
   )
   // Tanggal tidak bergeser hari walau dibaca di zona waktu mana pun.

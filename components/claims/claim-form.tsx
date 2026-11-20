@@ -23,7 +23,13 @@ import {
   TextField,
 } from "@/components/shared/form-fields"
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
-import { LOD_PAYMENT_DAYS, lodPaymentDueDate } from "@/lib/claim-detail"
+import {
+  LOD_PAYMENT_DAYS,
+  lodPaymentDueDate,
+  payingInsurers,
+  paymentSpeed,
+  paymentSpeedText,
+} from "@/lib/claim-detail"
 import { claimPolicyChoices, claimPolicyLabel } from "@/lib/claim-policy-files"
 import {
   CLAIM_STAGES,
@@ -31,7 +37,7 @@ import {
   type ClaimStage,
   type ClaimStatus,
 } from "@/lib/data"
-import { dateShort, money } from "@/lib/format"
+import { dateShort, money, num } from "@/lib/format"
 import {
   paBenefitLimitText,
   paClaimWarnings,
@@ -58,11 +64,21 @@ import { requiredText, validate, type FieldErrors } from "@/lib/validation"
 type Draft = Omit<Claim, "id" | "claimNo"> & {
   id: string | null
   claimNo: string
+  /** Tanggal bayar klaim per asuransi polis, kunci id asuransi. */
+  insurerPaidDates: Record<string, string | null>
+}
+
+/** Tanggal bayar yang sudah tercatat, kunci id asuransi. */
+function paidDatesOf(insurers: Claim["insurers"]): Draft["insurerPaidDates"] {
+  return Object.fromEntries(
+    (insurers ?? []).flatMap((i) => (i.insurerId && i.paidDate ? [[i.insurerId, i.paidDate]] : []))
+  )
 }
 
 const EMPTY: Draft = {
   id: null,
   claimNo: "",
+  insurerPaidDates: {},
   policyId: null,
   policyNo: "",
   insuredName: "",
@@ -171,7 +187,9 @@ export function ClaimForm({
   onSaved,
 }: ClaimFormProps) {
   const [draft, setDraft] = React.useState<Draft>(() =>
-    claim ? { ...claim, id: claim.id } : { ...EMPTY }
+    claim
+      ? { ...claim, id: claim.id, insurerPaidDates: paidDatesOf(claim.insurers) }
+      : { ...EMPTY }
   )
   const [errors, setErrors] = React.useState<FieldErrors>({})
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
@@ -180,6 +198,8 @@ export function ClaimForm({
   const masterOptions = useFormOptions()
   const policies = formOptions.policies
   const policy = policies.find((p) => p.id === draft.policyId) ?? null
+  // Asuransi polis untuk tanggal bayar per asuransi (Agus, 20 November 2026).
+  const payers = payingInsurers(policy?.insurers).filter((i) => i.insurerId)
   // Status premi dan deductible polis yang dipilih (meeting LCH, 10 November 2026).
   const { info: policyInfo, loading: policyInfoLoading } = useClaimPolicyInfo(
     policy?.id
@@ -288,6 +308,7 @@ export function ClaimForm({
             participantName: "",
             paBenefitId: null,
             paBenefitName: "",
+            insurerPaidDates: {},
           }
         : {
             policyId: null,
@@ -298,8 +319,23 @@ export function ClaimForm({
             participantName: "",
             paBenefitId: null,
             paBenefitName: "",
+            insurerPaidDates: {},
           }
     )
+  }
+
+  const paidDateKey = (insurerId: string) => `insurerPaidDate:${insurerId}`
+  function setPaidDate(insurerId: string, value: string) {
+    setDraft((d) => ({
+      ...d,
+      insurerPaidDates: { ...d.insurerPaidDates, [insurerId]: value || null },
+    }))
+  }
+  /** Keterangan di bawah tanggal bayar: kecepatan bayar sejak LOD. */
+  function paidDateHint(paidDate: string | null | undefined) {
+    const speed = paymentSpeed(draft.lodDate, paidDate)
+    if (speed) return paymentSpeedText(speed)
+    return paidDate ? "Isi Tanggal LOD ke Asuransi untuk menghitung kecepatan bayar." : undefined
   }
 
   async function submit() {
@@ -313,8 +349,16 @@ export function ClaimForm({
     if (needsParticipant && !draft.paBenefitId) {
       errs.paBenefitId = "Pilih jenis manfaat klaim"
     }
+    let paidDateInvalid = false
+    for (const i of payers) {
+      const paidDate = draft.insurerPaidDates[i.insurerId!]
+      if (paidDate && draft.lossDate && paidDate < draft.lossDate) {
+        errs[paidDateKey(i.insurerId!)] = "Tanggal bayar tidak boleh mendahului tanggal kejadian"
+        paidDateInvalid = true
+      }
+    }
     setErrors(errs)
-    if (!result.ok || errs.participantId || errs.paBenefitId) return false
+    if (!result.ok || errs.participantId || errs.paBenefitId || paidDateInvalid) return false
 
     const matchedAdjuster = formOptions.adjusters.find(
       (a) => a.name.toLowerCase() === draft.adjuster?.toLowerCase()
@@ -349,6 +393,10 @@ export function ClaimForm({
         rosterList && !rosterList.length ? null : (draft.participantId ?? null),
       paBenefitId:
         rosterList && !rosterList.length ? null : (draft.paBenefitId ?? null),
+      // Semua asuransi polis dikirim; yang kosong berarti belum dibayar.
+      insurerPaidDates: Object.fromEntries(
+        payers.map((i) => [i.insurerId!, draft.insurerPaidDates[i.insurerId!] || null])
+      ),
     }
 
     if (draft.id) {
@@ -717,6 +765,48 @@ export function ClaimForm({
               }
             />
           </div>
+
+          {/* Tanggal bayar per asuransi untuk review kecepatan bayar (Agus, 20 November 2026). */}
+          {payers.length === 1 ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TextField
+                label="Tanggal Bayar Asuransi"
+                type="date"
+                value={draft.insurerPaidDates[payers[0].insurerId!] ?? ""}
+                onChange={(v) => setPaidDate(payers[0].insurerId!, v)}
+                placeholder="YYYY-MM-DD"
+                error={errors[paidDateKey(payers[0].insurerId!)]}
+                description={
+                  paidDateHint(draft.insurerPaidDates[payers[0].insurerId!]) ??
+                  "Tanggal klaim dibayar asuransi, untuk review kecepatan bayar."
+                }
+              />
+            </div>
+          ) : payers.length > 1 ? (
+            <div className="flex flex-col gap-3">
+              <div>
+                <p className="text-sm font-medium">Tanggal Bayar Klaim per Asuransi</p>
+                <p className="text-sm text-muted-foreground">
+                  Co-insurance: isi saat tiap asuransi membayar bagiannya. Kecepatan bayar dihitung
+                  dari Tanggal LOD ke Asuransi.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {payers.map((i) => (
+                  <TextField
+                    key={i.insurerId}
+                    label={`${i.insurer} (${i.leader ? "Leader" : "Member"} ${num(i.sharePct, 2)}%)`}
+                    type="date"
+                    value={draft.insurerPaidDates[i.insurerId!] ?? ""}
+                    onChange={(v) => setPaidDate(i.insurerId!, v)}
+                    placeholder="YYYY-MM-DD"
+                    error={errors[paidDateKey(i.insurerId!)]}
+                    description={paidDateHint(draft.insurerPaidDates[i.insurerId!])}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <TextField
             label="Catatan Tambahan"

@@ -653,10 +653,17 @@ export interface Policy {
 
 /** Satu asuransi pada polis klaim, dari panel security polis. */
 export interface ClaimInsurerShare {
+  /** Id asuransi di Master Data; kunci tanggal bayar per asuransi di form klaim. */
+  insurerId?: string
   insurer: string
   /** Persen, misalnya 60 untuk 60%. */
   sharePct: number
   leader: boolean
+  /**
+   * Tanggal asuransi ini membayar bagian klaimnya, "YYYY-MM-DD"; kosong berarti belum dibayar
+   * (Agus, 20 November 2026).
+   */
+  paidDate?: string | null
 }
 
 export interface Claim {

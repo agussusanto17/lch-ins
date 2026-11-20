@@ -38,6 +38,7 @@ test("report Statistik Klaim: kolom Tanggal LOD dan Batas Bayar Asuransi setelah
     claimNo: "CLM-1",
     insuredName: "PT A",
     insurer: "PT Asuransi X",
+    insurers: [],
     policyNo: "P-1",
     cob: "Property",
     currency: "IDR",
@@ -75,15 +76,23 @@ test("report Statistik Klaim: kolom Tanggal LOD dan Batas Bayar Asuransi setelah
   const read = new ExcelJS.Workbook()
   await read.xlsx.load(await wb.xlsx.writeBuffer())
   const list = read.getWorksheet("Daftar Klaim")!
-  const cells = (row: number) => ["Q", "R", "S", "T"].map((col) => list.getCell(`${col}${row}`).value)
-  assert.deepEqual(cells(4), ["Date SPK / SPGR", "Date LOD to Insurer", "Payment Due", "Status"])
+  const cells = (row: number) =>
+    ["Q", "R", "S", "T", "U"].map((col) => list.getCell(`${col}${row}`).value)
+  assert.deepEqual(cells(4), [
+    "Date SPK / SPGR",
+    "Date LOD to Insurer",
+    "Payment Due",
+    "Paid Date per Insurer",
+    "Status",
+  ])
   assert.deepEqual(cells(5), [
     "Tanggal Terbit SPK/SPGR",
     "Tanggal LOD ke Asuransi",
     "Batas Bayar Asuransi",
+    "Tanggal Bayar per Asuransi",
     "Status Klaim",
   ])
   const iso = (value: unknown) => (value instanceof Date ? value.toISOString().slice(0, 10) : value)
-  assert.deepEqual(cells(6).map(iso), ["2026-11-02", "2026-11-05", "2026-12-05", "Partial Settle"])
-  assert.deepEqual(cells(7).map(iso), ["2026-11-02", null, null, "Partial Settle"])
+  assert.deepEqual(cells(6).map(iso), ["2026-11-02", "2026-11-05", "2026-12-05", null, "Partial Settle"])
+  assert.deepEqual(cells(7).map(iso), ["2026-11-02", null, null, null, "Partial Settle"])
 })
