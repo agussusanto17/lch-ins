@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-20
 - **Branch:** `feat/upload-objek-engineering`
-- **PR:** #<nomor>
+- **PR:** #293
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
