@@ -27,12 +27,14 @@ import { EndorsementParticipants } from "@/components/policies/endorsement-parti
 import {
   additionalFeeFor,
   brokerageCapFor,
+  additionalFeeVatAddedFor,
   additionalFeeVatFor,
   feeVatInside,
   grossPremium,
   nettPremium,
   slipPolicyParts,
   sumPercent,
+  vatAdded,
 } from "@/lib/calc"
 import {
   POLICY_TYPES,
@@ -399,10 +401,17 @@ export function PolicyForm({
         ]
   const feeNominal = additionalFeeFor(draft.premium, feeRows)
   const feeVat = additionalFeeVatFor(draft.premium, feeRows)
-  const chargeText = (amount: number, vat: number) =>
+  // Excl. VAT: PPN 2,2% ditambahkan di atas brokerage dan fee (Agus, 20 November 2026).
+  const brokerageVatOnTop = vatAdded(brokerageNominal, draft.includeVat)
+  const feeVatOnTop = additionalFeeVatAddedFor(draft.premium, feeRows)
+  const chargeText = (amount: number, vat: number, added = 0) =>
     vat
-      ? `${money(amount, draft.currency)} · termasuk PPN 2,2% ${money(vat, draft.currency)}`
-      : money(amount, draft.currency)
+      ? `${money(amount, draft.currency)} · termasuk PPN 2,2% ${money(vat, draft.currency)}${
+          added ? ` · ditambah PPN 2,2% ${money(added, draft.currency)}` : ""
+        }`
+      : added
+        ? `${money(amount, draft.currency)} + PPN 2,2% ${money(added, draft.currency)} (excl. VAT)`
+        : money(amount, draft.currency)
   // Polis induk MOP dan deklarasinya menautkan slip open cover. Nilai, premi, dan periode
   // deklarasi diisi per pengiriman; data lain ikut polis MOP.
   const openCoverSlip = linkedSlip ? usesOpenCover(linkedSlip) : false
@@ -1051,9 +1060,15 @@ export function PolicyForm({
                   grossPremium(draft),
                   draft.currency
                 )} · Nett Premium ${money(
-                  nettPremium({ ...draft, additionalFee: feeNominal }),
+                  nettPremium({
+                    ...draft,
+                    additionalFee: feeNominal,
+                    vatAdded: brokerageVatOnTop + feeVatOnTop,
+                  }),
                   draft.currency
-                )} (gross − diskon − brokerage − additional fee).`}
+                )} (gross − diskon − brokerage − additional fee${
+                  brokerageVatOnTop + feeVatOnTop ? " − PPN excl. VAT" : ""
+                }).`}
               />
             )}
             {isEndorsement ? (
@@ -1157,7 +1172,11 @@ export function PolicyForm({
                 description={
                   brokerageCap != null && draft.brokeragePct > brokerageCap
                     ? `Melebihi batas biaya akuisisi OJK ${brokerageCap}% untuk ${draft.cob}.`
-                    : chargeText(brokerageNominal, feeVatInside(brokerageNominal, draft.includeVat))
+                    : chargeText(
+                        brokerageNominal,
+                        feeVatInside(brokerageNominal, draft.includeVat),
+                        brokerageVatOnTop
+                      )
                 }
               />
               <Field orientation="horizontal">
@@ -1176,7 +1195,7 @@ export function PolicyForm({
                 <div className="flex flex-col gap-1 text-sm">
                   <span className="font-medium">Additional Fee</span>
                   <span className="tabular">
-                    {chargeText(feeNominal, feeVat)}
+                    {chargeText(feeNominal, feeVat, feeVatOnTop)}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     Persen dan status PPN per asuransi dari slip, lihat daftar
@@ -1192,7 +1211,7 @@ export function PolicyForm({
                   error={errors.additionalFeePct}
                   description={
                     feeNominal
-                      ? chargeText(feeNominal, feeVat)
+                      ? chargeText(feeNominal, feeVat, feeVatOnTop)
                       : "Opsional, fee di luar brokerage: persen dari premi."
                   }
                 />

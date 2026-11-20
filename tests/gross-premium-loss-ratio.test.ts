@@ -176,9 +176,10 @@ test("diskon slip ikut tercatat di polis dan Ringkasan Penutupan", () => {
   assert.equal(s.discount, 1_000_000)
   // Gross Premium = premi sebelum diskon.
   assert.equal(s.gross, 10_000_000)
-  // Brokerage dari premi sebelum diskon: 10.000.000 × 15%.
+  // Brokerage dari premi sebelum diskon: 10.000.000 × 15%, excl. VAT jadi ditambah PPN 2,2%.
   assert.equal(s.brokerage, 1_500_000)
-  assert.equal(s.net, 7_500_000)
+  assert.equal(s.brokerageVat, 33_000)
+  assert.equal(s.net, 7_467_000)
 })
 
 test("slip PAR + EQVET: diskon per bagian polis", () => {

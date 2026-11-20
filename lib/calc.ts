@@ -188,9 +188,15 @@ export function nettPremium(p: {
   discountAmount?: number
   brokeragePct: number
   additionalFee?: number
+  /** PPN 2,2% yang ditambahkan di atas brokerage dan fee excl. VAT, ikut dipotong dari premi. */
+  vatAdded?: number
 }) {
   return roundCents(
-    grossPremium(p) - (p.discountAmount ?? 0) - policyBrokerage(p) - (p.additionalFee ?? 0)
+    grossPremium(p) -
+      (p.discountAmount ?? 0) -
+      policyBrokerage(p) -
+      (p.additionalFee ?? 0) -
+      (p.vatAdded ?? 0)
   )
 }
 
@@ -360,6 +366,20 @@ export function effectiveBrokeragePct(slip: PlacingSlip) {
   return slip.includeVat ? b / (1 + BROKERAGE_VAT_RATE) : b
 }
 
+/**
+ * PPN 2,2% yang ditambahkan di atas brokerage atau fee excl. VAT (Agus, 20 November 2026). Contoh
+ * slip LCH menulis "Brokerage 15% excl. VAT": asuransi membayar komisi ditambah PPN-nya, jadi PPN
+ * ikut dipotong dari premi yang disetor ke asuransi. Nol bila nominalnya sudah termasuk PPN.
+ */
+export function vatAdded(amount: number, includeVat: boolean | undefined) {
+  return includeVat ? 0 : roundCents(amount * BROKERAGE_VAT_RATE)
+}
+
+/** PPN yang ditambahkan di atas brokerage slip excl. VAT. */
+export function brokerageVatAdded(slip: PlacingSlip) {
+  return vatAdded(brokerageAmount(slip), slip.includeVat)
+}
+
 /** VAT inside the brokerage amount; the entered rate already includes it, as in effectiveBrokeragePct. */
 export function brokerageVatAmount(slip: PlacingSlip) {
   if (!slip.includeVat) return 0
@@ -426,6 +446,26 @@ export function additionalFeeVatFor(
       0
     )
   )
+}
+
+/** PPN yang ditambahkan di atas additional fee asuransi yang excl. VAT, per asuransi. */
+export function additionalFeeVatAddedFor(
+  premium: number,
+  rows:
+    | readonly Pick<SecurityPanelRow, "share" | "additionalFeePct" | "additionalFeeIncludeVat">[]
+    | undefined
+) {
+  return roundCents(
+    (rows ?? []).reduce(
+      (sum, r) => sum + vatAdded(insurerAdditionalFee(premium, r), r.additionalFeeIncludeVat),
+      0
+    )
+  )
+}
+
+/** PPN yang ditambahkan di atas additional fee slip, dari status PPN tiap asuransi di panel. */
+export function additionalFeeVatAddedAmount(slip: PlacingSlip) {
+  return additionalFeeVatAddedFor(totalPremium(slip), slip.securityPanel)
 }
 
 /** PPN di dalam additional fee slip, dari status PPN tiap asuransi di panel. */

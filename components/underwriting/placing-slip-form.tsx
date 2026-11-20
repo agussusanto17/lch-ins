@@ -122,10 +122,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Toggle } from "@/components/ui/toggle"
 import {
   additionalFeeAmount,
+  additionalFeeVatAddedAmount,
   additionalFeeVatAmount,
   brokerageAmount,
   brokerageLimitIssue,
   brokerageLimitText,
+  brokerageVatAdded,
   brokerageVatAmount,
   calculateParEqvet,
   discountAmount,
@@ -140,6 +142,7 @@ import {
   totalPremium,
   totalSumInsured,
   usesOjkTariff,
+  vatAdded,
 } from "@/lib/calc"
 import {
   CLAUSES,
@@ -2429,6 +2432,30 @@ function SlipEditor({
                       : money(brokerageAmount(slip), slip.currency)}
                   </span>
                 </div>
+                {!slip.includeVat && !usesOpenCover(slip) && brokerageVatAdded(slip) ? (
+                  // Excl. VAT: PPN ditambahkan di atas brokerage (Agus, 20 November 2026).
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        PPN 2,2% (ditambahkan)
+                      </span>
+                      <span className="tabular font-semibold">
+                        {money(brokerageVatAdded(slip), slip.currency)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Brokerage + PPN
+                      </span>
+                      <span className="tabular font-semibold">
+                        {money(
+                          brokerageAmount(slip) + brokerageVatAdded(slip),
+                          slip.currency
+                        )}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
                 {slip.includeVat ? (
                   <>
                     <div className="flex items-center justify-between text-sm">
@@ -2587,6 +2614,13 @@ function SlipEditor({
                               {row.additionalFeePct ? (
                                 <span className="tabular text-xs text-muted-foreground">
                                   {money(insurerAdditionalFee(totalPremium(slip), row), slip.currency)}
+                                  {/* Excl. VAT: PPN 2,2% ditambahkan di atas fee. */}
+                                  {row.additionalFeeIncludeVat
+                                    ? null
+                                    : ` + PPN ${money(
+                                        vatAdded(insurerAdditionalFee(totalPremium(slip), row), false),
+                                        slip.currency
+                                      )}`}
                                 </span>
                               ) : null}
                             </div>
@@ -2664,6 +2698,14 @@ function SlipEditor({
                             {money(additionalFeeAmount(slip), slip.currency)}
                           </span>
                         </div>
+                        {additionalFeeVatAddedAmount(slip) ? (
+                          <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-start sm:gap-0.5">
+                            <span className="text-muted-foreground">PPN 2,2% (ditambahkan)</span>
+                            <span className="tabular font-semibold">
+                              {money(additionalFeeVatAddedAmount(slip), slip.currency)}
+                            </span>
+                          </div>
+                        ) : null}
                         {additionalFeeVatAmount(slip) ? (
                           <>
                             <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-start sm:gap-0.5">
@@ -2685,10 +2727,11 @@ function SlipEditor({
                         ) : null}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Nominal = premi × share × fee (%) tiap asuransi. Nyalakan
-                        Incl. VAT di asuransi yang fee-nya sudah termasuk PPN
-                        2,2%. Hanya untuk produksi, tidak dicetak di slip; ikut
-                        ke polis di Policy Database.
+                        Nominal = premi × share × fee (%) tiap asuransi. Incl. VAT:
+                        fee sudah termasuk PPN 2,2%. Excl. VAT: PPN 2,2% ditambahkan
+                        di atas fee dan ikut dipotong dari premi ke asuransi. Hanya
+                        untuk produksi, tidak dicetak di slip; ikut ke polis di
+                        Policy Database.
                       </p>
                     </div>
                   ) : null}
