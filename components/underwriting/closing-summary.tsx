@@ -66,13 +66,28 @@ export function ClosingSummaryPanel({
           hint={s.discount ? "Dari Gross Premium, sebelum diskon" : undefined}
           value={`− ${money(s.brokerage, currency)}`}
         />
+        {/* Excl. VAT: PPN 2,2% ditambahkan di atas brokerage dan ikut dipotong (Agus, 20 November 2026). */}
+        {s.brokerageVat ? (
+          <Row
+            label="PPN 2,2% atas brokerage"
+            hint="Brokerage excl. VAT, PPN ditambahkan"
+            value={`− ${money(s.brokerageVat, currency)}`}
+          />
+        ) : null}
         {withFee ? (
           <Row label="Additional fee" value={`− ${money(s.fee, currency)}`} />
+        ) : null}
+        {s.feeVat ? (
+          <Row
+            label="PPN 2,2% atas additional fee"
+            hint="Fee asuransi yang excl. VAT, PPN ditambahkan"
+            value={`− ${money(s.feeVat, currency)}`}
+          />
         ) : null}
         <div className="mt-1 border-t pt-1">
           <Row
             label="Nett Premium ke asuransi"
-            hint={`Gross Premium${s.discount ? " − diskon" : ""} − brokerage${withFee ? " − additional fee" : ""}`}
+            hint={`Gross Premium${s.discount ? " − diskon" : ""} − brokerage${withFee ? " − additional fee" : ""}${s.brokerageVat || s.feeVat ? " − PPN excl. VAT" : ""}`}
             value={money(s.net, currency)}
             strong
           />
@@ -82,7 +97,7 @@ export function ClosingSummaryPanel({
             label="Pendapatan LCH"
             hint={
               s.incomeVat
-                ? `${withFee ? "Brokerage + additional fee" : "Brokerage"}, termasuk PPN 2,2% ${money(s.incomeVat, currency)} · sebelum PPN ${money(s.income - s.incomeVat, currency)}`
+                ? `${withFee ? "Brokerage + additional fee" : "Brokerage"}${s.brokerageVat || s.feeVat ? " + PPN excl. VAT" : ""}, termasuk PPN 2,2% ${money(s.incomeVat, currency)} · sebelum PPN ${money(s.income - s.incomeVat, currency)}`
                 : withFee
                   ? "Brokerage + additional fee"
                   : "Brokerage"
@@ -103,6 +118,9 @@ export function ClosingSummaryPanel({
                 {s.discount ? <th className="px-3 py-2 text-right font-medium">Diskon</th> : null}
                 <th className="px-3 py-2 text-right font-medium">Brokerage</th>
                 {withFee ? <th className="px-3 py-2 text-right font-medium">Additional fee</th> : null}
+                {s.brokerageVat || s.feeVat ? (
+                  <th className="px-3 py-2 text-right font-medium">PPN 2,2% excl.</th>
+                ) : null}
                 <th className="px-3 py-2 text-right font-medium">Net ke asuransi</th>
               </tr>
             </thead>
@@ -121,6 +139,9 @@ export function ClosingSummaryPanel({
                   {withFee ? (
                     <td className="tabular px-3 py-2 text-right whitespace-nowrap">{money(r.fee, currency)}</td>
                   ) : null}
+                  {s.brokerageVat || s.feeVat ? (
+                    <td className="tabular px-3 py-2 text-right whitespace-nowrap">{money(r.vat, currency)}</td>
+                  ) : null}
                   <td className="tabular px-3 py-2 text-right font-semibold whitespace-nowrap">{money(r.net, currency)}</td>
                 </tr>
               ))}
@@ -134,6 +155,9 @@ export function ClosingSummaryPanel({
           Hitungan internal LCH, tidak dicetak di dokumen.
           {s.discount
             ? " Brokerage dan additional fee dihitung dari Gross Premium; Nett Premium = Gross Premium − diskon − brokerage − additional fee."
+            : ""}
+          {s.brokerageVat || s.feeVat
+            ? " Brokerage atau fee excl. VAT: PPN 2,2% ditambahkan di atasnya dan ikut dipotong dari premi ke asuransi; incl. VAT: PPN sudah di dalam nominalnya."
             : ""}
         </p>
       ) : null}
