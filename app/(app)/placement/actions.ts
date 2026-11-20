@@ -217,6 +217,8 @@ const rateLineSchema = z
     basis: z.string().optional(),
     min: z.coerce.number().nullable().optional(),
     max: z.coerce.number().nullable().optional(),
+    // Tanpa ini asal batas OJK terbuang di sini dan tidak pernah tersimpan.
+    boundSource: z.string().max(300).optional(),
     lossLimitPct: z.coerce
       .number()
       .gt(0, "Persentase loss limit harus lebih dari 0%.")

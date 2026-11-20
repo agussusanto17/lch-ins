@@ -492,16 +492,19 @@ export function usesOjkTariff(slip: Pick<PlacingSlip, "ojkTariff">) {
   return slip.ojkTariff !== false
 }
 
+/** Satu baris rate tanpa batas OJK tersimpan; baris tanpa batas dikembalikan apa adanya. */
+export function withoutBounds(line: RateLine): RateLine {
+  return line.min == null && line.max == null && !line.boundSource
+    ? line
+    : { ...line, min: null, max: null, boundSource: undefined }
+}
+
 /**
  * Baris rate tanpa batas OJK. Batas yang pernah tersimpan ikut dibuang,
  * misalnya saat type of cover slip diganti ke Heavy Equipment.
  */
 export function withoutOjkBounds(lines: RateLine[]): RateLine[] {
-  return lines.map((l) =>
-    l.min == null && l.max == null && !l.boundSource
-      ? l
-      : { ...l, min: null, max: null, boundSource: undefined }
-  )
+  return lines.map(withoutBounds)
 }
 
 /**

@@ -24,6 +24,7 @@ import { LocationUpload } from "@/components/underwriting/location-upload"
 import { CoverRateTable } from "@/components/underwriting/rate-tables"
 import {
   addLocationPatch,
+  copyFirstOccupationPatch,
   floatingDropsLocationData,
   floatingSumInsuredPatch,
   isOutOfBounds,
@@ -293,20 +294,7 @@ export function SlipLocations({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() =>
-                onChange({
-                  locations: groups.map((g) =>
-                    g.no === 1
-                      ? g.location
-                      : {
-                          ...g.location,
-                          occupation: first.occupation,
-                          occupationLabel: first.occupationLabel,
-                          constructionClass: first.constructionClass,
-                        }
-                  ),
-                })
-              }
+              onClick={() => onChange(copyFirstOccupationPatch(slip))}
             >
               Samakan okupasi & kelas dengan Lokasi 1
             </Button>

@@ -4,6 +4,7 @@ import {
   sumItems,
   totalSumInsured,
   usesOjkTariff,
+  withoutBounds,
   withoutOjkBounds,
 } from "@/lib/calc"
 import { validateClauseUniquenessAcrossSections } from "@/lib/validation"
@@ -613,6 +614,35 @@ export function addLocationPatch(slip: PlacingSlip): Partial<PlacingSlip> {
 }
 
 /**
+ * Isian lokasi yang menentukan batas OJK cover Property, di getPropertyRateBounds maupun panel
+ * Referensi Tarif OJK: FLEXAS dari okupasi dan kelas konstruksi; EQVET dari okupasi (Dwelling
+ * atau Commercial), kelas, dan zona gempa alamat; FWTWD dari wilayah banjir alamat.
+ */
+const BOUND_INPUTS = [
+  ["occupation", ["FLEXAS", "EQVET"]],
+  ["constructionClass", ["FLEXAS", "EQVET"]],
+  ["riskLocation", ["EQVET", "FWTWD"]],
+] as const satisfies readonly (readonly [keyof SlipLocation, readonly string[]])[]
+
+const LOCATION_BOUND_COVERS: ReadonlySet<string> = new Set(
+  BOUND_INPUTS.flatMap(([, covers]) => covers)
+)
+
+/** Baris rate tanpa batas tersimpan bila batasnya bergantung pada isian lokasi. */
+function withoutLocationBounds(line: RateLine): RateLine {
+  return LOCATION_BOUND_COVERS.has(line.label) ? withoutBounds(line) : line
+}
+
+/** Cover yang batas OJK-nya perlu dihitung ulang karena isian lokasinya berubah. */
+function staleBoundCovers(before: SlipLocation | undefined, after: SlipLocation) {
+  return new Set<string>(
+    BOUND_INPUTS.flatMap(([field, covers]) =>
+      (before?.[field] ?? "") === (after[field] ?? "") ? [] : covers
+    )
+  )
+}
+
+/**
  * Hapus lokasi beserta sum insured, baris rate, deductible, dan alasan
  * rate-nya. Lokasi lain memakai deductible-nya sendiri.
  */
@@ -624,7 +654,8 @@ export function removeLocationPatch(
   const removed = groups.find((g) => g.location.id === locationId)
   if (!removed || groups.length < 2) return {}
   if (isFloatingSumInsured(slip)) {
-    // Sum insured dan rate bersama pindah ke lokasi yang menjadi pertama.
+    // Sum insured dan rate bersama pindah ke lokasi yang menjadi pertama. Lokasi paling
+    // berisiko bisa ikut terhapus, jadi batas OJK-nya dihitung ulang.
     const locations = slipLocations(slip).filter((l) => l.id !== locationId)
     const to = <T extends { locationId?: string | null }>(rows: T[]) =>
       rows.map((r) => ({ ...r, locationId: locations[0].id }))
@@ -632,7 +663,7 @@ export function removeLocationPatch(
       locations,
       sumInsuredSection1: to(slip.sumInsuredSection1),
       sumInsuredSection2: to(slip.sumInsuredSection2),
-      rateLines: to(slip.rateLines),
+      rateLines: to(slip.rateLines.map(withoutLocationBounds)),
     }
   }
   const owner = locationOwner(slip)
@@ -653,16 +684,63 @@ export function removeLocationPatch(
   }
 }
 
+/**
+ * Ganti daftar lokasi slip Property. Batas OJK tersimpan didahulukan saat dihitung
+ * (rateLinesWithBounds, attachSlipRateBounds), jadi batas cover yang bergantung pada okupasi,
+ * kelas konstruksi, atau alamat yang berubah dikosongkan supaya dihitung ulang dari isian baru.
+ * Tanpa ini batas okupasi lama tetap dipakai dan rate di bawah batas okupasi baru lolos tanpa
+ * alasan (ditemukan saat menguji floating sum insured, 18 November 2026). Baris slip floating
+ * berlaku di semua lokasi, jadi perubahan lokasi mana pun mengosongkan batasnya. Alasan rate
+ * dibiarkan: release tetap meminta alasan bila rate di luar batas baru.
+ */
+export function locationsPatch(
+  slip: PlacingSlip,
+  locations: SlipLocation[]
+): Partial<PlacingSlip> {
+  const before = new Map(slipLocations(slip).map((l) => [l.id, l]))
+  const stale = new Map(
+    locations.flatMap((l) => {
+      const covers = staleBoundCovers(before.get(l.id), l)
+      return covers.size ? [[l.id, covers] as const] : []
+    })
+  )
+  if (!stale.size) return { locations }
+  const floating = isFloatingSumInsured(slip)
+  const owner = locationOwner(slip)
+  const anyLocation = new Set([...stale.values()].flatMap((covers) => [...covers]))
+  return {
+    locations,
+    rateLines: slip.rateLines.map((l) =>
+      (floating ? anyLocation : stale.get(owner(l.locationId)))?.has(l.label)
+        ? withoutBounds(l)
+        : l
+    ),
+  }
+}
+
 export function updateLocationPatch(
   slip: PlacingSlip,
   locationId: string,
   patch: Partial<Omit<SlipLocation, "id">>
 ): Partial<PlacingSlip> {
-  return {
-    locations: slipLocations(slip).map((l) =>
-      l.id === locationId ? { ...l, ...patch } : l
-    ),
-  }
+  return locationsPatch(
+    slip,
+    slipLocations(slip).map((l) => (l.id === locationId ? { ...l, ...patch } : l))
+  )
+}
+
+/** Samakan okupasi dan kelas konstruksi semua lokasi dengan lokasi 1. */
+export function copyFirstOccupationPatch(slip: PlacingSlip): Partial<PlacingSlip> {
+  const [first, ...rest] = slipLocations(slip)
+  return locationsPatch(slip, [
+    first,
+    ...rest.map((l) => ({
+      ...l,
+      occupation: first.occupation,
+      occupationLabel: first.occupationLabel,
+      constructionClass: first.constructionClass,
+    })),
+  ])
 }
 
 /**
@@ -691,6 +769,8 @@ export function floatingDropsLocationData(slip: PlacingSlip) {
  *   lokasi lain dihapus.
  * - Mati: semua sum insured tetap di lokasi pertama. Lokasi lain mendapat baris sum insured
  *   kosong serta salinan rate, loss limit, dan deductible lokasi pertama.
+ * Batas OJK tersimpan lokasi pertama dikosongkan: slip floating memakai batas lokasi paling
+ * berisiko, slip biasa batas lokasinya sendiri.
  */
 export function floatingSumInsuredPatch(
   slip: PlacingSlip,
@@ -703,6 +783,7 @@ export function floatingSumInsuredPatch(
     rows: T[],
     locationId = first.location.id
   ) => rows.map((r) => ({ ...r, locationId }))
+  const firstLines = first.rateLines.map(withoutLocationBounds)
 
   if (on) {
     const filled = (it: LineItem) =>
@@ -714,7 +795,7 @@ export function floatingSumInsuredPatch(
       floatingSumInsured: true,
       sumInsuredSection1: merge("section1"),
       sumInsuredSection2: merge("section2"),
-      rateLines: at(first.rateLines),
+      rateLines: at(firstLines),
       rateExceptions: Object.fromEntries(
         Object.entries(slip.rateExceptions ?? {}).filter(
           ([lineId]) => !removed.has(lineId)
@@ -740,7 +821,7 @@ export function floatingSumInsuredPatch(
       ...rest.map((g) => emptyRow("b", g.location.id)),
     ],
     rateLines: [
-      ...at(first.rateLines),
+      ...at(firstLines),
       ...rest.flatMap((g) =>
         first.rateLines.map(
           (l): RateLine => ({
