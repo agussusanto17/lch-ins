@@ -89,6 +89,7 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       currency: row.currencyCode,
       premium: Number(row.premium),
       discount: Number(row.discountAmount),
+      insurerPremium: row.insurerPremium == null ? null : Number(row.insurerPremium),
       brokeragePct: Number(row.brokeragePct),
       remarks: row.remarks,
       groupingInsured: row.groupingInsured,

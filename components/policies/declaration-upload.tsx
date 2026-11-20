@@ -26,7 +26,7 @@ import {
   type DeclarationImportRow,
 } from "@/lib/declaration-import"
 import { dateShort, money, num } from "@/lib/format"
-import { openCoverRateText } from "@/lib/open-cover"
+import { declarationMargin, openCoverRateText } from "@/lib/open-cover"
 import { store } from "@/lib/store"
 
 /** Isi sheet Deklarasi, atau sheet pertama bila namanya diganti, sebagai larik baris. */
@@ -122,6 +122,8 @@ export function DeclarationUpload({
   const totalValue = rows.reduce((sum, r) => sum + r.sumInsured, 0)
   const totalPremium = rows.reduce((sum, r) => sum + r.premium, 0)
   const totalAdminFee = rows.reduce((sum, r) => sum + (r.adminFee ?? 0), 0)
+  // Margin rate: premi dari file (rate ke klien) dikurangi premi menurut rate MOP (Agus, 20 November 2026).
+  const totalMargin = rows.reduce((sum, r) => sum + (declarationMargin(r) ?? 0), 0)
 
   async function readFile(file: File) {
     setReading(true)
@@ -192,6 +194,7 @@ export function DeclarationUpload({
             inceptionDate: r.inceptionDate,
             sumInsured: r.sumInsured,
             premium: r.premium,
+            insurerPremium: r.insurerPremium,
             insuredName: r.insuredName,
             adminFee: r.adminFee,
             remarks: r.remarks,
@@ -430,6 +433,9 @@ export function DeclarationUpload({
                 {totalAdminFee
                   ? ` · admin fee ${money(totalAdminFee, master.currency)}`
                   : ""}
+                {Math.abs(totalMargin) >= 0.01
+                  ? ` · margin rate ${money(totalMargin, master.currency)}`
+                  : ""}
               </span>
             </p>
             <div className="max-h-[22rem] overflow-auto rounded-lg border">
@@ -471,6 +477,11 @@ export function DeclarationUpload({
                       ) : null}
                       <TableCell className="text-right tabular-nums">
                         {money(r.premium, master.currency)}
+                        {declarationMargin(r) ? (
+                          <div className="text-xs text-muted-foreground">
+                            Margin {money(declarationMargin(r)!, master.currency)}
+                          </div>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))}

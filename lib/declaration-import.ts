@@ -255,6 +255,11 @@ export interface DeclarationImportRow {
   inceptionDate: string
   sumInsured: number
   premium: number
+  /**
+   * Premi ke asuransi dari kategori rate MOP (Agus, 20 November 2026). Bila premi diambil dari
+   * file (rate ke klien), selisihnya margin. Kosong bila kategorinya tidak diketahui.
+   */
+  insurerPremium: number | null
   /** Kategori rate yang dipakai; kosong bila premi diambil dari file tanpa kategori. */
   rateLabel: string | null
   units: number | null
@@ -525,6 +530,13 @@ export function declarationsFromRows(
       inceptionDate: date!,
       sumInsured: value!,
       premium,
+      insurerPremium: rate
+        ? rate.basis === "per_unit"
+          ? units != null && units > 0
+            ? openCoverPremium(rate, units)
+            : null
+          : openCoverPremium(rate, value!)
+        : null,
       rateLabel: rate ? rate.label.trim() : null,
       units: rate?.basis === "per_unit" ? units : null,
       insuredName: insuredName || null,

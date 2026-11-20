@@ -44,6 +44,11 @@ export interface RecapPolicy {
   premium: number
   /** Diskon polis, bertanda sama dengan premi (MoM review Phase 1, poin 19). */
   discount?: number
+  /**
+   * Deklarasi MOP: premi ke asuransi menurut rate MOP. Premi deklarasi mengikuti rate ke klien,
+   * selisihnya margin rate LCH (Agus, 20 November 2026).
+   */
+  insurerPremium?: number | null
   brokeragePct: number
   remarks: string | null
   groupingInsured: string | null
@@ -106,6 +111,9 @@ export const RECAP_HEADERS = [
   "COB OJK",
   "Lokasi Penempatan",
   "Perusahaan/Perorangan",
+  // Tambahan sistem di luar contoh LCH: margin rate deklarasi MOP (Agus, 20 November 2026).
+  "Margin_Rate_OC",
+  "Margin_Rate",
 ] as const
 
 const TYPE_CODES: Record<PolicyType, string> = {
@@ -152,6 +160,10 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
       const discountRaw = -((p.discount ?? 0) * ins.share) / 100
       const commissionRaw = -(grossRaw * p.brokeragePct) / 100
       const feeRaw = -(grossRaw * ins.additionalFeePct) / 100
+      // Margin rate deklarasi MOP: premi ke klien − premi ke asuransi, ditulis negatif seperti
+      // pendapatan lain. Tidak ikut (Income)/Beban supaya kolom contoh LCH tidak berubah.
+      const marginRaw =
+        p.insurerPremium == null ? 0 : -(((p.premium - p.insurerPremium) * ins.share) / 100)
       const gross = roundCents(grossRaw)
       const commission = roundCents(commissionRaw)
       const fee = roundCents(feeRaw)
@@ -209,6 +221,8 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
         "Lokasi Penempatan": p.placementLocation ?? "",
         "Perusahaan/Perorangan":
           p.clientType === "Korporasi" ? "Perusahaan" : (p.clientType ?? ""),
+        Margin_Rate_OC: roundCents(marginRaw),
+        Margin_Rate: idr(marginRaw),
       }
       return row
     })
@@ -225,6 +239,8 @@ const MONEY = new Set<string>([
   "RM_Fee_OC",
   "RM_Fee",
   "(Income)/Beban",
+  "Margin_Rate_OC",
+  "Margin_Rate",
 ])
 
 /** Kolom export, urutan dan nama persis contoh LCH. */

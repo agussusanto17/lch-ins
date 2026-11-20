@@ -65,6 +65,8 @@ const policyInputSchema = z
     premium: z.number(),
     // Diskon nominal, bertanda sama dengan premi (MoM review Phase 1, poin 19).
     discountAmount: z.number().optional(),
+    // Deklarasi MOP: premi ke asuransi menurut rate MOP, untuk margin (Agus, 20 November 2026).
+    insurerPremium: z.number().min(0, "Premi ke asuransi tidak boleh negatif").nullable().optional(),
     brokeragePct: z.number().min(0).max(100),
     // Premi installment 2 sampai 10 kali (Agus, 20 November 2026); server memeriksa jumlah persen.
     premiumInstallments: z
@@ -170,6 +172,8 @@ const declarationRowsSchema = z
       inceptionDate: isoDate,
       sumInsured: z.number().gt(0, "Nilai deklarasi harus lebih dari 0"),
       premium: z.number().gt(0, "Premi deklarasi harus lebih dari 0"),
+      // Premi ke asuransi dari kategori rate MOP; kosong bila kategorinya tidak diketahui.
+      insurerPremium: z.number().min(0, "Premi ke asuransi tidak boleh negatif").nullable().optional(),
       // Tertanggung di sertifikat ("... QQ ..."); kosong berarti ikut polis MOP.
       insuredName: z.string().trim().max(500, "Tertanggung maksimal 500 karakter").nullable().optional(),
       // Admin Fee General Marine Report, disimpan sebagai admin cost deklarasi.
@@ -213,6 +217,7 @@ export async function importDeclarationsAction(
         inceptionDate: row.inceptionDate,
         sumInsured: row.sumInsured,
         premium: row.premium,
+        insurerPremium: row.insurerPremium ?? null,
         discountAmount: 0,
         additionalFee: 0,
         rate: null,
