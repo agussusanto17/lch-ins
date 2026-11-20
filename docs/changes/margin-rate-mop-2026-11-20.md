@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-20
 - **Branch:** `feat/margin-rate-mop`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #297
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
