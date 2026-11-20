@@ -6,7 +6,7 @@ import {
   documentReceiptLocked,
   isClaimLocked,
 } from "@/lib/claim-detail"
-import type { Claim, ClaimStage, ClaimStatus } from "@/lib/data/types"
+import type { Claim, ClaimInsurerShare, ClaimStage, ClaimStatus } from "@/lib/data/types"
 import { todayIso } from "@/lib/date"
 import { CLAIM_STATUS_CODES, POLICY_TYPE_CODES, systemValueFromRow } from "@/lib/form-options"
 import {
@@ -97,6 +97,11 @@ export interface ClaimInput {
   participantId?: string | null
   /** Jenis manfaat klaim PA; wajib bersama peserta. */
   paBenefitId?: string | null
+  /**
+   * Tanggal bayar klaim per asuransi polis, dengan kunci id asuransi (Agus, 20 November 2026).
+   * Null menghapus tanggalnya. Asuransi yang tidak dikirim tanggalnya tetap.
+   */
+  insurerPaidDates?: Record<string, string | null>
 }
 
 export interface ClaimFormOptions {
@@ -110,6 +115,8 @@ export interface ClaimFormOptions {
       policyNo: string
       insuredName: string
       insurer: string
+      /** Asuransi polis untuk isian tanggal bayar per asuransi. */
+      insurers: ClaimInsurerShare[]
       cob: Claim["cob"]
       currency: string
     }
@@ -150,6 +157,7 @@ const claimIncludeRelations = {
     },
   },
   paBenefit: { select: { id: true, code: true, name: true } },
+  insurerPayments: { select: { insurerId: true, paidDate: true } },
 } satisfies Prisma.ClaimInclude
 
 type PrismaClaimWithRelations = Prisma.ClaimGetPayload<{
@@ -224,6 +232,26 @@ async function resolveAdjusterId(adjusterIdOrName?: string | null): Promise<stri
   return created.id
 }
 
+/** Asuransi polis klaim, dengan tanggal bayar bagian klaimnya bila sudah dicatat. */
+export function insurerShares(
+  rows: ReadonlyArray<{
+    insurerId: string
+    sharePct: Prisma.Decimal
+    insurer: { name: string } | null
+    position: { code: string | null }
+  }>,
+  payments: ReadonlyArray<{ insurerId: string; paidDate: Date }> = []
+): ClaimInsurerShare[] {
+  const paid = new Map(payments.map((p) => [p.insurerId, p.paidDate.toISOString().slice(0, 10)]))
+  return rows.map((i) => ({
+    insurerId: i.insurerId,
+    insurer: i.insurer?.name ?? "",
+    sharePct: Number(i.sharePct),
+    leader: i.position.code === "leader",
+    paidDate: paid.get(i.insurerId) ?? null,
+  }))
+}
+
 function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
   const leaderInsurer = record.policy?.insurers?.find((i) => i.position.code === "leader")?.insurer?.name
   const firstInsurer = record.policy?.insurers?.[0]?.insurer?.name || ""
@@ -242,11 +270,7 @@ function toClaimRecord(record: PrismaClaimWithRelations): ClaimRecord {
     policyNo: record.policy?.policyNo || "",
     insuredName: record.policy?.insuredName || "",
     insurer: primaryInsurer,
-    insurers: (record.policy?.insurers ?? []).map((i) => ({
-      insurer: i.insurer?.name ?? "",
-      sharePct: Number(i.sharePct),
-      leader: i.position.code === "leader",
-    })),
+    insurers: insurerShares(record.policy?.insurers ?? [], record.insurerPayments),
     cob: normalizeCob(record.policy?.cob?.name),
     currency: record.currencyCode as Claim["currency"],
     lossDate: record.lossDate.toISOString().slice(0, 10),
@@ -385,6 +409,7 @@ export async function listClaimFormOptions(): Promise<ClaimFormOptions> {
         policyNo: p.policyNo,
         insuredName: p.insuredName,
         insurer: leader || first,
+        insurers: insurerShares(p.insurers),
         cob: normalizeCob(p.cob.name),
         currency: p.currencyCode,
         ...(families.get(p.id) ?? { rootId: p.id, endorsements: 0, cancelled: false }),
@@ -750,6 +775,51 @@ async function checkedPaClaim(
   return { participantId: participant.id, paBenefitId: benefit.id }
 }
 
+/**
+ * Simpan tanggal bayar klaim per asuransi polis klaim (Agus, 20 November 2026), lalu kembalikan
+ * semua tanggal bayar klaim itu. Tanggal asuransi yang sudah tidak ada di polis ikut dihapus.
+ */
+async function saveInsurerPaidDates(
+  tx: Prisma.TransactionClient,
+  claim: { id: string; policyId: string; lossDate: string },
+  dates: ClaimInput["insurerPaidDates"]
+) {
+  const insurers = await tx.policyInsurer.findMany({
+    where: { policyId: claim.policyId },
+    select: { insurerId: true, insurer: { select: { name: true } } },
+  })
+  await tx.claimInsurerPayment.deleteMany({
+    where: { claimId: claim.id, insurerId: { notIn: insurers.map((i) => i.insurerId) } },
+  })
+  for (const { insurerId, insurer } of insurers) {
+    const paidDate = dates?.[insurerId]
+    if (paidDate === undefined) continue
+    if (!paidDate) {
+      await tx.claimInsurerPayment.deleteMany({ where: { claimId: claim.id, insurerId } })
+      continue
+    }
+    if (paidDate < claim.lossDate) {
+      throw new Error(`Tanggal bayar ${insurer.name} tidak boleh mendahului tanggal kejadian.`)
+    }
+    await tx.claimInsurerPayment.upsert({
+      where: { claimId_insurerId: { claimId: claim.id, insurerId } },
+      create: { claimId: claim.id, insurerId, paidDate: new Date(paidDate) },
+      update: { paidDate: new Date(paidDate) },
+    })
+  }
+  return tx.claimInsurerPayment.findMany({
+    where: { claimId: claim.id },
+    select: { insurerId: true, paidDate: true },
+  })
+}
+
+/** Tanggal bayar per asuransi untuk Audit Trail, satu baris per asuransi yang sudah membayar. */
+function insurerPaidDatesAudit(claim: Pick<Claim, "insurers">) {
+  return (claim.insurers ?? [])
+    .filter((i) => i.paidDate)
+    .map((i) => `${i.insurer}: ${dateShort(i.paidDate!)}`)
+}
+
 export async function createClaim(
   input: ClaimInput,
   userId: string
@@ -796,6 +866,12 @@ export async function createClaim(
       },
       include: claimIncludeRelations,
     })
+    const insurerPayments = await saveInsurerPaidDates(
+      tx,
+      { id: record.id, policyId, lossDate: input.lossDate },
+      input.insurerPaidDates
+    )
+    const saved = toClaimRecord({ ...record, insurerPayments })
 
     await recordAudit(tx, {
       userId,
@@ -810,10 +886,11 @@ export async function createClaim(
         stageId: record.stageId,
         participantId: record.participantId,
         paBenefitId: record.paBenefitId,
+        insurerPaidDates: insurerPaidDatesAudit(saved),
       },
     })
 
-    return toClaimRecord(record)
+    return saved
   })
 }
 
@@ -871,6 +948,12 @@ export async function updateClaim(
       },
       include: claimIncludeRelations,
     })
+    const insurerPayments = await saveInsurerPaidDates(
+      tx,
+      { id, policyId: record.policyId, lossDate: input.lossDate },
+      input.insurerPaidDates
+    )
+    const saved = toClaimRecord({ ...record, insurerPayments })
 
     await recordAudit(tx, {
       userId,
@@ -891,6 +974,7 @@ export async function updateClaim(
         adjusterFeeAmount: Number(existing.adjusterFeeAmount),
         participantId: existing.participantId,
         paBenefitId: existing.paBenefitId,
+        insurerPaidDates: insurerPaidDatesAudit(toClaimRecord(existing)),
       },
       after: {
         claimNo: record.claimNo,
@@ -906,10 +990,11 @@ export async function updateClaim(
         adjusterFeeAmount: Number(record.adjusterFeeAmount),
         participantId: record.participantId,
         paBenefitId: record.paBenefitId,
+        insurerPaidDates: insurerPaidDatesAudit(saved),
       },
     })
 
-    return toClaimRecord(record)
+    return saved
   })
 }
 

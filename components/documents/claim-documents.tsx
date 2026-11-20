@@ -2,7 +2,14 @@ import { DocumentShell } from "@/components/documents/document-shell"
 import { DocTitle, HangingIndentText, InfoTable } from "@/components/documents/doc-blocks"
 import { Letterhead } from "@/components/documents/letterhead"
 import { toIdr } from "@/lib/calc"
-import { claimInsurerPortions, isCoInsurance, lodPaymentDueDate } from "@/lib/claim-detail"
+import {
+  claimInsurerPortions,
+  claimPaymentProgress,
+  isCoInsurance,
+  lodPaymentDueDate,
+  paymentSpeed,
+  paymentSpeedText,
+} from "@/lib/claim-detail"
 import type { ClaimFilterParams } from "@/lib/claim-filter"
 import { claimBackHref } from "@/lib/claim-filter"
 import { dateLong, dateShort, money, num } from "@/lib/format"
@@ -11,6 +18,22 @@ import type {
   ClaimFollowupRecord,
   ClaimRecord,
 } from "@/lib/server/claims"
+
+/**
+ * Baris Dibayar Asuransi di cetak klaim: tanggal bayar dan kecepatannya sejak LOD. Co-insurance
+ * lunas setelah semua asuransi membayar; tanggal per asuransi tercetak di data polis.
+ */
+function paidByInsurerText(claim: ClaimRecord) {
+  const progress = claimPaymentProgress(claim.insurers)
+  if (progress.paidDate) {
+    const speed = paymentSpeed(claim.lodDate, progress.paidDate)
+    return dateLong(progress.paidDate) + (speed ? `, ${paymentSpeedText(speed)}` : "")
+  }
+  if (progress.total > 1 && progress.paid) {
+    return `${progress.paid} dari ${progress.total} asuransi sudah membayar`
+  }
+  return "Belum dibayar"
+}
 
 function summarizeFilters(filters: ClaimFilterParams, today: string): string {
   const parts: string[] = []
@@ -191,7 +214,8 @@ export function ClaimDetailDocument({
                     claimInsurerPortions(claim.paidAmount, claim.insurers).map(
                       (p) =>
                         `${p.insurer}, ${p.leader ? "Leader" : "Member"} ${num(p.sharePct, 2)}%` +
-                        (claim.paidAmount > 0 ? `: ${money(p.amount, claim.currency)}` : "")
+                        (claim.paidAmount > 0 ? `: ${money(p.amount, claim.currency)}` : "") +
+                        (p.paidDate ? `, dibayar ${dateLong(p.paidDate)}` : "")
                     ),
                   ]
                 : ["Penanggung (Asuransi)", claim.insurer || "-"],
@@ -264,6 +288,7 @@ export function ClaimDetailDocument({
                   ? `${dateLong(claim.lodDate)}, batas bayar asuransi ${dateLong(lodPaymentDueDate(claim.lodDate))}`
                   : "Belum dikirim",
               ],
+              ["Dibayar Asuransi", paidByInsurerText(claim)],
             ]}
           />
         </section>

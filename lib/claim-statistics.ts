@@ -6,9 +6,16 @@
 import type { Workbook, Worksheet } from "exceljs"
 
 import { roundCents, toIdr } from "./calc"
-import { lodPaymentDueDate } from "./claim-detail"
+import {
+  lodDaysOverdue,
+  lodPaymentDueDate,
+  payingInsurers,
+  paymentSpeed,
+  paymentSpeedText,
+} from "./claim-detail"
 import { CLAIM_STATUSES } from "./data/reference"
-import type { ClaimStatus } from "./data/types"
+import type { ClaimInsurerShare, ClaimStatus } from "./data/types"
+import { daysBetween } from "./date"
 import { dateShort } from "./format"
 
 /** Satu klaim di report, dengan polis dan tindak lanjut terakhirnya. */
@@ -17,6 +24,8 @@ export interface ClaimStatRow {
   insuredName: string
   /** Asuransi leader, atau asuransi pertama bila tidak ada leader. */
   insurer: string
+  /** Semua asuransi polis dengan share dan tanggal bayar bagian klaimnya. */
+  insurers: ClaimInsurerShare[]
   policyNo: string
   cob: string
   /** Mata uang klaim, sama dengan mata uang polis saat klaim dicatat. */
@@ -157,6 +166,101 @@ export function claimStatusPivot(
         ? rank(a.label) - rank(b.label) || a.label.localeCompare(b.label)
         : b.total - a.total || a.label.localeCompare(b.label)
     )
+}
+
+export interface InsurerPaymentSpeedRow {
+  insurer: string
+  /** Klaim yang bagiannya sudah dibayar asuransi ini. */
+  paid: number
+  /** Rata-rata hari kalender dari tanggal lapor (atau kejadian) sampai dibayar. */
+  avgDaysFromReport: number | null
+  /** Pembayaran yang tanggal LOD klaimnya tercatat. */
+  withLod: number
+  avgDaysFromLod: number | null
+  fastestDays: number | null
+  slowestDays: number | null
+  /** Dibayar lebih dari 30 hari sejak LOD. */
+  paidLate: number
+  /** Klaim berjalan yang batas bayarnya sudah lewat, tetapi bagian asuransi ini belum dibayar. */
+  unpaidOverdue: number
+}
+
+interface SpeedSamples {
+  fromReport: number[]
+  fromLod: number[]
+  paidLate: number
+  unpaidOverdue: number
+}
+
+const average = (values: readonly number[]) =>
+  values.length ? Math.round((values.reduce((s, v) => s + v, 0) / values.length) * 10) / 10 : null
+
+function speedRow(insurer: string, s: SpeedSamples): InsurerPaymentSpeedRow {
+  return {
+    insurer,
+    paid: s.fromReport.length,
+    avgDaysFromReport: average(s.fromReport),
+    withLod: s.fromLod.length,
+    avgDaysFromLod: average(s.fromLod),
+    fastestDays: s.fromLod.length ? Math.min(...s.fromLod) : null,
+    slowestDays: s.fromLod.length ? Math.max(...s.fromLod) : null,
+    paidLate: s.paidLate,
+    unpaidOverdue: s.unpaidOverdue,
+  }
+}
+
+/**
+ * Kecepatan bayar klaim per asuransi (Agus, 20 November 2026). Co-insurance dihitung per asuransi
+ * dengan tanggal bayarnya sendiri. Baris urut pembayaran terbanyak, lalu nama asuransi; `total`
+ * menggabungkan semua pembayaran.
+ */
+export function insurerPaymentSpeed(claims: readonly ClaimStatRow[], today: string) {
+  const empty = (): SpeedSamples => ({ fromReport: [], fromLod: [], paidLate: 0, unpaidOverdue: 0 })
+  const groups = new Map<string, SpeedSamples>()
+  const all = empty()
+  for (const c of claims) {
+    const overdue = lodDaysOverdue(c, today) > 0
+    for (const i of payingInsurers(c.insurers)) {
+      if (!i.paidDate && !overdue) continue
+      const g = groups.get(i.insurer) ?? empty()
+      groups.set(i.insurer, g)
+      if (!i.paidDate) {
+        g.unpaidOverdue += 1
+        all.unpaidOverdue += 1
+        continue
+      }
+      const fromReport = daysBetween(claimPeriodDate(c), i.paidDate)
+      g.fromReport.push(fromReport)
+      all.fromReport.push(fromReport)
+      const speed = paymentSpeed(c.lodDate, i.paidDate)
+      if (!speed) continue
+      g.fromLod.push(speed.days)
+      all.fromLod.push(speed.days)
+      if (speed.late) {
+        g.paidLate += 1
+        all.paidLate += 1
+      }
+    }
+  }
+  return {
+    rows: [...groups.entries()]
+      .map(([insurer, s]) => speedRow(insurer, s))
+      .sort((a, b) => b.paid - a.paid || a.insurer.localeCompare(b.insurer)),
+    total: speedRow("Total", all),
+  }
+}
+
+/** Tanggal bayar tiap asuransi di sheet Daftar Klaim; kosong bila belum ada yang membayar. */
+function insurerPaymentText(c: ClaimStatRow) {
+  const payers = payingInsurers(c.insurers)
+  if (!payers.some((i) => i.paidDate)) return null
+  return payers
+    .map((i) => {
+      if (!i.paidDate) return `${i.insurer}: belum dibayar`
+      const speed = paymentSpeed(c.lodDate, i.paidDate)
+      return `${i.insurer}: ${dateShort(i.paidDate)}${speed ? ` (${paymentSpeedText(speed)})` : ""}`
+    })
+    .join("\n")
 }
 
 /** Klaim di sheet Daftar Klaim: urut status, lalu tanggal dasar periode, lalu nomor klaim. */
@@ -336,6 +440,46 @@ function fillSummarySheet(
       ]
     )
   }
+
+  // Review kecepatan bayar asuransi (Agus, 20 November 2026).
+  const speed = insurerPaymentSpeed(data.claims, printedOn)
+  next += 1
+  writeSectionTitle(ws, next, "Kecepatan bayar per asuransi")
+  ws.getRow(next + 1).getCell(1).value =
+    "Hari kalender sampai asuransi membayar bagiannya; co-insurance dihitung per asuransi. Batas bayar 30 hari sejak LOD ke asuransi."
+  if (!speed.rows.length) {
+    ws.getRow(next + 2).getCell(1).value = "Belum ada tanggal bayar asuransi untuk klaim di periode ini."
+    return
+  }
+  const speedValues = (r: InsurerPaymentSpeedRow): CellValue[] => [
+    r.insurer,
+    r.paid,
+    r.avgDaysFromReport,
+    r.withLod,
+    r.avgDaysFromLod,
+    r.fastestDays,
+    r.slowestDays,
+    r.paidLate,
+    r.unpaidOverdue,
+  ]
+  writeTable(
+    ws,
+    next + 2,
+    [
+      "Asuransi",
+      "Klaim Dibayar",
+      "Rata-rata Hari sejak Lapor",
+      "Dibayar dengan Tanggal LOD",
+      "Rata-rata Hari sejak LOD",
+      "Tercepat sejak LOD (hari)",
+      "Terlama sejak LOD (hari)",
+      "Dibayar Lewat 30 Hari",
+      "Belum Dibayar, Lewat Batas",
+    ],
+    speed.rows.map(speedValues),
+    [null, COUNT_FMT, "0.0", COUNT_FMT, "0.0", COUNT_FMT, COUNT_FMT, COUNT_FMT, COUNT_FMT],
+    speedValues(speed.total)
+  )
 }
 
 /** Kolom nilai di tabel Per COB, judulnya sama dengan tabel Per status. */
@@ -418,6 +562,12 @@ const LIST_COLUMNS: Array<{
     width: 14,
     fmt: DATE_FMT,
     value: (c) => excelDate(lodPaymentDueDate(c.lodDate)),
+  },
+  {
+    en: "Paid Date per Insurer",
+    id: "Tanggal Bayar per Asuransi",
+    width: 44,
+    value: (c) => insurerPaymentText(c),
   },
   {
     en: "Status",

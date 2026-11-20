@@ -180,6 +180,7 @@ const FIELD_LABELS: Record<string, string> = {
   adjustmentAmount: "Adjustment asuransi",
   salvageAmount: "Nilai salvage",
   adjusterFeeAmount: "Adjuster fee",
+  insurerPaidDates: "Tanggal bayar per asuransi",
   document: "Dokumen klaim",
   documentReceived: "Dokumen diterima",
   documentReceivedDate: "Tanggal dokumen diterima",
@@ -225,7 +226,7 @@ const MONEY_FIELDS = new Set([
 ])
 
 /** Daftar teks yang isinya sendiri memuat koma, jadi ditampilkan per baris. */
-const LINE_LIST_FIELDS = new Set(["addresses", "documents", "detailLabels"])
+const LINE_LIST_FIELDS = new Set(["addresses", "documents", "detailLabels", "insurerPaidDates"])
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

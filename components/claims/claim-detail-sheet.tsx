@@ -75,6 +75,9 @@ import {
   isCoInsurance,
   lodDaysOverdue,
   lodPaymentDueDate,
+  claimPaymentProgress,
+  paymentSpeed,
+  paymentSpeedText,
 } from "@/lib/claim-detail"
 import { CLAIM_STATUSES } from "@/lib/data/reference"
 import type { Claim, ClaimStatus } from "@/lib/data"
@@ -108,10 +111,11 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 function CoInsuranceRows({
   claim,
 }: {
-  claim: Pick<Claim, "paidAmount" | "currency" | "insurers">
+  claim: Pick<Claim, "paidAmount" | "currency" | "insurers" | "lodDate" | "status">
 }) {
   const paid = claim.paidAmount > 0
   const portions = claimInsurerPortions(claim.paidAmount, claim.insurers)
+  const overdue = lodDaysOverdue(claim, todayIso())
   return (
     <div className="py-2 text-sm">
       <span className="text-muted-foreground">Asuransi (co-insurance)</span>
@@ -123,6 +127,7 @@ function CoInsuranceRows({
               <span className="block text-xs text-muted-foreground">
                 {p.leader ? "Leader" : "Member"} · {num(p.sharePct, 2)}%
               </span>
+              <InsurerPaidLine lodDate={claim.lodDate} paidDate={p.paidDate} overdue={overdue} />
             </span>
             <span className="tabular shrink-0 text-right font-medium">
               {paid ? money(p.amount, claim.currency) : "—"}
@@ -139,6 +144,42 @@ function CoInsuranceRows({
   )
 }
 
+/**
+ * Tanggal bayar satu asuransi dan kecepatannya sejak LOD (Agus, 20 November 2026). Asuransi yang
+ * belum membayar ditandai bila batas bayarnya sudah lewat.
+ */
+function InsurerPaidLine({
+  lodDate,
+  paidDate,
+  overdue,
+}: {
+  lodDate?: string | null
+  paidDate?: string | null
+  overdue: number
+}) {
+  if (paidDate) {
+    const speed = paymentSpeed(lodDate, paidDate)
+    return (
+      <span
+        className={cn(
+          "tabular mt-0.5 block text-xs",
+          speed?.late ? "text-warning" : "text-muted-foreground"
+        )}
+      >
+        Dibayar {dateShort(paidDate)}
+        {speed ? ` · ${paymentSpeedText(speed)}` : null}
+      </span>
+    )
+  }
+  if (!lodDate) return null
+  return (
+    <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      Belum dibayar
+      {overdue ? <ToneBadge tone="danger">Lewat {overdue} hari</ToneBadge> : null}
+    </span>
+  )
+}
+
 const TIMELINE: { key: keyof Claim; label: string }[] = [
   { key: "lossDate", label: "Tanggal kejadian" },
   { key: "reportedDate", label: "Dilaporkan" },
@@ -146,6 +187,43 @@ const TIMELINE: { key: keyof Claim; label: string }[] = [
   { key: "spkDate", label: "SPK / SPGR terbit" },
   { key: "lodDate", label: "LOD dikirim ke asuransi" },
 ]
+
+interface TimelineStep {
+  key: string
+  label: string
+  value: string | null
+  note?: string
+}
+
+/**
+ * Timeline klaim, diakhiri pembayaran asuransi (Agus, 20 November 2026). Co-insurance dianggap
+ * dibayar setelah semua asuransinya membayar, pada tanggal bayar terakhir.
+ */
+function timelineSteps(claim: Claim): TimelineStep[] {
+  const steps: TimelineStep[] = TIMELINE.map((t) => ({
+    key: t.key,
+    label: t.label,
+    value: (claim[t.key] as string | null | undefined) ?? null,
+  }))
+  const progress = claimPaymentProgress(claim.insurers)
+  if (!progress.total) return steps
+  const speed = paymentSpeed(claim.lodDate, progress.paidDate)
+  const note = [
+    progress.total > 1 && progress.paid
+      ? `${progress.paid} dari ${progress.total} asuransi sudah membayar`
+      : null,
+    speed ? paymentSpeedText(speed) : null,
+  ].filter(Boolean)
+  return [
+    ...steps,
+    {
+      key: "paidDate",
+      label: "Dibayar asuransi",
+      value: progress.paidDate,
+      note: note.length ? note.join(" · ") : undefined,
+    },
+  ]
+}
 
 /** Batas bayar asuransi di bawah tanggal LOD, dengan tanda bila klaim berjalan sudah lewat batas. */
 function LodPaymentDue({ claim }: { claim: Claim }) {
@@ -634,28 +712,28 @@ export function ClaimDetailSheet({
                       Timeline
                     </h3>
                     <ol className="flex flex-col gap-0">
-                      {TIMELINE.map((t, i) => {
-                        const value = claim[t.key] as string | null
-                        return (
-                          <li key={t.label} className="flex gap-3">
-                            <div className="flex flex-col items-center">
-                              <span
-                                className={`mt-1 size-2.5 shrink-0 rounded-full ${value ? "bg-primary" : "bg-muted-foreground/30"}`}
-                              />
-                              {i < TIMELINE.length - 1 ? (
-                                <span className="w-px flex-1 bg-border" />
-                              ) : null}
-                            </div>
-                            <div className="pb-4">
-                              <p className="text-sm font-medium">{t.label}</p>
-                              <p className="tabular text-xs text-muted-foreground">
-                                {value ? dateShort(value) : "Belum ada"}
-                              </p>
-                              {t.key === "lodDate" ? <LodPaymentDue claim={claim} /> : null}
-                            </div>
-                          </li>
-                        )
-                      })}
+                      {timelineSteps(claim).map((t, i, steps) => (
+                        <li key={t.key} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <span
+                              className={`mt-1 size-2.5 shrink-0 rounded-full ${t.value ? "bg-primary" : "bg-muted-foreground/30"}`}
+                            />
+                            {i < steps.length - 1 ? (
+                              <span className="w-px flex-1 bg-border" />
+                            ) : null}
+                          </div>
+                          <div className="pb-4">
+                            <p className="text-sm font-medium">{t.label}</p>
+                            <p className="tabular text-xs text-muted-foreground">
+                              {t.value ? dateShort(t.value) : "Belum ada"}
+                            </p>
+                            {t.key === "lodDate" ? <LodPaymentDue claim={claim} /> : null}
+                            {t.note ? (
+                              <p className="tabular mt-0.5 text-xs text-muted-foreground">{t.note}</p>
+                            ) : null}
+                          </div>
+                        </li>
+                      ))}
                     </ol>
                   </section>
 

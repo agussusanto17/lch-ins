@@ -72,6 +72,8 @@ const claimInputSchema = z.object({
   notes: z.string().optional().default(""),
   participantId: z.uuid("Peserta tidak valid").nullable().optional(),
   paBenefitId: z.uuid("Jenis manfaat tidak valid").nullable().optional(),
+  // Tanggal bayar klaim per asuransi polis, kunci id asuransi (Agus, 20 November 2026).
+  insurerPaidDates: z.record(z.uuid("Asuransi tidak valid"), isoDate.nullable()).optional(),
 })
 
 /** Peserta dan limit manfaat polis untuk klaim PA grup. */

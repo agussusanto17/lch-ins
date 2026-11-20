@@ -6,6 +6,7 @@ import type { ClaimStatus } from "@/lib/data/types"
 import { CLAIM_STATUS_CODES, systemValueFromRow } from "@/lib/form-options"
 import { normalizeCob } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
+import { insurerShares } from "@/lib/server/claims"
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10)
 
@@ -46,6 +47,8 @@ export async function listClaimStatistics(start: string, end: string): Promise<C
             cob: { select: { name: true } },
             insurers: {
               select: {
+                insurerId: true,
+                sharePct: true,
                 insurer: { select: { name: true } },
                 position: { select: { code: true } },
               },
@@ -53,6 +56,7 @@ export async function listClaimStatistics(start: string, end: string): Promise<C
             },
           },
         },
+        insurerPayments: { select: { insurerId: true, paidDate: true } },
         followups: {
           select: { followupDate: true, note: true },
           orderBy: [{ followupDate: "desc" }, { createdAt: "desc" }],
@@ -88,6 +92,7 @@ export async function listClaimStatistics(start: string, end: string): Promise<C
       claimNo: c.claimNo,
       insuredName: c.policy.insuredName,
       insurer: leader || insurers[0]?.insurer.name || "",
+      insurers: insurerShares(insurers, c.insurerPayments),
       policyNo: c.policy.policyNo,
       cob: normalizeCob(c.policy.cob.name),
       currency: c.currencyCode,

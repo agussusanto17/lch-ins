@@ -673,6 +673,7 @@ model Insurer {
   journalLines      JournalLine[]
   claimPics         InsurerClaimPic[]
   clientCodes       ClientInsurerCode[]
+  claimPayments     ClaimInsurerPayment[]
 
   @@map("insurers")
 }
@@ -1745,12 +1746,32 @@ model Claim {
   payments  Payment[]
   documents ClaimDocument[]
   followups ClaimFollowup[]
+  insurerPayments ClaimInsurerPayment[]
 
   @@index([policyId])
   @@index([statusId])
   @@index([participantId])
   @@index([paBenefitId])
   @@map("claims")
+}
+
+/// Tanggal bayar klaim per asuransi polis (Agus, 20 November 2026): asuransi co-insurance membayar
+/// bagiannya sendiri-sendiri, dan kecepatan bayarnya dihitung dari tanggal LOD. Satu baris per
+/// asuransi yang sudah membayar.
+model ClaimInsurerPayment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  claimId   String   @map("claim_id") @db.Uuid
+  insurerId String   @map("insurer_id") @db.Uuid
+  paidDate  DateTime @map("paid_date") @db.Date
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  claim   Claim   @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  insurer Insurer @relation(fields: [insurerId], references: [id])
+
+  @@unique([claimId, insurerId])
+  @@index([insurerId])
+  @@map("claim_insurer_payments")
 }
 
 /// Berkas dan dokumen kelengkapan klaim (PRD A-18, ERD claim_documents).
