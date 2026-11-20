@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-20
 - **Branch:** `feat/premi-installment`
-- **PR:** (diisi setelah PR dibuka)
+- **PR:** #296
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
