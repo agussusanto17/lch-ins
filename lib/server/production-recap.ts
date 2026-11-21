@@ -8,7 +8,7 @@ import {
   systemValueFromRow,
 } from "@/lib/form-options"
 import { prisma } from "@/lib/prisma"
-import type { RecapPolicy } from "@/lib/production-recap"
+import { recapObject, type RecapPolicy } from "@/lib/production-recap"
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10)
 /** Tanggal WIB dari timestamp, untuk tanggal record dicatat. */
@@ -58,7 +58,17 @@ export async function listProductionRecap(start: string, end: string): Promise<R
         },
       },
       placingSlip: {
-        select: { slipNo: true, openCover: true, source: { select: { code: true, name: true } } },
+        select: {
+          slipNo: true,
+          openCover: true,
+          source: { select: { code: true, name: true } },
+          // Objek pertanggungan untuk kolom Object; Section 2 (TPL) dan limit bukan objek.
+          items: {
+            where: { kind: "Interest", isLimitOnly: false, OR: [{ sectionNo: null }, { sectionNo: 1 }] },
+            select: { description: true },
+            orderBy: { sortOrder: "asc" },
+          },
+        },
       },
       cobOjkClass: { select: { name: true } },
       placementLocation: { select: { name: true } },
@@ -107,6 +117,10 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       brokeragePct: Number(row.brokeragePct),
       remarks: row.remarks,
       groupingInsured: row.groupingInsured,
+      object: recapObject(
+        (row.placingSlip?.items ?? []).map((i) => i.description),
+        row.riskLocation
+      ),
       // Endorsement, pembatalan, dan deklarasi yang belum diisi memakai isian polis induknya.
       cobOjkClass:
         row.cobOjkClass?.name ??

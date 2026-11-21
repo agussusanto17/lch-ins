@@ -34,9 +34,9 @@ import {
   insurerCobLossRatio,
 } from "@/lib/loss-ratio-report"
 import { fillOjkProduction } from "@/lib/ojk-production"
-import { downloadWorkbook, exportXlsx } from "@/lib/export"
+import { downloadWorkbook } from "@/lib/export"
 import { dateShort } from "@/lib/format"
-import { RECAP_COLUMNS, recapRows } from "@/lib/production-recap"
+import { fillProductionRecap } from "@/lib/production-recap"
 import {
   defaultReportPeriod,
   reportPeriodError,
@@ -74,16 +74,13 @@ const GENERATORS: Record<
   ReportId,
   (start: string, end: string, today: string, params: ReportParams) => Promise<ReportResult>
 > = {
-  "rekap-produksi": async (start, end) => {
+  "rekap-produksi": async (start, end, today) => {
     const res = await productionRecapAction(start, end)
     if (!res.ok || !res.data) throw new Error(res.error ?? "Gagal mengambil rekap produksi.")
     if (res.data.length) {
-      await exportXlsx({
-        filename: `rekap-produksi-${start}-sd-${end}`,
-        sheet: "Rekap Produksi",
-        columns: RECAP_COLUMNS,
-        rows: recapRows(res.data),
-      })
+      const wb = await newWorkbook()
+      fillProductionRecap(wb, res.data, { start, end }, today)
+      await downloadWorkbook(wb, `rekap-produksi-${start}-sd-${end}`)
     }
     return { count: res.data.length, unit: "polis" }
   },
