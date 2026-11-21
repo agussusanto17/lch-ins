@@ -3,6 +3,8 @@
  * tombol diklik supaya ±900 KB library tidak ikut bundle awal.
  */
 
+import type { Workbook } from "exceljs"
+
 export type ExportCellType = "text" | "number" | "money" | "percent" | "date"
 
 export interface ExportColumn<T> {
@@ -10,6 +12,8 @@ export interface ExportColumn<T> {
   value: (row: T) => string | number | null | undefined
   type?: ExportCellType
   width?: number
+  /** Format angka Excel khusus kolom ini, misalnya "0.00%"; kosong berarti format bawaan `type`. */
+  numFmt?: string
 }
 
 export interface ExportSpec<T> {
@@ -85,23 +89,23 @@ function excelDate(value: string) {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
 }
 
-export async function exportXlsx<T>(spec: ExportSpec<T>) {
-  const { default: ExcelJS } = await import("exceljs")
-  const workbook = new ExcelJS.Workbook()
-  workbook.creator = "PT. LCH Insurance Brokers"
-  workbook.created = new Date()
-
+/**
+ * Tambahkan satu sheet tabel ke workbook ExcelJS: header tebal, baris header dibekukan, dan
+ * filter. Dipakai export satu sheet dan report yang filenya berisi beberapa sheet.
+ */
+export function addExportSheet<T>(workbook: Workbook, spec: Omit<ExportSpec<T>, "filename">) {
   const sheet = workbook.addWorksheet(spec.sheet ?? "Data", {
     views: [{ state: "frozen", ySplit: 1 }],
   })
-  sheet.columns = spec.columns.map((c, i) => ({
-    header: c.header,
-    key: `c${i}`,
-    width: c.width ?? Math.min(Math.max(c.header.length + 4, 12), 48),
-    style: NUM_FMT[c.type ?? "text"]
-      ? { numFmt: NUM_FMT[c.type ?? "text"] }
-      : {},
-  }))
+  sheet.columns = spec.columns.map((c, i) => {
+    const numFmt = c.numFmt ?? NUM_FMT[c.type ?? "text"]
+    return {
+      header: c.header,
+      key: `c${i}`,
+      width: c.width ?? Math.min(Math.max(c.header.length + 4, 12), 48),
+      style: numFmt ? { numFmt } : {},
+    }
+  })
   for (const row of spec.rows) {
     sheet.addRow(
       Object.fromEntries(
@@ -120,7 +124,15 @@ export async function exportXlsx<T>(spec: ExportSpec<T>) {
     from: { row: 1, column: 1 },
     to: { row: 1, column: spec.columns.length },
   }
+  return sheet
+}
 
+export async function exportXlsx<T>(spec: ExportSpec<T>) {
+  const { default: ExcelJS } = await import("exceljs")
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = "PT. LCH Insurance Brokers"
+  workbook.created = new Date()
+  addExportSheet(workbook, spec)
   await downloadWorkbook(workbook, spec.filename)
 }
 

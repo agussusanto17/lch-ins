@@ -110,13 +110,19 @@ function recapPolicy(over: Partial<RecapPolicy> = {}): RecapPolicy {
   }
 }
 
-test("Rekap Produksi: kolom margin rate per asuransi, ditulis negatif seperti pendapatan", () => {
-  const [row] = recapRows([recapPolicy()])
-  assert.equal(row.Premium_Gross_OC, 1_000_000)
-  assert.equal(row.Margin_Rate_OC, -150_000)
-  assert.equal(row.Margin_Rate, -150_000)
-  // (Income)/Beban tetap komisi + fee seperti contoh LCH.
-  assert.equal(row["(Income)/Beban"], 0)
+test("Rekap Produksi: margin rate per asuransi di baris O/I-MARGIN, ditulis negatif seperti pendapatan", () => {
+  const [commission, margin] = recapRows([recapPolicy()])
+  assert.equal(commission.Premium_Gross_OC, 1_000_000)
+  assert.equal(commission.Margin_Rate_OC, 0)
+  // Baris margin: sub akun O/I-MARGIN (catatan Team LCH, 20 November 2026), tanpa premi supaya
+  // jumlah premi tidak dobel, dan ikut (Income)/Beban sebagai pendapatan.
+  assert.equal(margin["akun pnl"], "INCOME")
+  assert.equal(margin["sub akun pnl"], "O/I-MARGIN")
+  assert.equal(margin.Premium_Gross_OC, 0)
+  assert.equal(margin.Margin_Rate_OC, -150_000)
+  assert.equal(margin.Margin_Rate, -150_000)
+  assert.equal(margin["(Income)/Beban"], -150_000)
+  assert.equal(margin.Percentage, -0.15)
 
   // Co-insurance: margin dibagi sesuai share.
   const shared = recapRows([
@@ -127,12 +133,15 @@ test("Rekap Produksi: kolom margin rate per asuransi, ditulis negatif seperti pe
       ],
     }),
   ])
-  assert.deepEqual(shared.map((r) => r.Margin_Rate_OC), [-90_000, -60_000])
+  assert.deepEqual(
+    shared.filter((r) => r["sub akun pnl"] === "O/I-MARGIN").map((r) => r.Margin_Rate_OC),
+    [-90_000, -60_000]
+  )
 
-  // Polis biasa dan deklarasi tanpa premi ke asuransi: margin 0.
-  const [plain] = recapRows([recapPolicy({ type: "Baru", insurerPremium: null })])
-  assert.equal(plain.Margin_Rate_OC, 0)
+  // Polis biasa dan deklarasi tanpa premi ke asuransi: tidak ada baris margin.
+  const plain = recapRows([recapPolicy({ type: "Baru", insurerPremium: null })])
+  assert.deepEqual(plain.map((r) => r["sub akun pnl"]), ["COMM"])
   // USD: kolom Rupiah memakai kurs report.
-  const [usd] = recapRows([recapPolicy({ currency: "USD", premium: 100, insurerPremium: 85 })], { USD: 16_000 })
+  const [, usd] = recapRows([recapPolicy({ currency: "USD", premium: 100, insurerPremium: 85 })], { USD: 16_000 })
   assert.deepEqual([usd.Margin_Rate_OC, usd.Margin_Rate], [-15, -240_000])
 })

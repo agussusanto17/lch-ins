@@ -1,11 +1,19 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
+import ExcelJS from "exceljs"
+
 import {
+  fillProductionRecap,
   RECAP_COLUMNS,
   RECAP_HEADERS,
+  RECAP_POLICY_HEADERS,
   recapDate,
+  recapObject,
+  recapPolicyRows,
   recapRows,
+  recapSourceFile,
+  spilClass,
   type RecapPolicy,
 } from "../lib/production-recap"
 
@@ -72,7 +80,7 @@ test("a USD row matches the sample: rupiah from the unrounded original amounts",
   assert.equal(row.Percentage, -0.0015)
 })
 
-test("co-insurance gives one row per insurer with its premium share and fee percent", () => {
+test("co-insurance gives a COMM row per insurer with its premium share, and an EF row for its fee", () => {
   const rows = recapRows([
     policy({
       insurers: [
@@ -81,14 +89,30 @@ test("co-insurance gives one row per insurer with its premium share and fee perc
       ],
     }),
   ])
-  assert.equal(rows.length, 2)
+  // Catatan Team LCH (20 November 2026): satu sub akun pnl per baris; premi hanya di baris COMM.
   assert.deepEqual(
-    rows.map((r) => [r.asuransi, r.Premium_Gross, r.Premium_Commission, r.RM_Fee, r["(Income)/Beban"]]),
+    rows.map((r) => [
+      r.asuransi,
+      r["akun pnl"],
+      r["sub akun pnl"],
+      r.Premium_Gross,
+      r.Premium_Commission,
+      r.RM_Fee,
+      r["(Income)/Beban"],
+      r.Percentage,
+    ]),
     [
-      ["PT Asuransi Astra Buana", 600_000, -90_000, -75_000, -165_000],
-      ["PT Asuransi Sinar Mas", 400_000, -60_000, -40_000, -100_000],
+      ["PT Asuransi Astra Buana", "INCOME", "COMM", 600_000, -90_000, 0, -90_000, -0.15],
+      ["PT Asuransi Astra Buana", "INCOME", "EF", 0, 0, -75_000, -75_000, -0.125],
+      ["PT Asuransi Sinar Mas", "INCOME", "COMM", 400_000, -60_000, 0, -60_000, -0.15],
+      ["PT Asuransi Sinar Mas", "INCOME", "EF", 0, 0, -40_000, -40_000, -0.1],
     ]
   )
+  // Total kolom sama dengan sebelum baris dipecah.
+  const total = (key: "Premium_Gross" | "(Income)/Beban") =>
+    rows.reduce((sum, r) => sum + Number(r[key]), 0)
+  assert.equal(total("Premium_Gross"), 1_000_000)
+  assert.equal(total("(Income)/Beban"), -265_000)
   assert.equal(rows[0].cob, "02 - MOTOR VEHICLE")
   assert.equal(rows[0].toc, "0201 - PSKBI")
   assert.equal(rows[0].tipe, "NEW")
@@ -167,15 +191,137 @@ test("an MOP policy with a deposit premium stays in the recap", () => {
 })
 
 test("a cancellation refund reverses income, so commission and fee turn positive", () => {
-  const [row] = recapRows([
+  const [commission, fee] = recapRows([
     policy({
       type: "Cancellation",
       premium: -200_000,
       insurers: [{ insurer: "PT Asuransi Astra Buana", share: 100, additionalFeePct: 15 }],
     }),
   ])
-  assert.equal(row.tipe, "CANCEL")
-  assert.equal(row.Premium_Gross, -200_000)
-  assert.equal(row.Premium_Commission, 30_000)
-  assert.equal(row.RM_Fee, 30_000)
+  assert.equal(commission.tipe, "CANCEL")
+  assert.equal(commission.Premium_Gross, -200_000)
+  assert.equal(commission.Premium_Commission, 30_000)
+  assert.equal(fee.tipe, "CANCEL")
+  assert.equal(fee.RM_Fee, 30_000)
+  assert.equal(fee["akun pnl"], "INCOME")
+})
+
+test("EF from Multi Artha Guna uses the LCH sub account EF (MAG)", () => {
+  const rows = recapRows([
+    policy({
+      insurers: [{ insurer: "PT Asuransi Multi Artha Guna Tbk", share: 100, additionalFeePct: 15 }],
+    }),
+  ])
+  assert.deepEqual(
+    rows.map((r) => r["sub akun pnl"]),
+    ["COMM", "EF (MAG)"]
+  )
+})
+
+test("a policy without fee or margin keeps one COMM row", () => {
+  const rows = recapRows([policy()])
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0]["sub akun pnl"], "COMM")
+  assert.equal(rows[0]["sub akun comm exp"], "")
+})
+
+test("Grouping Insured falls back to the client or insured name when it is empty", () => {
+  const [blank] = recapRows([policy({ groupingInsured: "  " })])
+  assert.equal(blank["Grouping Insured"], "PT Nusantara Fleet Services")
+  const [named] = recapRows([policy({ groupingInsured: "D BEST GROUP" })])
+  assert.equal(named["Grouping Insured"], "D BEST GROUP")
+  const [noClient] = recapRows([policy({ groupingInsured: "", clientName: null })])
+  assert.equal(noClient["Grouping Insured"], "PT NUSANTARA FLEET SERVICES")
+})
+
+test("spil/non spil follows the grouping insured, client, or insured name", () => {
+  const base = { groupingInsured: null, clientName: null, insuredName: "PT Lain" }
+  assert.equal(spilClass({ ...base, groupingInsured: "SPIL Warehouse" }), "SPIL")
+  assert.equal(spilClass({ ...base, insuredName: "PT SALAM PACIFIC INDONESIA LINES" }), "SPIL")
+  assert.equal(spilClass({ ...base, clientName: "PT Spill Over" }), "Non SPIL")
+  assert.equal(spilClass(base), "Non SPIL")
+  const [row] = recapRows([policy({ groupingInsured: "SPIL Warehouse" })])
+  assert.equal(row["spil/non spil"], "SPIL")
+})
+
+test("source file is the module the policy came from", () => {
+  assert.equal(recapSourceFile({ type: "Baru", slipNo: "018/LCH-PLCMT/PS-MV/XI/2026" }), "Placement")
+  assert.equal(recapSourceFile({ type: "Endorsement", slipNo: null }), "Policy Database")
+  assert.equal(recapSourceFile({ type: "Deklarasi", slipNo: "011/LCH-PLCMT/PS-MOP/XI/2026" }), "Deklarasi MOP")
+})
+
+test("Object lists the slip interests, or the risk location when there are none", () => {
+  assert.equal(
+    recapObject(["Toyota Avanza 1.3 G  B 1234 XYZ", "Honda Brio B 5678 ABC", "Toyota Avanza 1.3 G  B 1234 XYZ"], "Jl. Nanas"),
+    "Toyota Avanza 1.3 G B 1234 XYZ; Honda Brio B 5678 ABC"
+  )
+  assert.equal(
+    recapObject([], "1. Gudang Bekasi, Jl. Raya Industri No. 5\n2. Kantor, Jl. Sudirman"),
+    "1. Gudang Bekasi, Jl. Raya Industri No. 5; 2. Kantor, Jl. Sudirman"
+  )
+  assert.equal(recapObject([], null), "")
+  assert.equal(recapObject(["x".repeat(300)], null).length, 250)
+  const [row] = recapRows([policy({ object: "Honda Brio B 5678 ABC" })])
+  assert.equal(row.Object, "Honda Brio B 5678 ABC")
+})
+
+test("Percentage is formatted as a percent like the LCH sample", () => {
+  const column = RECAP_COLUMNS.find((c) => c.header === "Percentage")
+  assert.equal(column?.numFmt, "0.00%")
+})
+
+test("Per Polis sheet: one row per policy per insurer with a value column per sub account", () => {
+  const rows = recapPolicyRows([
+    policy({
+      premium: 1_000_000,
+      discount: 100_000,
+      insurerPremium: 850_000,
+      insurers: [
+        { insurer: "PT Asuransi Multi Artha Guna Tbk", share: 60, additionalFeePct: 10 },
+        { insurer: "PT Asuransi Sinar Mas", share: 40, additionalFeePct: 0 },
+      ],
+    }),
+  ])
+  assert.equal(rows.length, 2)
+  assert.deepEqual(
+    [
+      rows[0].Premium_Gross_IDR,
+      rows[0].Premium_Discount_IDR,
+      rows[0].Commission_IDR,
+      rows[0].EF_IDR,
+      rows[0]["O/I-MARGIN_IDR"],
+      rows[0]["MARKETING-CASHBACK_IDR"],
+      rows[0]["(Income)/Beban"],
+    ],
+    [600_000, -60_000, -90_000, -60_000, -90_000, 0, -240_000]
+  )
+  assert.equal(rows[1].EF_IDR, 0)
+  assert.deepEqual(RECAP_POLICY_HEADERS.slice(17, 21), [
+    "Premium_Gross_OC",
+    "Premium_Gross_IDR",
+    "Premium_Discount_OC",
+    "Premium_Discount_IDR",
+  ])
+  assert.ok(RECAP_POLICY_HEADERS.includes("EXPENSE-COMMISIONS_IDR"))
+  assert.equal(RECAP_POLICY_HEADERS.at(-1), "(Income)/Beban")
+})
+
+test("the recap workbook has the LCH sheet, the Per Polis sheet, and notes", () => {
+  const wb = new ExcelJS.Workbook()
+  fillProductionRecap(
+    wb,
+    [policy({ insurers: [{ insurer: "PT Asuransi Multi Artha Guna Tbk", share: 100, additionalFeePct: 15 }] })],
+    { start: "2026-11-01", end: "2026-11-30" },
+    "2026-11-21"
+  )
+  assert.deepEqual(
+    wb.worksheets.map((ws) => ws.name),
+    ["Rekap Produksi", "Per Polis", "Keterangan"]
+  )
+  const recap = wb.getWorksheet("Rekap Produksi")!
+  // Header + baris COMM + baris EF (MAG).
+  assert.equal(recap.rowCount, 3)
+  assert.equal(recap.getRow(1).getCell(37).value, "akun pnl")
+  assert.equal(recap.getRow(3).getCell(38).value, "EF (MAG)")
+  assert.equal(wb.getWorksheet("Per Polis")!.rowCount, 2)
 })

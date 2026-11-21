@@ -47,7 +47,7 @@ export const REPORTS: readonly ReportDefinition[] = [
     id: "rekap-produksi",
     title: "Rekap Produksi",
     description:
-      "Format kolom LCH: satu baris per polis per asuransi, nilai dalam mata uang polis dan IDR, termasuk margin rate deklarasi MOP.",
+      "Format kolom LCH per polis, per asuransi, dan per unsur pendapatan (COMM, EF, margin), plus sheet Per Polis. Nilai dalam mata uang polis dan IDR.",
     division: "Produksi",
     access: "/reports",
     dateBasis: "tanggal mulai polis",

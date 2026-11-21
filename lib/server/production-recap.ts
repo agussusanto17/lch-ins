@@ -8,7 +8,7 @@ import {
   systemValueFromRow,
 } from "@/lib/form-options"
 import { prisma } from "@/lib/prisma"
-import type { RecapPolicy } from "@/lib/production-recap"
+import { recapObject, type RecapPolicy } from "@/lib/production-recap"
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10)
 /** Tanggal WIB dari timestamp, untuk tanggal record dicatat. */
@@ -47,10 +47,12 @@ export async function listProductionRecap(start: string, end: string): Promise<R
           policyNo: true,
           inceptionDate: true,
           expiryDate: true,
+          groupingInsured: true,
           cobOjkClass: { select: { name: true } },
           placementLocation: { select: { name: true } },
           parentPolicy: {
             select: {
+              groupingInsured: true,
               cobOjkClass: { select: { name: true } },
               placementLocation: { select: { name: true } },
             },
@@ -58,7 +60,17 @@ export async function listProductionRecap(start: string, end: string): Promise<R
         },
       },
       placingSlip: {
-        select: { slipNo: true, openCover: true, source: { select: { code: true, name: true } } },
+        select: {
+          slipNo: true,
+          openCover: true,
+          source: { select: { code: true, name: true } },
+          // Objek pertanggungan untuk kolom Object; Section 2 (TPL) dan limit bukan objek.
+          items: {
+            where: { kind: "Interest", isLimitOnly: false, OR: [{ sectionNo: null }, { sectionNo: 1 }] },
+            select: { description: true },
+            orderBy: { sortOrder: "asc" },
+          },
+        },
       },
       cobOjkClass: { select: { name: true } },
       placementLocation: { select: { name: true } },
@@ -106,7 +118,17 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       insurerPremium: row.insurerPremium == null ? null : Number(row.insurerPremium),
       brokeragePct: Number(row.brokeragePct),
       remarks: row.remarks,
-      groupingInsured: row.groupingInsured,
+      // Polis dari CI menyimpan grouping kosong (""); endorsement, pembatalan, dan deklarasi yang
+      // kosong memakai grouping polis induknya.
+      groupingInsured:
+        row.groupingInsured?.trim() ||
+        parent?.groupingInsured?.trim() ||
+        parent?.parentPolicy?.groupingInsured?.trim() ||
+        null,
+      object: recapObject(
+        (row.placingSlip?.items ?? []).map((i) => i.description),
+        row.riskLocation
+      ),
       // Endorsement, pembatalan, dan deklarasi yang belum diisi memakai isian polis induknya.
       cobOjkClass:
         row.cobOjkClass?.name ??
