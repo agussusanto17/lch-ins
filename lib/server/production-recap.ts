@@ -42,7 +42,21 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       cob: { select: { code: true, name: true } },
       coverType: { select: { code: true, name: true } },
       policyType: { select: { code: true, name: true } },
-      parentPolicy: { select: { policyNo: true, inceptionDate: true, expiryDate: true } },
+      parentPolicy: {
+        select: {
+          policyNo: true,
+          inceptionDate: true,
+          expiryDate: true,
+          cobOjkClass: { select: { name: true } },
+          placementLocation: { select: { name: true } },
+          parentPolicy: {
+            select: {
+              cobOjkClass: { select: { name: true } },
+              placementLocation: { select: { name: true } },
+            },
+          },
+        },
+      },
       placingSlip: {
         select: { slipNo: true, openCover: true, source: { select: { code: true, name: true } } },
       },
@@ -93,8 +107,17 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       brokeragePct: Number(row.brokeragePct),
       remarks: row.remarks,
       groupingInsured: row.groupingInsured,
-      cobOjkClass: row.cobOjkClass?.name ?? null,
-      placementLocation: row.placementLocation?.name ?? null,
+      // Endorsement, pembatalan, dan deklarasi yang belum diisi memakai isian polis induknya.
+      cobOjkClass:
+        row.cobOjkClass?.name ??
+        parent?.cobOjkClass?.name ??
+        parent?.parentPolicy?.cobOjkClass?.name ??
+        null,
+      placementLocation:
+        row.placementLocation?.name ??
+        parent?.placementLocation?.name ??
+        parent?.parentPolicy?.placementLocation?.name ??
+        null,
       insurers: row.insurers.map((i) => ({
         insurer: i.insurer.name,
         share: Number(i.sharePct),

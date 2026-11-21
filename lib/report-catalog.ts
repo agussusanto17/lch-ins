@@ -6,7 +6,18 @@
 
 import { canSeeReportClaims } from "./access"
 
-export type ReportId = "rekap-produksi" | "statistik-klaim"
+export type ReportId =
+  | "rekap-produksi"
+  | "statistik-klaim"
+  | "produksi-ojk"
+  | "loss-ratio-asuransi"
+  | "loss-ratio-akun"
+
+/** Pilihan di dialog selain periode: asuransi (boleh semua) atau akun (wajib). */
+export type ReportParam = "insurer" | "account"
+
+/** Periode awal dialog: bulan berjalan, triwulan berjalan, atau lima tahun terakhir. */
+export type ReportPeriodKind = "month" | "quarter" | "years"
 
 export interface ReportDefinition {
   id: ReportId
@@ -26,6 +37,9 @@ export interface ReportDefinition {
   claims?: boolean
   /** Dasar tanggal parameter periode, ditulis di dialog. */
   dateBasis: string
+  params?: readonly ReportParam[]
+  /** Kosong berarti bulan berjalan. */
+  defaultPeriod?: ReportPeriodKind
 }
 
 export const REPORTS: readonly ReportDefinition[] = [
@@ -33,7 +47,7 @@ export const REPORTS: readonly ReportDefinition[] = [
     id: "rekap-produksi",
     title: "Rekap Produksi",
     description:
-      "Format 49 kolom LCH: satu baris per polis per asuransi, nilai dalam mata uang polis dan IDR.",
+      "Format kolom LCH: satu baris per polis per asuransi, nilai dalam mata uang polis dan IDR, termasuk margin rate deklarasi MOP.",
     division: "Produksi",
     access: "/reports",
     dateBasis: "tanggal mulai polis",
@@ -47,6 +61,41 @@ export const REPORTS: readonly ReportDefinition[] = [
     access: "/reports",
     claims: true,
     dateBasis: "tanggal lapor klaim (tanggal kejadian bila tanggal lapor kosong)",
+  },
+  // Template report Team LCH (20 November 2026).
+  {
+    id: "produksi-ojk",
+    title: "Produksi OJK (LR 01 & LR 02)",
+    description:
+      "Laporan triwulanan OJK: jumlah polis, premi, dan pendapatan jasa keperantaraan per lini usaha, lokasi penempatan, dan penanggung.",
+    division: "Produksi",
+    access: "/reports",
+    dateBasis: "tanggal mulai polis",
+    defaultPeriod: "quarter",
+  },
+  {
+    id: "loss-ratio-asuransi",
+    title: "Loss Ratio per Asuransi",
+    description:
+      "Per asuransi, per COB, per tahun polis: gross premium, net premium, klaim, dan rasio terhadap gross dan net, seperti laporan produksi dari asuransi.",
+    division: "Klaim",
+    access: "/reports",
+    claims: true,
+    dateBasis: "tanggal mulai tahun polis (polis Baru atau Renewal)",
+    params: ["insurer"],
+    defaultPeriod: "years",
+  },
+  {
+    id: "loss-ratio-akun",
+    title: "Loss Ratio Akun per Asuransi",
+    description:
+      "Satu akun (grouping insured) per tahun polis per asuransi: premi gross, BF, diskon, EF, net premium, klaim, dan loss ratio, beserta gabungan semua tahun.",
+    division: "Klaim",
+    access: "/reports",
+    claims: true,
+    dateBasis: "tanggal mulai tahun polis (polis Baru atau Renewal)",
+    params: ["account"],
+    defaultPeriod: "years",
   },
 ]
 
@@ -69,12 +118,22 @@ export function visibleReports(
   return [...groups].map(([division, reports]) => ({ division, reports }))
 }
 
-/** Periode awal dialog: bulan berjalan, tanggal 1 sampai akhir bulan. */
-export function defaultReportPeriod(today: string): { start: string; end: string } {
+/**
+ * Periode awal dialog. Bulan berjalan: tanggal 1 sampai akhir bulan. Triwulan berjalan untuk
+ * laporan OJK. Lima tahun terakhir untuk loss ratio: 1 Januari lima tahun lalu sampai hari ini.
+ */
+export function defaultReportPeriod(
+  today: string,
+  kind: ReportPeriodKind = "month"
+): { start: string; end: string } {
   const year = Number(today.slice(0, 4))
   const month = Number(today.slice(5, 7))
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
-  return { start: `${today.slice(0, 7)}-01`, end: `${today.slice(0, 7)}-${String(lastDay).padStart(2, "0")}` }
+  if (kind === "years") return { start: `${year - 5}-01-01`, end: today }
+  const first = kind === "quarter" ? Math.floor((month - 1) / 3) * 3 + 1 : month
+  const last = kind === "quarter" ? first + 2 : month
+  const lastDay = new Date(Date.UTC(year, last, 0)).getUTCDate()
+  const mm = (m: number) => String(m).padStart(2, "0")
+  return { start: `${year}-${mm(first)}-01`, end: `${year}-${mm(last)}-${String(lastDay).padStart(2, "0")}` }
 }
 
 /** Pesan kesalahan periode; null bila periodenya bisa dipakai. */

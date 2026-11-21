@@ -4,8 +4,15 @@ import * as React from "react"
 import { Download, FileSpreadsheet, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
-import { claimStatisticsAction, productionRecapAction } from "@/app/(app)/reports/actions"
+import {
+  claimStatisticsAction,
+  lossRatioAccountsAction,
+  lossRatioReportAction,
+  productionRecapAction,
+} from "@/app/(app)/reports/actions"
 import { usePermission } from "@/components/auth/permission-provider"
+import { useFormOptions } from "@/components/shared/form-options-provider"
+import { SearchSelect } from "@/components/shared/form-fields"
 import { useToday } from "@/components/layout/today-provider"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -20,6 +27,13 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { fillClaimStatistics } from "@/lib/claim-statistics"
+import {
+  accountLossRatio,
+  fillAccountLossRatio,
+  fillInsurerCobLossRatio,
+  insurerCobLossRatio,
+} from "@/lib/loss-ratio-report"
+import { fillOjkProduction } from "@/lib/ojk-production"
 import { downloadWorkbook, exportXlsx } from "@/lib/export"
 import { dateShort } from "@/lib/format"
 import { RECAP_COLUMNS, recapRows } from "@/lib/production-recap"
@@ -37,10 +51,28 @@ interface ReportResult {
   unit: string
 }
 
+/** Pilihan dialog selain periode: asuransi kosong berarti semua asuransi. */
+interface ReportParams {
+  insurer: string | null
+  account: string | null
+}
+
+async function newWorkbook() {
+  const { default: ExcelJS } = await import("exceljs")
+  const wb = new ExcelJS.Workbook()
+  wb.creator = "PT. LCH Insurance Brokers"
+  wb.created = new Date()
+  return wb
+}
+
+/** Nama file dari teks bebas, misalnya nama akun. */
+const fileSlug = (text: string) =>
+  text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "akun"
+
 /** Pembuat file Excel per report untuk periode yang dipilih; `today` dicetak sebagai tanggal buat. */
 const GENERATORS: Record<
   ReportId,
-  (start: string, end: string, today: string) => Promise<ReportResult>
+  (start: string, end: string, today: string, params: ReportParams) => Promise<ReportResult>
 > = {
   "rekap-produksi": async (start, end) => {
     const res = await productionRecapAction(start, end)
@@ -68,6 +100,41 @@ const GENERATORS: Record<
     }
     return { count: res.data.claims.length, unit: "klaim" }
   },
+  // Template report Team LCH (20 November 2026).
+  "produksi-ojk": async (start, end, today) => {
+    const res = await productionRecapAction(start, end)
+    if (!res.ok || !res.data) throw new Error(res.error ?? "Gagal mengambil data produksi.")
+    if (res.data.length) {
+      const wb = await newWorkbook()
+      fillOjkProduction(wb, res.data, { start, end }, today)
+      await downloadWorkbook(wb, `produksi-ojk-${start}-sd-${end}`)
+    }
+    return { count: res.data.length, unit: "polis" }
+  },
+  "loss-ratio-asuransi": async (start, end, today, params) => {
+    const res = await lossRatioReportAction(start, end)
+    if (!res.ok || !res.data) throw new Error(res.error ?? "Gagal mengambil data loss ratio.")
+    const results = insurerCobLossRatio(res.data, params.insurer)
+    if (results.length) {
+      const wb = await newWorkbook()
+      fillInsurerCobLossRatio(wb, results, { start, end }, today)
+      const name = params.insurer ? fileSlug(params.insurer) : "semua-asuransi"
+      await downloadWorkbook(wb, `loss-ratio-${name}-${start}-sd-${end}`)
+    }
+    return { count: results.length, unit: "asuransi" }
+  },
+  "loss-ratio-akun": async (start, end, today, params) => {
+    if (!params.account) throw new Error("Pilih akun.")
+    const res = await lossRatioReportAction(start, end)
+    if (!res.ok || !res.data) throw new Error(res.error ?? "Gagal mengambil data loss ratio.")
+    const result = accountLossRatio(res.data, params.account)
+    if (result.years.length) {
+      const wb = await newWorkbook()
+      fillAccountLossRatio(wb, result, { start, end }, today)
+      await downloadWorkbook(wb, `loss-ratio-${fileSlug(params.account)}-${start}-sd-${end}`)
+    }
+    return { count: result.years.length, unit: "tahun polis" }
+  },
 }
 
 export function ReportCatalog() {
@@ -78,10 +145,23 @@ export function ReportCatalog() {
   const [period, setPeriod] = React.useState(() => defaultReportPeriod(today))
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
+  const masterOptions = useFormOptions()
+  const [params, setParams] = React.useState<ReportParams>({ insurer: null, account: null })
+  const [accounts, setAccounts] = React.useState<string[] | null>(null)
+  const wants = (param: "insurer" | "account") => Boolean(active?.params?.includes(param))
 
   function openReport(report: ReportDefinition) {
     setActive(report)
     setError(null)
+    setPeriod(defaultReportPeriod(today, report.defaultPeriod))
+    setParams({ insurer: null, account: null })
+    // Daftar akun dimuat saat dialog Loss Ratio Akun dibuka.
+    if (report.params?.includes("account") && accounts === null) {
+      lossRatioAccountsAction().then((res) => {
+        if (res.ok && res.data) setAccounts(res.data)
+        else toast.error("Gagal memuat daftar akun", { description: res.error })
+      })
+    }
   }
 
   function setDate(key: "start" | "end", value: string) {
@@ -92,7 +172,9 @@ export function ReportCatalog() {
   async function download(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!active) return
-    const problem = reportPeriodError(period.start, period.end)
+    const problem =
+      reportPeriodError(period.start, period.end) ??
+      (wants("account") && !params.account ? "Pilih akun." : null)
     if (problem) {
       setError(problem)
       return
@@ -100,7 +182,7 @@ export function ReportCatalog() {
     const range = `${dateShort(period.start)} s/d ${dateShort(period.end)}`
     setBusy(true)
     try {
-      const result = await GENERATORS[active.id](period.start, period.end, today)
+      const result = await GENERATORS[active.id](period.start, period.end, today, params)
       if (!result.count) {
         toast.info(`Tidak ada ${result.unit} di periode ini`, { description: range })
         return
@@ -193,6 +275,31 @@ export function ReportCatalog() {
                 />
               </Field>
             </div>
+            {wants("insurer") ? (
+              <SearchSelect
+                label="Asuransi"
+                items={[
+                  { label: "Semua asuransi", value: "" },
+                  ...masterOptions.insurers.map((i) => ({ label: i.name, value: i.name })),
+                ]}
+                value={params.insurer ?? ""}
+                onValueChange={(v) => setParams((p) => ({ ...p, insurer: v || null }))}
+                description="Semua asuransi: satu sheet per asuransi."
+              />
+            ) : null}
+            {wants("account") ? (
+              <SearchSelect
+                label="Akun"
+                items={(accounts ?? []).map((a) => ({ label: a, value: a }))}
+                value={params.account}
+                onValueChange={(v) => {
+                  setParams((p) => ({ ...p, account: v }))
+                  setError(null)
+                }}
+                placeholder={accounts === null ? "Memuat daftar akun…" : "Ketik nama akun…"}
+                description="Grouping Insured polis, atau nama klien bila kosong."
+              />
+            ) : null}
             {error ? (
               <p role="alert" className="text-sm text-destructive">
                 {error}
