@@ -12,6 +12,7 @@ export type ReportId =
   | "produksi-ojk"
   | "loss-ratio-asuransi"
   | "loss-ratio-akun"
+  | "reserve-basis"
 
 /** Pilihan di dialog selain periode: asuransi (boleh semua) atau akun (wajib). */
 export type ReportParam = "insurer" | "account"
@@ -96,6 +97,15 @@ export const REPORTS: readonly ReportDefinition[] = [
     dateBasis: "tanggal mulai tahun polis (polis Baru atau Renewal)",
     params: ["account"],
     defaultPeriod: "years",
+  },
+  {
+    id: "reserve-basis",
+    title: "Reserve Basis Bulanan",
+    description:
+      "Per insured per bulan: pendapatan (COMM, COMM via interco, EF, margin) dan kolom beban marketing untuk diisi, lalu reserve 40% pendapatan dikurangi beban.",
+    division: "Finance",
+    access: "/reports",
+    dateBasis: "tanggal mulai polis",
   },
 ]
 

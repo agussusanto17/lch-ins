@@ -37,6 +37,7 @@ import { fillOjkProduction } from "@/lib/ojk-production"
 import { downloadWorkbook } from "@/lib/export"
 import { dateShort } from "@/lib/format"
 import { fillProductionRecap } from "@/lib/production-recap"
+import { fillReserveBasis, reserveBasis } from "@/lib/reserve-basis"
 import {
   defaultReportPeriod,
   reportPeriodError,
@@ -119,6 +120,17 @@ const GENERATORS: Record<
       await downloadWorkbook(wb, `loss-ratio-${name}-${start}-sd-${end}`)
     }
     return { count: results.length, unit: "asuransi" }
+  },
+  "reserve-basis": async (start, end, today) => {
+    const res = await productionRecapAction(start, end)
+    if (!res.ok || !res.data) throw new Error(res.error ?? "Gagal mengambil data produksi.")
+    const months = reserveBasis(res.data)
+    if (months.length) {
+      const wb = await newWorkbook()
+      fillReserveBasis(wb, months, today)
+      await downloadWorkbook(wb, `reserve-basis-${start}-sd-${end}`)
+    }
+    return { count: months.reduce((n, m) => n + m.rows.length, 0), unit: "akun" }
   },
   "loss-ratio-akun": async (start, end, today, params) => {
     if (!params.account) throw new Error("Pilih akun.")
