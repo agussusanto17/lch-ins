@@ -490,6 +490,36 @@ export const RECAP_POLICY_COLUMNS: ExportColumn<RecapPolicyRow>[] = RECAP_POLICY
   })
 )
 
+/** Pendapatan satu polis untuk satu asuransi dalam IDR, untuk laporan per akun per bulan. */
+export interface RecapIncome {
+  /** Kolom Grouping Insured, lihat `recapAccount`. */
+  account: string
+  /** Bulan produksi "YYYY-MM", sama dengan kolom thn dan mth. */
+  month: string
+  sourceCode: string | null
+  commission: number
+  fee: number
+  margin: number
+}
+
+/** Komisi, fee, dan margin per polis per asuransi dengan aturan dan pembulatan Rekap Produksi. */
+export function recapIncome(
+  policies: RecapPolicy[],
+  fx: Record<string, number> = FX
+): RecapIncome[] {
+  return insurerLines(policies, fx).map((line) => {
+    const idr = (raw: number) => roundCents(raw * line.rate)
+    return {
+      account: recapAccount(line.policy),
+      month: line.policy.productionDate.slice(0, 7),
+      sourceCode: line.policy.sourceCode,
+      commission: idr(line.commission),
+      fee: idr(line.fee),
+      margin: idr(line.margin),
+    }
+  })
+}
+
 /** Penjelasan kolom yang ditambahkan untuk catatan Team LCH. */
 export const RECAP_NOTES = [
   "Rekap Produksi: satu baris per polis per asuransi per unsur pendapatan. Premi dan diskon hanya ditulis di baris COMM, jadi jumlah premi tidak dobel.",

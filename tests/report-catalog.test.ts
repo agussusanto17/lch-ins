@@ -15,6 +15,7 @@ test("report tampil sesuai hak akses menu sumbernya", () => {
     [
       ["Produksi", ["rekap-produksi", "produksi-ojk"]],
       ["Klaim", ["statistik-klaim", "loss-ratio-asuransi", "loss-ratio-akun"]],
+      ["Finance", ["reserve-basis"]],
     ]
   )
   assert.deepEqual(visibleReports((path) => path !== "/reports", ["admin"]), [])
@@ -28,7 +29,7 @@ test("report klaim hanya untuk role yang melihat bagian Klaim di Report Operatio
     assert.ok(ids([role]).includes("loss-ratio-akun"), role)
   }
   // Loss ratio memuat nilai klaim, jadi ikut aturan report klaim.
-  assert.deepEqual(ids(["placement"]), ["rekap-produksi", "produksi-ojk"])
+  assert.deepEqual(ids(["placement"]), ["rekap-produksi", "produksi-ojk", "reserve-basis"])
 })
 
 test("setiap report punya menu hak akses", () => {
