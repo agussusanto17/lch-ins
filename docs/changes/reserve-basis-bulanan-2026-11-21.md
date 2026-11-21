@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-21
 - **Branch:** `feat/reserve-basis`, ditumpuk di atas `feat/rekap-produksi-akun-pnl` (#300)
-- **PR:** #<nomor>
+- **PR:** #301
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
