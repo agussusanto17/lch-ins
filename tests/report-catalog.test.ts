@@ -13,8 +13,8 @@ test("report tampil sesuai hak akses menu sumbernya", () => {
   assert.deepEqual(
     all.map((g) => [g.division, g.reports.map((r) => r.id)]),
     [
-      ["Produksi", ["rekap-produksi"]],
-      ["Klaim", ["statistik-klaim"]],
+      ["Produksi", ["rekap-produksi", "produksi-ojk"]],
+      ["Klaim", ["statistik-klaim", "loss-ratio-asuransi", "loss-ratio-akun"]],
     ]
   )
   assert.deepEqual(visibleReports((path) => path !== "/reports", ["admin"]), [])
@@ -25,8 +25,10 @@ test("report klaim hanya untuk role yang melihat bagian Klaim di Report Operatio
     visibleReports(() => true, roles).flatMap((g) => g.reports.map((r) => r.id))
   for (const role of ["admin", "marketing", "claim", "direksi"]) {
     assert.ok(ids([role]).includes("statistik-klaim"), role)
+    assert.ok(ids([role]).includes("loss-ratio-akun"), role)
   }
-  assert.deepEqual(ids(["placement"]), ["rekap-produksi"])
+  // Loss ratio memuat nilai klaim, jadi ikut aturan report klaim.
+  assert.deepEqual(ids(["placement"]), ["rekap-produksi", "produksi-ojk"])
 })
 
 test("setiap report punya menu hak akses", () => {
