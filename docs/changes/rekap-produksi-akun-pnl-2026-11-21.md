@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-21
 - **Branch:** `feat/rekap-produksi-akun-pnl`, ditumpuk di atas `feat/report-ojk-loss-ratio` (#299)
-- **PR:** #<nomor>
+- **PR:** #300
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
