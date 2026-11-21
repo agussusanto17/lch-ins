@@ -33,6 +33,9 @@ Catatan Team LCH:
 - **source file** = Placement (polis dari placing slip), Policy Database (polis input langsung), atau Deklarasi MOP.
 - **Object** = baris Interest slip (kendaraan, barang, alat), atau lokasi risiko polis bila slip tidak punya baris Interest. Maksimal 250 karakter.
 - **Percentage** berformat persen (`0.00%`) seperti contoh LCH. Sebelumnya berformat `#,##0`, jadi -0,15 tampil "-0".
+- **Grouping Insured:**
+  - polis dari CI menyimpan grouping kosong (`""`), dan kolom ini dulu ikut kosong; sekarang memakai nama klien atau tertanggung;
+  - endorsement, pembatalan, dan deklarasi tanpa grouping memakai grouping polis induknya.
 - **Sheet baru Per Polis:** format alternatif Team LCH, satu baris per polis per asuransi dengan kolom nilai per sub akun, ditutup `(Income)/Beban`.
 - **Sheet baru Keterangan:** aturan semua kolom di atas.
 - `lib/export.ts`: helper `addExportSheet` untuk workbook berisi beberapa sheet, dan `numFmt` per kolom.
@@ -80,6 +83,7 @@ Catatan Team LCH:
   - format Percentage;
   - sheet Per Polis;
   - workbook tiga sheet;
+  - Grouping Insured kosong;
   - baris O/I-MARGIN.
 - **Data lokal** 1 Jan 2025 s/d 31 Des 2026:
   - 27 polis menjadi 40 baris (30 COMM, 10 EF);

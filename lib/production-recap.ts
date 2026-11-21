@@ -155,6 +155,11 @@ export const SUB_ACCOUNT = {
 export const feeSubAccount = (insurer: string) =>
   /multi\s*artha\s*guna/i.test(insurer) ? SUB_ACCOUNT.feeMag : SUB_ACCOUNT.fee
 
+/** Akun (kolom Grouping Insured): grouping insured polis, atau nama klien/tertanggung bila kosong. */
+export const recapAccount = (
+  p: Pick<RecapPolicy, "groupingInsured" | "clientName" | "insuredName">
+) => p.groupingInsured?.trim() || p.clientName?.trim() || p.insuredName
+
 const SPIL_NAME = /\bSPIL\b|SALAM\s+PACIFIC/i
 
 /** SPIL Program bila grouping insured, klien, atau tertanggung memuat "SPIL" atau "Salam Pacific". */
@@ -288,7 +293,7 @@ function baseRow(line: InsurerLine): RecapRow {
     "sub akun comm exp": "",
     Note: p.remarks ?? "",
     "Insured Name": insured,
-    "Grouping Insured": p.groupingInsured ?? p.clientName ?? p.insuredName,
+    "Grouping Insured": recapAccount(p),
     "Group New Source Rev": source,
     "COB OJK": p.cobOjkClass ?? "",
     "Lokasi Penempatan": p.placementLocation ?? "",

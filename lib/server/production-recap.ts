@@ -47,10 +47,12 @@ export async function listProductionRecap(start: string, end: string): Promise<R
           policyNo: true,
           inceptionDate: true,
           expiryDate: true,
+          groupingInsured: true,
           cobOjkClass: { select: { name: true } },
           placementLocation: { select: { name: true } },
           parentPolicy: {
             select: {
+              groupingInsured: true,
               cobOjkClass: { select: { name: true } },
               placementLocation: { select: { name: true } },
             },
@@ -116,7 +118,13 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       insurerPremium: row.insurerPremium == null ? null : Number(row.insurerPremium),
       brokeragePct: Number(row.brokeragePct),
       remarks: row.remarks,
-      groupingInsured: row.groupingInsured,
+      // Polis dari CI menyimpan grouping kosong (""); endorsement, pembatalan, dan deklarasi yang
+      // kosong memakai grouping polis induknya.
+      groupingInsured:
+        row.groupingInsured?.trim() ||
+        parent?.groupingInsured?.trim() ||
+        parent?.parentPolicy?.groupingInsured?.trim() ||
+        null,
       object: recapObject(
         (row.placingSlip?.items ?? []).map((i) => i.description),
         row.riskLocation

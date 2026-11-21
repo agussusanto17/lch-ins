@@ -225,6 +225,15 @@ test("a policy without fee or margin keeps one COMM row", () => {
   assert.equal(rows[0]["sub akun comm exp"], "")
 })
 
+test("Grouping Insured falls back to the client or insured name when it is empty", () => {
+  const [blank] = recapRows([policy({ groupingInsured: "  " })])
+  assert.equal(blank["Grouping Insured"], "PT Nusantara Fleet Services")
+  const [named] = recapRows([policy({ groupingInsured: "D BEST GROUP" })])
+  assert.equal(named["Grouping Insured"], "D BEST GROUP")
+  const [noClient] = recapRows([policy({ groupingInsured: "", clientName: null })])
+  assert.equal(noClient["Grouping Insured"], "PT NUSANTARA FLEET SERVICES")
+})
+
 test("spil/non spil follows the grouping insured, client, or insured name", () => {
   const base = { groupingInsured: null, clientName: null, insuredName: "PT Lain" }
   assert.equal(spilClass({ ...base, groupingInsured: "SPIL Warehouse" }), "SPIL")
