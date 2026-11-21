@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-21
 - **Branch:** `feat/report-ojk-loss-ratio`
-- **PR:** #<nomor>
+- **PR:** #299
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
