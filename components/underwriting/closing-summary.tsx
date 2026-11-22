@@ -3,6 +3,7 @@
 import { usesAdditionalFee } from "@/components/underwriting/slip-model"
 import type { PlacingSlip } from "@/lib/data/types"
 import { money, num } from "@/lib/format"
+import { effectiveBrokeragePct } from "@/lib/calc"
 import { closingSummary } from "@/lib/closing-summary"
 import { cn } from "@/lib/utils"
 
@@ -61,33 +62,50 @@ export function ClosingSummaryPanel({
             value={`− ${money(s.discount, currency)}`}
           />
         ) : null}
+        {/* Brokerage ditulis sebelum PPN: incl. VAT = persen slip ÷ 1,022 (Agus, 22 November 2026). */}
         <Row
           label={`Brokerage ${num(slip.brokeragePct || 0, 2)}% (${vatText})`}
-          hint={s.discount ? "Dari Gross Premium, sebelum diskon" : undefined}
+          hint={
+            [
+              slip.includeVat
+                ? `Sebelum PPN: ${num(effectiveBrokeragePct(slip), 4)}% dari Gross Premium`
+                : "",
+              s.discount ? "Dari Gross Premium, sebelum diskon" : "",
+            ]
+              .filter(Boolean)
+              .join(" · ") || undefined
+          }
           value={`− ${money(s.brokerage, currency)}`}
         />
-        {/* Excl. VAT: PPN 2,2% ditambahkan di atas brokerage dan ikut dipotong (Agus, 20 November 2026). */}
         {s.brokerageVat ? (
           <Row
             label="PPN 2,2% atas brokerage"
-            hint="Brokerage excl. VAT, PPN ditambahkan"
+            hint={
+              slip.includeVat
+                ? `Termasuk dalam brokerage ${num(slip.brokeragePct || 0, 2)}% incl. VAT`
+                : "Brokerage excl. VAT, PPN ditambahkan"
+            }
             value={`− ${money(s.brokerageVat, currency)}`}
           />
         ) : null}
         {withFee ? (
-          <Row label="Additional fee" value={`− ${money(s.fee, currency)}`} />
+          <Row
+            label="Additional fee"
+            hint={s.feeVat ? "Sebelum PPN" : undefined}
+            value={`− ${money(s.fee, currency)}`}
+          />
         ) : null}
         {s.feeVat ? (
           <Row
             label="PPN 2,2% atas additional fee"
-            hint="Fee asuransi yang excl. VAT, PPN ditambahkan"
+            hint="Termasuk dalam fee incl. VAT, atau ditambahkan di atas fee excl. VAT"
             value={`− ${money(s.feeVat, currency)}`}
           />
         ) : null}
         <div className="mt-1 border-t pt-1">
           <Row
             label="Nett Premium ke asuransi"
-            hint={`Gross Premium${s.discount ? " − diskon" : ""} − brokerage${withFee ? " − additional fee" : ""}${s.brokerageVat || s.feeVat ? " − PPN excl. VAT" : ""}`}
+            hint={`Gross Premium${s.discount ? " − diskon" : ""} − brokerage${withFee ? " − additional fee" : ""}${s.brokerageVat || s.feeVat ? " − PPN" : ""}`}
             value={money(s.net, currency)}
             strong
           />
@@ -97,7 +115,7 @@ export function ClosingSummaryPanel({
             label="Pendapatan LCH"
             hint={
               s.incomeVat
-                ? `${withFee ? "Brokerage + additional fee" : "Brokerage"}${s.brokerageVat || s.feeVat ? " + PPN excl. VAT" : ""}, termasuk PPN 2,2% ${money(s.incomeVat, currency)} · sebelum PPN ${money(s.income - s.incomeVat, currency)}`
+                ? `${withFee ? "Brokerage + additional fee" : "Brokerage"} + PPN 2,2% ${money(s.incomeVat, currency)} · sebelum PPN ${money(s.income - s.incomeVat, currency)}`
                 : withFee
                   ? "Brokerage + additional fee"
                   : "Brokerage"
@@ -119,7 +137,7 @@ export function ClosingSummaryPanel({
                 <th className="px-3 py-2 text-right font-medium">Brokerage</th>
                 {withFee ? <th className="px-3 py-2 text-right font-medium">Additional fee</th> : null}
                 {s.brokerageVat || s.feeVat ? (
-                  <th className="px-3 py-2 text-right font-medium">PPN 2,2% excl.</th>
+                  <th className="px-3 py-2 text-right font-medium">PPN 2,2%</th>
                 ) : null}
                 <th className="px-3 py-2 text-right font-medium">Net ke asuransi</th>
               </tr>
@@ -157,7 +175,7 @@ export function ClosingSummaryPanel({
             ? " Brokerage dan additional fee dihitung dari Gross Premium; Nett Premium = Gross Premium − diskon − brokerage − additional fee."
             : ""}
           {s.brokerageVat || s.feeVat
-            ? " Brokerage atau fee excl. VAT: PPN 2,2% ditambahkan di atasnya dan ikut dipotong dari premi ke asuransi; incl. VAT: PPN sudah di dalam nominalnya."
+            ? " Brokerage dan fee ditulis sebelum PPN. Incl. VAT: PPN 2,2% diambil dari dalam persennya (15% incl. VAT = 14,6771% + PPN); excl. VAT: PPN 2,2% ditambahkan di atasnya. PPN ikut dipotong dari premi ke asuransi."
             : ""}
         </p>
       ) : null}

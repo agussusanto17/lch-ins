@@ -2425,7 +2425,7 @@ function SlipEditor({
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Nilai Brokerage</span>
+                  <span className="text-muted-foreground">Nilai Brokerage (sebelum PPN)</span>
                   <span className="tabular font-semibold">
                     {usesOpenCover(slip)
                       ? "Per deklarasi"
@@ -2468,11 +2468,11 @@ function SlipEditor({
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        Brokerage sebelum PPN
+                        Brokerage + PPN ({num(slip.brokeragePct || 0, 2)}% incl. VAT)
                       </span>
                       <span className="tabular font-semibold">
                         {money(
-                          brokerageAmount(slip) - brokerageVatAmount(slip),
+                          brokerageAmount(slip) + brokerageVatAmount(slip),
                           slip.currency
                         )}
                       </span>
