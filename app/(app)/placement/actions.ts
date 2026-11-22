@@ -205,6 +205,8 @@ const lineItemSchema = z.object({
   color: z.string().nullish(),
   vehicleModel: z.string().nullish(),
   locationId: z.string().nullish(),
+  // Polis MV multi tahun: nilai casco manual per tahun polis (Harry, 22 November 2026).
+  yearValues: z.array(z.number().min(0, "Nilai casco tidak boleh negatif").nullable()).max(30).optional(),
 })
 
 const rateLineSchema = z

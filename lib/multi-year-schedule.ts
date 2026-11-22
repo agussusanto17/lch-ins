@@ -45,7 +45,12 @@ export function multiYearSchedule(slip: PlacingSlip): VehicleYearSchedule[] {
   const mode = rateModeFor(slip.cob)
 
   return itemGroups(slip).map((g) => {
-    const values = yearlySumInsured(g.item.amount || 0, slip.multiYearDepreciationPct, years.length)
+    const values = yearlySumInsured(
+      g.item.amount || 0,
+      slip.multiYearDepreciationPct,
+      years.length,
+      g.item.yearValues
+    )
     const perYear = years.map((year, i): VehicleYear => {
       const rows: YearCoverRow[] = [
         ...g.rateLines

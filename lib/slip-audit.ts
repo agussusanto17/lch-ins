@@ -144,6 +144,15 @@ export function slipAuditSummary(
     discountPct: slip.discountPct,
     additionalDiscountPct: slip.additionalDiscountPct ?? 0,
     multiYearDepreciationPct: slip.multiYearDepreciationPct ?? 0,
+    // Nilai casco manual per tahun polis MV multi tahun (Harry, 22 November 2026).
+    multiYearValues: slip.interestItems
+      .flatMap((it, i) =>
+        (it.yearValues ?? []).map((v, y) =>
+          v != null ? `Kendaraan ${i + 1} tahun ${y + 1}: ${money(v, slip.currency)}` : ""
+        )
+      )
+      .filter(Boolean)
+      .join("\n"),
     commissionShareSgPct: slip.commissionShareSgPct ?? 0,
     premiumInstallments: installmentAuditLines(slip.premiumInstallments).join("\n"),
     adminCost: slip.adminCost,

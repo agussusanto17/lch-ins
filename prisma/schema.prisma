@@ -1305,6 +1305,9 @@ model SlipItem {
   vehicleTypeId  String? @map("vehicle_type_id") @db.Uuid
   /// Lokasi slip Property untuk baris sum insured Section 1 dan 2.
   locationId     String? @map("location_id") @db.Uuid
+  /// Polis MV multi tahun: nilai casco manual per tahun polis, [tahun1, tahun2, ...]; null =
+  /// mengikuti penyusutan (Harry, 22 November 2026).
+  yearValues     Json?   @map("year_values") @db.JsonB
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)

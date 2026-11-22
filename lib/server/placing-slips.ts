@@ -49,6 +49,7 @@ import { cleanClauseGroups, groupedClauseOrder } from "@/lib/clause-groups"
 import { usesItemRates } from "@/lib/slip-items"
 import { slipRiskLocationText } from "@/lib/slip-locations"
 import { cobLookupKeys } from "@/lib/server/cob"
+import { cleanYearValues } from "@/lib/multi-year"
 import { prisma } from "@/lib/prisma"
 import { getSppaById } from "@/lib/server/sppa"
 import { checkVehiclePair } from "@/lib/server/vehicles"
@@ -550,6 +551,7 @@ function toPlacingSlipRecord(
         year: parsed.year ?? null,
         color: parsed.color ?? null,
         vehicleModel: parsed.vehicleModel ?? null,
+        yearValues: cleanYearValues(it.yearValues).length ? cleanYearValues(it.yearValues) : undefined,
       })
     } else if (it.kind === "SumInsuredSection1") {
       sumInsuredSection1.push({
@@ -1496,6 +1498,7 @@ export async function createPlacingSlip(
       vehicleBrandId?: string | null
       vehicleTypeId?: string | null
       locationId?: string | null
+      yearValues?: Prisma.InputJsonValue
     }[] = []
 
     if (input.interestItems) {
@@ -1528,6 +1531,10 @@ export async function createPlacingSlip(
             sectionNo: it.section === 2 ? 2 : null,
             sortOrder: sortIdx++,
             ...(motor ? await checkVehiclePair(tx, it.vehicleBrandId, it.vehicleTypeId) : {}),
+            // Nilai casco manual per tahun polis MV multi tahun (Harry, 22 November 2026).
+            ...(motor && cleanYearValues(it.yearValues).length
+              ? { yearValues: cleanYearValues(it.yearValues) }
+              : {}),
           })
         }
       }
@@ -1942,6 +1949,7 @@ export async function updatePlacingSlip(
       vehicleBrandId?: string | null
       vehicleTypeId?: string | null
       locationId?: string | null
+      yearValues?: Prisma.InputJsonValue
     }[] = []
 
     if (input.interestItems) {
@@ -1974,6 +1982,10 @@ export async function updatePlacingSlip(
             sectionNo: it.section === 2 ? 2 : null,
             sortOrder: sortIdx++,
             ...(motor ? await checkVehiclePair(tx, it.vehicleBrandId, it.vehicleTypeId) : {}),
+            // Nilai casco manual per tahun polis MV multi tahun (Harry, 22 November 2026).
+            ...(motor && cleanYearValues(it.yearValues).length
+              ? { yearValues: cleanYearValues(it.yearValues) }
+              : {}),
           })
         }
       }

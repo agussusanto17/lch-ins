@@ -611,6 +611,8 @@ export function recalcSlip(input: PlacingSlip): PlacingSlip {
   const owner = locationOwner(slip)
   const itemOf = itemOwner(slip)
   const itemValue = new Map(slip.interestItems.map((v) => [v.id, v.amount || 0]))
+  // Nilai casco manual per tahun polis MV multi tahun (Harry, 22 November 2026).
+  const itemYearValues = new Map(slip.interestItems.map((v) => [v.id, v.yearValues]))
   const limitItems = new Set(
     slip.interestItems.filter((v) => isLimitOnlyItem(slip.cob, v)).map((v) => v.id)
   )
@@ -633,7 +635,12 @@ export function recalcSlip(input: PlacingSlip): PlacingSlip {
       }
       const value = itemValue.get(itemOf(l.vehicleId) ?? "") ?? 0
       if (multiYear) {
-        const values = yearlySumInsured(value, slip.multiYearDepreciationPct, years.length)
+        const values = yearlySumInsured(
+          value,
+          slip.multiYearDepreciationPct,
+          years.length,
+          itemYearValues.get(itemOf(l.vehicleId) ?? "")
+        )
         return {
           ...l,
           flatPremium: undefined,

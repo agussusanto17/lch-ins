@@ -3,7 +3,13 @@ import test from "node:test"
 
 import { recalcSlip } from "../lib/calc"
 import type { PlacingSlip } from "../lib/data/types"
-import { isMultiYearMotor, policyYears, yearlySumInsured } from "../lib/multi-year"
+import {
+  cleanYearValues,
+  isMultiYearMotor,
+  policyYears,
+  withYearValue,
+  yearlySumInsured,
+} from "../lib/multi-year"
 import { multiYearSchedule } from "../lib/multi-year-schedule"
 import { itemGroups } from "../lib/slip-items"
 import { emptySlip, switchCob } from "../components/underwriting/slip-model"
@@ -124,4 +130,40 @@ test("tahun terakhir yang tidak penuh dihitung prorata hari", () => {
   const slip = dirajaSlip(1, { expiryDate: "2025-12-10", multiYearDepreciationPct: undefined })
   // 37.164.500 setahun, lalu 183/365 hari: 18.633.160,27.
   assert.equal(slip.rateLines[0].premium, 55_797_660.27)
+})
+
+test("nilai casco per tahun bisa diisi manual; tahun berikutnya turun dari nilai manual", () => {
+  // Harry (22 November 2026): harga kendaraan tidak selalu turun dengan persen yang sama.
+  assert.deepEqual(yearlySumInsured(1_555_000_000, 10, 4, [null, 1_450_000_000]), [
+    1_555_000_000, 1_450_000_000, 1_305_000_000, 1_174_500_000,
+  ])
+  assert.deepEqual(yearlySumInsured(1_555_000_000, 10, 4, [null, null, 1_300_000_000, 1_250_000_000]), [
+    1_555_000_000, 1_399_500_000, 1_300_000_000, 1_250_000_000,
+  ])
+  // Tahun pertama selalu nilai kendaraan (TSI di Interest Insured).
+  assert.deepEqual(yearlySumInsured(1_000, 10, 2, [5_000]), [1_000, 900])
+
+  // Mengisi lalu mengosongkan nilai kembali ke penyusutan.
+  const set = withYearValue(undefined, 2, 1_300_000_000)
+  assert.deepEqual(set, [null, null, 1_300_000_000])
+  assert.equal(withYearValue(set, 2, null), undefined)
+  assert.deepEqual(cleanYearValues([999, -1, "x", 10.005]), [null, null, null, 10.01])
+})
+
+test("premi slip dan rincian per tahun memakai nilai casco manual", () => {
+  const manual = [null, 1_450_000_000, null, null]
+  const slip = dirajaSlip(1)
+  const edited = recalcSlip({
+    ...slip,
+    interestItems: slip.interestItems.map((it) => ({ ...it, yearValues: manual })),
+  })
+  const [vehicle] = multiYearSchedule(edited)
+  assert.deepEqual(vehicle.years.map((y) => y.sumInsured), [
+    1_555_000_000, 1_450_000_000, 1_305_000_000, 1_174_500_000,
+  ])
+  // Premi baris casco = jumlah casco semua tahun di rincian, sama dengan sebelumnya.
+  const cascoRows = vehicle.years.flatMap((y) => y.rows.filter((r) => r.kind === "casco"))
+  assert.equal(edited.rateLines[0].premium, Math.round(cascoRows.reduce((a, r) => a + r.premium, 0) * 100) / 100)
+  assert.equal(total(edited), vehicle.total)
+  assert.notEqual(total(edited), total(slip))
 })

@@ -18,9 +18,11 @@ import {
 } from "@/components/underwriting/slip-model"
 import { UnitCard } from "@/components/underwriting/unit-card"
 import { Button } from "@/components/ui/button"
+import { NumberInput } from "@/components/ui/number-input"
 import { rateUnitFor, sumPremium, usesOjkTariff } from "@/lib/calc"
 import type { PlacingSlip, RateException, RateLine } from "@/lib/data"
 import { dateShort, money, num } from "@/lib/format"
+import { depreciationPct, withYearValue } from "@/lib/multi-year"
 import { multiYearSchedule, type VehicleYearSchedule } from "@/lib/multi-year-schedule"
 import { itemGroups } from "@/lib/slip-items"
 import { cascoSwitchPatch, vehicleTariff, vehicleTitle } from "@/lib/slip-vehicles"
@@ -34,7 +36,22 @@ import { cascoSwitchPatch, vehicleTariff, vehicleTitle } from "@/lib/slip-vehicl
  * casco dan perluasan, premi TPL dan PA, dan total tahun itu. Jumlahnya sama dengan premi per baris
  * di atas, yang berisi total semua tahun.
  */
-function YearBreakdown({ schedule, currency }: { schedule: VehicleYearSchedule; currency: string }) {
+function YearBreakdown({
+  schedule,
+  currency,
+  depreciation,
+  locked,
+  onValueChange,
+}: {
+  schedule: VehicleYearSchedule
+  currency: string
+  /** Penyusutan per tahun slip (%), untuk keterangan nilai otomatis. */
+  depreciation: number
+  locked: boolean
+  /** Nilai casco manual tahun `index` (mulai 0); null kembali ke penyusutan. */
+  onValueChange: (index: number, value: number | null) => void
+}) {
+  const manual = schedule.item.yearValues ?? []
   const th = "px-2 py-1.5 text-left font-medium text-muted-foreground"
   const td = "px-2 py-1.5 tabular-nums whitespace-nowrap"
   // Mata uang di judul kolom supaya angka muat tanpa patah baris.
@@ -55,7 +72,7 @@ function YearBreakdown({ schedule, currency }: { schedule: VehicleYearSchedule; 
             </tr>
           </thead>
           <tbody>
-            {schedule.years.map(({ year, sumInsured, rows, total }) => {
+            {schedule.years.map(({ year, sumInsured, rows, total }, index) => {
               const casco = rows.filter((r) => r.kind === "casco").reduce((a, r) => a + r.premium, 0)
               return (
                 <tr key={year.no} className="border-t">
@@ -70,7 +87,23 @@ function YearBreakdown({ schedule, currency }: { schedule: VehicleYearSchedule; 
                   <td className={td}>
                     {dateShort(year.start)} – {dateShort(year.end)}
                   </td>
-                  <td className={`${td} text-right`}>{amount(sumInsured)}</td>
+                  <td className={`${td} text-right`}>
+                    {/* Nilai casco tahun ke-2 dst. bisa diubah karena harga kendaraan tidak selalu
+                        turun dengan persen yang sama (Harry, 22 November 2026). */}
+                    {index > 0 && !locked ? (
+                      <NumberInput
+                        aria-label={`Nilai casco tahun ${year.no}`}
+                        className="ml-auto h-7 w-36 text-right text-xs"
+                        value={sumInsured}
+                        onValueChange={(v) => onValueChange(index, v)}
+                      />
+                    ) : (
+                      amount(sumInsured)
+                    )}
+                    {index > 0 && manual[index] != null ? (
+                      <span className="block text-[11px] text-muted-foreground">manual</span>
+                    ) : null}
+                  </td>
                   <td className={`${td} text-right`}>{amount(casco)}</td>
                   <td className={`${td} text-right`}>{amount(total - casco)}</td>
                   <td className={`${td} text-right font-medium`}>{amount(total)}</td>
@@ -86,6 +119,12 @@ function YearBreakdown({ schedule, currency }: { schedule: VehicleYearSchedule; 
           </tbody>
         </table>
       </div>
+      {!locked && schedule.years.length > 1 ? (
+        <p className="text-xs text-muted-foreground">
+          Nilai casco tahun ke-2 dan seterusnya bisa diubah. Kosongkan untuk kembali mengikuti
+          penyusutan {num(depreciation, 0, 2)}% per tahun dari nilai tahun sebelumnya.
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -284,7 +323,21 @@ export function SlipVehicles({
               motorcycle) · maks. 2 orang (truck).
             </p>
             {yearSchedules.get(vehicle.id) ? (
-              <YearBreakdown schedule={yearSchedules.get(vehicle.id)!} currency={slip.currency} />
+              <YearBreakdown
+                schedule={yearSchedules.get(vehicle.id)!}
+                currency={slip.currency}
+                depreciation={depreciationPct(slip.multiYearDepreciationPct)}
+                locked={locked}
+                onValueChange={(index, value) =>
+                  onChange({
+                    interestItems: slip.interestItems.map((it) =>
+                      it.id === vehicle.id
+                        ? { ...it, yearValues: withYearValue(it.yearValues, index, value) }
+                        : it
+                    ),
+                  })
+                }
+              />
             ) : null}
             {multi ? (
               <TotalBar

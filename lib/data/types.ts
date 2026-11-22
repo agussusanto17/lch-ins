@@ -206,6 +206,12 @@ export interface LineItem {
   vehicleModel?: string | null
   /** Lokasi slip Property untuk baris sum insured Section 1 dan 2. */
   locationId?: string | null
+  /**
+   * Polis Motor Vehicle multi tahun: nilai casco yang diisi manual per tahun polis (Harry, 22
+   * November 2026). Indeks 0 = tahun pertama (selalu nilai kendaraan), indeks 1 = tahun kedua,
+   * dst.; kosong berarti mengikuti penyusutan dari nilai tahun sebelumnya.
+   */
+  yearValues?: (number | null)[]
 }
 
 export interface RateLine {

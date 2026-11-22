@@ -2011,9 +2011,11 @@ export function MultiYearPremiumAppendix({ slip }: { slip: PlacingSlip }) {
       <AppendixTitle slip={slip} title="PERHITUNGAN PREMI PER TAHUN POLIS" />
       <p className="mb-3 text-[11px] text-muted-foreground">
         {yearCount} tahun polis.{" "}
-        {depreciation
-          ? `Nilai kendaraan turun ${num(depreciation, 0, 2)}% per tahun dari nilai tahun sebelumnya. `
-          : "Nilai kendaraan sama setiap tahun. "}
+        {schedules.some((s) => (s.item.yearValues ?? []).some((v) => v != null))
+          ? "Nilai kendaraan per tahun polis sesuai tabel. "
+          : depreciation
+            ? `Nilai kendaraan turun ${num(depreciation, 0, 2)}% per tahun dari nilai tahun sebelumnya. `
+            : "Nilai kendaraan sama setiap tahun. "}
         Rate sama setiap tahun; TPL dan PA dihitung setiap tahun dengan limit yang sama.
       </p>
       <table className="w-full border-collapse text-[10px] leading-snug">

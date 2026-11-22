@@ -71,17 +71,52 @@ export function depreciationPct(value: number | null | undefined) {
 
 /**
  * Nilai kendaraan tiap tahun polis: tahun berikutnya turun `pct` persen dari nilai tahun
- * sebelumnya, dibulatkan ke sen.
+ * sebelumnya, dibulatkan ke sen. Nilai tahun kedua dan seterusnya bisa diisi manual (`manual`,
+ * Harry, 22 November 2026) karena harga kendaraan tidak selalu turun dengan persen yang sama;
+ * tahun sesudahnya kembali turun `pct` persen dari nilai manual itu. Tahun pertama selalu nilai
+ * kendaraan.
  */
-export function yearlySumInsured(sumInsured: number, pct: number | null | undefined, years: number) {
+export function yearlySumInsured(
+  sumInsured: number,
+  pct: number | null | undefined,
+  years: number,
+  manual?: readonly (number | null | undefined)[]
+) {
   const keep = 1 - depreciationPct(pct) / 100
   const values: number[] = []
   let value = sumInsured
   for (let i = 0; i < years; i++) {
+    const entered = i > 0 ? manual?.[i] : null
+    if (entered != null && Number.isFinite(entered) && entered >= 0) value = cents(entered)
     values.push(value)
     value = cents(value * keep)
   }
   return values
+}
+
+/**
+ * Nilai manual dengan nilai tahun `index` (mulai 0) diganti; null mengembalikan tahun itu ke
+ * penyusutan. Hasil kosong (undefined) berarti semua tahun mengikuti penyusutan.
+ */
+export function withYearValue(
+  values: readonly (number | null)[] | undefined,
+  index: number,
+  value: number | null
+) {
+  const next = [...(values ?? [])]
+  while (next.length <= index) next.push(null)
+  next[index] = value
+  const cleaned = cleanYearValues(next)
+  return cleaned.length ? cleaned : undefined
+}
+
+/** Nilai manual per tahun yang valid; daftar kosong bila tidak ada yang diisi. */
+export function cleanYearValues(raw: unknown): (number | null)[] {
+  if (!Array.isArray(raw)) return []
+  const values = raw.slice(0, 30).map((v, i) =>
+    i > 0 && typeof v === "number" && Number.isFinite(v) && v >= 0 ? cents(v) : null
+  )
+  return values.some((v) => v != null) ? values : []
 }
 
 /**
