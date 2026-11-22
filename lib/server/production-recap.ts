@@ -34,6 +34,7 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       client: {
         select: {
           name: true,
+          spilProgram: true,
           clientType: { select: { name: true } },
           branch: { select: { code: true } },
           insurerCodes: { select: { code: true, insurer: { select: { name: true } } } },
@@ -75,7 +76,11 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       cobOjkClass: { select: { name: true } },
       placementLocation: { select: { name: true } },
       insurers: {
-        select: { sharePct: true, additionalFeePct: true, insurer: { select: { name: true } } },
+        select: {
+          sharePct: true,
+          additionalFeePct: true,
+          insurer: { select: { name: true, feeSubAccount: { select: { name: true } } } },
+        },
         orderBy: { sharePct: "desc" },
       },
     },
@@ -140,10 +145,12 @@ export async function listProductionRecap(start: string, end: string): Promise<R
         parent?.placementLocation?.name ??
         parent?.parentPolicy?.placementLocation?.name ??
         null,
+      spilProgram: row.client?.spilProgram ?? false,
       insurers: row.insurers.map((i) => ({
         insurer: i.insurer.name,
         share: Number(i.sharePct),
         additionalFeePct: Number(i.additionalFeePct),
+        feeSubAccount: i.insurer.feeSubAccount?.name ?? null,
       })),
     }
   })

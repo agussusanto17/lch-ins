@@ -177,6 +177,7 @@ export function ClientDetail({
         <SectionCard title="Data KYC">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Item label="Occupation / Bisnis Utama" value={client.businessLine} />
+            <Item label="SPIL Program" value={client.spilProgram ? "Ya" : "Tidak"} />
             {corporate ? (
               <>
                 <Item

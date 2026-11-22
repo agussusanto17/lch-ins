@@ -82,6 +82,7 @@ const TYPE_LABELS: Record<string, string> = {
   account_type: "Jenis Akun Perkiraan",
   payment_model: "Model Pembayaran Premi",
   placement_location: "Lokasi Penempatan",
+  ef_sub_account: "Sub Akun EF (Rekap Produksi)",
   rate_line_kind: "Jenis Baris Rate",
   reset_period: "Periode Reset Penomoran",
 }

@@ -61,7 +61,15 @@ export interface RecapPolicy {
   placementLocation: string | null
   /** Objek pertanggungan untuk kolom Object, lihat `recapObject`. */
   object?: string | null
-  insurers: { insurer: string; share: number; additionalFeePct: number }[]
+  /** Klien ditandai SPIL Program di Database Klien. */
+  spilProgram?: boolean
+  /** feeSubAccount: sub akun EF asuransi dari Master Data; kosong = EF. */
+  insurers: {
+    insurer: string
+    share: number
+    additionalFeePct: number
+    feeSubAccount?: string | null
+  }[]
 }
 
 /** Satu baris rekap, satu kolom per header contoh LCH. */
@@ -146,28 +154,24 @@ const codeName = (code: string | null | undefined, name: string | null | undefin
 export const PNL_INCOME = "INCOME"
 export const SUB_ACCOUNT = {
   commission: "COMM",
-  feeMag: "EF (MAG)",
   fee: "EF",
   margin: "O/I-MARGIN",
 } as const
 
-/** Daftar sub akun Team LCH menulis "EF (MAG)"; EF dari asuransi lain ditulis "EF". */
-export const feeSubAccount = (insurer: string) =>
-  /multi\s*artha\s*guna/i.test(insurer) ? SUB_ACCOUNT.feeMag : SUB_ACCOUNT.fee
+/**
+ * Sub akun baris EF: pilihan Sub akun EF asuransi di Master Data (misalnya "EF (MAG)" untuk Multi
+ * Artha Guna), atau EF bila asuransinya belum diatur.
+ */
+export const feeSubAccount = (label?: string | null) => label?.trim() || SUB_ACCOUNT.fee
 
 /** Akun (kolom Grouping Insured): grouping insured polis, atau nama klien/tertanggung bila kosong. */
 export const recapAccount = (
   p: Pick<RecapPolicy, "groupingInsured" | "clientName" | "insuredName">
 ) => p.groupingInsured?.trim() || p.clientName?.trim() || p.insuredName
 
-const SPIL_NAME = /\bSPIL\b|SALAM\s+PACIFIC/i
-
-/** SPIL Program bila grouping insured, klien, atau tertanggung memuat "SPIL" atau "Salam Pacific". */
-export function spilClass(p: Pick<RecapPolicy, "groupingInsured" | "clientName" | "insuredName">) {
-  return [p.groupingInsured, p.clientName, p.insuredName].some((n) => n && SPIL_NAME.test(n))
-    ? "SPIL"
-    : "Non SPIL"
-}
+/** SPIL bila klien polis ditandai SPIL Program di Database Klien; tidak ada daftar resmi SPIL. */
+export const spilClass = (p: Pick<RecapPolicy, "spilProgram">) =>
+  p.spilProgram ? "SPIL" : "Non SPIL"
 
 /** Modul tempat polis dicatat: Placement (dari placing slip), Policy Database, atau Deklarasi MOP. */
 export function recapSourceFile(p: Pick<RecapPolicy, "type" | "slipNo">) {
@@ -196,7 +200,7 @@ export function recapObject(interests: readonly string[], riskLocation: string |
 /** Nilai mentah satu polis untuk satu asuransi sesuai share, dalam mata uang polis. */
 interface InsurerLine {
   policy: RecapPolicy
-  insurer: { insurer: string; share: number; additionalFeePct: number }
+  insurer: RecapPolicy["insurers"][number]
   rate: number
   gross: number
   discount: number
@@ -336,7 +340,7 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
         RM_Fee: idr(line.fee),
         "(Income)/Beban": idr(line.fee),
         Percentage: -ins.additionalFeePct / 100,
-        "sub akun pnl": feeSubAccount(ins.insurer),
+        "sub akun pnl": feeSubAccount(ins.feeSubAccount),
       })
     }
     if (line.margin) {
@@ -524,8 +528,8 @@ export function recapIncome(
 export const RECAP_NOTES = [
   "Rekap Produksi: satu baris per polis per asuransi per unsur pendapatan. Premi dan diskon hanya ditulis di baris COMM, jadi jumlah premi tidak dobel.",
   "akun pnl: semua baris dari sistem adalah INCOME. Pendapatan ditulis negatif dan beban positif, seperti kolom (Income)/Beban contoh LCH.",
-  "sub akun pnl: COMM = brokerage; EF (MAG) = additional fee dari Multi Artha Guna, EF = additional fee dari asuransi lain; O/I-MARGIN = margin rate deklarasi MOP (premi rate klien − premi ke asuransi).",
-  "spil/non spil: SPIL bila Grouping Insured, nama klien, atau tertanggung memuat \"SPIL\" atau \"Salam Pacific\"; selain itu Non SPIL.",
+  "sub akun pnl: COMM = brokerage; baris EF = additional fee, sub akunnya mengikuti Sub akun EF asuransi di Master Data > Asuransi & Adjuster (Multi Artha Guna: EF (MAG); belum diatur: EF); O/I-MARGIN = margin rate deklarasi MOP (premi rate klien − premi ke asuransi).",
+  "spil/non spil: SPIL bila klien polis ditandai SPIL Program di Database Klien; selain itu Non SPIL.",
   "source file: Placement untuk polis dari placing slip, Policy Database untuk polis yang diinput langsung, Deklarasi MOP untuk deklarasi.",
   "Object: objek pertanggungan dari baris Interest slip (kendaraan, barang, alat), atau lokasi risiko polis bila tidak ada.",
   "Per Polis: format alternatif Team LCH, satu baris per polis per asuransi dengan kolom nilai per sub akun.",

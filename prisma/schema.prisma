@@ -319,6 +319,7 @@ model LookupValue {
   banks                 BankAccount[]       @relation("bank")
   accountTypes          CoaAccount[]        @relation("account_type")
   ojkReportLines        CoaAccount[]        @relation("ojk_report_line")
+  insurerFeeSubAccounts Insurer[]           @relation("ef_sub_account")
 
   @@unique([lookupType, code])
   @@index([lookupType, sortOrder])
@@ -663,10 +664,14 @@ model Insurer {
   email         String?
   phone         String?
   isActive      Boolean @default(true) @map("is_active")
+  /// lookup ef_sub_account: sub akun pnl baris EF (additional fee) asuransi ini di Rekap Produksi.
+  /// Kosong = EF (22 November 2026).
+  feeSubAccountId String? @map("fee_sub_account_id") @db.Uuid
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  feeSubAccount     LookupValue?        @relation("ef_sub_account", fields: [feeSubAccountId], references: [id])
   slipSecurityPanel SlipSecurityPanel[]
   policyInsurers    PolicyInsurer[]
   creditNotes       CreditNote[]
@@ -878,6 +883,9 @@ model Client {
   branchId              String?   @map("branch_id") @db.Uuid
   /// lookup client_status: Prospect, Active, Inactive.
   statusId              String    @map("status_id") @db.Uuid
+  /// Klien program SPIL: kolom spil/non spil di Rekap Produksi. Tidak ada daftar resmi, LCH
+  /// menandai sendiri di Database Klien (22 November 2026).
+  spilProgram           Boolean   @default(false) @map("spil_program")
   notes                 String?
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
