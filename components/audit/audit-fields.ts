@@ -128,6 +128,7 @@ const FIELD_LABELS: Record<string, string> = {
   additionalDiscountPct: "Additional discount Quotation (%)",
   commissionShareSgPct: "Sharing komisi LCH Singapore (%)",
   multiYearDepreciationPct: "Penyusutan nilai per tahun polis (%)",
+  multiYearValues: "Nilai casco manual per tahun polis",
   premiumInstallments: "Premi installment",
   settledUnlockReason: "Alasan buka kunci klaim Settled",
   subjectivity: "Subjectivity",
