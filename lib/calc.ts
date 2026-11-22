@@ -345,13 +345,24 @@ export function calculateParEqvet(slip: PlacingSlip): ParEqvetCalculation {
   }
 }
 
-export function brokerageAmount(slip: PlacingSlip) {
+/** Brokerage menurut persen slip; pada slip incl. VAT nilai ini sudah termasuk PPN 2,2%. */
+export function brokerageGross(slip: PlacingSlip) {
   return roundCents((totalPremium(slip) * (slip.brokeragePct || 0)) / 100)
 }
 
-/** Net premium payable to insurer — displayed on the Closing Instruction. */
+/**
+ * Nilai brokerage sebelum PPN (Agus, 22 November 2026). Brokerage incl. VAT: persen slip sudah
+ * termasuk PPN 2,2%, jadi nilainya brokerage ÷ 1,022, misalnya 15% incl. VAT = 14,6771%
+ * (13.750.200 menjadi 13.454.207,44). Excl. VAT: premi × persen, PPN ditambahkan di atasnya.
+ */
+export function brokerageAmount(slip: PlacingSlip) {
+  const gross = brokerageGross(slip)
+  return slip.includeVat ? roundCents(gross / (1 + BROKERAGE_VAT_RATE)) : gross
+}
+
+/** Net premium payable to insurer: premi − brokerage − PPN brokerage (di dalam atau ditambahkan). */
 export function netPremium(slip: PlacingSlip) {
-  return roundCents(totalPremium(slip) - brokerageAmount(slip))
+  return roundCents(totalPremium(slip) - brokerageGross(slip) - brokerageVatAdded(slip))
 }
 
 /**
@@ -380,11 +391,10 @@ export function brokerageVatAdded(slip: PlacingSlip) {
   return vatAdded(brokerageAmount(slip), slip.includeVat)
 }
 
-/** VAT inside the brokerage amount; the entered rate already includes it, as in effectiveBrokeragePct. */
+/** PPN di dalam brokerage incl. VAT: brokerage menurut persen slip − nilai brokerage sebelum PPN. */
 export function brokerageVatAmount(slip: PlacingSlip) {
   if (!slip.includeVat) return 0
-  const b = brokerageAmount(slip)
-  return roundCents(b - b / (1 + BROKERAGE_VAT_RATE))
+  return roundCents(brokerageGross(slip) - brokerageAmount(slip))
 }
 
 /**

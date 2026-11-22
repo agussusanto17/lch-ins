@@ -10,13 +10,14 @@ import {
   brokerageAmount,
   brokerageVatAdded,
   brokerageVatAmount,
+  feeVatInside,
   insurerAdditionalFee,
   roundCents,
   slipDiscountAmount,
   totalPremium,
   vatAdded,
 } from "@/lib/calc"
-import type { PlacingSlip } from "@/lib/data/types"
+import type { PlacingSlip, SecurityPanelRow } from "@/lib/data/types"
 import { usesAdditionalFee } from "@/components/underwriting/slip-model"
 
 export interface InsurerClosingSummary {
@@ -24,11 +25,13 @@ export interface InsurerClosingSummary {
   share: number
   premium: number
   discount: number
+  /** Brokerage sebelum PPN bagian asuransi ini. */
   brokerage: number
+  /** Additional fee sebelum PPN. */
   fee: number
-  /** PPN 2,2% yang ditambahkan di atas brokerage dan fee excl. VAT bagian asuransi ini. */
+  /** PPN 2,2% brokerage dan fee bagian asuransi ini, yang di dalam (incl.) maupun ditambahkan (excl.). */
   vat: number
-  /** Premi − diskon − brokerage − additional fee − PPN excl. VAT bagian asuransi ini. */
+  /** Premi − diskon − brokerage − additional fee − PPN bagian asuransi ini. */
   net: number
 }
 
@@ -39,25 +42,38 @@ export interface ClosingSummary {
   discount: number
   /** Gross Premium = total premi sebelum diskon, brokerage, dan additional fee (Team LCH). */
   gross: number
+  /**
+   * Brokerage sebelum PPN (Agus, 22 November 2026): incl. VAT = persen slip ÷ 1,022, misalnya 15%
+   * incl. VAT = 14,6771%; excl. VAT = persen slip.
+   */
   brokerage: number
-  /** PPN 2,2% yang ditambahkan di atas brokerage excl. VAT; nol bila brokerage incl. VAT. */
+  /** PPN 2,2% brokerage: di dalam persen slip (incl. VAT) atau ditambahkan di atasnya (excl. VAT). */
   brokerageVat: number
-  /** Nol untuk COB tanpa additional fee (selain Property dan Motor Vehicle). */
+  /** Additional fee sebelum PPN; nol untuk COB tanpa additional fee (selain Property dan Motor Vehicle). */
   fee: number
-  /** PPN 2,2% yang ditambahkan di atas fee asuransi yang excl. VAT. */
+  /** PPN 2,2% additional fee, di dalam atau ditambahkan sesuai status PPN tiap asuransi. */
   feeVat: number
   /**
    * Nett Premium yang disetor ke asuransi: Gross Premium − diskon − brokerage − additional fee
-   * (Team LCH, 19 November 2026; MoM review Phase 1, poin 19), dikurangi PPN yang ditambahkan di
-   * atas brokerage dan fee excl. VAT (Agus, 20 November 2026).
+   * (Team LCH, 19 November 2026; MoM review Phase 1, poin 19) − PPN brokerage dan fee.
    */
   net: number
-  /** Diterima LCH dari asuransi: brokerage + additional fee + PPN excl. VAT. */
+  /** Diterima LCH dari asuransi: brokerage + additional fee + PPN-nya. */
   income: number
-  /** Semua PPN 2,2% di dalam pendapatan: yang termasuk di nominal dan yang ditambahkan. */
+  /** Semua PPN 2,2% di dalam pendapatan. */
   incomeVat: number
   /** Rincian per asuransi untuk co-insurance; kosong bila hanya satu asuransi. */
   insurers: InsurerClosingSummary[]
+}
+
+/** Fee sebelum PPN dan PPN-nya untuk satu asuransi. */
+function feeParts(premium: number, r: SecurityPanelRow) {
+  const gross = insurerAdditionalFee(premium, r)
+  const inside = feeVatInside(gross, r.additionalFeeIncludeVat)
+  return {
+    fee: roundCents(gross - inside),
+    vat: roundCents(inside + vatAdded(gross, r.additionalFeeIncludeVat)),
+  }
 }
 
 export function closingSummary(slip: PlacingSlip): ClosingSummary {
@@ -65,13 +81,12 @@ export function closingSummary(slip: PlacingSlip): ClosingSummary {
   const premium = totalPremium(slip)
   const discount = slipDiscountAmount(slip)
   const brokerage = brokerageAmount(slip)
-  const brokerageVat = brokerageVatAdded(slip)
-  const fee = withFee ? additionalFeeAmount(slip) : 0
-  const feeVat = withFee ? additionalFeeVatAddedAmount(slip) : 0
-  const vatOnTop = roundCents(brokerageVat + feeVat)
-  const vatInside = roundCents(
-    brokerageVatAmount(slip) + (withFee ? additionalFeeVatAmount(slip) : 0)
-  )
+  const brokerageVat = roundCents(brokerageVatAmount(slip) + brokerageVatAdded(slip))
+  const feeGross = withFee ? additionalFeeAmount(slip) : 0
+  const feeInside = withFee ? additionalFeeVatAmount(slip) : 0
+  const fee = roundCents(feeGross - feeInside)
+  const feeVat = withFee ? roundCents(feeInside + additionalFeeVatAddedAmount(slip)) : 0
+  const vat = roundCents(brokerageVat + feeVat)
 
   // Co-insurance: bagian tiap asuransi sesuai share. Asuransi terakhir
   // menampung selisih pembulatan, supaya rinciannya sama dengan total.
@@ -81,29 +96,31 @@ export function closingSummary(slip: PlacingSlip): ClosingSummary {
     let premiumLeft = premium
     let discountLeft = discount
     let brokerageLeft = brokerage
+    let brokerageVatLeft = brokerageVat
     let feeLeft = fee
-    let vatLeft = vatOnTop
+    let feeVatLeft = feeVat
     rows.forEach((r, i) => {
       const last = i === rows.length - 1
+      const own = withFee ? feeParts(premium, r) : { fee: 0, vat: 0 }
       const brokeragePart = last ? brokerageLeft : roundCents((brokerage * r.share) / 100)
-      const feePart = last ? feeLeft : withFee ? insurerAdditionalFee(premium, r) : 0
+      const brokerageVatPart = last
+        ? brokerageVatLeft
+        : roundCents((brokerageVat * r.share) / 100)
+      const feePart = last ? feeLeft : own.fee
+      const feeVatPart = last ? feeVatLeft : own.vat
       const part = {
         premium: last ? premiumLeft : roundCents((premium * r.share) / 100),
         discount: last ? discountLeft : roundCents((discount * r.share) / 100),
         brokerage: brokeragePart,
         fee: feePart,
-        vat: last
-          ? vatLeft
-          : roundCents(
-              vatAdded(brokeragePart, slip.includeVat) +
-                (withFee ? vatAdded(feePart, r.additionalFeeIncludeVat) : 0)
-            ),
+        vat: roundCents(brokerageVatPart + feeVatPart),
       }
       premiumLeft = roundCents(premiumLeft - part.premium)
       discountLeft = roundCents(discountLeft - part.discount)
-      brokerageLeft = roundCents(brokerageLeft - part.brokerage)
-      feeLeft = roundCents(feeLeft - part.fee)
-      vatLeft = roundCents(vatLeft - part.vat)
+      brokerageLeft = roundCents(brokerageLeft - brokeragePart)
+      brokerageVatLeft = roundCents(brokerageVatLeft - brokerageVatPart)
+      feeLeft = roundCents(feeLeft - feePart)
+      feeVatLeft = roundCents(feeVatLeft - feeVatPart)
       insurers.push({
         insurer: r.insurer,
         share: r.share,
@@ -121,9 +138,9 @@ export function closingSummary(slip: PlacingSlip): ClosingSummary {
     brokerageVat,
     fee,
     feeVat,
-    net: roundCents(premium - discount - brokerage - fee - vatOnTop),
-    income: roundCents(brokerage + fee + vatOnTop),
-    incomeVat: roundCents(vatInside + vatOnTop),
+    net: roundCents(premium - discount - brokerage - fee - vat),
+    income: roundCents(brokerage + fee + vat),
+    incomeVat: vat,
     insurers,
   }
 }

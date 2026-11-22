@@ -3,6 +3,7 @@ import test from "node:test"
 
 import {
   additionalFeeVatAddedFor,
+  brokerageAmount,
   brokerageVatAdded,
   nettPremium,
   recalcSlip,
@@ -79,9 +80,10 @@ test("ringkasan penutupan: PPN excl. VAT ikut dipotong dari premi ke asuransi", 
   assert.equal(s.brokerage, 1_500_000)
   assert.equal(s.brokerageVat, 33_000)
   assert.equal(brokerageVatAdded(slip), 33_000)
-  // Fee A 10% incl. VAT (600.000, PPN di dalam), fee B 12,5% excl. VAT (500.000 + PPN 11.000).
-  assert.equal(s.fee, 1_100_000)
-  assert.equal(s.feeVat, 11_000)
+  // Fee A 10% incl. VAT (600.000 = 587.084,15 + PPN 12.915,85), fee B 12,5% excl. VAT
+  // (500.000 + PPN 11.000). Fee ditulis sebelum PPN (Agus, 22 November 2026).
+  assert.equal(s.fee, 1_087_084.15)
+  assert.equal(s.feeVat, 23_915.85)
   assert.equal(s.net, 10_000_000 - 1_500_000 - 1_100_000 - 44_000)
   // Diterima LCH: brokerage + fee + PPN ditambahkan; PPN total = di dalam fee A + ditambahkan.
   assert.equal(s.income, 2_644_000)
@@ -90,7 +92,7 @@ test("ringkasan penutupan: PPN excl. VAT ikut dipotong dari premi ke asuransi", 
   assert.deepEqual(
     s.insurers.map((r) => [r.insurer, r.premium, r.brokerage, r.fee, r.vat, r.net]),
     [
-      ["PT A", 6_000_000, 900_000, 600_000, 19_800, 4_480_200],
+      ["PT A", 6_000_000, 900_000, 587_084.15, 32_715.85, 4_480_200],
       ["PT B", 4_000_000, 600_000, 500_000, 24_200, 2_875_800],
     ]
   )
@@ -100,16 +102,23 @@ test("ringkasan penutupan: PPN excl. VAT ikut dipotong dari premi ke asuransi", 
   )
 })
 
-test("semua incl. VAT: tidak ada PPN tambahan, net sama dengan sebelumnya", () => {
+test("semua incl. VAT: PPN diambil dari dalam nominal, net sama dengan sebelumnya", () => {
   const slip = mvSlip({
     includeVat: true,
     securityPanel: mvSlip().securityPanel!.map((r) => ({ ...r, additionalFeeIncludeVat: true })),
   })
   const s = closingSummary(slip)
-  assert.equal(s.brokerageVat, 0)
-  assert.equal(s.feeVat, 0)
+  // Brokerage 15% incl. VAT = 14,6771%: 1.500.000 ÷ 1,022 = 1.467.710,37 + PPN 32.289,63
+  // (Agus, 22 November 2026).
+  assert.equal(brokerageAmount(slip), 1_467_710.37)
+  assert.equal(s.brokerage, 1_467_710.37)
+  assert.equal(s.brokerageVat, 32_289.63)
+  assert.equal(brokerageVatAdded(slip), 0)
+  assert.equal(s.fee, 1_076_320.94)
+  assert.equal(s.feeVat, 23_679.06)
   assert.equal(s.net, 10_000_000 - 1_500_000 - 1_100_000)
-  assert.deepEqual(s.insurers.map((r) => r.vat), [0, 0])
+  assert.equal(s.income, 2_600_000)
+  assert.deepEqual(s.insurers.map((r) => r.vat), [32_289.63, 23_679.06])
 })
 
 test("Nett Premium polis ikut dikurangi PPN excl. VAT", () => {

@@ -404,14 +404,14 @@ export function PolicyForm({
   // Excl. VAT: PPN 2,2% ditambahkan di atas brokerage dan fee (Agus, 20 November 2026).
   const brokerageVatOnTop = vatAdded(brokerageNominal, draft.includeVat)
   const feeVatOnTop = additionalFeeVatAddedFor(draft.premium, feeRows)
-  const chargeText = (amount: number, vat: number, added = 0) =>
-    vat
-      ? `${money(amount, draft.currency)} · termasuk PPN 2,2% ${money(vat, draft.currency)}${
-          added ? ` · ditambah PPN 2,2% ${money(added, draft.currency)}` : ""
-        }`
-      : added
-        ? `${money(amount, draft.currency)} + PPN 2,2% ${money(added, draft.currency)} (excl. VAT)`
-        : money(amount, draft.currency)
+  // Nominal ditulis sebelum PPN (Agus, 22 November 2026): incl. VAT = nominal ÷ 1,022, misalnya
+  // 15% incl. VAT = 14,6771% + PPN; excl. VAT: PPN ditambahkan di atasnya.
+  const chargeText = (amount: number, vat: number, added = 0) => {
+    const totalVat = Math.round((vat + added) * 100) / 100
+    if (!totalVat) return money(amount, draft.currency)
+    const mode = vat && added ? "incl. dan excl. VAT" : vat ? "incl. VAT" : "excl. VAT"
+    return `${money(amount - vat, draft.currency)} + PPN 2,2% ${money(totalVat, draft.currency)} (${mode})`
+  }
   // Polis induk MOP dan deklarasinya menautkan slip open cover. Nilai, premi, dan periode
   // deklarasi diisi per pengiriman; data lain ikut polis MOP.
   const openCoverSlip = linkedSlip ? usesOpenCover(linkedSlip) : false
