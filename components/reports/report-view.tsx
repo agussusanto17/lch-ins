@@ -47,6 +47,7 @@ import {
 } from "@/lib/data"
 import { yearMonth } from "@/lib/date"
 import type { ExportColumn } from "@/lib/export"
+import { duplicateFlags } from "@/lib/production-duplicates"
 import { customRange, rangeDays } from "@/lib/report-range"
 import {
   compactMoney,
@@ -227,6 +228,25 @@ export function ReportView({
 
   // Produksi = polis yang mulai berlaku di periode; klaim = tanggal kejadian.
   const policies = allPolicies.filter((p) => inRange(p.inceptionDate))
+  // Polis yang kemungkinan tercatat dua kali diberi tanda; datanya tetap tampil dan dihitung
+  // (Agus, 22 November 2026).
+  const flags = duplicateFlags(
+    policies.map((p) => ({
+      policyNo: p.policyNo,
+      type: p.type,
+      insuredName: p.insuredName,
+      cob: p.cob,
+      inceptionDate: p.inceptionDate,
+      expiryDate: p.expiryDate,
+      currency: p.currency,
+      premium: p.premium,
+      insurer: p.insurer,
+      slipPart: p.slipPart,
+      parent: p.parentPolicyId,
+    }))
+  )
+  const duplicateOf = new Map(policies.map((p, i) => [p.id, flags[i]]))
+  const duplicateCount = flags.filter(Boolean).length
   const claims = allClaims.filter((c) => inRange(c.lossDate))
 
   const {
@@ -542,9 +562,19 @@ export function ReportView({
                   header: "Status",
                   value: (p) => policyStatus(p, today),
                 },
+                {
+                  header: "Cek Dobel",
+                  value: (p) => duplicateOf.get(p.id) ?? "",
+                  width: 50,
+                },
               ],
             }}
           />
+          {duplicateCount ? (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+              {`${duplicateCount} polis kemungkinan tercatat dobel, ditandai "Dobel?". Datanya tetap tampil dan ikut dihitung; cek di Policy Database lalu hapus atau perbaiki yang dobel.`}
+            </p>
+          ) : null}
           <Card className="overflow-hidden py-0">
             <Table>
               <TableHeader>
@@ -570,6 +600,14 @@ export function ReportView({
                     <TableRow key={p.id}>
                       <TableCell className="tabular font-medium">
                         {p.policyNo}
+                        {duplicateOf.get(p.id) ? (
+                          <span
+                            title={duplicateOf.get(p.id)}
+                            className="ml-1.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300"
+                          >
+                            Dobel?
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="max-w-52.5 truncate">
                         {p.insuredName}

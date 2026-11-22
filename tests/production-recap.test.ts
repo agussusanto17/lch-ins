@@ -52,13 +52,15 @@ function policy(over: Partial<RecapPolicy> = {}): RecapPolicy {
 }
 
 test("the recap has the 49 headers of the LCH sample, in order, then the MOP rate margin", () => {
-  // 49 kolom contoh LCH, lalu dua kolom margin rate deklarasi MOP (Agus, 20 November 2026).
-  assert.equal(RECAP_HEADERS.length, 51)
-  assert.equal(RECAP_COLUMNS.length, 51)
+  // 49 kolom contoh LCH, lalu dua kolom margin rate deklarasi MOP (Agus, 20 November 2026) dan
+  // kolom Cek Dobel (Agus, 22 November 2026).
+  assert.equal(RECAP_HEADERS.length, 52)
+  assert.equal(RECAP_COLUMNS.length, 52)
+  assert.equal(RECAP_HEADERS.at(-1), "Cek Dobel")
   assert.deepEqual(RECAP_HEADERS.slice(0, 5), ["refno", "voucher", "thn", "mth", "insured"])
   assert.equal(RECAP_HEADERS[30], "RM_Fee_OC")
   assert.equal(RECAP_HEADERS[48], "Perusahaan/Perorangan")
-  assert.deepEqual(RECAP_HEADERS.slice(49), ["Margin_Rate_OC", "Margin_Rate"])
+  assert.deepEqual(RECAP_HEADERS.slice(49), ["Margin_Rate_OC", "Margin_Rate", "Cek Dobel"])
 })
 
 test("dates follow the sample format MM/DD/YYYY", () => {
@@ -322,7 +324,7 @@ test("Per Polis sheet: one row per policy per insurer with a value column per su
     "Premium_Discount_IDR",
   ])
   assert.ok(RECAP_POLICY_HEADERS.includes("EXPENSE-COMMISIONS_IDR"))
-  assert.equal(RECAP_POLICY_HEADERS.at(-1), "(Income)/Beban")
+  assert.deepEqual(RECAP_POLICY_HEADERS.slice(-2), ["(Income)/Beban", "Cek Dobel"])
 })
 
 test("the recap workbook has the LCH sheet, the Per Polis sheet, and notes", () => {
@@ -382,4 +384,31 @@ test("sharing komisi ke LCH Singapore: baris EXPENSE / COMM EXPENSE dan kolom Pe
   // Brokerage incl. VAT: sharing dari brokerage sebelum PPN (150.000 ÷ 1,022 × 40% = 58.708,41).
   const incl = recapRows([policy({ commissionShareSgPct: 40, includeVat: true })])
   assert.equal(incl[1]["(Income)/Beban"], 58_708.41)
+})
+
+test("Cek Dobel: polis yang kemungkinan dobel tetap ditulis, diberi tanda dan warna", () => {
+  // Polis sementara dari CI yang juga diinput manual dengan nomor asuransi (Agus, 22 November 2026).
+  const auto = policy()
+  const manual = policy({ policyNo: "45020126000123", slipNo: null })
+  const other = policy({ policyNo: "MV/2026/0002", insuredName: "PT LAIN" })
+  const rows = recapRows([auto, manual, other])
+  // Datanya tetap ditulis semua.
+  assert.equal(rows.length, 3)
+  assert.deepEqual(
+    rows.map((r) => r["Cek Dobel"]),
+    [
+      "DOBEL? isi sama dengan 45020126000123",
+      "DOBEL? isi sama dengan 018/LCH-PLCMT/CI-MV/XI/2026",
+      "",
+    ]
+  )
+  assert.equal(recapPolicyRows([auto, manual, other])[0]["Cek Dobel"], rows[0]["Cek Dobel"])
+
+  const wb = new ExcelJS.Workbook()
+  fillProductionRecap(wb, [auto, manual, other], { start: "2026-11-01", end: "2026-11-30" }, "2026-11-22")
+  const sheet = wb.getWorksheet("Rekap Produksi")!
+  const fill = (n: number) => (sheet.getRow(n).getCell(1).fill as { fgColor?: { argb?: string } })?.fgColor?.argb
+  assert.equal(fill(2), "FFFCE4D6")
+  assert.equal(fill(3), "FFFCE4D6")
+  assert.equal(fill(4), undefined)
 })
