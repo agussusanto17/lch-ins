@@ -95,8 +95,11 @@ export function totalPayable(slip: PlacingSlip) {
   )
 }
 
-/** Batas additional discount Quotation (MoM review Phase 1, poin 7). */
-export const MAX_ADDITIONAL_DISCOUNT_PCT = 15
+/**
+ * Batas additional discount Quotation. Awalnya 15% (MoM review Phase 1, poin 7); sejak 22 November
+ * 2026 tidak dibatasi (Agus), hanya tidak boleh lebih dari 100% supaya premi tidak negatif.
+ */
+export const MAX_ADDITIONAL_DISCOUNT_PCT = 100
 
 /**
  * Additional discount Quotation: persen dari premi setelah discount utama (MoM review Phase 1,

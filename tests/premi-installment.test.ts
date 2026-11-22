@@ -136,17 +136,32 @@ test("jadwal ikut ke polis dari slip; open cover tetap sekaligus", () => {
   assert.deepEqual(fields.premiumInstallments, slip.premiumInstallments)
   assert.equal(fields.premium, 10_000_000)
   assert.equal(fields.discountAmount, 1_000_000)
+  // Admin cost dan stamp duty slip ikut ke polis dan masuk cicilan pertama (Agus, 22 November 2026).
+  assert.equal((fields.adminCost ?? 0) + (fields.stampDuty ?? 0), 50_000)
   assert.equal(
     installmentScheduleText(fields),
-    "1. 20 Nov 2026: 2.250.000,00; 2. 20 Feb 2027: 2.250.000,00; 3. 20 Mei 2027: 2.250.000,00; 4. 20 Agu 2027: 2.250.000,00"
+    "1. 20 Nov 2026: 2.300.000,00; 2. 20 Feb 2027: 2.250.000,00; 3. 20 Mei 2027: 2.250.000,00; 4. 20 Agu 2027: 2.250.000,00"
   )
 
   const openCover = policyFieldsFromSlip(liabilitySlip({ openCover: true }), null)
   assert.deepEqual(openCover.premiumInstallments, [])
+  assert.deepEqual([openCover.adminCost, openCover.stampDuty], [0, 0])
 
   // Revisi slip setelah CI terbit ikut mengubah jadwal di polis bernomor sementara.
   const revised = liabilitySlip({ premiumInstallments: defaultInstallments(2, "2026-11-20", "2027-11-20") })
   const changes = changedSlipFields(fields, policyFieldsFromSlip(revised, null))
   assert.deepEqual(Object.keys(changes), ["premiumInstallments"])
   assert.equal(changes.premiumInstallments?.length, 2)
+})
+
+test("admin cost dan stamp duty masuk cicilan pertama", () => {
+  const rows = defaultInstallments(4, "2026-11-20", "2027-11-20")
+  // Premi setelah diskon 9.000.000, admin cost + stamp duty 50.000 (Agus, 22 November 2026).
+  const amounts = installmentAmounts(rows, 9_000_000, 50_000)
+  assert.deepEqual(amounts, [2_300_000, 2_250_000, 2_250_000, 2_250_000])
+  assert.equal(
+    amounts.reduce((sum, a) => sum + a, 0),
+    9_050_000
+  )
+  assert.deepEqual(installmentAmounts(rows, 9_000_000), [2_250_000, 2_250_000, 2_250_000, 2_250_000])
 })

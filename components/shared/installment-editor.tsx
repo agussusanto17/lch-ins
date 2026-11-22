@@ -35,6 +35,7 @@ export function InstallmentEditor({
   disabled,
   hint,
   note,
+  charges = 0,
 }: {
   value: readonly PremiumInstallment[] | undefined
   onChange: (rows: PremiumInstallment[]) => void
@@ -48,9 +49,11 @@ export function InstallmentEditor({
   hint?: string
   /** Keterangan tambahan di bawah tabel, misalnya biaya polis dan meterai. */
   note?: string
+  /** Admin cost dan stamp duty, otomatis masuk cicilan pertama (Agus, 22 November 2026). */
+  charges?: number
 }) {
   const rows = value ?? []
-  const amounts = installmentAmounts(rows, base)
+  const amounts = installmentAmounts(rows, base, charges)
   const totalPct = rows.reduce((sum, r) => sum + r.pct, 0)
   const error = installmentsError(rows)
 
@@ -84,7 +87,7 @@ export function InstallmentEditor({
               <tr className="border-b text-left text-xs text-muted-foreground">
                 <th className="px-3 py-2 font-medium">Cicilan</th>
                 <th className="px-3 py-2 font-medium">Jatuh Tempo</th>
-                <th className="px-3 py-2 font-medium">Persen (%)</th>
+                <th className="px-3 py-2 font-medium">Percentage (%)</th>
                 <th className="px-3 py-2 text-right font-medium">Jumlah ({currency})</th>
               </tr>
             </thead>
@@ -125,13 +128,18 @@ export function InstallmentEditor({
                   Total
                 </td>
                 <td className="px-3 py-2 tabular">{num(totalPct, 0, 4)}%</td>
-                <td className="px-3 py-2 text-right tabular">{num(base, 2)}</td>
+                <td className="px-3 py-2 text-right tabular">{num(base + charges, 2)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
       ) : null}
       {rows.length && error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {rows.length && charges > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Cicilan ke-1 termasuk admin cost dan stamp duty {money(charges, currency)}.
+        </p>
+      ) : null}
       {rows.length && note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
     </div>
   )

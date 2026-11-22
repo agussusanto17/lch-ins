@@ -19,7 +19,6 @@ import {
   DocTitle,
   ExclusionsBlock,
   HangingIndentText,
-  InstallmentScheduleBlock,
   InterestBlock,
   LocationPremiumAttached,
   LocationScheduleAppendix,
@@ -220,13 +219,9 @@ function SlipRateAndPremium({
   /** Quotation Slip Internal LCH: perhitungan premi ikut additional discount (MoM poin 7). */
   internal?: boolean
 }) {
-  return (
-    <>
-      <SlipPremiumCalculation slip={slip} internal={internal} />
-      {/* Jadwal premi installment di bawah perhitungan premi (Agus, 20 November 2026). */}
-      <InstallmentScheduleBlock slip={slip} internal={internal} />
-    </>
-  )
+  // Jadwal premi installment tidak dicetak di slip; tampil di Policy Database dan report
+  // (Agus, 22 November 2026).
+  return <SlipPremiumCalculation slip={slip} internal={internal} />
 }
 
 function SlipPremiumCalculation({

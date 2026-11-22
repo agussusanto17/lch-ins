@@ -72,7 +72,11 @@ import {
 import { parentPolicyIssue, parentPolicyLabel } from "@/lib/policy-parent"
 import { cancellationSuggestion } from "@/lib/policy-cancellation"
 import { isProvisionalPolicyNo, policyFieldsFromSlip } from "@/lib/policy-from-slip"
-import { installmentsError, policyInstallmentBase } from "@/lib/premium-installments"
+import {
+  installmentsError,
+  policyInstallmentBase,
+  policyInstallmentCharges,
+} from "@/lib/premium-installments"
 import {
   POLICY_FILE_KINDS,
   latestPolicyFile,
@@ -1104,6 +1108,28 @@ export function PolicyForm({
                 </div>
               </>
             ) : null}
+            {(draft.type === "Baru" || draft.type === "Renewal") && !openCoverSlip ? (
+              // Biaya polis dan meterai, ditagih bersama cicilan pertama premi installment
+              // (Agus, 22 November 2026). Polis dari CI mengikuti isian slip.
+              <>
+                <NumberField
+                  label="Admin Cost"
+                  min={0}
+                  value={draft.adminCost ?? 0}
+                  onValueChange={(v) => set({ adminCost: v ?? 0 })}
+                  error={errors.adminCost}
+                  description="Biaya polis; ikut cicilan pertama bila premi dicicil."
+                />
+                <NumberField
+                  label="Stamp Duty"
+                  min={0}
+                  value={draft.stampDuty ?? 0}
+                  onValueChange={(v) => set({ stampDuty: v ?? 0 })}
+                  error={errors.stampDuty}
+                  description="Bea meterai; ikut cicilan pertama bila premi dicicil."
+                />
+              </>
+            ) : null}
             {declaration ? (
               // Admin Fee dari asuransi per sertifikat (General Marine Report), di luar premi produksi.
               <NumberField
@@ -1123,6 +1149,7 @@ export function PolicyForm({
                 value={draft.premiumInstallments}
                 onChange={(rows) => set({ premiumInstallments: rows })}
                 base={policyInstallmentBase(draft)}
+                charges={policyInstallmentCharges(draft)}
                 currency={draft.currency}
                 inceptionDate={draft.inceptionDate}
                 expiryDate={draft.expiryDate}

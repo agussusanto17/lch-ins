@@ -28,6 +28,8 @@ export type PolicySlipFields = Pick<
   | "sumInsured"
   | "premium"
   | "discountAmount"
+  | "adminCost"
+  | "stampDuty"
   | "premiumInstallments"
   | "brokeragePct"
   | "includeVat"
@@ -69,6 +71,10 @@ export function policyFieldsFromSlip(
     premium,
     // Diskon slip ikut tercatat di polis (MoM review Phase 1, poin 19).
     discountAmount: openCover ? 0 : slipPolicyDiscount(slip, part),
+    // Admin cost dan stamp duty slip ikut ke polis dan masuk cicilan pertama (Agus, 22 November
+    // 2026). PAR + EQVET: dikenakan per polis yang berpremi, seperti cetakan slip.
+    adminCost: !openCover && premium > 0 ? slip.adminCost || 0 : 0,
+    stampDuty: !openCover && premium > 0 ? slip.stampDuty || 0 : 0,
     // Premi installment ikut ke polis (Agus, 20 November 2026); open cover dibayar per deklarasi.
     premiumInstallments: openCover ? [] : (slip.premiumInstallments ?? []),
     brokeragePct: slip.brokeragePct,

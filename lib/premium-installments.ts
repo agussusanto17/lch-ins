@@ -4,7 +4,7 @@
  * terbit. Nominal tiap cicilan dihitung dari premi masing-masing, jadi dua polis slip PAR + EQVET
  * memakai jadwal yang sama.
  */
-import { roundCents, slipDiscountAmount, totalPremium } from "./calc"
+import { roundCents, slipDiscountAmount, totalPayable, totalPremium } from "./calc"
 import type { PlacingSlip, PremiumInstallment } from "./data/types"
 import { dateShort, num } from "./format"
 
@@ -106,17 +106,19 @@ export function installmentsError(rows: readonly PremiumInstallment[] | undefine
 
 /**
  * Nominal tiap cicilan dari premi setelah diskon. Dibulatkan ke sen, dan cicilan terakhir
- * menampung selisih pembulatan supaya jumlahnya tepat sama dengan premi.
+ * menampung selisih pembulatan supaya jumlahnya tepat sama dengan premi. Admin cost dan stamp
+ * duty (`charges`) otomatis masuk cicilan pertama (Agus, 22 November 2026).
  */
 export function installmentAmounts(
   rows: readonly PremiumInstallment[],
-  netPremium: number
+  netPremium: number,
+  charges = 0
 ): number[] {
   let left = cents(netPremium)
   return rows.map((r, i) => {
     const amount = i === rows.length - 1 ? left : cents((netPremium * r.pct) / 100)
     left = cents(left - amount)
-    return amount
+    return i === 0 ? cents(amount + charges) : amount
   })
 }
 
@@ -131,6 +133,16 @@ export function slipInstallmentBase(slip: PlacingSlip) {
 /** Dasar cicilan polis: premi setelah diskon. */
 export function policyInstallmentBase(p: { premium: number; discountAmount?: number }) {
   return roundCents(p.premium - (p.discountAmount ?? 0))
+}
+
+/** Admin cost dan stamp duty slip yang dibayar bersama cicilan pertama (PAR + EQVET: per polis). */
+export function slipInstallmentCharges(slip: PlacingSlip) {
+  return roundCents(totalPayable(slip) - slipInstallmentBase(slip))
+}
+
+/** Admin cost dan stamp duty polis, dibayar bersama cicilan pertama. */
+export function policyInstallmentCharges(p: { adminCost?: number; stampDuty?: number }) {
+  return roundCents((p.adminCost ?? 0) + (p.stampDuty ?? 0))
 }
 
 /** Label singkat jadwal: "Sekaligus" atau "4x cicilan". */
@@ -149,10 +161,12 @@ export function installmentAuditLines(rows: readonly PremiumInstallment[] | unde
 export function installmentScheduleText(p: {
   premium: number
   discountAmount?: number
+  adminCost?: number
+  stampDuty?: number
   premiumInstallments?: readonly PremiumInstallment[]
 }) {
   const rows = p.premiumInstallments ?? []
-  const amounts = installmentAmounts(rows, policyInstallmentBase(p))
+  const amounts = installmentAmounts(rows, policyInstallmentBase(p), policyInstallmentCharges(p))
   return rows
     .map((r, i) => `${r.no}. ${r.dueDate ? dateShort(r.dueDate) : "—"}: ${num(amounts[i], 2)}`)
     .join("; ")
