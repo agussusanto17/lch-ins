@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-22
 - **Branch:** `feat/nilai-casco-per-tahun`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #311
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
