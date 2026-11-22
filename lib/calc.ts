@@ -782,3 +782,12 @@ function withBiRates(slip: PlacingSlip): RateLine[] {
 export function sgCommissionShare(brokerage: number, sharePct: number | undefined) {
   return roundCents((brokerage * (sharePct || 0)) / 100)
 }
+
+/**
+ * Nominal brokerage atau fee sebelum PPN 2,2% untuk report (Agus dan Harry, 22 November 2026),
+ * sama dengan placing: incl. VAT berarti PPN sudah di dalam persennya, jadi nominal ÷ 1,022
+ * (15% incl. VAT = 14,6771%); excl. VAT apa adanya. PPN-nya = nominal sebelum PPN × 2,2%.
+ */
+export function beforeVat(amount: number, includeVat: boolean | undefined) {
+  return includeVat ? amount / (1 + BROKERAGE_VAT_RATE) : amount
+}

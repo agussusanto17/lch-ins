@@ -13,7 +13,7 @@
  */
 import type { Workbook, Worksheet } from "exceljs"
 
-import { FX, roundCents } from "./calc"
+import { BROKERAGE_VAT_RATE, beforeVat, FX, roundCents } from "./calc"
 import type { ClaimStatus, PolicyType } from "./data/types"
 import { dateShort } from "./format"
 import { lossRatioClaimValue } from "./loss-ratio"
@@ -24,6 +24,8 @@ export interface LrInsurerShare {
   share: number
   /** Additional fee (EF) asuransi ini dalam persen premi. */
   additionalFeePct: number
+  /** EF asuransi ini sudah termasuk PPN 2,2%. */
+  additionalFeeIncludeVat?: boolean
 }
 
 export interface LrPolicy {
@@ -43,6 +45,8 @@ export interface LrPolicy {
   premium: number
   discount: number
   brokeragePct: number
+  /** Brokerage sudah termasuk PPN 2,2%. */
+  includeVat?: boolean
   insurers: LrInsurerShare[]
 }
 
@@ -66,17 +70,24 @@ export interface LossRatioReportData {
 /** Nilai satu asuransi pada satu kelompok, dalam IDR. */
 export interface LrAmounts {
   gross: number
+  /** Brokerage sebelum PPN. */
   brokerage: number
   discount: number
+  /** Additional fee sebelum PPN. */
   fee: number
+  /** PPN 2,2% atas brokerage dan fee, di dalam persen (incl. VAT) atau ditambahkan (excl. VAT). */
+  vat: number
   claim: number
 }
 
-const emptyAmounts = (): LrAmounts => ({ gross: 0, brokerage: 0, discount: 0, fee: 0, claim: 0 })
+const emptyAmounts = (): LrAmounts => ({ gross: 0, brokerage: 0, discount: 0, fee: 0, vat: 0, claim: 0 })
 
-/** Total outgo = BF + diskon + EF; net premium = gross − total outgo. */
+/**
+ * Total outgo = BF + diskon + EF + PPN; net premium = gross − total outgo, sama dengan Net ke
+ * asuransi di Ringkasan Penutupan placing (22 November 2026).
+ */
 export function outgo(a: LrAmounts) {
-  return roundCents(a.brokerage + a.discount + a.fee)
+  return roundCents(a.brokerage + a.discount + a.fee + a.vat)
 }
 export function netPremium(a: LrAmounts) {
   return roundCents(a.gross - outgo(a))
@@ -86,7 +97,7 @@ export function ratio(claim: number, base: number) {
   return base > 0 ? claim / base : null
 }
 
-const AMOUNT_KEYS = ["gross", "brokerage", "discount", "fee", "claim"] as const
+const AMOUNT_KEYS = ["gross", "brokerage", "discount", "fee", "vat", "claim"] as const
 
 function add(target: LrAmounts, source: Partial<LrAmounts>) {
   for (const key of AMOUNT_KEYS) target[key] += source[key] ?? 0
@@ -98,6 +109,7 @@ function rounded(a: LrAmounts): LrAmounts {
     brokerage: roundCents(a.brokerage),
     discount: roundCents(a.discount),
     fee: roundCents(a.fee),
+    vat: roundCents(a.vat),
     claim: roundCents(a.claim),
   }
 }
@@ -113,11 +125,15 @@ export function claimIncurred(c: LrClaim, fx: Record<string, number> = FX) {
 export function policyShare(p: LrPolicy, ins: LrInsurerShare, fx: Record<string, number> = FX) {
   const rate = fx[p.currency] ?? 1
   const part = (p.premium * ins.share) / 100
+  // Brokerage dan EF sebelum PPN, PPN-nya terpisah (Agus dan Harry, 22 November 2026).
+  const brokerage = beforeVat((part * p.brokeragePct) / 100, p.includeVat) * rate
+  const fee = beforeVat((part * (ins.additionalFeePct || 0)) / 100, ins.additionalFeeIncludeVat) * rate
   return {
     gross: part * rate,
-    brokerage: ((part * p.brokeragePct) / 100) * rate,
+    brokerage,
     discount: ((p.discount * ins.share) / 100) * rate,
-    fee: ((part * (ins.additionalFeePct || 0)) / 100) * rate,
+    fee,
+    vat: (brokerage + fee) * BROKERAGE_VAT_RATE,
   }
 }
 
@@ -436,7 +452,7 @@ export function fillInsurerCobLossRatio(
     title(ws, 1, r.insurer.toUpperCase(), 14)
     ws.getRow(2).getCell(1).value = `As of ${dateShort(period.end)}. Tahun = tahun mulai polis (polis Baru/Renewal beserta endorsement, pembatalan, dan deklarasinya), mulai ${dateShort(period.start)}.`
     ws.getRow(3).getCell(1).value =
-      "Bagian asuransi sesuai share, dalam IDR. Net premium = gross − brokerage − diskon − additional fee (EF). Klaim = nilai disetujui/dibayar + adjuster fee − salvage, tanpa klaim Rejected."
+      "Bagian asuransi sesuai share, dalam IDR. Net premium = gross − brokerage − diskon − additional fee (EF) − PPN 2,2% atas brokerage dan EF; brokerage dan EF sebelum PPN (incl. VAT: persen ÷ 1,022), sama dengan Net ke asuransi di placing. Klaim = nilai disetujui/dibayar + adjuster fee − salvage, tanpa klaim Rejected."
     ws.getRow(4).getCell(1).value = `Dibuat ${dateShort(printedOn)}.`
     let row = 6
     for (const table of [...r.cobs, r.all]) {
@@ -453,15 +469,16 @@ const ACCOUNT_HEADERS = [
   "BF",
   "Diskon",
   "EF",
+  "PPN",
   "Total Outgo",
   "Net Premium",
   "Klaim",
   "Loss Ratio",
 ]
-const ACCOUNT_FORMATS = [null, PCT_FMT, IDR_FMT, IDR_FMT, IDR_FMT, IDR_FMT, IDR_FMT, IDR_FMT, IDR_FMT, PCT_FMT]
+const ACCOUNT_FORMATS = [null, PCT_FMT, IDR_FMT, IDR_FMT, IDR_FMT, IDR_FMT, IDR_FMT, IDR_FMT, IDR_FMT, IDR_FMT, PCT_FMT]
 
 function accountRow(label: string, share: number | null, a: LrAmounts): Value[] {
-  return [label, share, a.gross, a.brokerage, a.discount, a.fee, outgo(a), netPremium(a), a.claim, ratio(a.claim, netPremium(a))]
+  return [label, share, a.gross, a.brokerage, a.discount, a.fee, a.vat, outgo(a), netPremium(a), a.claim, ratio(a.claim, netPremium(a))]
 }
 
 /**
@@ -478,10 +495,10 @@ export function fillAccountLossRatio(
     title(ws, 1, heading, 14)
     ws.getRow(2).getCell(1).value = `Akun: ${result.account}. Tahun polis mulai ${dateShort(period.start)} s/d ${dateShort(period.end)}; nilai dalam IDR, bagian asuransi sesuai share.`
     ws.getRow(3).getCell(1).value =
-      "BF = brokerage, EF = additional fee, Total Outgo = BF + diskon + EF, Net Premium = premi gross − total outgo. Klaim = nilai disetujui/dibayar + adjuster fee − salvage (tanpa Rejected); Loss Ratio = klaim / net premium."
+      "BF = brokerage dan EF = additional fee, keduanya sebelum PPN (incl. VAT: persen ÷ 1,022); PPN = 2,2% × (BF + EF). Total Outgo = BF + diskon + EF + PPN, Net Premium = premi gross − total outgo (sama dengan Net ke asuransi di placing). Klaim = nilai disetujui/dibayar + adjuster fee − salvage (tanpa Rejected); Loss Ratio = klaim / net premium."
     ws.getRow(4).getCell(1).value = `Dibuat ${dateShort(printedOn)}.`
   }
-  const widths = [{ width: 40 }, { width: 10 }, ...Array.from({ length: 8 }, () => ({ width: 19 }))]
+  const widths = [{ width: 40 }, { width: 10 }, ...Array.from({ length: 9 }, () => ({ width: 19 }))]
 
   const perYear = wb.addWorksheet("Per Tahun")
   perYear.columns = widths

@@ -9,6 +9,7 @@ import {
   insurerCobLossRatio,
   lossRatioAccounts,
   netPremium,
+  policyShare,
   type LossRatioReportData,
   type LrPolicy,
 } from "../lib/loss-ratio-report"
@@ -186,19 +187,20 @@ test("loss ratio per asuransi: per COB per tahun, seperti laporan MAG", () => {
   assert.deepEqual(
     property.years.map((y) => [y.year, y.gross, netPremium(y), y.claim, y.topClaimAccount]),
     [
-      // 110 jt × 60% = 66 jt; net = 66 − BF 9,9 − EF 13,2 = 42,9 jt; klaim 31 jt × 60%.
-      ["2024", 66_000_000, 42_900_000, 18_600_000, "D BEST GROUP"],
+      // 110 jt × 60% = 66 jt; net = 66 − BF 9,9 − EF 13,2 − PPN 2,2% × 23,1 (excl. VAT) =
+      // 42.391.800, sama dengan Net ke asuransi placing (22 November 2026); klaim 31 jt × 60%.
+      ["2024", 66_000_000, 42_391_800, 18_600_000, "D BEST GROUP"],
       // Klaim Rejected tidak dihitung.
-      ["2025", 60_000_000, 39_000_000, 0, null],
+      ["2025", 60_000_000, 38_538_000, 0, null],
     ]
   )
   const motor = mag.cobs.find((c) => c.cob === "MOTOR VEHICLE")!
-  assert.deepEqual(motor.years.map((y) => [y.year, y.gross, netPremium(y), y.claim]), [["2025", 50_000_000, 37_500_000, 20_000_000]])
+  assert.deepEqual(motor.years.map((y) => [y.year, y.gross, netPremium(y), y.claim]), [["2025", 50_000_000, 37_225_000, 20_000_000]])
   assert.deepEqual(
     mag.all.years.map((y) => [y.year, y.gross, netPremium(y), y.claim]),
     [
-      ["2024", 66_000_000, 42_900_000, 18_600_000],
-      ["2025", 110_000_000, 76_500_000, 20_000_000],
+      ["2024", 66_000_000, 42_391_800, 18_600_000],
+      ["2025", 110_000_000, 75_763_000, 20_000_000],
     ]
   )
   assert.deepEqual(insurerCobLossRatio(DATA).map((r) => r.insurer), ["LIPPO", "MAG"])
@@ -211,8 +213,8 @@ test("loss ratio akun per asuransi: per tahun polis, terbaru dulu, dengan share 
   assert.deepEqual(
     y2024.insurers.map((i) => [i.insurer, i.share, i.gross, i.brokerage, i.fee, netPremium(i), i.claim]),
     [
-      ["MAG", 0.6, 66_000_000, 9_900_000, 13_200_000, 42_900_000, 18_600_000],
-      ["LIPPO", 0.4, 44_000_000, 6_600_000, 13_200_000, 24_200_000, 12_400_000],
+      ["MAG", 0.6, 66_000_000, 9_900_000, 13_200_000, 42_391_800, 18_600_000],
+      ["LIPPO", 0.4, 44_000_000, 6_600_000, 13_200_000, 23_764_400, 12_400_000],
     ]
   )
   assert.equal(r.total.gross, 230_000_000)
@@ -239,4 +241,31 @@ test("workbook loss ratio: sheet per asuransi dan sheet akun", async () => {
   assert.deepEqual([mag.getCell("A8").value, mag.getCell("B8").value, mag.getCell("D8").value], ["2024", 66_000_000, 18_600_000])
   const perYear = read.getWorksheet("Per Tahun")!
   assert.equal(perYear.getCell("A6").value, "TOTAL 2025-2026")
+})
+
+test("loss ratio: brokerage dan EF incl. VAT ditulis sebelum PPN, net sama dengan placing", () => {
+  // 100 jt, brokerage 15% incl. VAT dan EF 10% incl. VAT (Agus dan Harry, 22 November 2026).
+  const share = policyShare(
+    {
+      id: "x",
+      rootId: "x",
+      yearStart: "2026-01-01",
+      policyNo: "X",
+      type: "Baru",
+      cobCode: "01",
+      cob: "PROPERTY",
+      account: "X",
+      currency: "IDR",
+      premium: 100_000_000,
+      discount: 0,
+      brokeragePct: 15,
+      includeVat: true,
+      insurers: [],
+    },
+    { insurer: "MAG", share: 100, additionalFeePct: 10, additionalFeeIncludeVat: true }
+  )
+  assert.equal(Math.round(share.brokerage * 100) / 100, 14_677_103.72)
+  assert.equal(Math.round(share.fee * 100) / 100, 9_784_735.81)
+  // Yang dipotong dari premi tetap 15% + 10% karena PPN sudah di dalam persennya.
+  assert.equal(netPremium({ ...share, claim: 0 }), 75_000_000)
 })
