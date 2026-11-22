@@ -118,6 +118,7 @@ function toPolicyRecord(
     discountAmount: Number(row.discountAmount),
     brokeragePct: Number(row.brokeragePct),
     includeVat: row.includeVat,
+    commissionShareSgPct: Number(row.commissionShareSgPct),
     additionalFee: Number(row.additionalFee),
     additionalFeePct: weightedFeePct(insurers),
     // Isian form polis satu asuransi; co-insurance memakai status per asuransi.
@@ -163,6 +164,7 @@ function auditSnapshot(p: PolicyRecord) {
     premium: p.premium,
     discountAmount: p.discountAmount ?? 0,
     brokeragePct: p.brokeragePct,
+    commissionShareSgPct: p.commissionShareSgPct ?? 0,
     additionalFee: p.additionalFee ?? 0,
     additionalFeePanel: additionalFeePanelText(p.insurers),
     rate: p.rate ?? null,
@@ -334,6 +336,8 @@ async function policyData(tx: Tx, input: PolicyInput) {
     discountAmount,
     brokeragePct: input.brokeragePct,
     includeVat: input.includeVat ?? false,
+    // Sharing brokerage ke LCH Singapore, persen dari brokerage (Agus, 22 November 2026).
+    commissionShareSgPct: input.commissionShareSgPct ?? 0,
     // Nominal = premi × fee (%) per asuransi (Harry, 12 November 2026), jadi
     // ikut berubah bersama premi, termasuk premi negatif pada pembatalan.
     additionalFee: additionalFeeFor(premium, insurerRows(input)),

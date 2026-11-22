@@ -47,6 +47,7 @@ export function declarationPreset(master: Policy) {
     riskLocation: master.riskLocation,
     brokeragePct: master.brokeragePct,
     includeVat: master.includeVat,
+    commissionShareSgPct: master.commissionShareSgPct,
     additionalFeePct: master.additionalFeePct,
     additionalFeeIncludeVat: master.additionalFeeIncludeVat,
     cobOjkClassId: master.cobOjkClassId,

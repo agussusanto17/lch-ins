@@ -125,3 +125,13 @@ test("brokerage 15% incl. VAT ditulis 14,6771% sebelum PPN; excl. VAT tetap 15% 
   assert.equal(brokerageVatAdded(excl), 302_504.4)
   assert.equal(closingSummary(excl).net, 91_668_000 - 13_750_200 - 302_504.4)
 })
+
+test("sharing komisi LCH Singapore: dari brokerage sebelum PPN, net ke asuransi tetap", () => {
+  const panel = [row("PT Asuransi Multi Artha Guna Tbk", 100)]
+  const base = slipWith("Motor Vehicle", 10_000_000, panel, { brokeragePct: 15, includeVat: false })
+  const shared = closingSummary({ ...base, commissionShareSgPct: 50 })
+  // Brokerage 1.500.000 excl. VAT; 50% ke LCH Singapore (Agus, 22 November 2026).
+  assert.equal(shared.sgShare, 750_000)
+  assert.equal(shared.net, closingSummary(base).net)
+  assert.equal(closingSummary(base).sgShare, 0)
+})

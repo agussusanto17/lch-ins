@@ -136,6 +136,7 @@ import {
   calculateParEqvet,
   discountAmount,
   effectiveBrokeragePct,
+  sgCommissionShare,
   insurerAdditionalFee,
   internalTotalPayable,
   isParEqvetSlip,
@@ -2475,6 +2476,39 @@ function SlipEditor({
                     </div>
                   </>
                 ) : null}
+              </div>
+              {/* Sharing brokerage ke kantor LCH Singapore (Agus, 22 November 2026). */}
+              <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-3">
+                <Field>
+                  <FieldLabel htmlFor="sg-share">Sharing Komisi LCH Singapore (%)</FieldLabel>
+                  <NumberInput
+                    id="sg-share"
+                    preset="percent"
+                    min={0}
+                    max={100}
+                    invalid={
+                      (slip.commissionShareSgPct ?? 0) < 0 ||
+                      (slip.commissionShareSgPct ?? 0) > 100
+                    }
+                    value={slip.commissionShareSgPct || null}
+                    onValueChange={(v) => set({ commissionShareSgPct: v ?? 0 })}
+                  />
+                </Field>
+                <p className="text-xs text-muted-foreground sm:col-span-2 sm:pt-7">
+                  {slip.commissionShareSgPct && !usesOpenCover(slip)
+                    ? `Ke LCH Singapore ${money(
+                        sgCommissionShare(brokerageAmount(slip), slip.commissionShareSgPct),
+                        slip.currency
+                      )} · LCH Indonesia ${money(
+                        brokerageAmount(slip) -
+                          sgCommissionShare(brokerageAmount(slip), slip.commissionShareSgPct),
+                        slip.currency
+                      )}. `
+                    : ""}
+                  Persen dari brokerage yang di-sharing ke LCH Insurance Brokers Pte Ltd; kosong
+                  bila tidak ada sharing. Tidak dicetak di dokumen; tercatat sebagai beban komisi
+                  di Rekap Produksi.
+                </p>
               </div>
               {usesAdditionalFee(slip.cob) ? (
                 // Harry, 12 November 2026: additional fee berupa persen, diisi

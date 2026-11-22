@@ -355,3 +355,31 @@ test("the recap workbook has the LCH sheet, the Per Polis sheet, and notes", () 
   assert.equal(recap.getRow(3).getCell(38).value, "EF (MAG)")
   assert.equal(wb.getWorksheet("Per Polis")!.rowCount, 2)
 })
+
+test("sharing komisi ke LCH Singapore: baris EXPENSE / COMM EXPENSE dan kolom Per Polis", () => {
+  // Brokerage 15% dari premi 1.000.000 = 150.000; 40% di-sharing ke LCH Singapore = 60.000
+  // (Agus, 22 November 2026).
+  const p = policy({ commissionShareSgPct: 40 })
+  const rows = recapRows([p])
+  assert.deepEqual(
+    rows.map((r) => [r["akun pnl"], r["sub akun pnl"], r["sub akun comm exp"], r["(Income)/Beban"]]),
+    [
+      ["INCOME", "COMM", "", -150_000],
+      ["EXPENSE", "COMM EXPENSE", "LCH Insurance Brokers Pte Ltd", 60_000],
+    ]
+  )
+  assert.equal(rows[1].Premium_Gross_OC, 0)
+  assert.equal(rows[1].Percentage, 0.06)
+
+  const [perPolis] = recapPolicyRows([p])
+  assert.equal(perPolis["EXPENSE-COMMISIONS_OC"], 60_000)
+  assert.equal(perPolis["EXPENSE-COMMISIONS_IDR"], 60_000)
+  assert.equal(perPolis["(Income)/Beban"], -90_000)
+
+  // Tanpa sharing: tidak ada baris beban.
+  assert.deepEqual(recapRows([policy()]).map((r) => r["akun pnl"]), ["INCOME"])
+
+  // Brokerage incl. VAT: sharing dari brokerage sebelum PPN (150.000 ÷ 1,022 × 40% = 58.708,41).
+  const incl = recapRows([policy({ commissionShareSgPct: 40, includeVat: true })])
+  assert.equal(incl[1]["(Income)/Beban"], 58_708.41)
+})

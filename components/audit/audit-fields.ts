@@ -126,6 +126,7 @@ const FIELD_LABELS: Record<string, string> = {
   wordingForms: "Wording form",
   discountPct: "Diskon (%)",
   additionalDiscountPct: "Additional discount Quotation (%)",
+  commissionShareSgPct: "Sharing komisi LCH Singapore (%)",
   multiYearDepreciationPct: "Penyusutan nilai per tahun polis (%)",
   premiumInstallments: "Premi installment",
   settledUnlockReason: "Alasan buka kunci klaim Settled",

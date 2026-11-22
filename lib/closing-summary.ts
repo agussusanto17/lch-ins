@@ -13,6 +13,7 @@ import {
   feeVatInside,
   insurerAdditionalFee,
   roundCents,
+  sgCommissionShare,
   slipDiscountAmount,
   totalPremium,
   vatAdded,
@@ -62,6 +63,11 @@ export interface ClosingSummary {
   income: number
   /** Semua PPN 2,2% di dalam pendapatan. */
   incomeVat: number
+  /**
+   * Bagian brokerage (sebelum PPN) yang di-sharing ke LCH Singapore (Agus, 22 November 2026).
+   * Beban komisi LCH Indonesia; tidak mengubah net ke asuransi.
+   */
+  sgShare: number
   /** Rincian per asuransi untuk co-insurance; kosong bila hanya satu asuransi. */
   insurers: InsurerClosingSummary[]
 }
@@ -141,6 +147,7 @@ export function closingSummary(slip: PlacingSlip): ClosingSummary {
     net: roundCents(premium - discount - brokerage - fee - vat),
     income: roundCents(brokerage + fee + vat),
     incomeVat: vat,
+    sgShare: sgCommissionShare(brokerage, slip.commissionShareSgPct),
     insurers,
   }
 }

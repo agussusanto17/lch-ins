@@ -124,6 +124,22 @@ export function ClosingSummaryPanel({
             strong
           />
         </div>
+        {/* Sharing brokerage ke kantor LCH Singapore (Agus, 22 November 2026). */}
+        {s.sgShare ? (
+          <div className="border-t pt-1">
+            <Row
+              label={`Sharing komisi LCH Singapore ${num(slip.commissionShareSgPct || 0, 2)}%`}
+              hint="Dari brokerage sebelum PPN; beban komisi LCH Indonesia"
+              value={`− ${money(s.sgShare, currency)}`}
+            />
+            <Row
+              label="Pendapatan LCH Indonesia"
+              hint="Pendapatan LCH − sharing komisi LCH Singapore"
+              value={money(s.income - s.sgShare, currency)}
+              strong
+            />
+          </div>
+        ) : null}
       </div>
 
       {!compact && s.insurers.length ? (

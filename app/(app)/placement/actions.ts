@@ -428,6 +428,12 @@ const placingSlipSchema = z.object({
     .min(0, "Penyusutan per tahun tidak boleh negatif")
     .max(100, "Penyusutan per tahun maksimal 100%")
     .optional(),
+  // Sharing brokerage ke LCH Singapore, persen dari brokerage (Agus, 22 November 2026).
+  commissionShareSgPct: z.coerce
+    .number()
+    .min(0, "Sharing komisi LCH Singapore tidak boleh negatif")
+    .max(100, "Sharing komisi LCH Singapore maksimal 100%")
+    .optional(),
   // Premi installment 2 sampai 10 kali (Agus, 20 November 2026); server memeriksa jumlah persen.
   premiumInstallments: z
     .array(

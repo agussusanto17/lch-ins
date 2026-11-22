@@ -1172,6 +1172,9 @@ model PlacingSlip {
   /// bermotor. Sistem memperingatkan bila dilewati.
   brokeragePct Decimal @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
   includeVat   Boolean @default(false) @map("include_vat")
+  /// Bagian brokerage yang di-sharing ke LCH Insurance Brokers Pte Ltd (Singapore), dalam persen
+  /// brokerage (Agus, 22 November 2026). Beban komisi LCH Indonesia; 0 berarti tidak ada sharing.
+  commissionShareSgPct Decimal @default(0) @map("commission_share_sg_pct") @db.Decimal(12, 6)
 
   /// Tidak dipakai lagi sejak 12 Nov 2026, diganti `slip_security_panel.additional_fee_pct`.
   /// Kolom dibiarkan sebagai isian lama.
@@ -1491,6 +1494,8 @@ model Policy {
   brokeragePct        Decimal  @default(0) @map("brokerage_pct") @db.Decimal(12, 6)
   /// Brokerage sudah termasuk PPN 2,2%, mengikuti Include VAT di slip.
   includeVat          Boolean  @default(false) @map("include_vat")
+  /// Sharing brokerage ke LCH Singapore (% dari brokerage), mengikuti slip (Agus, 22 November 2026).
+  commissionShareSgPct Decimal @default(0) @map("commission_share_sg_pct") @db.Decimal(12, 6)
   /// Fee di luar brokerage dalam mata uang polis: premi × `policy_insurers.additional_fee_pct`.
   /// Dihitung server, negatif pada pembatalan atau pengurangan premi.
   additionalFee       Decimal  @default(0) @map("additional_fee") @db.Decimal(18, 2)

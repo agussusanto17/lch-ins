@@ -144,6 +144,7 @@ export function slipAuditSummary(
     discountPct: slip.discountPct,
     additionalDiscountPct: slip.additionalDiscountPct ?? 0,
     multiYearDepreciationPct: slip.multiYearDepreciationPct ?? 0,
+    commissionShareSgPct: slip.commissionShareSgPct ?? 0,
     premiumInstallments: installmentAuditLines(slip.premiumInstallments).join("\n"),
     adminCost: slip.adminCost,
     stampDuty: slip.stampDuty,
