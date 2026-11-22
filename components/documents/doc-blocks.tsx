@@ -45,8 +45,7 @@ import {
   wordingText,
   type SlipParticipant,
 } from "@/lib/data"
-import { CURRENCY_SYMBOL, dateEn, dateShort, money, moneyCents, num } from "@/lib/format"
-import { installmentAmounts, slipInstallmentBase } from "@/lib/premium-installments"
+import { CURRENCY_SYMBOL, dateShort, money, moneyCents, num } from "@/lib/format"
 import { depreciationPct, isMultiYearMotor } from "@/lib/multi-year"
 import { multiYearSchedule } from "@/lib/multi-year-schedule"
 import {
@@ -1160,63 +1159,6 @@ export function PayableTable({
         </tr>
       </tbody>
     </table>
-  )
-}
-
-const ORDINAL = (n: number) =>
-  n % 100 >= 11 && n % 100 <= 13
-    ? `${n}th`
-    : `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`
-
-/**
- * Jadwal premi installment (Agus, 20 November 2026), dicetak di bawah perhitungan premi Placing
- * Slip, Quotation Slip, Cover Note, dan Closing Instruction. Nominal dari premi setelah diskon
- * (setelah additional discount pada cetakan internal); admin cost dan stamp duty dibayar bersama
- * cicilan pertama.
- */
-export function InstallmentScheduleBlock({
-  slip,
-  internal = false,
-}: {
-  slip: PlacingSlip
-  internal?: boolean
-}) {
-  const rows = slip.premiumInstallments ?? []
-  if (!rows.length || usesOpenCover(slip) || (slip.kind && slip.kind !== "Placing")) return null
-  const charges = roundCents(totalPayable(slip) - slipInstallmentBase(slip))
-  const base = internal
-    ? roundCents(internalTotalPayable(slip) - charges)
-    : slipInstallmentBase(slip)
-  const amounts = installmentAmounts(rows, base)
-  return (
-    <>
-      <SectionHeading>PREMIUM INSTALMENT</SectionHeading>
-      <table className="w-full text-[12.5px]">
-        <thead>
-          <tr className="border-b text-left">
-            <th className="py-2 font-semibold">Instalment</th>
-            <th className="py-2 font-semibold">Due Date</th>
-            <th className="py-2 text-right font-semibold">Portion</th>
-            <th className="py-2 text-right font-semibold">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={r.no} className="border-b">
-              <td className="py-2">{ORDINAL(r.no)}</td>
-              <td className="py-2">{r.dueDate ? dateEn(r.dueDate) : "-"}</td>
-              <td className="tabular py-2 text-right">{num(r.pct, 0, 4)}%</td>
-              <td className="tabular py-2 text-right">{moneyCents(amounts[i], slip.currency)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {charges > 0 ? (
-        <p className="mt-1.5 text-[11.5px]">
-          Admin cost and stamp duty are payable with the 1st instalment.
-        </p>
-      ) : null}
-    </>
   )
 }
 

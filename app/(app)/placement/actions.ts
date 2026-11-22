@@ -420,7 +420,8 @@ const placingSlipSchema = z.object({
   additionalDiscountPct: z.coerce
     .number()
     .min(0, "Additional discount tidak boleh negatif")
-    .max(15, "Additional discount maksimal 15%")
+    // Tidak dibatasi sejak 22 November 2026 (Agus); lebih dari 100% membuat premi negatif.
+    .max(100, "Additional discount maksimal 100%")
     .optional(),
   multiYearDepreciationPct: z.coerce
     .number()

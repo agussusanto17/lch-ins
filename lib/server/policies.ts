@@ -342,12 +342,10 @@ async function policyData(tx: Tx, input: PolicyInput) {
     // General Marine Report sebagai admin cost (Agus, 17 November 2026).
     rate: input.type === "Endorsement" ? (input.rate ?? null) : null,
     premiumBasis: input.type === "Endorsement" ? (input.premiumBasis ?? null) : null,
-    adminCost:
-      input.type === "Endorsement" || input.type === "Cancellation" || input.type === "Deklarasi"
-        ? (input.adminCost ?? 0)
-        : 0,
-    stampDuty:
-      input.type === "Endorsement" || input.type === "Cancellation" ? (input.stampDuty ?? 0) : 0,
+    // Polis Baru dan Renewal menyimpan admin cost dan stamp duty untuk cicilan pertama premi
+    // installment (Agus, 22 November 2026).
+    adminCost: input.adminCost ?? 0,
+    stampDuty: input.type === "Deklarasi" ? 0 : (input.stampDuty ?? 0),
     // Premi ke asuransi menurut rate MOP, hanya deklarasi (Agus, 20 November 2026).
     clientPremium: input.type === "Deklarasi" ? (input.clientPremium ?? null) : null,
     riskLocation: input.riskLocation.trim() || null,

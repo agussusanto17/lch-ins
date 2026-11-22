@@ -13,6 +13,7 @@ import {
   installmentAmounts,
   installmentLabel,
   policyInstallmentBase,
+  policyInstallmentCharges,
 } from "@/lib/premium-installments"
 
 /**
@@ -23,13 +24,17 @@ export function InstallmentSchedule({
   policy,
   today,
 }: {
-  policy: Pick<Policy, "premium" | "discountAmount" | "currency" | "premiumInstallments">
+  policy: Pick<
+    Policy,
+    "premium" | "discountAmount" | "adminCost" | "stampDuty" | "currency" | "premiumInstallments"
+  >
   /** Hari ini "YYYY-MM-DD" (WIB), untuk cicilan berikutnya. */
   today: string
 }) {
   const rows = policy.premiumInstallments ?? []
   if (!rows.length) return null
-  const amounts = installmentAmounts(rows, policyInstallmentBase(policy))
+  const charges = policyInstallmentCharges(policy)
+  const amounts = installmentAmounts(rows, policyInstallmentBase(policy), charges)
   const next = rows.find((r) => r.dueDate && r.dueDate >= today)
   return (
     <Popover>
@@ -64,6 +69,9 @@ export function InstallmentSchedule({
         </table>
         <p className="text-xs text-muted-foreground">
           Dari premi setelah diskon {money(policyInstallmentBase(policy), policy.currency)}.
+          {charges > 0
+            ? ` Cicilan ke-1 termasuk admin cost dan stamp duty ${money(charges, policy.currency)}.`
+            : ""}
         </p>
       </PopoverContent>
     </Popover>

@@ -53,7 +53,11 @@ import { SlipAttachments } from "@/components/underwriting/slip-attachments"
 import { SlipParticipants } from "@/components/underwriting/slip-participants"
 import { changeSlipLockText } from "@/lib/endorsement-slip"
 import { usesOpenCover } from "@/lib/open-cover"
-import { installmentsError, slipInstallmentBase } from "@/lib/premium-installments"
+import {
+  installmentsError,
+  slipInstallmentBase,
+  slipInstallmentCharges,
+} from "@/lib/premium-installments"
 import { effectivePaBenefitLimits } from "@/lib/pa-benefits"
 import { participantsInterestItem, usesParticipants } from "@/lib/slip-participants"
 import { SlipDetailRows } from "@/components/underwriting/slip-detail-rows"
@@ -2294,19 +2298,12 @@ function SlipEditor({
                       value={slip.premiumInstallments}
                       onChange={(rows) => set({ premiumInstallments: rows })}
                       base={slipInstallmentBase(slip)}
+                      charges={slipInstallmentCharges(slip)}
                       currency={slip.currency}
                       inceptionDate={slip.periodTba ? null : slip.inceptionDate}
                       expiryDate={slip.periodTba ? null : slip.expiryDate}
                       disabled={locked}
-                      hint="Jadwalnya ikut ke Policy Database saat polis dicatat dari CI."
-                      note={
-                        payable - slipInstallmentBase(slip) > 0
-                          ? `Admin cost dan stamp duty (${money(
-                              payable - slipInstallmentBase(slip),
-                              slip.currency
-                            )}) ditagih bersama cicilan pertama.`
-                          : undefined
-                      }
+                      hint="Tidak dicetak di slip; jadwalnya ikut ke Policy Database saat polis dicatat dari CI."
                     />
                   </div>
                 ) : null}
@@ -2339,10 +2336,9 @@ function SlipEditor({
                         />
                       </Field>
                       <p className="text-xs text-muted-foreground sm:col-span-2 sm:pt-7">
-                        Maksimal {MAX_ADDITIONAL_DISCOUNT_PCT}%, dihitung dari premi
-                        setelah discount. Hanya dicetak di Quotation Slip Internal
-                        LCH; Closing Instruction, polis, dan report tetap memakai
-                        Discount di atas.
+                        Dihitung dari premi setelah discount. Hanya dicetak di
+                        Quotation Slip Internal LCH; Closing Instruction, polis, dan
+                        report tetap memakai Discount di atas.
                       </p>
                     </div>
                     {additionalPct > MAX_ADDITIONAL_DISCOUNT_PCT ? (
