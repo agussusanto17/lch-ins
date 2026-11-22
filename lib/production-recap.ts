@@ -7,7 +7,7 @@
 
 import type { Workbook } from "exceljs"
 
-import { FX, roundCents } from "@/lib/calc"
+import { BROKERAGE_VAT_RATE, FX, roundCents } from "@/lib/calc"
 import { addExportSheet, type ExportColumn } from "@/lib/export"
 import { dateShort } from "@/lib/format"
 import type { PolicyType } from "@/lib/data/types"
@@ -63,6 +63,10 @@ export interface RecapPolicy {
   object?: string | null
   /** Klien ditandai SPIL Program di Database Klien. */
   spilProgram?: boolean
+  /** Sharing brokerage ke LCH Singapore, persen dari brokerage (Agus, 22 November 2026). */
+  commissionShareSgPct?: number
+  /** Brokerage sudah termasuk PPN 2,2%; sharing dihitung dari brokerage sebelum PPN. */
+  includeVat?: boolean
   /** feeSubAccount: sub akun EF asuransi dari Master Data; kosong = EF. */
   insurers: {
     insurer: string
@@ -152,6 +156,10 @@ const codeName = (code: string | null | undefined, name: string | null | undefin
 
 /** Akun dan sub akun laba rugi dari daftar Team LCH. Beban belum dicatat di sistem. */
 export const PNL_INCOME = "INCOME"
+export const PNL_EXPENSE = "EXPENSE"
+/** Sub akun beban komisi dan penerimanya untuk sharing brokerage ke LCH Singapore. */
+export const COMM_EXPENSE = "COMM EXPENSE"
+export const SG_OFFICE = "LCH Insurance Brokers Pte Ltd"
 export const SUB_ACCOUNT = {
   commission: "COMM",
   fee: "EF",
@@ -207,6 +215,8 @@ interface InsurerLine {
   commission: number
   fee: number
   margin: number
+  /** Sharing brokerage ke LCH Singapore: beban, ditulis positif. */
+  sgShare: number
 }
 
 /**
@@ -237,6 +247,11 @@ function insurerLines(policies: readonly RecapPolicy[], fx: Record<string, numbe
           policy.clientPremium == null
             ? 0
             : -(((policy.clientPremium - policy.premium) * insurer.share) / 100),
+        // Beban komisi ke LCH Singapore: bagian sharing dari brokerage sebelum PPN, sama dengan
+        // Ringkasan Penutupan (Agus, 22 November 2026).
+        sgShare:
+          ((gross * policy.brokeragePct) / 100 / (policy.includeVat ? 1 + BROKERAGE_VAT_RATE : 1)) *
+          ((policy.commissionShareSgPct || 0) / 100),
       }
     })
   })
@@ -351,6 +366,18 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
         "(Income)/Beban": idr(line.margin),
         Percentage: p.premium ? -((p.clientPremium ?? p.premium) - p.premium) / p.premium : 0,
         "sub akun pnl": SUB_ACCOUNT.margin,
+      })
+    }
+    if (line.sgShare) {
+      // Sharing brokerage ke LCH Singapore: beban komisi, sub akun comm exp = penerimanya
+      // (catatan Team LCH, 20 November 2026; Agus, 22 November 2026).
+      rows.push({
+        ...base,
+        "(Income)/Beban": idr(line.sgShare),
+        Percentage: gross ? line.sgShare / line.gross : 0,
+        "akun pnl": PNL_EXPENSE,
+        "sub akun pnl": COMM_EXPENSE,
+        "sub akun comm exp": SG_OFFICE,
       })
     }
     return rows
@@ -478,7 +505,10 @@ export function recapPolicyRows(
       "O/I-MARGIN_OC": roundCents(line.margin),
       "O/I-MARGIN_IDR": idr(line.margin),
       ...unrecorded,
-      "(Income)/Beban": idr(line.commission + line.fee + line.margin),
+      // Beban komisi yang tercatat: sharing brokerage ke LCH Singapore.
+      "EXPENSE-COMMISIONS_OC": roundCents(line.sgShare),
+      "EXPENSE-COMMISIONS_IDR": idr(line.sgShare),
+      "(Income)/Beban": idr(line.commission + line.fee + line.margin + line.sgShare),
     }
   })
 }
@@ -533,7 +563,8 @@ export const RECAP_NOTES = [
   "source file: Placement untuk polis dari placing slip, Policy Database untuk polis yang diinput langsung, Deklarasi MOP untuk deklarasi.",
   "Object: objek pertanggungan dari baris Interest slip (kendaraan, barang, alat), atau lokasi risiko polis bila tidak ada.",
   "Per Polis: format alternatif Team LCH, satu baris per polis per asuransi dengan kolom nilai per sub akun.",
-  "Beban (EXPENSE-COMMISIONS, MARKETING-CASHBACK, REFERRAL FEE, PREMI BEBAN LCH, DISCOUNT BEBAN LCH), O/I-SPONSORSHIP, dan sub akun comm exp belum dicatat di sistem, jadi berisi 0 atau kosong. Kolomnya bisa diisi langsung di file ini.",
+  "Beban komisi: sharing brokerage ke LCH Singapore (isian Sharing Komisi LCH Singapore di placing slip/polis) ditulis sebagai baris EXPENSE / COMM EXPENSE dengan sub akun comm exp LCH Insurance Brokers Pte Ltd, dan kolom EXPENSE-COMMISIONS di sheet Per Polis.",
+  "Beban lain (MARKETING-CASHBACK, REFERRAL FEE, PREMI BEBAN LCH, DISCOUNT BEBAN LCH) dan O/I-SPONSORSHIP belum dicatat di sistem, jadi berisi 0. Kolomnya bisa diisi langsung di file ini.",
 ] as const
 
 /** Workbook Rekap Produksi: sheet Rekap Produksi (format LCH), Per Polis, dan Keterangan. */

@@ -771,3 +771,11 @@ function withBiRates(slip: PlacingSlip): RateLine[] {
     }
   })
 }
+
+/**
+ * Bagian brokerage yang di-sharing ke LCH Insurance Brokers Pte Ltd (Singapore): brokerage ×
+ * persen sharing (Agus, 22 November 2026). Beban komisi LCH Indonesia.
+ */
+export function sgCommissionShare(brokerage: number, sharePct: number | undefined) {
+  return roundCents((brokerage * (sharePct || 0)) / 100)
+}

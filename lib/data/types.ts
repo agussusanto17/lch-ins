@@ -512,6 +512,11 @@ export interface PlacingSlip {
   stampDuty: number
   brokeragePct: number
   includeVat: boolean
+  /**
+   * Bagian brokerage yang di-sharing ke LCH Insurance Brokers Pte Ltd (Singapore), dalam persen
+   * brokerage (Agus, 22 November 2026). Kosong atau 0 berarti tidak ada sharing.
+   */
+  commissionShareSgPct?: number
   createdAt: string
   updatedAt: string
   /**
@@ -620,6 +625,8 @@ export interface Policy {
   brokeragePct: number
   /** Brokerage sudah termasuk PPN 2,2%, mengikuti slip. */
   includeVat?: boolean
+  /** Sharing brokerage ke LCH Singapore (% dari brokerage), mengikuti slip. */
+  commissionShareSgPct?: number
   /**
    * Nominal fee di luar brokerage dalam mata uang polis, ikut report produksi: premi × fee (%)
    * per asuransi, dihitung server. Negatif pada pembatalan atau pengurangan premi.

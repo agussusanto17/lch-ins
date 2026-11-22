@@ -34,6 +34,7 @@ import {
   nettPremium,
   slipPolicyParts,
   sumPercent,
+  sgCommissionShare,
   vatAdded,
 } from "@/lib/calc"
 import {
@@ -1193,6 +1194,28 @@ export function PolicyForm({
                   Brokerage include VAT (PPN 2,2%)
                 </FieldLabel>
               </Field>
+              {/* Sharing brokerage ke kantor LCH Singapore (Agus, 22 November 2026). */}
+              <NumberField
+                label="Sharing Komisi LCH Singapore (%)"
+                preset="percent"
+                min={0}
+                max={100}
+                value={draft.commissionShareSgPct || null}
+                onValueChange={(v) => set({ commissionShareSgPct: v ?? 0 })}
+                error={errors.commissionShareSgPct}
+                description={
+                  draft.commissionShareSgPct
+                    ? `Ke LCH Singapore ${money(
+                        sgCommissionShare(brokerageNominal, draft.commissionShareSgPct),
+                        draft.currency
+                      )} · LCH Indonesia ${money(
+                        brokerageNominal -
+                          sgCommissionShare(brokerageNominal, draft.commissionShareSgPct),
+                        draft.currency
+                      )}`
+                    : "Persen dari brokerage; kosong bila tidak ada sharing."
+                }
+              />
             </div>
             <div className="flex flex-col gap-3">
               {draft.insurers.length > 1 ? (

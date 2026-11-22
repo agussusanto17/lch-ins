@@ -31,6 +31,7 @@ export type PolicySlipFields = Pick<
   | "premiumInstallments"
   | "brokeragePct"
   | "includeVat"
+  | "commissionShareSgPct"
   | "additionalFee"
   | "additionalFeePct"
   | "additionalFeeIncludeVat"
@@ -73,6 +74,8 @@ export function policyFieldsFromSlip(
     premiumInstallments: openCover ? [] : (slip.premiumInstallments ?? []),
     brokeragePct: slip.brokeragePct,
     includeVat: slip.includeVat,
+    // Sharing brokerage ke LCH Singapore ikut ke polis (Agus, 22 November 2026).
+    commissionShareSgPct: slip.commissionShareSgPct ?? 0,
     additionalFee: additionalFeeFor(premium, panel),
     additionalFeePct: weightedFeePct(panel),
     // Isian form polis satu asuransi; co-insurance memakai status per asuransi.

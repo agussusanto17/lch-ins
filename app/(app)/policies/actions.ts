@@ -80,6 +80,12 @@ const policyInputSchema = z
       .max(10, "Cicilan premi maksimal 10 kali")
       .optional(),
     includeVat: z.boolean().optional(),
+    // Sharing brokerage ke LCH Singapore, persen dari brokerage (Agus, 22 November 2026).
+    commissionShareSgPct: z
+      .number()
+      .min(0, "Sharing komisi LCH Singapore tidak boleh negatif")
+      .max(100, "Sharing komisi LCH Singapore maksimal 100%")
+      .optional(),
     // Nominal fee dihitung server dari premi dan fee (%) per asuransi.
     additionalFee: z.number().optional(),
     additionalFeePct: z.number().min(0, "Additional fee tidak boleh negatif").max(100, "Additional fee maksimal 100%").optional(),

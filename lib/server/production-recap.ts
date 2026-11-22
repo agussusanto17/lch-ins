@@ -146,6 +146,8 @@ export async function listProductionRecap(start: string, end: string): Promise<R
         parent?.parentPolicy?.placementLocation?.name ??
         null,
       spilProgram: row.client?.spilProgram ?? false,
+      commissionShareSgPct: Number(row.commissionShareSgPct),
+      includeVat: row.includeVat,
       insurers: row.insurers.map((i) => ({
         insurer: i.insurer.name,
         share: Number(i.sharePct),

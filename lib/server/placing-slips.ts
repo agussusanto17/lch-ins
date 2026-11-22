@@ -185,6 +185,7 @@ export interface PlacingSlipInput {
   discountPct?: number
   additionalDiscountPct?: number
   multiYearDepreciationPct?: number
+  commissionShareSgPct?: number
   /** Jadwal premi installment; undefined berarti tidak diubah. */
   premiumInstallments?: PremiumInstallment[]
   adminCost?: number
@@ -763,6 +764,7 @@ function toPlacingSlipRecord(
     discountPct: Number(raw.discountPct),
     additionalDiscountPct: Number(raw.additionalDiscountPct) || undefined,
     multiYearDepreciationPct: Number(raw.multiYearDepreciationPct) || undefined,
+    commissionShareSgPct: Number(raw.commissionShareSgPct) || undefined,
     premiumInstallments: cleanInstallments(raw.premiumInstallments),
     adminCost: Number(raw.adminCost),
     stampDuty: Number(raw.stampDuty),
@@ -912,6 +914,7 @@ export function copySlipInput(source: PlacingSlipRecord): PlacingSlipInput {
     discountPct: source.discountPct,
     additionalDiscountPct: source.additionalDiscountPct,
     multiYearDepreciationPct: source.multiYearDepreciationPct,
+    commissionShareSgPct: source.commissionShareSgPct,
     premiumInstallments: source.premiumInstallments,
     adminCost: source.adminCost,
     stampDuty: source.stampDuty,
@@ -1464,6 +1467,7 @@ export async function createPlacingSlip(
         discountPct: new Prisma.Decimal(input.discountPct ?? 0),
         additionalDiscountPct: new Prisma.Decimal(input.additionalDiscountPct ?? 0),
         multiYearDepreciationPct: new Prisma.Decimal(input.multiYearDepreciationPct ?? 0),
+        commissionShareSgPct: new Prisma.Decimal(input.commissionShareSgPct ?? 0),
         premiumInstallments: installmentsData(input.premiumInstallments, { openCover: input.openCover }),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
@@ -1897,6 +1901,7 @@ export async function updatePlacingSlip(
         discountPct: new Prisma.Decimal(input.discountPct ?? 0),
         additionalDiscountPct: new Prisma.Decimal(input.additionalDiscountPct ?? 0),
         multiYearDepreciationPct: new Prisma.Decimal(input.multiYearDepreciationPct ?? 0),
+        commissionShareSgPct: new Prisma.Decimal(input.commissionShareSgPct ?? 0),
         premiumInstallments: installmentsData(input.premiumInstallments, {
           openCover: input.openCover ?? before.openCover,
           changeSlip: Boolean(before.kind && before.kind !== "Placing"),

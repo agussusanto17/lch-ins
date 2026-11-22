@@ -404,6 +404,12 @@ export function PolicyDatabase({
         type: "percent",
       },
       { header: "Brokerage incl. VAT", value: (p) => (p.includeVat ? "Ya" : "Tidak") },
+      // Sharing brokerage ke LCH Singapore (Agus, 22 November 2026).
+      {
+        header: "Sharing Komisi LCH SG (%)",
+        value: (p) => p.commissionShareSgPct || null,
+        type: "percent",
+      },
       // Persen per asuransi tertimbang share; nominal = premi × persen (Harry, 12 November 2026).
       {
         header: "Additional Fee (%)",
