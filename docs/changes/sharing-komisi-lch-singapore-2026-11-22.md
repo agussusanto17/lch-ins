@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-22
 - **Branch:** `feat/sharing-komisi-sg`, ditumpuk di atas `fix/brokerage-incl-vat` (#304)
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #306
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
