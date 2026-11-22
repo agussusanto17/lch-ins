@@ -127,7 +127,7 @@ function toPolicyRecord(
     premiumBasis: row.premiumBasis == null ? null : Number(row.premiumBasis),
     adminCost: Number(row.adminCost),
     stampDuty: Number(row.stampDuty),
-    insurerPremium: row.insurerPremium == null ? null : Number(row.insurerPremium),
+    clientPremium: row.clientPremium == null ? null : Number(row.clientPremium),
     // Dicocokkan lewat kode, jadi nama yang diganti di Master Data aman.
     type: systemValueFromRow(POLICY_TYPE_CODES, row.policyType, "Baru"),
     riskLocation: row.riskLocation ?? "",
@@ -169,7 +169,7 @@ function auditSnapshot(p: PolicyRecord) {
     premiumBasis: p.premiumBasis ?? null,
     adminCost: p.adminCost ?? 0,
     stampDuty: p.stampDuty ?? 0,
-    insurerPremium: p.insurerPremium ?? null,
+    clientPremium: p.clientPremium ?? null,
     slipPart: p.slipPart ?? null,
     endorsementSeq: p.endorsementSeq,
     cobOjkClassId: p.cobOjkClassId,
@@ -349,7 +349,7 @@ async function policyData(tx: Tx, input: PolicyInput) {
     stampDuty:
       input.type === "Endorsement" || input.type === "Cancellation" ? (input.stampDuty ?? 0) : 0,
     // Premi ke asuransi menurut rate MOP, hanya deklarasi (Agus, 20 November 2026).
-    insurerPremium: input.type === "Deklarasi" ? (input.insurerPremium ?? null) : null,
+    clientPremium: input.type === "Deklarasi" ? (input.clientPremium ?? null) : null,
     riskLocation: input.riskLocation.trim() || null,
     cobOjkClassId: await findCobOjkClassId(tx, input.cobOjkClassId),
     placementLocationId: await findPlacementLocationId(tx, input.placementLocationId),

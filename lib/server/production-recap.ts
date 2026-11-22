@@ -120,7 +120,7 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       currency: row.currencyCode,
       premium: Number(row.premium),
       discount: Number(row.discountAmount),
-      insurerPremium: row.insurerPremium == null ? null : Number(row.insurerPremium),
+      clientPremium: row.clientPremium == null ? null : Number(row.clientPremium),
       brokeragePct: Number(row.brokeragePct),
       remarks: row.remarks,
       // Polis dari CI menyimpan grouping kosong (""); endorsement, pembatalan, dan deklarasi yang

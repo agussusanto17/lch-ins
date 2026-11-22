@@ -50,10 +50,10 @@ export interface RecapPolicy {
   /** Diskon polis, bertanda sama dengan premi (MoM review Phase 1, poin 19). */
   discount?: number
   /**
-   * Deklarasi MOP: premi ke asuransi menurut rate MOP. Premi deklarasi mengikuti rate ke klien,
-   * selisihnya margin rate LCH (Agus, 20 November 2026).
+   * Deklarasi MOP: premi tagihan ke klien menurut rate yang diupload. Premi deklarasi adalah premi
+   * ke asuransi menurut rate MOP; selisihnya margin LCH (Agus, 22 November 2026).
    */
-  insurerPremium?: number | null
+  clientPremium?: number | null
   brokeragePct: number
   remarks: string | null
   groupingInsured: string | null
@@ -212,8 +212,8 @@ interface InsurerLine {
 /**
  * Satu baris per asuransi sesuai share. Komisi = premi × brokerage (%), fee = premi × additional
  * fee (%), keduanya negatif karena pendapatan (konvensi contoh LCH). Komisi dan fee dari premi
- * sebelum diskon (MoM review Phase 1, poin 19). Margin rate deklarasi MOP = premi ke klien − premi
- * ke asuransi.
+ * sebelum diskon (MoM review Phase 1, poin 19). Margin deklarasi MOP = premi tagihan ke klien −
+ * premi deklarasi (premi ke asuransi).
  */
 function insurerLines(policies: readonly RecapPolicy[], fx: Record<string, number>): InsurerLine[] {
   return policies.flatMap((policy) => {
@@ -234,9 +234,9 @@ function insurerLines(policies: readonly RecapPolicy[], fx: Record<string, numbe
         commission: -(gross * policy.brokeragePct) / 100,
         fee: -(gross * insurer.additionalFeePct) / 100,
         margin:
-          policy.insurerPremium == null
+          policy.clientPremium == null
             ? 0
-            : -(((policy.premium - policy.insurerPremium) * insurer.share) / 100),
+            : -(((policy.clientPremium - policy.premium) * insurer.share) / 100),
       }
     })
   })
@@ -349,7 +349,7 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
         Margin_Rate_OC: roundCents(line.margin),
         Margin_Rate: idr(line.margin),
         "(Income)/Beban": idr(line.margin),
-        Percentage: p.premium ? -(p.premium - (p.insurerPremium ?? p.premium)) / p.premium : 0,
+        Percentage: p.premium ? -((p.clientPremium ?? p.premium) - p.premium) / p.premium : 0,
         "sub akun pnl": SUB_ACCOUNT.margin,
       })
     }
@@ -528,7 +528,7 @@ export function recapIncome(
 export const RECAP_NOTES = [
   "Rekap Produksi: satu baris per polis per asuransi per unsur pendapatan. Premi dan diskon hanya ditulis di baris COMM, jadi jumlah premi tidak dobel.",
   "akun pnl: semua baris dari sistem adalah INCOME. Pendapatan ditulis negatif dan beban positif, seperti kolom (Income)/Beban contoh LCH.",
-  "sub akun pnl: COMM = brokerage; baris EF = additional fee, sub akunnya mengikuti Sub akun EF asuransi di Master Data > Asuransi & Adjuster (Multi Artha Guna: EF (MAG); belum diatur: EF); O/I-MARGIN = margin rate deklarasi MOP (premi rate klien − premi ke asuransi).",
+  "sub akun pnl: COMM = brokerage; baris EF = additional fee, sub akunnya mengikuti Sub akun EF asuransi di Master Data > Asuransi & Adjuster (Multi Artha Guna: EF (MAG); belum diatur: EF); O/I-MARGIN = margin deklarasi MOP (premi tagihan ke klien − premi ke asuransi menurut rate MOP).",
   "spil/non spil: SPIL bila klien polis ditandai SPIL Program di Database Klien; selain itu Non SPIL.",
   "source file: Placement untuk polis dari placing slip, Policy Database untuk polis yang diinput langsung, Deklarasi MOP untuk deklarasi.",
   "Object: objek pertanggungan dari baris Interest slip (kendaraan, barang, alat), atau lokasi risiko polis bila tidak ada.",

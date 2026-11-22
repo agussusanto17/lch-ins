@@ -395,9 +395,9 @@ export function PolicyDatabase({
         value: (p) => installmentScheduleText(p),
         width: 48,
       },
-      // Deklarasi MOP: premi menurut rate MOP dan margin rate (Agus, 20 November 2026).
-      { header: "Premi ke Asuransi", value: (p) => p.insurerPremium ?? null, type: "money" },
-      { header: "Margin Rate", value: (p) => declarationMargin(p), type: "money" },
+      // Deklarasi MOP: premi tagihan ke klien dan margin (Agus, 22 November 2026).
+      { header: "Premi Tagihan ke Klien", value: (p) => p.clientPremium ?? null, type: "money" },
+      { header: "Margin", value: (p) => declarationMargin(p), type: "money" },
       {
         header: "Brokerage (%)",
         value: (p) => p.brokeragePct,
@@ -632,7 +632,7 @@ export function PolicyDatabase({
                                 Diskon {money(p.discountAmount, p.currency)}
                               </span>
                             ) : null}
-                            {/* Margin rate deklarasi MOP (Agus, 20 November 2026). */}
+                            {/* Margin deklarasi MOP: premi tagihan ke klien − premi ke asuransi. */}
                             {declarationMargin(p) ? (
                               <span className="block text-xs font-normal text-muted-foreground">
                                 Margin {money(declarationMargin(p)!, p.currency)}
