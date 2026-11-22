@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-22
 - **Branch:** `feat/flag-dobel-report`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #307
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
