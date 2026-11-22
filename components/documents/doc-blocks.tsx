@@ -21,6 +21,7 @@ import {
   ratePermilText,
   roundCents,
   sumItems,
+  sumPercent,
   totalPayable,
   totalPremium,
   totalSumInsured,
@@ -2295,7 +2296,10 @@ export function SecurityPanelBlock({ slip }: { slip: PlacingSlip }) {
   return <SecurityTable rows={slip.securityPanel ?? []} />
 }
 
-/** Panel asuransi dan share-nya; dipakai slip dan cetak endorsement polis. */
+/**
+ * Panel asuransi dan share-nya; dipakai slip dan cetak endorsement polis. Co-insurance ditutup
+ * baris Total Share (Agus, 22 November 2026), dijumlah dari share yang tercatat.
+ */
 export function SecurityTable({ rows: panel }: { rows: SecurityPanelRow[] }) {
   const rows = panel.filter((p) => p.insurer)
   if (!rows.length) return null
@@ -2314,6 +2318,15 @@ export function SecurityTable({ rows: panel }: { rows: SecurityPanelRow[] }) {
               {shared ? <td className="w-28 py-2">{p.role}</td> : null}
             </tr>
           ))}
+          {shared ? (
+            <tr className="font-semibold">
+              <td className="py-2">Total Share</td>
+              <td className="tabular w-24 py-2 pr-6 text-right">
+                {num(sumPercent(rows.map((p) => p.share)), 2)}%
+              </td>
+              <td className="w-28 py-2" />
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </>
