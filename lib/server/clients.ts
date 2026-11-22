@@ -67,6 +67,8 @@ export interface ClientInput {
   branch?: ClientBranch | string | null
   /** Occupation / bisnis utama (lookup business_line). */
   businessLine?: string | null
+  /** Klien program SPIL (kolom spil/non spil Rekap Produksi). */
+  spilProgram?: boolean
   status?: ClientStatus | string
   notes?: string | null
   addresses?: ClientAddressInput[]
@@ -251,6 +253,7 @@ function mapPrismaClientToRecord(
     clientType: systemValueFromRow(CLIENT_TYPE_CODES, c.clientType, "Korporasi"),
     branch: systemValueFromRow(CLIENT_BRANCH_CODES, c.branch, "Jakarta"),
     businessLine: c.businessLine?.name || undefined,
+    spilProgram: c.spilProgram,
     name: c.name,
     npwp: c.npwp || "",
     idType: c.idType?.name || undefined,
@@ -729,6 +732,7 @@ export async function createClient(
         cobId,
         branchId,
         businessLineId,
+        spilProgram: input.spilProgram ?? false,
         statusId,
         notes: input.notes?.trim() || null,
       },
@@ -880,6 +884,7 @@ export async function updateClient(
         ...(input.cob !== undefined ? { cobId } : {}),
         branchId,
         businessLineId,
+        ...(input.spilProgram !== undefined ? { spilProgram: input.spilProgram } : {}),
         statusId,
         notes: input.notes?.trim() || null,
       },

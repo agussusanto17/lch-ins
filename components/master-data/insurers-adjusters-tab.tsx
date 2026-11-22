@@ -34,6 +34,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import {
   Table,
@@ -47,14 +54,24 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import type { Adjuster, Insurer } from "@/lib/generated/prisma/client"
 
+/** Pilihan lookup ef_sub_account: sub akun pnl baris EF di Rekap Produksi. */
+export interface FeeSubAccountOption {
+  id: string
+  code: string
+  name: string
+  isActive: boolean
+}
+
 export interface InsurersAdjustersTabProps {
   initialInsurers: Insurer[]
   initialAdjusters: Adjuster[]
+  feeSubAccounts?: FeeSubAccountOption[]
 }
 
 export function InsurersAdjustersTab({
   initialInsurers,
   initialAdjusters,
+  feeSubAccounts = [],
 }: InsurersAdjustersTabProps) {
   const permission = usePermission()
   const canManage = permission.canManage("/master-data")
@@ -72,6 +89,16 @@ export function InsurersAdjustersTab({
   const [phone, setPhone] = React.useState("")
   const [address, setAddress] = React.useState("")
   const [isActive, setIsActive] = React.useState(true)
+  const [feeSubAccountId, setFeeSubAccountId] = React.useState("")
+
+  // Asuransi tanpa pilihan ditulis EF di Rekap Produksi.
+  const defaultFeeSubAccountId =
+    feeSubAccounts.find((o) => o.code === "ef" && o.isActive)?.id ?? ""
+  const feeSubAccountName = (id: string | null) =>
+    feeSubAccounts.find((o) => o.id === id)?.name ?? "EF"
+  const feeSubAccountItems = feeSubAccounts
+    .filter((o) => o.isActive || o.id === feeSubAccountId)
+    .map((o) => ({ label: o.name, value: o.id }))
 
   const [prevInsurers, setPrevInsurers] = React.useState(initialInsurers)
   if (prevInsurers !== initialInsurers) {
@@ -127,6 +154,7 @@ export function InsurersAdjustersTab({
     setPhone("")
     setAddress("")
     setIsActive(true)
+    setFeeSubAccountId(defaultFeeSubAccountId)
     setDialogOpen(true)
   }
 
@@ -138,6 +166,9 @@ export function InsurersAdjustersTab({
     setPhone(item.phone ?? "")
     setAddress(item.address ?? "")
     setIsActive(item.isActive)
+    setFeeSubAccountId(
+      "feeSubAccountId" in item ? (item.feeSubAccountId ?? defaultFeeSubAccountId) : ""
+    )
     setDialogOpen(true)
   }
 
@@ -157,6 +188,7 @@ export function InsurersAdjustersTab({
             phone,
             address,
             isActive,
+            feeSubAccountId: feeSubAccountId || null,
           })
           if (!res.ok) {
             toast.error(res.error)
@@ -166,7 +198,16 @@ export function InsurersAdjustersTab({
           setInsurers((prev) =>
             prev.map((i) =>
               i.id === editingItem.id
-                ? { ...i, name, contactPerson, email, phone, address, isActive }
+                ? {
+                    ...i,
+                    name,
+                    contactPerson,
+                    email,
+                    phone,
+                    address,
+                    isActive,
+                    feeSubAccountId: res.data?.feeSubAccountId ?? null,
+                  }
                 : i
             )
           )
@@ -178,6 +219,7 @@ export function InsurersAdjustersTab({
             phone,
             address,
             isActive,
+            feeSubAccountId: feeSubAccountId || null,
           })
           if (!res.ok || !res.data) {
             toast.error(res.error)
@@ -325,13 +367,14 @@ export function InsurersAdjustersTab({
               <TableHead className="w-44">Email</TableHead>
               <TableHead className="w-36">Telepon</TableHead>
               <TableHead>Alamat Kantor</TableHead>
+              {partnerType === "insurer" && <TableHead className="w-28">Sub akun EF</TableHead>}
               <TableHead className="w-24 pr-4">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {currentList.length === 0 ? (
               <TableEmpty
-                colSpan={canManage ? 7 : 6}
+                colSpan={(canManage ? 7 : 6) + (partnerType === "insurer" ? 1 : 0)}
                 message={
                   query
                     ? `Tidak ada ${
@@ -359,6 +402,11 @@ export function InsurersAdjustersTab({
                   <TableCell className="text-muted-foreground truncate max-w-64">
                     {item.address || "—"}
                   </TableCell>
+                  {partnerType === "insurer" && (
+                    <TableCell>
+                      {feeSubAccountName("feeSubAccountId" in item ? item.feeSubAccountId : null)}
+                    </TableCell>
+                  )}
                   <TableCell className="pr-4">
                     <StatusBadge status={item.isActive ? "Active" : "Inactive"} />
                   </TableCell>
@@ -458,6 +506,32 @@ export function InsurersAdjustersTab({
                 rows={2}
               />
             </div>
+
+            {partnerType === "insurer" && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="partner-fee-sub-account">Sub akun EF</Label>
+                <Select
+                  items={feeSubAccountItems}
+                  value={feeSubAccountId || null}
+                  onValueChange={(val) => setFeeSubAccountId((val as string | null) ?? "")}
+                >
+                  <SelectTrigger id="partner-fee-sub-account" className="w-full">
+                    <SelectValue placeholder="EF" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {feeSubAccountItems.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Sub akun pnl baris EF (additional fee) asuransi ini di Rekap Produksi. Daftarnya
+                  diatur di Master Data, kategori Sub Akun EF.
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center justify-between rounded-lg border p-2.5">
               <span className="text-sm font-medium">Status Aktif Operasional</span>

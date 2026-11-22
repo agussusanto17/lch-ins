@@ -206,15 +206,32 @@ test("a cancellation refund reverses income, so commission and fee turn positive
   assert.equal(fee["akun pnl"], "INCOME")
 })
 
-test("EF from Multi Artha Guna uses the LCH sub account EF (MAG)", () => {
+test("the EF row uses the insurer's Sub akun EF from master data, EF when unset", () => {
   const rows = recapRows([
     policy({
-      insurers: [{ insurer: "PT Asuransi Multi Artha Guna Tbk", share: 100, additionalFeePct: 15 }],
+      insurers: [
+        {
+          insurer: "PT Asuransi Multi Artha Guna Tbk",
+          share: 60,
+          additionalFeePct: 15,
+          feeSubAccount: "EF (MAG)",
+        },
+        { insurer: "PT Asuransi Astra Buana", share: 25, additionalFeePct: 10, feeSubAccount: "DLL" },
+        { insurer: "PT Asuransi Sinar Mas", share: 15, additionalFeePct: 10, feeSubAccount: null },
+      ],
     }),
   ])
+  // Nama asuransi tidak lagi menentukan; sub akunnya diatur di Master Data (22 November 2026).
   assert.deepEqual(
-    rows.map((r) => r["sub akun pnl"]),
-    ["COMM", "EF (MAG)"]
+    rows.map((r) => [r.asuransi, r["sub akun pnl"]]),
+    [
+      ["PT Asuransi Multi Artha Guna Tbk", "COMM"],
+      ["PT Asuransi Multi Artha Guna Tbk", "EF (MAG)"],
+      ["PT Asuransi Astra Buana", "COMM"],
+      ["PT Asuransi Astra Buana", "DLL"],
+      ["PT Asuransi Sinar Mas", "COMM"],
+      ["PT Asuransi Sinar Mas", "EF"],
+    ]
   )
 })
 
@@ -234,14 +251,15 @@ test("Grouping Insured falls back to the client or insured name when it is empty
   assert.equal(noClient["Grouping Insured"], "PT NUSANTARA FLEET SERVICES")
 })
 
-test("spil/non spil follows the grouping insured, client, or insured name", () => {
-  const base = { groupingInsured: null, clientName: null, insuredName: "PT Lain" }
-  assert.equal(spilClass({ ...base, groupingInsured: "SPIL Warehouse" }), "SPIL")
-  assert.equal(spilClass({ ...base, insuredName: "PT SALAM PACIFIC INDONESIA LINES" }), "SPIL")
-  assert.equal(spilClass({ ...base, clientName: "PT Spill Over" }), "Non SPIL")
-  assert.equal(spilClass(base), "Non SPIL")
-  const [row] = recapRows([policy({ groupingInsured: "SPIL Warehouse" })])
-  assert.equal(row["spil/non spil"], "SPIL")
+test("spil/non spil follows the client's SPIL Program flag, not the name", () => {
+  assert.equal(spilClass({ spilProgram: true }), "SPIL")
+  assert.equal(spilClass({ spilProgram: false }), "Non SPIL")
+  assert.equal(spilClass({}), "Non SPIL")
+  // Tidak ada daftar resmi SPIL; LCH menandai kliennya sendiri (22 November 2026).
+  const [named] = recapRows([policy({ groupingInsured: "SPIL Warehouse" })])
+  assert.equal(named["spil/non spil"], "Non SPIL")
+  const [flagged] = recapRows([policy({ spilProgram: true })])
+  assert.equal(flagged["spil/non spil"], "SPIL")
 })
 
 test("source file is the module the policy came from", () => {
@@ -310,7 +328,18 @@ test("the recap workbook has the LCH sheet, the Per Polis sheet, and notes", () 
   const wb = new ExcelJS.Workbook()
   fillProductionRecap(
     wb,
-    [policy({ insurers: [{ insurer: "PT Asuransi Multi Artha Guna Tbk", share: 100, additionalFeePct: 15 }] })],
+    [
+      policy({
+        insurers: [
+          {
+            insurer: "PT Asuransi Multi Artha Guna Tbk",
+            share: 100,
+            additionalFeePct: 15,
+            feeSubAccount: "EF (MAG)",
+          },
+        ],
+      }),
+    ],
     { start: "2026-11-01", end: "2026-11-30" },
     "2026-11-21"
   )

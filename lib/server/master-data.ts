@@ -82,7 +82,12 @@ export interface InsurerInput {
   phone?: string | null
   address?: string | null
   isActive?: boolean
+  /** Lookup ef_sub_account; kosong = EF. */
+  feeSubAccountId?: string | null
 }
+
+/** Lookup sub akun pnl baris EF di Rekap Produksi, dipilih per asuransi. */
+export const EF_SUB_ACCOUNT_TYPE = "ef_sub_account"
 
 export interface AdjusterInput {
   name: string
@@ -578,6 +583,21 @@ export async function deleteCoverType(id: string, userId: string): Promise<void>
 
 // Mutation functions (insurers & adjusters)
 
+/** Sub akun EF yang dipilih, atau EF bila kosong. Pilihan harus dari lookup ef_sub_account. */
+async function feeSubAccountIdFor(
+  tx: Prisma.TransactionClient,
+  id: string | null | undefined
+): Promise<string | null> {
+  const row = await tx.lookupValue.findFirst({
+    where: id
+      ? { id, lookupType: EF_SUB_ACCOUNT_TYPE }
+      : { lookupType: EF_SUB_ACCOUNT_TYPE, code: "ef" },
+    select: { id: true },
+  })
+  if (id && !row) throw new Error("Sub akun EF tidak ada di Master Data.")
+  return row?.id ?? null
+}
+
 export async function createInsurer(
   input: InsurerInput,
   userId: string
@@ -591,6 +611,7 @@ export async function createInsurer(
         phone: input.phone?.trim() || null,
         address: input.address?.trim() || null,
         isActive: input.isActive ?? true,
+        feeSubAccountId: await feeSubAccountIdFor(tx, input.feeSubAccountId),
       },
     })
     await recordAudit(tx, {
@@ -620,6 +641,10 @@ export async function updateInsurer(
         phone: input.phone?.trim() || null,
         address: input.address?.trim() || null,
         isActive: input.isActive ?? before.isActive,
+        feeSubAccountId:
+          input.feeSubAccountId === undefined
+            ? before.feeSubAccountId
+            : await feeSubAccountIdFor(tx, input.feeSubAccountId),
       },
     })
     await recordAudit(tx, {

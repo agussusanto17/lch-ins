@@ -129,6 +129,8 @@ export interface Client {
   businessLine?: string
   /** Klien lama dan perorangan: Jakarta. */
   branch?: ClientBranch
+  /** Klien program SPIL, untuk kolom spil/non spil di Rekap Produksi. Ditandai LCH sendiri. */
+  spilProgram?: boolean
   status: ClientStatus
   addresses: ClientAddress[]
   documents: ClientDocument[]

@@ -133,6 +133,7 @@ const insurerSchema = z.object({
   phone: z.string().trim().nullish(),
   address: z.string().trim().nullish(),
   isActive: z.boolean().optional(),
+  feeSubAccountId: z.uuid().nullish(),
 })
 
 const adjusterSchema = z.object({

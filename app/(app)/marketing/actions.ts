@@ -48,6 +48,7 @@ const clientInputSchema = z.object({
   cob: z.string().nullish(),
   branch: z.string().nullish(),
   businessLine: z.string().nullish(),
+  spilProgram: z.boolean().optional(),
   status: z.string().nullish(),
   notes: z.string().nullish(),
   addresses: z

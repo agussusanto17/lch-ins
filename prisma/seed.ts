@@ -283,6 +283,17 @@ const LOOKUPS: {
     ],
   },
   {
+    // Sub akun pnl baris EF (additional fee) di Rekap Produksi, dipilih per asuransi di Master Data
+    // (22 November 2026). Asuransi tanpa pilihan ditulis EF.
+    type: "ef_sub_account",
+    system: false,
+    values: [
+      ["ef", "EF"],
+      ["ef_mag", "EF (MAG)"],
+      ["dll", "DLL"],
+    ],
+  },
+  {
     // Status siklus hidup klaim; tahapan dokumen ada di claim_stage (Harry, 5 Oktober 2026).
     type: "claim_status",
     system: true,

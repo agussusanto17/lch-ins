@@ -91,6 +91,7 @@ function emptyDraft(options: FormOptions): Draft {
     kycDate: todayIso(),
     cob: pick(cobLabels(options), "Property"),
     branch: "Jakarta",
+    spilProgram: false,
     status: "Prospect",
     addresses: [
       {
@@ -311,6 +312,7 @@ export function ClientForm({
       businessLine: draft.businessLine || null,
       // Perorangan selalu Jakarta; server memakai aturan yang sama.
       branch: corporate ? (draft.branch ?? "Jakarta") : "Jakarta",
+      spilProgram: Boolean(draft.spilProgram),
       status: draft.status,
       notes: draft.notes || null,
       addresses: addresses.map((a) => ({
@@ -441,6 +443,18 @@ export function ClientForm({
               onValueChange={(v) => set({ branch: v as ClientBranch })}
             />
           ) : null}
+          {/* Kolom spil/non spil di Rekap Produksi. Tidak ada daftar resmi, LCH menandai sendiri
+              (22 November 2026). */}
+          <Field orientation="horizontal" className="w-fit">
+            <Switch
+              id="client-spil-program"
+              checked={Boolean(draft.spilProgram)}
+              onCheckedChange={(v) => set({ spilProgram: Boolean(v) })}
+            />
+            <FieldLabel htmlFor="client-spil-program" className="font-normal">
+              SPIL Program
+            </FieldLabel>
+          </Field>
         </div>
 
         <FieldSeparator>
