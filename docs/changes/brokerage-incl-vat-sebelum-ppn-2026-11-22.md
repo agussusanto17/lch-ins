@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-22
 - **Branch:** `fix/brokerage-incl-vat`, ditumpuk di atas `feat/premi-klien-deklarasi` (#303)
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #304
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
