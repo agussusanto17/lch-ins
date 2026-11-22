@@ -22,13 +22,19 @@ export async function listLossRatioReport(start: string, end: string): Promise<L
       premium: true,
       discountAmount: true,
       brokeragePct: true,
+      includeVat: true,
       insuredName: true,
       groupingInsured: true,
       client: { select: { name: true } },
       policyType: { select: { code: true, name: true } },
       cob: { select: { code: true, name: true } },
       insurers: {
-        select: { sharePct: true, additionalFeePct: true, insurer: { select: { name: true } } },
+        select: {
+          sharePct: true,
+          additionalFeePct: true,
+          additionalFeeIncludeVat: true,
+          insurer: { select: { name: true } },
+        },
         orderBy: { sharePct: "desc" },
       },
     },
@@ -69,10 +75,12 @@ export async function listLossRatioReport(start: string, end: string): Promise<L
       premium: Number(r.premium),
       discount: Number(r.discountAmount),
       brokeragePct: Number(r.brokeragePct),
+      includeVat: r.includeVat,
       insurers: r.insurers.map((i) => ({
         insurer: i.insurer.name,
         share: Number(i.sharePct),
         additionalFeePct: Number(i.additionalFeePct),
+        additionalFeeIncludeVat: i.additionalFeeIncludeVat,
       })),
     })
   }

@@ -8,7 +8,7 @@
  */
 import type { Workbook, Worksheet } from "exceljs"
 
-import { FX, roundCents } from "./calc"
+import { beforeVat, FX, roundCents } from "./calc"
 import { dateShort } from "./format"
 import type { RecapPolicy } from "./production-recap"
 
@@ -57,7 +57,8 @@ export function ojkProduction(
       ? p.insurers
       : [{ insurer: OJK_MISSING, share: 100, additionalFeePct: 0 }]
     const premium = idr(p.premium, p.currency)
-    const brokerage = (premium * p.brokeragePct) / 100
+    // Brokerage dan EF sebelum PPN, sama dengan placing (22 November 2026).
+    const brokerage = beforeVat((premium * p.brokeragePct) / 100, p.includeVat)
 
     const key01 = `${line}\u0000${location}`
     const row01 =
@@ -67,7 +68,7 @@ export function ojkProduction(
     row01.income += brokerage
     for (const ins of insurers) {
       const part = (premium * ins.share) / 100
-      const fee = (part * (ins.additionalFeePct || 0)) / 100
+      const fee = beforeVat((part * (ins.additionalFeePct || 0)) / 100, ins.additionalFeeIncludeVat)
       row01.income += fee
 
       const key02 = `${ins.insurer}\u0000${line}\u0000${location}`
@@ -83,7 +84,7 @@ export function ojkProduction(
           policies: new Set<string>(),
         }
       row02.premium += part
-      row02.income += (part * p.brokeragePct) / 100 + fee
+      row02.income += beforeVat((part * p.brokeragePct) / 100, p.includeVat) + fee
       if (countsAsPolicy(p)) row02.policies.add(p.policyNo)
       lr02.set(key02, row02)
     }
@@ -254,8 +255,8 @@ export function fillOjkProduction(
     const insurers = p.insurers.length ? p.insurers : [{ insurer: OJK_MISSING, share: 100, additionalFeePct: 0 }]
     for (const ins of insurers) {
       const part = (p.premium * ins.share) / 100
-      const brokerage = (part * p.brokeragePct) / 100
-      const fee = (part * (ins.additionalFeePct || 0)) / 100
+      const brokerage = beforeVat((part * p.brokeragePct) / 100, p.includeVat)
+      const fee = beforeVat((part * (ins.additionalFeePct || 0)) / 100, ins.additionalFeeIncludeVat)
       rows.push([
         p.policyNo,
         p.type,
@@ -300,7 +301,7 @@ function writeNotes(
 ) {
   const notes = [
     "Jumlah polis: polis Baru dan Renewal. Endorsement, pembatalan, dan deklarasi MOP hanya menambah premi dan pendapatan.",
-    "Premi: premi sebelum diskon. Pendapatan jasa keperantaraan: brokerage + additional fee (EF); margin rate MOP tidak termasuk.",
+    "Premi: premi sebelum diskon. Pendapatan jasa keperantaraan: brokerage + additional fee (EF) sebelum PPN (incl. VAT: persen ÷ 1,022); margin rate MOP tidak termasuk.",
     "Lini Usaha OJK dan Lokasi Penempatan diambil dari Policy Database. Endorsement, pembatalan, dan deklarasi yang kosong memakai isian polis induknya.",
     ...extra,
     ...(missing.length

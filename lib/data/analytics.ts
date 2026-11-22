@@ -1,7 +1,7 @@
-import { grossPremium, toIdr } from "../calc"
+import { additionalFeeVatFor, beforeVat, grossPremium, toIdr } from "../calc"
 import { policyStatus } from "./policy-status"
 import { OPEN_CLAIM_STATUSES } from "./reference"
-import type { Claim, Client, PlacingSlip, Policy } from "./types"
+import type { Claim, Client, PlacingSlip, Policy, SecurityPanelRow } from "./types"
 
 /*
  * Agregasi menerima data dan tanggal "hari ini" sebagai argumen, jadi hasilnya sama
@@ -16,18 +16,28 @@ export function premiumIdr(p: { premium: number; currency: string }) {
   return toIdr(grossPremium(p), p.currency)
 }
 
-/** Brokerage dalam IDR, dari premi sebelum diskon (sejalan batas OJK brokerage + diskon). */
+/**
+ * Brokerage dalam IDR sebelum PPN, dari premi sebelum diskon (sejalan batas OJK brokerage +
+ * diskon). Incl. VAT: persen ÷ 1,022, sama dengan placing (22 November 2026).
+ */
 export function brokerageIdr(p: {
   premium: number
   currency: string
   brokeragePct: number
+  includeVat?: boolean
 }) {
-  return (toIdr(p.premium, p.currency) * p.brokeragePct) / 100
+  return beforeVat((toIdr(p.premium, p.currency) * p.brokeragePct) / 100, p.includeVat)
 }
 
-/** Additional fee polis dalam IDR; polis tanpa fee bernilai 0. */
-export function feeIdr(p: { additionalFee?: number; currency: string }) {
-  return toIdr(p.additionalFee ?? 0, p.currency)
+/** Additional fee polis dalam IDR sebelum PPN (fee incl. VAT ÷ 1,022); polis tanpa fee 0. */
+export function feeIdr(p: {
+  additionalFee?: number
+  currency: string
+  premium?: number
+  insurers?: readonly Pick<SecurityPanelRow, "share" | "additionalFeePct" | "additionalFeeIncludeVat">[]
+}) {
+  const inside = p.premium != null ? additionalFeeVatFor(p.premium, p.insurers) : 0
+  return toIdr((p.additionalFee ?? 0) - inside, p.currency)
 }
 
 /** Polis yang masih berjalan pada tanggal tertentu: belum berakhir dan tidak dibatalkan. */

@@ -7,7 +7,7 @@
 
 import type { Workbook } from "exceljs"
 
-import { BROKERAGE_VAT_RATE, FX, roundCents } from "@/lib/calc"
+import { BROKERAGE_VAT_RATE, beforeVat, FX, roundCents } from "@/lib/calc"
 import { addExportSheet, type ExportColumn } from "@/lib/export"
 import { duplicateFlags } from "@/lib/production-duplicates"
 import { dateShort } from "@/lib/format"
@@ -75,6 +75,8 @@ export interface RecapPolicy {
     insurer: string
     share: number
     additionalFeePct: number
+    /** Additional fee asuransi ini sudah termasuk PPN 2,2%. */
+    additionalFeeIncludeVat?: boolean
     feeSubAccount?: string | null
   }[]
 }
@@ -246,8 +248,9 @@ function insurerLines(policies: readonly RecapPolicy[], fx: Record<string, numbe
         gross,
         // Diskon ditulis negatif seperti komisi dan fee: potongan dari premi bruto.
         discount: -((policy.discount ?? 0) * insurer.share) / 100,
-        commission: -(gross * policy.brokeragePct) / 100,
-        fee: -(gross * insurer.additionalFeePct) / 100,
+        // Brokerage dan fee sebelum PPN, sama dengan placing (Agus dan Harry, 22 November 2026).
+        commission: -beforeVat((gross * policy.brokeragePct) / 100, policy.includeVat),
+        fee: -beforeVat((gross * insurer.additionalFeePct) / 100, insurer.additionalFeeIncludeVat),
         margin:
           policy.clientPremium == null
             ? 0
@@ -371,7 +374,7 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
         Premium_Commission_OC: roundCents(line.commission),
         Premium_Commission: idr(line.commission),
         "(Income)/Beban": idr(line.commission),
-        Percentage: gross ? -p.brokeragePct / 100 : 0,
+        Percentage: gross ? -beforeVat(p.brokeragePct, p.includeVat) / 100 : 0,
         "sub akun pnl": SUB_ACCOUNT.commission,
       },
     ]
@@ -381,7 +384,7 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
         RM_Fee_OC: roundCents(line.fee),
         RM_Fee: idr(line.fee),
         "(Income)/Beban": idr(line.fee),
-        Percentage: -ins.additionalFeePct / 100,
+        Percentage: -beforeVat(ins.additionalFeePct, ins.additionalFeeIncludeVat) / 100,
         "sub akun pnl": feeSubAccount(ins.feeSubAccount),
       })
     }
