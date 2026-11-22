@@ -122,7 +122,8 @@ export function DeclarationUpload({
   const totalValue = rows.reduce((sum, r) => sum + r.sumInsured, 0)
   const totalPremium = rows.reduce((sum, r) => sum + r.premium, 0)
   const totalAdminFee = rows.reduce((sum, r) => sum + (r.adminFee ?? 0), 0)
-  // Margin rate: premi dari file (rate ke klien) dikurangi premi menurut rate MOP (Agus, 20 November 2026).
+  // Margin: premi tagihan ke klien (Gross Premium file) dikurangi premi ke asuransi menurut rate MOP
+  // (Agus, 22 November 2026).
   const totalMargin = rows.reduce((sum, r) => sum + (declarationMargin(r) ?? 0), 0)
 
   async function readFile(file: File) {
@@ -194,7 +195,7 @@ export function DeclarationUpload({
             inceptionDate: r.inceptionDate,
             sumInsured: r.sumInsured,
             premium: r.premium,
-            insurerPremium: r.insurerPremium,
+            clientPremium: r.clientPremium,
             insuredName: r.insuredName,
             adminFee: r.adminFee,
             remarks: r.remarks,
@@ -428,13 +429,13 @@ export function DeclarationUpload({
               </span>
               <span className="text-muted-foreground">
                 {" "}
-                · nilai {money(totalValue, master.currency)} · premi{" "}
+                · nilai {money(totalValue, master.currency)} · premi ke asuransi{" "}
                 {money(totalPremium, master.currency)}
                 {totalAdminFee
                   ? ` · admin fee ${money(totalAdminFee, master.currency)}`
                   : ""}
                 {Math.abs(totalMargin) >= 0.01
-                  ? ` · margin rate ${money(totalMargin, master.currency)}`
+                  ? ` · margin ${money(totalMargin, master.currency)}`
                   : ""}
               </span>
             </p>
@@ -446,7 +447,7 @@ export function DeclarationUpload({
                     <TableHead>Tanggal</TableHead>
                     <TableHead className="text-right">Nilai</TableHead>
                     {showRate ? <TableHead>Kategori Rate</TableHead> : null}
-                    <TableHead className="text-right">Premium</TableHead>
+                    <TableHead className="text-right">Premi ke Asuransi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

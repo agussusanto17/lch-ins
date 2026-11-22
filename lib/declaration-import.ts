@@ -1,9 +1,10 @@
 /**
  * Upload deklarasi MOP dari Excel (Agus, 17 November 2026): satu baris satu pengiriman di bawah
  * polis MOP. File bisa memakai template sistem atau General Marine Report dari asuransi
- * (contoh MOC 45031125000646): judul kolom keduanya dikenali. Premi memakai Gross Premium atau
- * kolom Premium bila diisi, selain itu dihitung dari kategori rate slip seperti form Tambah
- * deklarasi.
+ * (contoh MOC 45031125000646): judul kolom keduanya dikenali. Gross Premium (atau kolom Premium)
+ * adalah premi tagihan ke klien; premi deklarasi adalah premi ke asuransi menurut kategori rate
+ * MOP, selisihnya margin (Agus, 22 November 2026). Tanpa kategori rate, premi file dipakai untuk
+ * keduanya.
  */
 import type { Workbook } from "exceljs"
 
@@ -254,12 +255,13 @@ export interface DeclarationImportRow {
   policyNo: string
   inceptionDate: string
   sumInsured: number
+  /** Premi deklarasi: premi ke asuransi menurut kategori rate MOP, atau premi file tanpa kategori. */
   premium: number
   /**
-   * Premi ke asuransi dari kategori rate MOP (Agus, 20 November 2026). Bila premi diambil dari
-   * file (rate ke klien), selisihnya margin. Kosong bila kategorinya tidak diketahui.
+   * Premi tagihan ke klien dari Gross Premium file (Agus, 22 November 2026); selisihnya dengan
+   * premi deklarasi adalah margin. Kosong bila kolom premi tidak diisi.
    */
-  insurerPremium: number | null
+  clientPremium: number | null
   /** Kategori rate yang dipakai; kosong bila premi diambil dari file tanpa kategori. */
   rateLabel: string | null
   units: number | null
@@ -529,14 +531,15 @@ export function declarationsFromRows(
       policyNo,
       inceptionDate: date!,
       sumInsured: value!,
-      premium,
-      insurerPremium: rate
-        ? rate.basis === "per_unit"
-          ? units != null && units > 0
-            ? openCoverPremium(rate, units)
-            : null
-          : openCoverPremium(rate, value!)
-        : null,
+      premium:
+        (rate
+          ? rate.basis === "per_unit"
+            ? units != null && units > 0
+              ? openCoverPremium(rate, units)
+              : null
+            : openCoverPremium(rate, value!)
+          : null) ?? premium,
+      clientPremium: premiumFilled ? premium : null,
       rateLabel: rate ? rate.label.trim() : null,
       units: rate?.basis === "per_unit" ? units : null,
       insuredName: insuredName || null,
@@ -690,7 +693,7 @@ export function fillDeclarationTemplate(
     "Date of Issue dan ETD: DD/MM/YYYY, misalnya 05/12/2026. Date of Issue menentukan bulan produksi dan harus di dalam periode polis MOP.",
     "Sum Insured, Gross Premium, dan Admin Fee: angka tanpa mata uang, misalnya 1000000000.",
     `Currency: kosongkan atau isi ${info.currency}, sama dengan mata uang polis MOP.`,
-    "Gross Premium: kosongkan supaya dihitung dari Kategori Rate (dropdown, daftarnya di sheet Rate).",
+    "Gross Premium: premi tagihan ke klien (rate polis Merimen). Premi ke asuransi dihitung dari Kategori Rate MOP (dropdown, daftarnya di sheet Rate); selisihnya margin. Kosongkan bila premi ke klien belum diketahui.",
     ...(perUnit
       ? [
           "Interest Insured: jumlah container (angka), misalnya 3. Wajib untuk rate per container.",

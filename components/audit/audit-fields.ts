@@ -93,6 +93,7 @@ const FIELD_LABELS: Record<string, string> = {
   insuredName: "Nama tertanggung",
   groupingInsured: "Grup tertanggung",
   feeSubAccountId: "Sub akun EF",
+  clientPremium: "Premi tagihan ke klien",
   spilProgram: "SPIL Program",
   premiumPaidDate: "Tanggal premi dibayar",
   riskLocation: "Lokasi risiko",

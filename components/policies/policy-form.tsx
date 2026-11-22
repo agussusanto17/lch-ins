@@ -921,10 +921,7 @@ export function PolicyForm({
                 set({
                   sumInsured: v ?? 0,
                   ...(ocRate?.basis === "percent"
-                    ? {
-                        premium: openCoverPremium(ocRate, v ?? 0),
-                        insurerPremium: openCoverPremium(ocRate, v ?? 0),
-                      }
+                    ? { premium: openCoverPremium(ocRate, v ?? 0) }
                     : {}),
                 })
               }
@@ -956,10 +953,10 @@ export function PolicyForm({
                         rate,
                         rate.basis === "percent" ? draft.sumInsured : (ocUnits ?? 0)
                       )
-                      set({ premium: ratePremium, insurerPremium: ratePremium })
+                      set({ premium: ratePremium })
                     }
                   }}
-                  description="Rate dari slip open cover. Premi dihitung otomatis dan tetap bisa diubah."
+                  description="Rate MOP ke asuransi. Premi ke asuransi dihitung otomatis dan tetap bisa diubah."
                 />
                 {ocRate?.basis === "per_unit" ? (
                   <NumberField
@@ -969,8 +966,7 @@ export function PolicyForm({
                     value={ocUnits}
                     onValueChange={(v) => {
                       setOcUnits(v)
-                      const ratePremium = openCoverPremium(ocRate, v ?? 0)
-                      set({ premium: ratePremium, insurerPremium: ratePremium })
+                      set({ premium: openCoverPremium(ocRate, v ?? 0) })
                     }}
                   />
                 ) : null}
@@ -1006,7 +1002,7 @@ export function PolicyForm({
               </>
             ) : null}
             <NumberField
-              label="Premium"
+              label={declaration ? "Premi ke Asuransi" : "Premium"}
               required
               readOnly={prorataOn}
               value={draft.premium}
@@ -1022,7 +1018,7 @@ export function PolicyForm({
                       ? `${money(draft.sumInsured, draft.currency)} × ${openCoverRateText(ocRate, draft.currency)} = ${money(openCoverPremium(ocRate, draft.sumInsured), draft.currency)}`
                       : `${num(ocUnits ?? 0, 0, 0)} × ${openCoverRateText(ocRate, draft.currency)} = ${money(openCoverPremium(ocRate, ocUnits ?? 0), draft.currency)}`
                     : openCoverSlip && linkedSlip && declaration
-                      ? `Rate open cover: ${(linkedSlip.openCoverRates ?? [])
+                      ? `Rate MOP: ${(linkedSlip.openCoverRates ?? [])
                           .filter((r) => r.rate != null)
                           .map((r) => `${r.label} ${openCoverRateText(r, draft.currency)}`)
                           .join(" · ")}.`
@@ -1032,22 +1028,30 @@ export function PolicyForm({
               }
             />
             {declaration ? (
-              // Rate ke klien bisa beda dari rate MOP ke asuransi; selisihnya margin (Agus, 20 November 2026).
-              <NumberField
-                label="Premi ke Asuransi"
-                min={0}
-                value={draft.insurerPremium ?? null}
-                onValueChange={(v) => set({ insurerPremium: v })}
-                error={errors.insurerPremium}
-                description={
-                  draft.insurerPremium == null
-                    ? "Premi menurut rate MOP, terisi saat Kategori Rate dipilih. Kosongkan bila tidak diketahui."
-                    : `Premi menurut rate MOP. Margin rate ${money(
-                        declarationMargin(draft) ?? 0,
-                        draft.currency
-                      )} (Premium − Premi ke Asuransi).`
-                }
-              />
+              // Premi ke klien mengikuti rate yang diupload (misalnya 0,12% dari polis Merimen),
+              // premi deklarasi di atas adalah premi ke asuransi menurut rate MOP; selisihnya
+              // margin LCH (Agus, 22 November 2026).
+              <>
+                <NumberField
+                  label="Premi Tagihan ke Klien"
+                  min={0}
+                  value={draft.clientPremium ?? null}
+                  onValueChange={(v) => set({ clientPremium: v })}
+                  error={errors.clientPremium}
+                  description={
+                    draft.clientPremium != null && draft.sumInsured > 0
+                      ? `Rate ke klien ${num((draft.clientPremium / draft.sumInsured) * 100, 0, 4)}% dari nilai deklarasi.`
+                      : "Premi menurut rate ke klien yang diupload, misalnya 0,12% dari nilai deklarasi."
+                  }
+                />
+                <NumberField
+                  label="Margin"
+                  readOnly
+                  value={declarationMargin(draft)}
+                  onValueChange={() => {}}
+                  description="Premi tagihan ke klien − premi ke asuransi. Masuk Rekap Produksi sebagai O/I-MARGIN."
+                />
+              </>
             ) : null}
             {declaration ? null : (
               // Gross Premium = premi sebelum diskon; Nett = gross − diskon − brokerage − fee (Team LCH, 19 November 2026).

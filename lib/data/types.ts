@@ -643,10 +643,11 @@ export interface Policy {
   adminCost?: number
   stampDuty?: number
   /**
-   * Deklarasi MOP: premi ke asuransi menurut rate MOP (Agus, 20 November 2026). Premi deklarasi
-   * mengikuti rate ke klien; selisihnya margin LCH. Kosong bila tidak diketahui atau bukan deklarasi.
+   * Deklarasi MOP: premi tagihan ke klien menurut rate yang diupload (Agus, 22 November 2026).
+   * Premi deklarasi adalah premi ke asuransi menurut rate MOP; selisihnya margin LCH. Kosong bila
+   * belum diisi atau bukan deklarasi.
    */
-  insurerPremium?: number | null
+  clientPremium?: number | null
   /**
    * Bagian slip PAR + EQVET yang menjadi polis ini. Kosong untuk slip yang
    * terbit sebagai satu polis dan polis tanpa slip.

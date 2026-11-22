@@ -293,7 +293,8 @@ test("Per Polis sheet: one row per policy per insurer with a value column per su
     policy({
       premium: 1_000_000,
       discount: 100_000,
-      insurerPremium: 850_000,
+      // Margin deklarasi: premi tagihan ke klien − premi ke asuransi = 150.000.
+      clientPremium: 1_150_000,
       insurers: [
         { insurer: "PT Asuransi Multi Artha Guna Tbk", share: 60, additionalFeePct: 10 },
         { insurer: "PT Asuransi Sinar Mas", share: 40, additionalFeePct: 0 },

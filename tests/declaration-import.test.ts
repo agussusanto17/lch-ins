@@ -52,7 +52,7 @@ const HEADER = [
   "Keterangan",
 ]
 
-test("premi deklarasi dihitung dari kategori rate slip, atau memakai kolom Premium", () => {
+test("premi deklarasi dihitung dari kategori rate slip; kolom Premium menjadi premi tagihan ke klien", () => {
   const { declarations, errors } = declarationsFromRows(
     [
       HEADER,
@@ -117,9 +117,14 @@ test("premi deklarasi dihitung dari kategori rate slip, atau memakai kolom Premi
         "20 FT - Others",
         10,
       ],
-      // Kolom Premium diisi: dipakai apa adanya.
-      [5, "CERT/004", "2026-12-21", 750_000_000, 600_000, "DRY SHIPMENT", null],
+      // Kolom Premium diisi: menjadi premi tagihan ke klien; premi deklarasi tetap dari rate MOP
+      // (Agus, 22 November 2026).
+      [5, "CERT/004", "2026-12-21", 750_000_000, 562_500, "DRY SHIPMENT", null],
     ]
+  )
+  assert.deepEqual(
+    declarations.map((d) => d.clientPremium),
+    [null, null, null, 600_000]
   )
   assert.equal(declarations[0].remarks, "Jakarta - Medan")
 })

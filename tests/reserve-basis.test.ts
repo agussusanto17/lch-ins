@@ -60,12 +60,12 @@ test("revenue per account per month: commission, interco commission, EF, and MOP
     policy({ policyNo: "MC/2026/0001-END1", type: "Endorsement", premium: 10_000_000 }),
     // Source LCH-SG: komisinya lewat interco.
     policy({ policyNo: "MC/2026/0002", sourceCode: "LCH-SG", premium: 20_000_000 }),
-    // Deklarasi MOP bermargin dengan EF.
+    // Deklarasi MOP bermargin dengan EF: premi ke asuransi 1.000.000, tagihan ke klien 1.150.000.
     policy({
       policyNo: "MOP/0001",
       type: "Deklarasi",
       premium: 1_000_000,
-      insurerPremium: 850_000,
+      clientPremium: 1_150_000,
       brokeragePct: 0,
       insurers: [{ insurer: "PT Asuransi Multi Artha Guna Tbk", share: 100, additionalFeePct: 10 }],
     }),

@@ -132,11 +132,11 @@ export function openCoverPremium(
 }
 
 /**
- * Margin rate deklarasi MOP (Agus, 20 November 2026): premi ke klien dikurangi premi ke asuransi,
- * misalnya rate klien 0,1% dan rate MOP 0,085% memberi margin 0,015% dari nilai deklarasi. Null
- * bila premi ke asuransi tidak diketahui.
+ * Margin deklarasi MOP: premi tagihan ke klien dikurangi premi deklarasi (premi ke asuransi menurut
+ * rate MOP), misalnya rate klien 0,12% dan rate MOP 0,0925% (Agus, 22 November 2026). Null bila
+ * premi tagihan ke klien belum diisi.
  */
-export function declarationMargin(p: Pick<Policy, "premium" | "insurerPremium">) {
-  if (p.insurerPremium == null) return null
-  return Math.round((p.premium - p.insurerPremium) * 100) / 100
+export function declarationMargin(p: Pick<Policy, "premium" | "clientPremium">) {
+  if (p.clientPremium == null) return null
+  return Math.round((p.clientPremium - p.premium) * 100) / 100
 }
