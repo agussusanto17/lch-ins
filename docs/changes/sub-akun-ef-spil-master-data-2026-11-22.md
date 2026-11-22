@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-22
 - **Branch:** `feat/sub-akun-ef-spil-master`
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #302
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
