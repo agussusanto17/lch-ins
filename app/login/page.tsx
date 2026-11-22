@@ -56,13 +56,14 @@ export default async function LoginPage({
         </div>
 
         <div className="lg:mt-auto">
-          <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-7xl">
-            Sistem
+          {/* Nama sistem BROKERCORE (Agus, 22 November 2026). */}
+          <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
+            BROKERCORE
             <br />
-            <span className="text-[#f7c303]">Back Office</span>
+            <span className="text-[#f7c303]">System</span>
           </h1>
           <p className="mt-4 max-w-xl text-base text-balance text-white/80 sm:text-lg lg:mt-6">
-            SPPA, placing slip, polis, dan klaim dalam satu sistem.
+            The Core of Your Business
           </p>
         </div>
       </section>
