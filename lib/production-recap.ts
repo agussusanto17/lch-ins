@@ -9,6 +9,7 @@ import type { Workbook } from "exceljs"
 
 import { BROKERAGE_VAT_RATE, FX, roundCents } from "@/lib/calc"
 import { addExportSheet, type ExportColumn } from "@/lib/export"
+import { duplicateFlags } from "@/lib/production-duplicates"
 import { dateShort } from "@/lib/format"
 import type { PolicyType } from "@/lib/data/types"
 
@@ -65,6 +66,8 @@ export interface RecapPolicy {
   spilProgram?: boolean
   /** Sharing brokerage ke LCH Singapore, persen dari brokerage (Agus, 22 November 2026). */
   commissionShareSgPct?: number
+  /** Bagian slip PAR + EQVET, supaya kedua polisnya tidak dianggap dobel. */
+  slipPart?: string | null
   /** Brokerage sudah termasuk PPN 2,2%; sharing dihitung dari brokerage sebelum PPN. */
   includeVat?: boolean
   /** feeSubAccount: sub akun EF asuransi dari Master Data; kosong = EF. */
@@ -133,6 +136,8 @@ export const RECAP_HEADERS = [
   // Tambahan sistem di luar contoh LCH: margin rate deklarasi MOP (Agus, 20 November 2026).
   "Margin_Rate_OC",
   "Margin_Rate",
+  // Tanda data produksi yang kemungkinan dobel; datanya tetap ditulis (Agus, 22 November 2026).
+  "Cek Dobel",
 ] as const
 
 const TYPE_CODES: Record<PolicyType, string> = {
@@ -319,7 +324,28 @@ function baseRow(line: InsurerLine): RecapRow {
     "Perusahaan/Perorangan": p.clientType === "Korporasi" ? "Perusahaan" : (p.clientType ?? ""),
     Margin_Rate_OC: 0,
     Margin_Rate: 0,
+    "Cek Dobel": "",
   }
+}
+
+/** Tanda dobel per polis rekap, lihat `duplicateFlags`. */
+function recapDuplicateFlags(policies: readonly RecapPolicy[]): Map<RecapPolicy, string> {
+  const flags = duplicateFlags(
+    policies.map((p) => ({
+      policyNo: p.policyNo,
+      type: p.type,
+      insuredName: p.insuredName,
+      cob: p.cobName,
+      inceptionDate: p.productionDate,
+      expiryDate: p.periodEnd,
+      currency: p.currency,
+      premium: p.premium,
+      insurer: p.insurers[0]?.insurer,
+      slipPart: p.slipPart,
+      parent: p.parentPolicyNo,
+    }))
+  )
+  return new Map(policies.map((p, i) => [p, flags[i]]))
 }
 
 /**
@@ -329,10 +355,11 @@ function baseRow(line: InsurerLine): RecapRow {
  * kurs, bukan komisi OC yang sudah dibulatkan).
  */
 export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = FX): RecapRow[] {
+  const flags = recapDuplicateFlags(policies)
   return insurerLines(policies, fx).flatMap((line) => {
     const { policy: p, insurer: ins } = line
     const idr = (raw: number) => roundCents(raw * line.rate)
-    const base = baseRow(line)
+    const base: RecapRow = { ...baseRow(line), "Cek Dobel": flags.get(p) ?? "" }
     const gross = roundCents(line.gross)
     const rows: RecapRow[] = [
       {
@@ -405,7 +432,7 @@ export const RECAP_COLUMNS: ExportColumn<RecapRow>[] = RECAP_HEADERS.map((header
   type: MONEY.has(header) ? "money" : header === "rate" || header === "Percentage" ? "number" : "text",
   numFmt: header === "Percentage" ? "0.00%" : undefined,
   width:
-    header === "aname" || header === "Object"
+    header === "aname" || header === "Object" || header === "Cek Dobel"
       ? 50
       : header === "insured" || header === "Insured Name"
         ? 36
@@ -458,6 +485,7 @@ export const RECAP_POLICY_HEADERS = [
   "O/I-MARGIN_IDR",
   ...UNRECORDED_ACCOUNTS.flatMap((a) => [`${a}_OC` as Unrecorded, `${a}_IDR` as Unrecorded]),
   "(Income)/Beban",
+  "Cek Dobel",
 ] as const
 
 export type RecapPolicyRow = Record<(typeof RECAP_POLICY_HEADERS)[number], string | number>
@@ -467,6 +495,7 @@ export function recapPolicyRows(
   policies: RecapPolicy[],
   fx: Record<string, number> = FX
 ): RecapPolicyRow[] {
+  const flags = recapDuplicateFlags(policies)
   return insurerLines(policies, fx).map((line) => {
     const base = baseRow(line)
     const idr = (raw: number) => roundCents(raw * line.rate)
@@ -509,6 +538,7 @@ export function recapPolicyRows(
       "EXPENSE-COMMISIONS_OC": roundCents(line.sgShare),
       "EXPENSE-COMMISIONS_IDR": idr(line.sgShare),
       "(Income)/Beban": idr(line.commission + line.fee + line.margin + line.sgShare),
+      "Cek Dobel": flags.get(line.policy) ?? "",
     }
   })
 }
@@ -519,8 +549,13 @@ export const RECAP_POLICY_COLUMNS: ExportColumn<RecapPolicyRow>[] = RECAP_POLICY
   (header) => ({
     header,
     value: (row: RecapPolicyRow) => row[header],
-    type: header === "rate" ? "number" : POLICY_TEXT.has(header) ? "text" : "money",
-    width: header === "Object" ? 50 : header === "insured" ? 36 : undefined,
+    type:
+      header === "rate"
+        ? "number"
+        : POLICY_TEXT.has(header) || header === "Cek Dobel"
+          ? "text"
+          : "money",
+    width: header === "Object" || header === "Cek Dobel" ? 50 : header === "insured" ? 36 : undefined,
   })
 )
 
@@ -557,7 +592,8 @@ export function recapIncome(
 /** Penjelasan kolom yang ditambahkan untuk catatan Team LCH. */
 export const RECAP_NOTES = [
   "Rekap Produksi: satu baris per polis per asuransi per unsur pendapatan. Premi dan diskon hanya ditulis di baris COMM, jadi jumlah premi tidak dobel.",
-  "akun pnl: semua baris dari sistem adalah INCOME. Pendapatan ditulis negatif dan beban positif, seperti kolom (Income)/Beban contoh LCH.",
+  "akun pnl: INCOME untuk pendapatan dan EXPENSE untuk beban. Pendapatan ditulis negatif dan beban positif, seperti kolom (Income)/Beban contoh LCH.",
+  "Cek Dobel: tanda polis yang kemungkinan tercatat dua kali, barisnya berwarna oranye. Datanya tetap ditulis dan ikut dijumlah; cek di Policy Database lalu hapus atau perbaiki yang dobel. Aturannya: no. polis sama dipakai lebih dari satu data, atau tipe, tertanggung, COB, tanggal mulai dan berakhir, mata uang, dan premi sama dengan nomor polis berbeda (misalnya polis sementara dari CI yang juga diinput manual).",
   "sub akun pnl: COMM = brokerage; baris EF = additional fee, sub akunnya mengikuti Sub akun EF asuransi di Master Data > Asuransi & Adjuster (Multi Artha Guna: EF (MAG); belum diatur: EF); O/I-MARGIN = margin deklarasi MOP (premi tagihan ke klien − premi ke asuransi menurut rate MOP).",
   "spil/non spil: SPIL bila klien polis ditandai SPIL Program di Database Klien; selain itu Non SPIL.",
   "source file: Placement untuk polis dari placing slip, Policy Database untuk polis yang diinput langsung, Deklarasi MOP untuk deklarasi.",
@@ -567,6 +603,9 @@ export const RECAP_NOTES = [
   "Beban lain (MARKETING-CASHBACK, REFERRAL FEE, PREMI BEBAN LCH, DISCOUNT BEBAN LCH) dan O/I-SPONSORSHIP belum dicatat di sistem, jadi berisi 0. Kolomnya bisa diisi langsung di file ini.",
 ] as const
 
+/** Warna baris yang bertanda dobel. */
+const DUPLICATE_FILL = "FFFCE4D6"
+
 /** Workbook Rekap Produksi: sheet Rekap Produksi (format LCH), Per Polis, dan Keterangan. */
 export function fillProductionRecap(
   wb: Workbook,
@@ -575,12 +614,27 @@ export function fillProductionRecap(
   printedOn: string,
   fx: Record<string, number> = FX
 ) {
-  addExportSheet(wb, { sheet: "Rekap Produksi", columns: RECAP_COLUMNS, rows: recapRows(policies, fx) })
-  addExportSheet(wb, {
+  const recap = addExportSheet(wb, {
+    sheet: "Rekap Produksi",
+    columns: RECAP_COLUMNS,
+    rows: recapRows(policies, fx),
+  })
+  const perPolicy = addExportSheet(wb, {
     sheet: "Per Polis",
     columns: RECAP_POLICY_COLUMNS,
     rows: recapPolicyRows(policies, fx),
   })
+  // Baris bertanda dobel diberi warna supaya mudah dicek; nilainya tetap ikut dijumlah.
+  for (const ws of [recap, perPolicy]) {
+    const flagColumn = ws.getRow(1).values as unknown[]
+    const index = flagColumn.indexOf("Cek Dobel")
+    ws.eachRow((row, n) => {
+      if (n === 1 || !row.getCell(index).value) return
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: DUPLICATE_FILL } }
+      })
+    })
+  }
   const notes = wb.addWorksheet("Keterangan")
   notes.getColumn(1).width = 130
   notes.getCell("A1").value = "Keterangan Rekap Produksi"
