@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-22
 - **Branch:** `fix/additional-discount-installment`, ditumpuk di atas `feat/premi-klien-deklarasi` (#303)
-- **PR:** #<nomor> (isi setelah PR dibuka)
+- **PR:** #305
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
