@@ -67,6 +67,8 @@ const policyInputSchema = z
     discountAmount: z.number().optional(),
     // Deklarasi MOP: premi tagihan ke klien, untuk margin (Agus, 22 November 2026).
     clientPremium: z.number().min(0, "Premi tagihan ke klien tidak boleh negatif").nullable().optional(),
+    // Deklarasi MOP: ETD dari General Marine Report (Agus, 23 November 2026).
+    etdDate: isoDate.nullable().optional(),
     brokeragePct: z.number().min(0).max(100),
     // Premi installment 2 sampai 10 kali (Agus, 20 November 2026); server memeriksa jumlah persen.
     premiumInstallments: z
@@ -176,6 +178,7 @@ const declarationRowsSchema = z
         .min(1, "No. sertifikat wajib diisi")
         .max(100, "No. sertifikat maksimal 100 karakter"),
       inceptionDate: isoDate,
+      etdDate: isoDate.nullable().optional(),
       sumInsured: z.number().gt(0, "Nilai deklarasi harus lebih dari 0"),
       premium: z.number().gt(0, "Premi deklarasi harus lebih dari 0"),
       // Premi tagihan ke klien dari Gross Premium file; premi deklarasi menurut rate MOP.
@@ -221,6 +224,7 @@ export async function importDeclarationsAction(
         policyNo: row.policyNo,
         previousPolicyNo: null,
         inceptionDate: row.inceptionDate,
+        etdDate: row.etdDate ?? null,
         sumInsured: row.sumInsured,
         premium: row.premium,
         clientPremium: row.clientPremium ?? null,

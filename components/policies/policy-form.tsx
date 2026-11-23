@@ -198,10 +198,14 @@ const schema = z
   .superRefine((d, ctx) => {
     // Tanggal sama boleh: polis acara satu hari, misalnya Hole in One.
     if (d.expiryDate && d.inceptionDate && d.expiryDate < d.inceptionDate) {
+      // Deklarasi tidak menampilkan Tanggal Berakhir; nilainya mengikuti polis MOP.
+      const declaration = d.type === "Deklarasi"
       ctx.addIssue({
         code: "custom",
-        path: ["expiryDate"],
-        message: "Tanggal berakhir tidak boleh sebelum tanggal mulai",
+        path: [declaration ? "inceptionDate" : "expiryDate"],
+        message: declaration
+          ? "Date of Issue melewati akhir periode polis MOP"
+          : "Tanggal berakhir tidak boleh sebelum tanggal mulai",
       })
     }
     // Renewal boleh tanpa polis di sistem asal nomornya diisi.
@@ -787,8 +791,8 @@ export function PolicyForm({
               rows={3}
               value={draft.remarks ?? ""}
               onChange={(v) => set({ remarks: v })}
-              placeholder="Contoh: KACA packed in Container 1X20 · Sea SUNGAI MAS V. 53 · Jakarta - Medan · ETD 19/09/2026"
-              description="Barang, kapal, rute, ETD, B/L, dan invoice. Terisi otomatis dari upload Excel."
+              placeholder="Contoh: KACA packed in Container 1X20 · Sea SUNGAI MAS V. 53 · Jakarta - Medan · B/L BL-9"
+              description="Barang, kapal, rute, B/L, dan invoice. Terisi otomatis dari upload Excel."
             />
           ) : null}
           {draft.type === "Endorsement" || draft.type === "Cancellation" ? (
@@ -900,7 +904,11 @@ export function PolicyForm({
           <fieldset disabled={periodLocked} className="contents">
             <TextField
               label={
-                changesParent ? "Tanggal Efektif" : declaration ? "Tanggal Deklarasi" : "Tanggal Mulai"
+                changesParent
+                  ? "Tanggal Efektif"
+                  : declaration
+                    ? "Tanggal Deklarasi (Date of Issue)"
+                    : "Tanggal Mulai"
               }
               required
               type="date"
@@ -913,18 +921,31 @@ export function PolicyForm({
                   : draft.type === "Endorsement"
                     ? "Perubahan berlaku terhitung sejak tanggal ini."
                     : declaration
-                      ? "Tanggal pengiriman atau keberangkatan; menentukan bulan produksi."
+                      ? "Date of Issue sertifikat; menentukan bulan produksi."
                       : undefined
               }
             />
-            <TextField
-              label="Tanggal Berakhir"
-              required
-              type="date"
-              value={draft.expiryDate}
-              onChange={(v) => set({ expiryDate: v })}
-              error={errors.expiryDate}
-            />
+            {/* Deklarasi MOP: ETD menggantikan Tanggal Berakhir, yang tetap mengikuti polis MOP
+                (Agus, 23 November 2026). */}
+            {declaration ? (
+              <TextField
+                label="Tanggal ETD"
+                type="date"
+                value={draft.etdDate ?? ""}
+                onChange={(v) => set({ etdDate: v || null })}
+                error={errors.etdDate}
+                description="Estimated Time of Departure dari kolom ETD General Marine Report."
+              />
+            ) : (
+              <TextField
+                label="Tanggal Berakhir"
+                required
+                type="date"
+                value={draft.expiryDate}
+                onChange={(v) => set({ expiryDate: v })}
+                error={errors.expiryDate}
+              />
+            )}
           </fieldset>
         </div>
 

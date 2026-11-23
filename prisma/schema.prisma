@@ -1519,6 +1519,9 @@ model Policy {
   /// Merimen. Premi deklarasi (`premium`) adalah premi ke asuransi menurut rate MOP; selisihnya
   /// margin LCH di Rekap Produksi (Agus, 22 November 2026). Kosong untuk polis lain.
   clientPremium       Decimal? @map("client_premium") @db.Decimal(18, 2)
+  /// Deklarasi MOP: ETD (Estimated Time of Departure) dari kolom ETD General Marine Report
+  /// (Agus, 23 November 2026). Tanggal deklarasi tetap inception_date (Date of Issue).
+  etdDate             DateTime? @map("etd_date") @db.Date
   /// Tanggal premi dibayar (kosong = belum), tampil saat klaim (meeting LCH, 10 November 2026).
   /// Diisi manual; Bagian B bisa mengisinya dari pencatatan pembayaran premi.
   premiumPaidDate     DateTime? @map("premium_paid_date") @db.Date

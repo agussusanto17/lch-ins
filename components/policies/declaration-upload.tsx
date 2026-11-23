@@ -193,6 +193,7 @@ export function DeclarationUpload({
           batch.map((r) => ({
             policyNo: r.policyNo,
             inceptionDate: r.inceptionDate,
+            etdDate: r.etdDate,
             sumInsured: r.sumInsured,
             premium: r.premium,
             clientPremium: r.clientPremium,
@@ -444,7 +445,8 @@ export function DeclarationUpload({
                 <TableHeader>
                   <TableRow>
                     <TableHead>No. Sertifikat</TableHead>
-                    <TableHead>Tanggal</TableHead>
+                    <TableHead>Date of Issue</TableHead>
+                    <TableHead>ETD</TableHead>
                     <TableHead className="text-right">Nilai</TableHead>
                     {showRate ? <TableHead>Kategori Rate</TableHead> : null}
                     <TableHead className="text-right">Premi ke Asuransi</TableHead>
@@ -465,6 +467,7 @@ export function DeclarationUpload({
                         ) : null}
                       </TableCell>
                       <TableCell>{dateShort(r.inceptionDate)}</TableCell>
+                      <TableCell>{r.etdDate ? dateShort(r.etdDate) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {money(r.sumInsured, master.currency)}
                       </TableCell>

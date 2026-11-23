@@ -253,7 +253,10 @@ export interface DeclarationImportRow {
   /** Nomor baris di Excel, untuk pesan kesalahan dan pratinjau. */
   row: number
   policyNo: string
+  /** Tanggal deklarasi = Date of Issue sertifikat (Agus, 23 November 2026). */
   inceptionDate: string
+  /** ETD (Estimated Time of Departure) dari kolom ETD; kosong bila tidak diisi atau bukan tanggal. */
+  etdDate: string | null
   sumInsured: number
   /** Premi deklarasi: premi ke asuransi menurut kategori rate MOP, atau premi file tanpa kategori. */
   premium: number
@@ -439,23 +442,22 @@ export function declarationsFromRows(
     if (currency && currency.toUpperCase() !== ctx.currency.toUpperCase())
       fail(`Mata uang ${currency} berbeda dengan polis MOP (${ctx.currency}).`)
 
-    // Tanggal deklarasi; General Marine Report tanpa Date of Issue memakai ETD.
+    // Tanggal deklarasi hanya dari Date of Issue; ETD disimpan sebagai Tanggal ETD (Agus, 23
+    // November 2026). Sebelumnya baris tanpa Date of Issue memakai ETD.
     const rawDate = cellValue(get("date"))
     const rawEtd = cellValue(get("etd"))
-    const useEtd =
-      (rawDate == null || rawDate === "") && rawEtd != null && rawEtd !== ""
-    const source = useEtd ? rawEtd : rawDate
-    const swapped = useEtd ? swapEtd : swapDate
-    const date = readDate(source, swapped)
-    if (swapped && source instanceof Date && source.getUTCDate() <= 12)
-      swappedDates += 1
-    if (source == null || source === "") fail("Tanggal Deklarasi kosong.")
-    else if (!date)
-      fail(`Tanggal Deklarasi "${cellText(source)}" tidak dikenali.`)
+    const date = readDate(rawDate, swapDate)
+    const etdDate = readDate(rawEtd, swapEtd)
+    for (const [raw, swapped] of [
+      [rawDate, swapDate],
+      [rawEtd, swapEtd],
+    ] as const) {
+      if (swapped && raw instanceof Date && raw.getUTCDate() <= 12) swappedDates += 1
+    }
+    if (rawDate == null || rawDate === "") fail("Date of Issue kosong.")
+    else if (!date) fail(`Date of Issue "${cellText(rawDate)}" tidak dikenali.`)
     else if (date < ctx.period.start || date > ctx.period.end)
-      fail(
-        `Tanggal Deklarasi ${ddmmyyyy(date)} di luar periode polis MOP (${periodText}).`
-      )
+      fail(`Date of Issue ${ddmmyyyy(date)} di luar periode polis MOP (${periodText}).`)
 
     const value = parseParticipantAmount(cellValue(get("value")))
     if (value == null || value <= 0)
@@ -530,6 +532,7 @@ export function declarationsFromRows(
       row: excelRow,
       policyNo,
       inceptionDate: date!,
+      etdDate,
       sumInsured: value!,
       premium:
         (rate
@@ -547,8 +550,9 @@ export function declarationsFromRows(
         adminFilled && adminFee != null
           ? Math.round(adminFee * 100) / 100
           : null,
+      // ETD yang bukan tanggal (misalnya "TBA") tetap dicatat di keterangan.
       remarks:
-        shipmentRemarks(text, readDate(rawEtd, swapEtd)).slice(
+        shipmentRemarks(text, etdDate ? "" : cellText(rawEtd)).slice(
           0,
           LIMITS.remarks
         ) || null,
@@ -582,9 +586,10 @@ export function declarationsFromRows(
 
 /**
  * Keterangan deklarasi: kolom Keterangan bila diisi, ditambah data pengiriman dari General
- * Marine Report (barang, kapal, rute, ETD, B/L, invoice, referensi).
+ * Marine Report (barang, kapal, rute, B/L, invoice, referensi). ETD tanggal disimpan di Tanggal
+ * ETD; `etdText` hanya untuk ETD yang bukan tanggal.
  */
-function shipmentRemarks(text: (key: ColumnKey) => string, etd: string | null) {
+function shipmentRemarks(text: (key: ColumnKey) => string, etdText: string) {
   const vessel = [
     text("conveyance"),
     text("vessel"),
@@ -602,7 +607,7 @@ function shipmentRemarks(text: (key: ColumnKey) => string, etd: string | null) {
     text("units") && `Interest Insured: ${text("units")}`,
     vessel,
     route,
-    etd ? `ETD ${ddmmyyyy(etd)}` : "",
+    etdText ? `ETD ${etdText}` : "",
     text("blNo") && `B/L ${text("blNo")}`,
     text("invoiceNo") && `Invoice ${text("invoiceNo")}`,
     text("refNo") && `Ref ${text("refNo")}`,
@@ -690,7 +695,7 @@ export function fillDeclarationTemplate(
     "",
     "Kolom sheet Deklarasi sama dengan General Marine Report dari asuransi, jadi barisnya bisa disalin langsung. Laporannya juga bisa diupload langsung (simpan dulu sebagai .xlsx).",
     "Isi satu sertifikat per baris, mulai baris 2. Kolom bertanda * wajib diisi.",
-    "Date of Issue dan ETD: DD/MM/YYYY, misalnya 05/12/2026. Date of Issue menentukan bulan produksi dan harus di dalam periode polis MOP.",
+    "Date of Issue dan ETD: DD/MM/YYYY, misalnya 05/12/2026. Date of Issue wajib: menjadi tanggal deklarasi, menentukan bulan produksi, dan harus di dalam periode polis MOP. ETD disimpan sebagai Tanggal ETD deklarasi.",
     "Sum Insured, Gross Premium, dan Admin Fee: angka tanpa mata uang, misalnya 1000000000.",
     `Currency: kosongkan atau isi ${info.currency}, sama dengan mata uang polis MOP.`,
     "Gross Premium: premi tagihan ke klien (rate polis Merimen). Premi ke asuransi dihitung dari Kategori Rate MOP (dropdown, daftarnya di sheet Rate); selisihnya margin. Kosongkan bila premi ke klien belum diketahui.",
@@ -702,7 +707,7 @@ export function fillDeclarationTemplate(
           "Interest Insured: jumlah container, misalnya 3; dicatat di keterangan deklarasi.",
         ]),
     'Assured Name: isi bila sertifikat atas nama lain, misalnya "... QQ ..."; kosong berarti ikut polis MOP.',
-    "Description of Goods, Interest Insured, Conv, Vessel Name, Voyage No, ETD, From, To, Internal Ref No., Invoice No., B/L No., dan Keterangan disimpan sebagai keterangan deklarasi. Admin Fee disimpan sebagai biaya admin, tidak menambah premi produksi.",
+    "Description of Goods, Interest Insured, Conv, Vessel Name, Voyage No, From, To, Internal Ref No., Invoice No., B/L No., dan Keterangan disimpan sebagai keterangan deklarasi. Admin Fee disimpan sebagai biaya admin, tidak menambah premi produksi.",
     `Maksimal ${DECLARATION_IMPORT_LIMIT.toLocaleString("id-ID")} baris per file. Cert No. yang sudah tercatat di polis MOP ini dilewati, jadi file yang sama boleh diupload ulang.`,
     "File sertifikat diunggah per deklarasi lewat menu Berkas polis.",
   ])
