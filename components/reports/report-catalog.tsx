@@ -37,6 +37,7 @@ import { fillOjkProduction } from "@/lib/ojk-production"
 import { downloadWorkbook } from "@/lib/export"
 import { dateShort } from "@/lib/format"
 import { fillProductionRecap } from "@/lib/production-recap"
+import { fillMomReport, momReport, previousYearDate } from "@/lib/mom-report"
 import { fillReserveBasis, reserveBasis } from "@/lib/reserve-basis"
 import {
   defaultReportPeriod,
@@ -132,6 +133,23 @@ const GENERATORS: Record<
     }
     return { count: months.reduce((n, m) => n + m.rows.length, 0), unit: "akun" }
   },
+  // Periode laporan dan tanggal yang sama tahun sebelumnya.
+  "laporan-mom": async (start, end, today) => {
+    const [current, previous] = await Promise.all([
+      productionRecapAction(start, end),
+      productionRecapAction(previousYearDate(start), previousYearDate(end)),
+    ])
+    if (!current.ok || !current.data || !previous.ok || !previous.data) {
+      throw new Error(current.error ?? previous.error ?? "Gagal mengambil data produksi.")
+    }
+    const count = current.data.length + previous.data.length
+    if (count) {
+      const wb = await newWorkbook()
+      fillMomReport(wb, momReport(current.data, previous.data, { start, end }), { start, end }, today)
+      await downloadWorkbook(wb, `laporan-mom-${start}-sd-${end}`)
+    }
+    return { count, unit: "polis" }
+  },
   "loss-ratio-akun": async (start, end, today, params) => {
     if (!params.account) throw new Error("Pilih akun.")
     const res = await lossRatioReportAction(start, end)
@@ -182,7 +200,7 @@ export function ReportCatalog() {
     e.preventDefault()
     if (!active) return
     const problem =
-      reportPeriodError(period.start, period.end) ??
+      reportPeriodError(period.start, period.end, { sameYear: active.sameYear }) ??
       (wants("account") && !params.account ? "Pilih akun." : null)
     if (problem) {
       setError(problem)

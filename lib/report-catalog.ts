@@ -13,12 +13,16 @@ export type ReportId =
   | "loss-ratio-asuransi"
   | "loss-ratio-akun"
   | "reserve-basis"
+  | "laporan-mom"
 
 /** Pilihan di dialog selain periode: asuransi (boleh semua) atau akun (wajib). */
 export type ReportParam = "insurer" | "account"
 
-/** Periode awal dialog: bulan berjalan, triwulan berjalan, atau lima tahun terakhir. */
-export type ReportPeriodKind = "month" | "quarter" | "years"
+/**
+ * Periode awal dialog: bulan berjalan, triwulan berjalan, lima tahun terakhir, atau awal tahun
+ * sampai akhir bulan berjalan.
+ */
+export type ReportPeriodKind = "month" | "quarter" | "years" | "ytd"
 
 export interface ReportDefinition {
   id: ReportId
@@ -41,6 +45,8 @@ export interface ReportDefinition {
   params?: readonly ReportParam[]
   /** Kosong berarti bulan berjalan. */
   defaultPeriod?: ReportPeriodKind
+  /** Periode wajib dalam satu tahun kalender, karena dibandingkan dengan tahun sebelumnya. */
+  sameYear?: boolean
 }
 
 export const REPORTS: readonly ReportDefinition[] = [
@@ -107,6 +113,18 @@ export const REPORTS: readonly ReportDefinition[] = [
     access: "/reports",
     dateBasis: "tanggal mulai polis",
   },
+  // Template Laporan MOM Team LCH (23 November 2026), untuk meeting bulanan dengan LCH Singapore.
+  {
+    id: "laporan-mom",
+    title: "Laporan MOM",
+    description:
+      "Per bulan, tahun ini dibanding tahun lalu: pendapatan, beban, dan NET bisnis LCH Indonesia, serta brokerage MAG dan Others bisnis LCH Singapore.",
+    division: "Finance",
+    access: "/reports",
+    dateBasis: "tanggal mulai polis, dibandingkan dengan tanggal yang sama tahun sebelumnya",
+    defaultPeriod: "ytd",
+    sameYear: true,
+  },
 ]
 
 export interface ReportGroup {
@@ -131,6 +149,7 @@ export function visibleReports(
 /**
  * Periode awal dialog. Bulan berjalan: tanggal 1 sampai akhir bulan. Triwulan berjalan untuk
  * laporan OJK. Lima tahun terakhir untuk loss ratio: 1 Januari lima tahun lalu sampai hari ini.
+ * Awal tahun untuk Laporan MOM: 1 Januari sampai akhir bulan berjalan.
  */
 export function defaultReportPeriod(
   today: string,
@@ -139,7 +158,8 @@ export function defaultReportPeriod(
   const year = Number(today.slice(0, 4))
   const month = Number(today.slice(5, 7))
   if (kind === "years") return { start: `${year - 5}-01-01`, end: today }
-  const first = kind === "quarter" ? Math.floor((month - 1) / 3) * 3 + 1 : month
+  const first =
+    kind === "quarter" ? Math.floor((month - 1) / 3) * 3 + 1 : kind === "ytd" ? 1 : month
   const last = kind === "quarter" ? first + 2 : month
   const lastDay = new Date(Date.UTC(year, last, 0)).getUTCDate()
   const mm = (m: number) => String(m).padStart(2, "0")
@@ -147,9 +167,16 @@ export function defaultReportPeriod(
 }
 
 /** Pesan kesalahan periode; null bila periodenya bisa dipakai. */
-export function reportPeriodError(start: string, end: string): string | null {
+export function reportPeriodError(
+  start: string,
+  end: string,
+  options: { sameYear?: boolean } = {}
+): string | null {
   const iso = /^\d{4}-\d{2}-\d{2}$/
   if (!iso.test(start) || !iso.test(end)) return "Isi tanggal mulai dan tanggal akhir."
   if (start > end) return "Tanggal mulai tidak boleh setelah tanggal akhir."
+  if (options.sameYear && start.slice(0, 4) !== end.slice(0, 4)) {
+    return "Tanggal mulai dan tanggal akhir harus di tahun yang sama, karena laporan dibandingkan dengan tahun sebelumnya."
+  }
   return null
 }
