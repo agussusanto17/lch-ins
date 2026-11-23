@@ -78,6 +78,8 @@ export interface RecapPolicy {
     /** Additional fee asuransi ini sudah termasuk PPN 2,2%. */
     additionalFeeIncludeVat?: boolean
     feeSubAccount?: string | null
+    /** Kode lookup sub akun EF, misalnya `ef_mag` untuk EF (MAG). */
+    feeSubAccountCode?: string | null
   }[]
 }
 
@@ -569,9 +571,13 @@ export interface RecapIncome {
   /** Bulan produksi "YYYY-MM", sama dengan kolom thn dan mth. */
   month: string
   sourceCode: string | null
+  /** Kode sub akun EF asuransinya dari Master Data, misalnya `ef_mag`. */
+  feeSubAccountCode: string | null
   commission: number
   fee: number
   margin: number
+  /** Sharing brokerage ke LCH Singapore (baris EXPENSE / COMM EXPENSE), positif. */
+  sgShare: number
 }
 
 /** Komisi, fee, dan margin per polis per asuransi dengan aturan dan pembulatan Rekap Produksi. */
@@ -585,9 +591,11 @@ export function recapIncome(
       account: recapAccount(line.policy),
       month: line.policy.productionDate.slice(0, 7),
       sourceCode: line.policy.sourceCode,
+      feeSubAccountCode: line.insurer.feeSubAccountCode ?? null,
       commission: idr(line.commission),
       fee: idr(line.fee),
       margin: idr(line.margin),
+      sgShare: idr(line.sgShare),
     }
   })
 }

@@ -80,7 +80,7 @@ export async function listProductionRecap(start: string, end: string): Promise<R
           sharePct: true,
           additionalFeePct: true,
           additionalFeeIncludeVat: true,
-          insurer: { select: { name: true, feeSubAccount: { select: { name: true } } } },
+          insurer: { select: { name: true, feeSubAccount: { select: { name: true, code: true } } } },
         },
         orderBy: { sharePct: "desc" },
       },
@@ -156,6 +156,7 @@ export async function listProductionRecap(start: string, end: string): Promise<R
         additionalFeePct: Number(i.additionalFeePct),
         additionalFeeIncludeVat: i.additionalFeeIncludeVat,
         feeSubAccount: i.insurer.feeSubAccount?.name ?? null,
+        feeSubAccountCode: i.insurer.feeSubAccount?.code ?? null,
       })),
     }
   })
