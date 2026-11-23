@@ -745,7 +745,7 @@ function resolveClauses(
   return resolveSlipClauses({ clauseIds, clauseOverrides }, copies)
 }
 
-interface ClauseGroup {
+export interface ClauseGroup {
   heading: string | null
   clauses: ResolvedClause[]
 }
@@ -754,7 +754,7 @@ interface ClauseGroup {
  * Property: klausula tanpa section dulu tanpa judul, lalu per section seperti INTEREST INSURED.
  * COB lain satu daftar atau kelompok berjudul; nomor ulang dari 1 per kelompok (Agus, 5 November 2026).
  */
-function clauseGroups(slip: PlacingSlip): ClauseGroup[] {
+export function clauseGroups(slip: PlacingSlip): ClauseGroup[] {
   const section1 = resolveClauses(
     slip.clauseIds,
     slip.clauseOverrides,
