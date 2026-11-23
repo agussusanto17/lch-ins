@@ -2820,7 +2820,7 @@ function SlipEditor({
                   title="Ringkasan Penutupan"
                   description="Net premi ke asuransi dan pendapatan LCH sebelum Closing Instruction diterbitkan."
                   {...sectionProps("closingSummary")}
-                  summary={`Net ke asuransi ${money(closingSummary(slip).net, slip.currency)}`}
+                  summary={`Net ke asuransi ${money(closingSummary(slip, options.insurers).net, slip.currency)}`}
                 >
                   <ClosingSummaryPanel slip={slip} />
                 </SectionCard>

@@ -5,6 +5,7 @@ import type { PlacingSlip } from "@/lib/data/types"
 import { money, num } from "@/lib/format"
 import { effectiveBrokeragePct } from "@/lib/calc"
 import { closingSummary } from "@/lib/closing-summary"
+import { useFormOptions } from "@/components/shared/form-options-provider"
 import { cn } from "@/lib/utils"
 
 function Row({
@@ -42,7 +43,7 @@ export function ClosingSummaryPanel({
   slip: PlacingSlip
   compact?: boolean
 }) {
-  const s = closingSummary(slip)
+  const s = closingSummary(slip, useFormOptions().insurers)
   const currency = slip.currency || "IDR"
   const withFee = usesAdditionalFee(slip.cob)
   const vatText = slip.includeVat ? "incl. VAT" : "excl. VAT"
@@ -83,7 +84,9 @@ export function ClosingSummaryPanel({
             hint={
               slip.includeVat
                 ? `Termasuk dalam brokerage ${num(slip.brokeragePct || 0, 2)}% incl. VAT`
-                : "Brokerage excl. VAT, PPN ditambahkan"
+                : s.magFee
+                  ? "Brokerage excl. VAT; PPN bagian MAG diambil dari EF MAG"
+                  : "Brokerage excl. VAT, PPN ditambahkan"
             }
             value={`− ${money(s.brokerageVat, currency)}`}
           />
@@ -91,7 +94,13 @@ export function ClosingSummaryPanel({
         {withFee ? (
           <Row
             label="Additional fee"
-            hint={s.feeVat ? "Sebelum PPN" : undefined}
+            hint={
+              s.magFee
+                ? "Sebelum PPN; EF MAG = fee − PPN komisi, sesuai produksi MAG"
+                : s.feeVat
+                  ? "Sebelum PPN"
+                  : undefined
+            }
             value={`− ${money(s.fee, currency)}`}
           />
         ) : null}
@@ -192,6 +201,9 @@ export function ClosingSummaryPanel({
             : ""}
           {s.brokerageVat || s.feeVat
             ? " Brokerage dan fee ditulis sebelum PPN. Brokerage incl. VAT: persen ÷ 1,022 (15% = 14,6771% + PPN); fee incl. VAT: 97,8% dari fee (35% = 34,23%), seperti sheet TARIF EF Team LCH; excl. VAT: PPN 2,2% ditambahkan di atasnya. PPN ikut dipotong dari premi ke asuransi."
+            : ""}
+          {s.magFee
+            ? " Asuransi dengan Sub akun EF \"EF (MAG)\": EF tidak kena PPN sendiri; PPN komisi diambil dari EF incl. VAT, misalnya outgo 42,5% − brokerage 15% − PPN komisi 0,33% = EF 27,17%."
             : ""}
         </p>
       ) : null}

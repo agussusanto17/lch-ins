@@ -69,7 +69,7 @@ const policyInclude = {
   placingSlip: { select: { slipNo: true } },
   insurers: {
     include: {
-      insurer: { select: { name: true } },
+      insurer: { select: { name: true, feeSubAccount: { select: { code: true } } } },
       position: { select: { code: true } },
     },
     orderBy: { sharePct: "desc" },
@@ -93,6 +93,7 @@ function toPolicyRecord(
     role: i.position.code === "leader" ? "As Leader" : "As Member",
     additionalFeePct: Number(i.additionalFeePct),
     additionalFeeIncludeVat: i.additionalFeeIncludeVat,
+    feeSubAccountCode: i.insurer.feeSubAccount?.code ?? null,
   }))
   const leader = insurers.find((i) => i.role === "As Leader") ?? insurers[0]
   return {

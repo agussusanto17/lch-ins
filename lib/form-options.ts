@@ -209,9 +209,14 @@ export interface SourceOption {
   name: string
 }
 
+/** Asuransi aktif dengan kode Sub akun EF-nya (aturan EF MAG, lihat `magCommissionVat`). */
+export interface InsurerOption extends NamedOption {
+  feeSubAccountCode: string | null
+}
+
 export interface FormOptions {
   cobs: CobOption[]
-  insurers: NamedOption[]
+  insurers: InsurerOption[]
   currencies: CurrencyOption[]
   wordingForms: NamedOption[]
   /** Nama nilai lookup per jenis, sudah urut sesuai sort order di master. */

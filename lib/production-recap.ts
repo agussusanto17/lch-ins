@@ -7,7 +7,14 @@
 
 import type { Workbook } from "exceljs"
 
-import { BROKERAGE_VAT_RATE, beforeVat, feeBeforeVat, FX, roundCents } from "@/lib/calc"
+import {
+  BROKERAGE_VAT_RATE,
+  beforeVat,
+  feeBeforeVat,
+  FX,
+  magCommissionVat,
+  roundCents,
+} from "@/lib/calc"
 import { addExportSheet, type ExportColumn } from "@/lib/export"
 import { duplicateFlags } from "@/lib/production-duplicates"
 import { dateShort } from "@/lib/format"
@@ -243,6 +250,7 @@ function insurerLines(policies: readonly RecapPolicy[], fx: Record<string, numbe
       : [{ insurer: "", share: 100, additionalFeePct: 0 }]
     return insurers.map((insurer) => {
       const gross = (policy.premium * insurer.share) / 100
+      const commission = beforeVat((gross * policy.brokeragePct) / 100, policy.includeVat)
       return {
         policy,
         insurer,
@@ -251,8 +259,13 @@ function insurerLines(policies: readonly RecapPolicy[], fx: Record<string, numbe
         // Diskon ditulis negatif seperti komisi dan fee: potongan dari premi bruto.
         discount: -((policy.discount ?? 0) * insurer.share) / 100,
         // Brokerage dan fee sebelum PPN, sama dengan placing (Agus dan Harry, 22 November 2026).
-        commission: -beforeVat((gross * policy.brokeragePct) / 100, policy.includeVat),
-        fee: -feeBeforeVat((gross * insurer.additionalFeePct) / 100, insurer.additionalFeeIncludeVat),
+        // EF MAG = fee − PPN komisi, sesuai produksi MAG (23 November 2026).
+        commission: -commission,
+        fee: -feeBeforeVat(
+          (gross * insurer.additionalFeePct) / 100,
+          insurer.additionalFeeIncludeVat,
+          magCommissionVat(insurer, commission, policy.includeVat)
+        ),
         margin:
           policy.clientPremium == null
             ? 0
@@ -386,7 +399,12 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
         RM_Fee_OC: roundCents(line.fee),
         RM_Fee: idr(line.fee),
         "(Income)/Beban": idr(line.fee),
-        Percentage: -feeBeforeVat(ins.additionalFeePct, ins.additionalFeeIncludeVat) / 100,
+        Percentage:
+          -feeBeforeVat(
+            ins.additionalFeePct,
+            ins.additionalFeeIncludeVat,
+            magCommissionVat(ins, beforeVat(p.brokeragePct, p.includeVat), p.includeVat)
+          ) / 100,
         "sub akun pnl": feeSubAccount(ins.feeSubAccount),
       })
     }
@@ -605,7 +623,7 @@ export const RECAP_NOTES = [
   "Rekap Produksi: satu baris per polis per asuransi per unsur pendapatan. Premi dan diskon hanya ditulis di baris COMM, jadi jumlah premi tidak dobel.",
   "akun pnl: INCOME untuk pendapatan dan EXPENSE untuk beban. Pendapatan ditulis negatif dan beban positif, seperti kolom (Income)/Beban contoh LCH.",
   "Cek Dobel: tanda polis yang kemungkinan tercatat dua kali, barisnya berwarna oranye. Datanya tetap ditulis dan ikut dijumlah; cek di Policy Database lalu hapus atau perbaiki yang dobel. Aturannya: no. polis sama dipakai lebih dari satu data, atau tipe, tertanggung, COB, tanggal mulai dan berakhir, mata uang, dan premi sama dengan nomor polis berbeda (misalnya polis sementara dari CI yang juga diinput manual).",
-  "sub akun pnl: COMM = brokerage; baris EF = additional fee, sub akunnya mengikuti Sub akun EF asuransi di Master Data > Asuransi & Adjuster (Multi Artha Guna: EF (MAG); belum diatur: EF); O/I-MARGIN = margin deklarasi MOP (premi tagihan ke klien − premi ke asuransi menurut rate MOP).",
+  "sub akun pnl: COMM = brokerage; baris EF = additional fee, sub akunnya mengikuti Sub akun EF asuransi di Master Data > Asuransi & Adjuster (Multi Artha Guna: EF (MAG); belum diatur: EF); nilai EF sebelum PPN (incl. VAT × 97,8%; EF MAG incl. VAT = fee − PPN komisi, sesuai produksi MAG); O/I-MARGIN = margin deklarasi MOP (premi tagihan ke klien − premi ke asuransi menurut rate MOP).",
   "spil/non spil: SPIL bila klien polis ditandai SPIL Program di Database Klien; selain itu Non SPIL.",
   "source file: Placement untuk polis dari placing slip, Policy Database untuk polis yang diinput langsung, Deklarasi MOP untuk deklarasi.",
   "Object: objek pertanggungan dari baris Interest slip (kendaraan, barang, alat), atau lokasi risiko polis bila tidak ada.",

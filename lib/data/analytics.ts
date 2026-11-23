@@ -1,4 +1,10 @@
-import { additionalFeeVatFor, beforeVat, grossPremium, toIdr } from "../calc"
+import {
+  additionalFeeVatFor,
+  beforeVat,
+  grossPremium,
+  magCommissionVatFor,
+  toIdr,
+} from "../calc"
 import { policyStatus } from "./policy-status"
 import { OPEN_CLAIM_STATUSES } from "./reference"
 import type { Claim, Client, PlacingSlip, Policy, SecurityPanelRow } from "./types"
@@ -29,14 +35,27 @@ export function brokerageIdr(p: {
   return beforeVat((toIdr(p.premium, p.currency) * p.brokeragePct) / 100, p.includeVat)
 }
 
-/** Additional fee polis dalam IDR sebelum PPN (fee incl. VAT × 97,8%, sheet TARIF EF); polis tanpa fee 0. */
+/**
+ * Additional fee polis dalam IDR sebelum PPN (fee incl. VAT × 97,8%, sheet TARIF EF; EF MAG = fee −
+ * PPN komisi, sesuai produksi MAG); polis tanpa fee 0.
+ */
 export function feeIdr(p: {
   additionalFee?: number
   currency: string
   premium?: number
-  insurers?: readonly Pick<SecurityPanelRow, "share" | "additionalFeePct" | "additionalFeeIncludeVat">[]
+  brokeragePct?: number
+  includeVat?: boolean
+  insurers?: readonly Pick<
+    SecurityPanelRow,
+    "share" | "additionalFeePct" | "additionalFeeIncludeVat" | "feeSubAccountCode"
+  >[]
 }) {
-  const inside = p.premium != null ? additionalFeeVatFor(p.premium, p.insurers) : 0
+  const brokerage = { pct: p.brokeragePct ?? 0, includeVat: p.includeVat }
+  const inside =
+    p.premium != null
+      ? additionalFeeVatFor(p.premium, p.insurers) +
+        magCommissionVatFor(p.premium, p.insurers, brokerage)
+      : 0
   return toIdr((p.additionalFee ?? 0) - inside, p.currency)
 }
 

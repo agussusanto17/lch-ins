@@ -25,17 +25,20 @@ import { Field, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/f
 import { Switch } from "@/components/ui/switch"
 import { EndorsementParticipants } from "@/components/policies/endorsement-participants"
 import {
+  additionalFeeBeforeVatFor,
   additionalFeeFor,
   brokerageCapFor,
   additionalFeeVatAddedFor,
   additionalFeeVatFor,
   brokerageVatInside,
   grossPremium,
+  magCommissionVatFor,
   nettPremium,
   slipPolicyParts,
   sumPercent,
   sgCommissionShare,
   vatAdded,
+  withFeeSubAccounts,
 } from "@/lib/calc"
 import {
   POLICY_TYPES,
@@ -45,6 +48,7 @@ import {
   type Policy,
   type PolicyFileKind,
   type PolicyType,
+  type SecurityPanelRow,
   type SlipPart,
   type SlipParticipant,
 } from "@/lib/data"
@@ -392,23 +396,35 @@ export function PolicyForm({
   // Nominal brokerage dan additional fee dari premi, dengan status PPN-nya
   // (Harry, 12 November 2026: persen dan nominal Rupiah tampil bersama).
   const brokerageNominal = (draft.premium * (draft.brokeragePct || 0)) / 100
+  const masterOptions = useFormOptions()
   // Co-insurance: fee (%) dan status PPN per asuransi dari slip (Harry,
-  // 12 November 2026). Polis satu asuransi: dari isian form.
-  const feeRows =
+  // 12 November 2026). Polis satu asuransi: dari isian form. Kode Sub akun EF
+  // dari Master Data untuk aturan EF MAG.
+  const panelRows: Pick<
+    SecurityPanelRow,
+    "insurer" | "share" | "additionalFeePct" | "additionalFeeIncludeVat"
+  >[] =
     draft.insurers.length > 1
       ? draft.insurers
       : [
           {
+            insurer: draft.insurer,
             share: 100,
             additionalFeePct: draft.additionalFeePct ?? 0,
             additionalFeeIncludeVat: draft.additionalFeeIncludeVat ?? false,
           },
         ]
+  const feeRows = withFeeSubAccounts(panelRows, masterOptions.insurers)
   const feeNominal = additionalFeeFor(draft.premium, feeRows)
   const feeVat = additionalFeeVatFor(draft.premium, feeRows)
   // Excl. VAT: PPN 2,2% ditambahkan di atas brokerage dan fee (Agus, 20 November 2026).
   const brokerageVatOnTop = vatAdded(brokerageNominal, draft.includeVat)
   const feeVatOnTop = additionalFeeVatAddedFor(draft.premium, feeRows)
+  // EF MAG: PPN komisi diambil dari EF incl. VAT, tidak ditambahkan di atas brokerage (sheet TARIF
+  // EF Team LCH, "ef (sesuai prod mag)", 23 November 2026).
+  const brokerageTerms = { pct: draft.brokeragePct, includeVat: draft.includeVat }
+  const magVat = magCommissionVatFor(draft.premium, feeRows, brokerageTerms)
+  const feeBeforeVatTotal = additionalFeeBeforeVatFor(draft.premium, feeRows, brokerageTerms)
   // Nominal ditulis sebelum PPN: brokerage incl. VAT = nominal ÷ 1,022 (15% = 14,6771% + PPN), fee
   // incl. VAT = nominal × 97,8% (sheet TARIF EF Team LCH); excl. VAT: PPN ditambahkan di atasnya.
   const chargeText = (amount: number, vat: number, added = 0) => {
@@ -417,6 +433,13 @@ export function PolicyForm({
     const mode = vat && added ? "incl. dan excl. VAT" : vat ? "incl. VAT" : "excl. VAT"
     return `${money(amount - vat, draft.currency)} + PPN 2,2% ${money(totalVat, draft.currency)} (${mode})`
   }
+  const feeText = magVat
+    ? `${money(feeBeforeVatTotal, draft.currency)} + PPN komisi ${money(magVat, draft.currency)}${
+        feeVat + feeVatOnTop
+          ? ` + PPN 2,2% ${money(Math.round((feeVat + feeVatOnTop) * 100) / 100, draft.currency)}`
+          : ""
+      } (EF MAG, sesuai produksi MAG)`
+    : chargeText(feeNominal, feeVat, feeVatOnTop)
   // Polis induk MOP dan deklarasinya menautkan slip open cover. Nilai, premi, dan periode
   // deklarasi diisi per pengiriman; data lain ikut polis MOP.
   const openCoverSlip = linkedSlip ? usesOpenCover(linkedSlip) : false
@@ -429,7 +452,6 @@ export function PolicyForm({
     Boolean(linkedSlip?.inceptionDate && linkedSlip.expiryDate) && !openCoverSlip
   // COB dan type of cover dari master data. Nilai polis lama yang sudah tidak
   // ada di master tetap tampil supaya tidak hilang saat diedit.
-  const masterOptions = useFormOptions()
   const cobItems = withCurrent(
     cobLabels(masterOptions).map((c) => ({ label: c, value: c })),
     draft.cob
@@ -1072,11 +1094,11 @@ export function PolicyForm({
                   nettPremium({
                     ...draft,
                     additionalFee: feeNominal,
-                    vatAdded: brokerageVatOnTop + feeVatOnTop,
+                    vatAdded: brokerageVatOnTop + feeVatOnTop - magVat,
                   }),
                   draft.currency
                 )} (gross − diskon − brokerage − additional fee${
-                  brokerageVatOnTop + feeVatOnTop ? " − PPN excl. VAT" : ""
+                  brokerageVatOnTop + feeVatOnTop - magVat ? " − PPN excl. VAT" : ""
                 }).`}
               />
             )}
@@ -1249,7 +1271,7 @@ export function PolicyForm({
                 <div className="flex flex-col gap-1 text-sm">
                   <span className="font-medium">Additional Fee</span>
                   <span className="tabular">
-                    {chargeText(feeNominal, feeVat, feeVatOnTop)}
+                    {feeText}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     Persen dan status PPN per asuransi dari slip, lihat daftar
@@ -1265,7 +1287,7 @@ export function PolicyForm({
                   error={errors.additionalFeePct}
                   description={
                     feeNominal
-                      ? chargeText(feeNominal, feeVat, feeVatOnTop)
+                      ? feeText
                       : "Opsional, fee di luar brokerage: persen dari premi."
                   }
                 />

@@ -8,7 +8,7 @@
  */
 import type { Workbook, Worksheet } from "exceljs"
 
-import { beforeVat, feeBeforeVat, FX, roundCents } from "./calc"
+import { beforeVat, feeBeforeVat, FX, magCommissionVat, roundCents } from "./calc"
 import { dateShort } from "./format"
 import type { RecapPolicy } from "./production-recap"
 
@@ -68,7 +68,12 @@ export function ojkProduction(
     row01.income += brokerage
     for (const ins of insurers) {
       const part = (premium * ins.share) / 100
-      const fee = feeBeforeVat((part * (ins.additionalFeePct || 0)) / 100, ins.additionalFeeIncludeVat)
+      // EF MAG = fee − PPN komisi bagian asuransi itu, sesuai produksi MAG.
+      const fee = feeBeforeVat(
+        (part * (ins.additionalFeePct || 0)) / 100,
+        ins.additionalFeeIncludeVat,
+        magCommissionVat(ins, beforeVat((part * p.brokeragePct) / 100, p.includeVat), p.includeVat)
+      )
       row01.income += fee
 
       const key02 = `${ins.insurer}\u0000${line}\u0000${location}`
@@ -256,7 +261,11 @@ export function fillOjkProduction(
     for (const ins of insurers) {
       const part = (p.premium * ins.share) / 100
       const brokerage = beforeVat((part * p.brokeragePct) / 100, p.includeVat)
-      const fee = feeBeforeVat((part * (ins.additionalFeePct || 0)) / 100, ins.additionalFeeIncludeVat)
+      const fee = feeBeforeVat(
+        (part * (ins.additionalFeePct || 0)) / 100,
+        ins.additionalFeeIncludeVat,
+        magCommissionVat(ins, brokerage, p.includeVat)
+      )
       rows.push([
         p.policyNo,
         p.type,
@@ -301,7 +310,7 @@ function writeNotes(
 ) {
   const notes = [
     "Jumlah polis: polis Baru dan Renewal. Endorsement, pembatalan, dan deklarasi MOP hanya menambah premi dan pendapatan.",
-    "Premi: premi sebelum diskon. Pendapatan jasa keperantaraan: brokerage + additional fee (EF) sebelum PPN (brokerage incl. VAT: persen ÷ 1,022; EF incl. VAT: × 97,8%); margin rate MOP tidak termasuk.",
+    "Premi: premi sebelum diskon. Pendapatan jasa keperantaraan: brokerage + additional fee (EF) sebelum PPN (brokerage incl. VAT: persen ÷ 1,022; EF incl. VAT: × 97,8%; EF MAG incl. VAT: fee − PPN komisi, sesuai produksi MAG); margin rate MOP tidak termasuk.",
     "Lini Usaha OJK dan Lokasi Penempatan diambil dari Policy Database. Endorsement, pembatalan, dan deklarasi yang kosong memakai isian polis induknya.",
     ...extra,
     ...(missing.length

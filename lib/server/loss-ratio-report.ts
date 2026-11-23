@@ -33,7 +33,7 @@ export async function listLossRatioReport(start: string, end: string): Promise<L
           sharePct: true,
           additionalFeePct: true,
           additionalFeeIncludeVat: true,
-          insurer: { select: { name: true } },
+          insurer: { select: { name: true, feeSubAccount: { select: { code: true } } } },
         },
         orderBy: { sharePct: "desc" },
       },
@@ -81,6 +81,7 @@ export async function listLossRatioReport(start: string, end: string): Promise<L
         share: Number(i.sharePct),
         additionalFeePct: Number(i.additionalFeePct),
         additionalFeeIncludeVat: i.additionalFeeIncludeVat,
+        feeSubAccountCode: i.insurer.feeSubAccount?.code ?? null,
       })),
     })
   }

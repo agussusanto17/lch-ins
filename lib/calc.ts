@@ -437,14 +437,145 @@ export function additionalFeeAmount(slip: PlacingSlip) {
   return additionalFeeFor(totalPremium(slip), slip.securityPanel)
 }
 
+/** Kode Sub akun EF "EF (MAG)" di Master Data > Asuransi & Adjuster (lookup ef_sub_account). */
+export const MAG_FEE_SUB_ACCOUNT = "ef_mag"
+
+type FeeRow = Pick<
+  SecurityPanelRow,
+  "share" | "additionalFeePct" | "additionalFeeIncludeVat" | "feeSubAccountCode"
+>
+
+/**
+ * PPN atas komisi yang diambil dari EF incl. VAT asuransi EF (MAG), mengikuti produksi MAG (sheet
+ * TARIF EF Team LCH, kolom "ef (sesuai prod mag)"; Agus, 23 November 2026). EF MAG tidak kena PPN
+ * sendiri; PPN 2,2% atas komisi bagian asuransi itu diambil dari EF. Contoh outgo 42,5% = FB 15%
+ * excl. VAT + EF 27,5% incl. VAT: EF sebelum PPN = 42,5% − 15% − (15% × 2,2%) = 27,17%. Brokerage
+ * incl. VAT sudah memuat PPN komisinya, jadi EF MAG utuh (0).
+ *
+ * `commission` = brokerage sebelum PPN bagian asuransi itu. Undefined berarti aturan umum: PPN EF =
+ * 2,2% × fee.
+ */
+export function magCommissionVat(
+  row: Pick<FeeRow, "additionalFeePct" | "additionalFeeIncludeVat" | "feeSubAccountCode">,
+  commission: number,
+  brokerageIncludeVat: boolean | undefined
+): number | undefined {
+  if (!magFeeRule(row)) return undefined
+  return brokerageIncludeVat ? 0 : commission * BROKERAGE_VAT_RATE
+}
+
+/** Additional fee incl. VAT asuransi EF (MAG): dihitung seperti produksi MAG. */
+export function magFeeRule(
+  row: Pick<FeeRow, "additionalFeePct" | "additionalFeeIncludeVat" | "feeSubAccountCode">
+) {
+  return (
+    Boolean(row.additionalFeeIncludeVat) &&
+    Boolean(row.additionalFeePct) &&
+    row.feeSubAccountCode === MAG_FEE_SUB_ACCOUNT
+  )
+}
+
 /**
  * PPN 2,2% di dalam nominal additional fee incl. VAT, mengikuti hitungan Team LCH (sheet "2 NOV"
  * skenario D'Best 2026-2027, kolom TARIF EF; Agus, 23 November 2026): PPN = 2,2% × nominal fee,
- * jadi fee bersih = 97,8% (EF 35% incl. VAT = 34,23%). Brokerage incl. VAT tetap ÷ 1,022.
+ * jadi fee bersih = 97,8% (EF 35% incl. VAT = 34,23%). Brokerage incl. VAT tetap ÷ 1,022. EF
+ * asuransi EF (MAG) tidak kena PPN sendiri (`magRule`, lihat `magCommissionVat`).
  */
-export function feeVatInside(fee: number, includeVat: boolean | undefined) {
-  if (!includeVat) return 0
+export function feeVatInside(fee: number, includeVat: boolean | undefined, magRule = false) {
+  if (!includeVat || magRule) return 0
   return roundCents(fee * BROKERAGE_VAT_RATE)
+}
+
+/**
+ * Brokerage sebelum PPN bagian satu asuransi: premi × share × persen brokerage, dibulatkan seperti
+ * `brokerageGross`, supaya PPN komisi satu asuransi 100% sama dengan PPN brokerage slip.
+ */
+function insurerCommission(
+  premium: number,
+  row: Pick<FeeRow, "share">,
+  brokerage: { pct: number; includeVat?: boolean }
+) {
+  return beforeVat(
+    roundCents((premium * (row.share || 0) * (brokerage.pct || 0)) / 10_000),
+    brokerage.includeVat
+  )
+}
+
+/**
+ * Additional fee sebelum PPN satu asuransi di panel, lihat `feeBeforeVat`. PPN-nya dibulatkan dulu
+ * dan fee sebelum PPN adalah sisanya, sama seperti kolom PPN Ringkasan Penutupan.
+ */
+export function insurerFeeBeforeVat(
+  premium: number,
+  row: FeeRow,
+  brokerage: { pct: number; includeVat?: boolean }
+) {
+  const fee = insurerAdditionalFee(premium, row)
+  if (!row.additionalFeeIncludeVat) return fee
+  const commissionVat = magCommissionVat(
+    row,
+    insurerCommission(premium, row, brokerage),
+    brokerage.includeVat
+  )
+  const vat = commissionVat === undefined ? feeVatInside(fee, true) : roundCents(commissionVat)
+  return roundCents(fee - vat)
+}
+
+/**
+ * PPN komisi yang diambil dari EF incl. VAT asuransi EF (MAG), dijumlah per asuransi panel. PPN ini
+ * tidak ditambahkan lagi di atas brokerage excl. VAT (lihat `magCommissionVat`).
+ */
+export function magCommissionVatFor(
+  premium: number,
+  rows: readonly FeeRow[] | undefined,
+  brokerage: { pct: number; includeVat?: boolean }
+) {
+  return roundCents(
+    (rows ?? []).reduce(
+      (sum, r) =>
+        sum +
+        roundCents(
+          magCommissionVat(r, insurerCommission(premium, r, brokerage), brokerage.includeVat) ?? 0
+        ),
+      0
+    )
+  )
+}
+
+/** Additional fee sebelum PPN semua asuransi di panel. */
+export function additionalFeeBeforeVatFor(
+  premium: number,
+  rows: readonly FeeRow[] | undefined,
+  brokerage: { pct: number; includeVat?: boolean }
+) {
+  return roundCents(
+    (rows ?? []).reduce((sum, r) => sum + insurerFeeBeforeVat(premium, r, brokerage), 0)
+  )
+}
+
+/** Additional fee sebelum PPN slip, dari panel Security dan brokerage slip. */
+export function additionalFeeBeforeVatAmount(slip: PlacingSlip) {
+  return additionalFeeBeforeVatFor(totalPremium(slip), slip.securityPanel, {
+    pct: slip.brokeragePct,
+    includeVat: slip.includeVat,
+  })
+}
+
+/**
+ * Kode Sub akun EF asuransi per baris panel, dicocokkan lewat nama dari pilihan Master Data. Form
+ * memakai ini karena asuransi di panel bisa diganti sebelum disimpan.
+ */
+export function withFeeSubAccounts<T extends { insurer: string }>(
+  rows: readonly T[] | undefined,
+  insurers: readonly { name: string; feeSubAccountCode?: string | null }[]
+): (T & { feeSubAccountCode: string | null })[] {
+  const codes = new Map(insurers.map((i) => [i.name, i.feeSubAccountCode ?? null]))
+  return (rows ?? []).map((r) => ({
+    ...r,
+    feeSubAccountCode: codes.has(r.insurer)
+      ? (codes.get(r.insurer) ?? null)
+      : ((r as { feeSubAccountCode?: string | null }).feeSubAccountCode ?? null),
+  }))
 }
 
 /** PPN 2,2% di dalam brokerage incl. VAT: nominal − nominal ÷ 1,022 (15% incl. VAT = 14,6771%). */
@@ -457,15 +588,12 @@ export function brokerageVatInside(amount: number, includeVat: boolean | undefin
  * PPN di dalam additional fee, per asuransi yang fee-nya termasuk PPN, tarifnya sama seperti
  * brokerage. Status PPN tiap asuransi bisa berbeda (Harry, 12 November 2026).
  */
-export function additionalFeeVatFor(
-  premium: number,
-  rows:
-    | readonly Pick<SecurityPanelRow, "share" | "additionalFeePct" | "additionalFeeIncludeVat">[]
-    | undefined
-) {
+export function additionalFeeVatFor(premium: number, rows: readonly FeeRow[] | undefined) {
   return roundCents(
     (rows ?? []).reduce(
-      (sum, r) => sum + feeVatInside(insurerAdditionalFee(premium, r), r.additionalFeeIncludeVat),
+      (sum, r) =>
+        sum +
+        feeVatInside(insurerAdditionalFee(premium, r), r.additionalFeeIncludeVat, magFeeRule(r)),
       0
     )
   )
@@ -811,9 +939,15 @@ export function beforeVat(amount: number, includeVat: boolean | undefined) {
 
 /**
  * Additional fee sebelum PPN untuk report, sama dengan placing: incl. VAT = nominal × 97,8%
- * (sheet TARIF EF Team LCH, 23 November 2026); excl. VAT apa adanya. PPN-nya selalu 2,2% ×
- * nominal fee, di dalam (incl.) atau ditambahkan (excl.).
+ * (sheet TARIF EF Team LCH, 23 November 2026); excl. VAT apa adanya. PPN-nya 2,2% × nominal fee,
+ * di dalam (incl.) atau ditambahkan (excl.). EF incl. VAT asuransi EF (MAG) = nominal − PPN atas
+ * komisi (`commissionVat`, lihat `magCommissionVat`).
  */
-export function feeBeforeVat(amount: number, includeVat: boolean | undefined) {
-  return includeVat ? amount * (1 - BROKERAGE_VAT_RATE) : amount
+export function feeBeforeVat(
+  amount: number,
+  includeVat: boolean | undefined,
+  commissionVat?: number
+) {
+  if (!includeVat) return amount
+  return commissionVat === undefined ? amount * (1 - BROKERAGE_VAT_RATE) : amount - commissionVat
 }
