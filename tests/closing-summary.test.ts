@@ -56,17 +56,18 @@ test("MV co-insurance: premi − brokerage − additional fee − PPN = net ke a
   // 1.179.375 ÷ 1,022 = 1.153.987,28 (14,6771%); PPN di dalamnya 25.387,72.
   assert.equal(s.brokerage, 1_153_987.28)
   assert.equal(s.brokerageVat, 25_387.72)
-  // Fee Astra Buana 589.687,50 incl. VAT = 576.993,64 + PPN 12.693,86; Sinar Mas 314.500 + 6.919.
-  assert.equal(s.fee, 891_493.64)
-  assert.equal(s.feeVat, 19_612.86)
+  // Fee Astra Buana 589.687,50 incl. VAT = 576.714,37 + PPN 2,2% × fee 12.973,13 (sheet TARIF EF
+  // Team LCH, 23 November 2026); Sinar Mas 314.500 + 6.919.
+  assert.equal(s.fee, 891_214.37)
+  assert.equal(s.feeVat, 19_892.13)
   assert.equal(s.net, 5_772_018.5)
   assert.equal(s.income, 2_090_481.5)
-  // PPN di dalam brokerage 25.387,72 + di dalam fee Astra Buana 12.693,86 + ditambahkan 6.919.
-  assert.equal(s.incomeVat, 45_000.58)
+  // PPN di dalam brokerage 25.387,72 + di dalam fee Astra Buana 12.973,13 + ditambahkan 6.919.
+  assert.equal(s.incomeVat, 45_279.85)
   assert.deepEqual(
     s.insurers.map((r) => [r.insurer, r.premium, r.brokerage, r.fee, r.vat, r.net]),
     [
-      ["PT Asuransi Astra Buana", 4_717_500, 692_392.37, 576_993.64, 27_926.49, 3_420_187.5],
+      ["PT Asuransi Astra Buana", 4_717_500, 692_392.37, 576_714.37, 28_205.76, 3_420_187.5],
       ["PT Asuransi Sinar Mas", 3_145_000, 461_594.91, 314_500, 17_074.09, 2_351_831],
     ]
   )

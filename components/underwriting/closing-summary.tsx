@@ -191,7 +191,7 @@ export function ClosingSummaryPanel({
             ? " Brokerage dan additional fee dihitung dari Gross Premium; Nett Premium = Gross Premium − diskon − brokerage − additional fee."
             : ""}
           {s.brokerageVat || s.feeVat
-            ? " Brokerage dan fee ditulis sebelum PPN. Incl. VAT: PPN 2,2% diambil dari dalam persennya (15% incl. VAT = 14,6771% + PPN); excl. VAT: PPN 2,2% ditambahkan di atasnya. PPN ikut dipotong dari premi ke asuransi."
+            ? " Brokerage dan fee ditulis sebelum PPN. Brokerage incl. VAT: persen ÷ 1,022 (15% = 14,6771% + PPN); fee incl. VAT: 97,8% dari fee (35% = 34,23%), seperti sheet TARIF EF Team LCH; excl. VAT: PPN 2,2% ditambahkan di atasnya. PPN ikut dipotong dari premi ke asuransi."
             : ""}
         </p>
       ) : null}

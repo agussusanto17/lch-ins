@@ -416,7 +416,7 @@ test("Cek Dobel: polis yang kemungkinan dobel tetap ditulis, diberi tanda dan wa
 })
 
 test("brokerage dan EF incl. VAT ditulis sebelum PPN, sama dengan placing", () => {
-  // Brokerage 15% incl. VAT = 14,6771%; EF 10% incl. VAT = 9,7847% (Agus dan Harry, 22 November 2026).
+  // Brokerage 15% incl. VAT = 14,6771% (÷ 1,022); EF 10% incl. VAT = 9,78% (× 97,8%, sheet TARIF EF).
   const [comm, ef] = recapRows([
     policy({
       includeVat: true,
@@ -428,7 +428,7 @@ test("brokerage dan EF incl. VAT ditulis sebelum PPN, sama dengan placing", () =
   assert.equal(comm.Premium_Commission_OC, -146_771.04)
   assert.equal(comm["(Income)/Beban"], -146_771.04)
   assert.equal(Math.round((comm.Percentage as number) * 1e6) / 1e6, -0.146771)
-  assert.equal(ef.RM_Fee_OC, -97_847.36)
+  assert.equal(ef.RM_Fee_OC, -97_800)
   // Excl. VAT tetap persen slip.
   const [plain] = recapRows([policy()])
   assert.equal(plain.Premium_Commission_OC, -150_000)
@@ -444,6 +444,6 @@ test("Report Operational: brokerage dan fee IDR sebelum PPN", () => {
     insurers: [{ share: 100, additionalFeePct: 10, additionalFeeIncludeVat: true }],
   }
   assert.equal(Math.round(brokerageIdr(p) * 100) / 100, 1_467_710.37)
-  assert.equal(Math.round(feeIdr(p) * 100) / 100, 978_473.58)
+  assert.equal(Math.round(feeIdr(p) * 100) / 100, 978_000)
   assert.equal(brokerageIdr({ ...p, includeVat: false }), 1_500_000)
 })
