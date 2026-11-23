@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-23
 - **Branch:** `feat/draft-cover-note-save-word`
-- **PR:** (belum dibuat)
+- **PR:** #313 (https://github.com/agussusanto17/lch-ins/pull/313)
 - **Dikerjakan oleh:** Zero dengan Antigravity
 
 ## Latar belakang
