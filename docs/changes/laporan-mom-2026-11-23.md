@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-23
 - **Branch:** `feat/laporan-mom`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #314
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
