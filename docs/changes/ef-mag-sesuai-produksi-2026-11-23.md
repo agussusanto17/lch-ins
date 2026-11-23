@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-23
 - **Branch:** `fix/ef-mag-sesuai-produksi`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #315
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
