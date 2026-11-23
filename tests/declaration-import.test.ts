@@ -194,8 +194,8 @@ test("kesalahan per baris memakai nomor baris Excel; baris benar tetap disimpan"
   assert.deepEqual(errors, [
     "Baris 4: No. Sertifikat cert/100 sama dengan baris 3.",
     "Baris 5: No. Sertifikat CERT/LAMA/001 sudah terdaftar di Policy Database.",
-    "Baris 6: Tanggal Deklarasi 01/06/2027 di luar periode polis MOP (28 Mei 2026 s/d 28 Mei 2027).",
-    'Baris 7: Tanggal Deklarasi "kemarin" tidak dikenali.',
+    "Baris 6: Date of Issue 01/06/2027 di luar periode polis MOP (28 Mei 2026 s/d 28 Mei 2027).",
+    'Baris 7: Date of Issue "kemarin" tidak dikenali.',
     "Baris 8: Nilai Deklarasi harus angka lebih dari 0.",
     'Baris 9: Kategori Rate "BULK" tidak ada di slip. Pilihan: DRY SHIPMENT, REEFER SHIPMENT (WITHIN INDONESIA), 20 FT - Others.',
     "Baris 10: Interest Insured wajib diisi jumlah container (angka) untuk rate 20 FT - Others (IDR 100.000 per container).",
@@ -329,7 +329,8 @@ test("General Marine Report dari asuransi dibaca langsung, termasuk tanggal yang
     ctx({ period: { start: "2026-05-28", end: "2027-05-28" }, rates: [] })
   )
   assert.deepEqual(ok.errors, [])
-  assert.equal(ok.swappedDates, 1)
+  // Date of Issue baris 2 dan ETD baris 3 tersimpan Excel sebagai bulan/hari.
+  assert.equal(ok.swappedDates, 2)
   assert.deepEqual(
     ok.declarations.map((d) => [
       d.policyNo,
@@ -360,10 +361,14 @@ test("General Marine Report dari asuransi dibaca langsung, termasuk tanggal yang
     ok.declarations.map((d) => d.adminFee),
     [10_000, 10_000]
   )
-  // ETD yang ikut dibalik Excel juga dibaca hari/bulan di keterangan.
+  // ETD masuk Tanggal ETD, termasuk yang ikut dibalik Excel (Agus, 23 November 2026).
+  assert.deepEqual(
+    ok.declarations.map((d) => d.etdDate),
+    ["2026-09-19", "2026-10-06"]
+  )
   assert.equal(
     ok.declarations[1].remarks,
-    "KARTON packed in Container 1X40HC · Sea SUNGAI MAS V. 53 · Jakarta, Indonesia - Medan, Indonesia · ETD 06/10/2026"
+    "KARTON packed in Container 1X40HC · Sea SUNGAI MAS V. 53 · Jakarta, Indonesia - Medan, Indonesia"
   )
 
   const bad = declarationsFromRows(
@@ -484,9 +489,32 @@ test("template bisa diisi lalu dibaca lagi, dengan dropdown kategori dari sheet 
       ],
     ]
   )
+  assert.equal(declarations[0].etdDate, "2026-12-19")
   assert.equal(
     declarations[0].remarks,
-    "KACA packed in Container 1X20 · Sea SUNGAI MAS V. 53 · Jakarta, Indonesia - Medan, Indonesia · ETD 19/12/2026 · B/L BL-9 · Invoice INV-1"
+    "KACA packed in Container 1X20 · Sea SUNGAI MAS V. 53 · Jakarta, Indonesia - Medan, Indonesia · B/L BL-9 · Invoice INV-1"
+  )
+})
+
+test("tanggal deklarasi hanya dari Date of Issue; ETD bukan tanggal tetap di keterangan", () => {
+  const header = ["Cert No.", "Date of Issue", "ETD", "Sum Insured", "Kategori Rate"]
+  const { declarations, errors } = declarationsFromRows(
+    [
+      header,
+      // Tanpa Date of Issue tidak lagi memakai ETD (Agus, 23 November 2026).
+      ["CERT/601", "", "07/12/2026", 1_000_000_000, "DRY SHIPMENT"],
+      ["CERT/602", "05/12/2026", "TBA", 1_000_000_000, "DRY SHIPMENT"],
+      ["CERT/603", "05/12/2026", "", 1_000_000_000, "DRY SHIPMENT"],
+    ],
+    ctx()
+  )
+  assert.deepEqual(errors, ["Baris 2: Date of Issue kosong."])
+  assert.deepEqual(
+    declarations.map((d) => [d.policyNo, d.inceptionDate, d.etdDate, d.remarks]),
+    [
+      ["CERT/602", "2026-12-05", null, "ETD TBA"],
+      ["CERT/603", "2026-12-05", null, null],
+    ]
   )
 })
 

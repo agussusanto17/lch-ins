@@ -130,6 +130,7 @@ function toPolicyRecord(
     adminCost: Number(row.adminCost),
     stampDuty: Number(row.stampDuty),
     clientPremium: row.clientPremium == null ? null : Number(row.clientPremium),
+    etdDate: row.etdDate ? isoDate(row.etdDate) : null,
     // Dicocokkan lewat kode, jadi nama yang diganti di Master Data aman.
     type: systemValueFromRow(POLICY_TYPE_CODES, row.policyType, "Baru"),
     riskLocation: row.riskLocation ?? "",
@@ -173,6 +174,7 @@ function auditSnapshot(p: PolicyRecord) {
     adminCost: p.adminCost ?? 0,
     stampDuty: p.stampDuty ?? 0,
     clientPremium: p.clientPremium ?? null,
+    etdDate: p.etdDate ?? null,
     slipPart: p.slipPart ?? null,
     endorsementSeq: p.endorsementSeq,
     cobOjkClassId: p.cobOjkClassId,
@@ -353,6 +355,8 @@ async function policyData(tx: Tx, input: PolicyInput) {
     stampDuty: input.type === "Deklarasi" ? 0 : (input.stampDuty ?? 0),
     // Premi ke asuransi menurut rate MOP, hanya deklarasi (Agus, 20 November 2026).
     clientPremium: input.type === "Deklarasi" ? (input.clientPremium ?? null) : null,
+    // ETD deklarasi MOP dari General Marine Report (Agus, 23 November 2026).
+    etdDate: input.type === "Deklarasi" && input.etdDate ? new Date(input.etdDate) : null,
     riskLocation: input.riskLocation.trim() || null,
     cobOjkClassId: await findCobOjkClassId(tx, input.cobOjkClassId),
     placementLocationId: await findPlacementLocationId(tx, input.placementLocationId),
@@ -360,7 +364,7 @@ async function policyData(tx: Tx, input: PolicyInput) {
     premiumPaidDate: input.premiumPaidDate ? new Date(input.premiumPaidDate) : null,
     premiumInstallments: policyInstallmentsData(input),
     // Remarks untuk endorsement dan pembatalan, serta keterangan pengiriman deklarasi MOP
-    // (barang, kapal, rute, ETD, B/L, invoice).
+    // (barang, kapal, rute, B/L, invoice); ETD-nya di etdDate.
     remarks:
       input.type === "Endorsement" || input.type === "Cancellation" || input.type === "Deklarasi"
         ? input.remarks?.trim() || null

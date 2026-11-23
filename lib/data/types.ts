@@ -667,6 +667,11 @@ export interface Policy {
    */
   clientPremium?: number | null
   /**
+   * Deklarasi MOP: ETD (Estimated Time of Departure) "YYYY-MM-DD" dari kolom ETD General Marine
+   * Report (Agus, 23 November 2026). Kosong untuk polis lain.
+   */
+  etdDate?: string | null
+  /**
    * Bagian slip PAR + EQVET yang menjadi polis ini. Kosong untuk slip yang
    * terbit sebagai satu polis dan polis tanpa slip.
    */
