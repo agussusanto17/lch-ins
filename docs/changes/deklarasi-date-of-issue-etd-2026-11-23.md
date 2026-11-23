@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-23
 - **Branch:** `feat/deklarasi-date-of-issue-etd`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #316
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
