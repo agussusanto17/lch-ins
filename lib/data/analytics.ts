@@ -29,7 +29,7 @@ export function brokerageIdr(p: {
   return beforeVat((toIdr(p.premium, p.currency) * p.brokeragePct) / 100, p.includeVat)
 }
 
-/** Additional fee polis dalam IDR sebelum PPN (fee incl. VAT ÷ 1,022); polis tanpa fee 0. */
+/** Additional fee polis dalam IDR sebelum PPN (fee incl. VAT × 97,8%, sheet TARIF EF); polis tanpa fee 0. */
 export function feeIdr(p: {
   additionalFee?: number
   currency: string

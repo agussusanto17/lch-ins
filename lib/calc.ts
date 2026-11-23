@@ -437,10 +437,20 @@ export function additionalFeeAmount(slip: PlacingSlip) {
   return additionalFeeFor(totalPremium(slip), slip.securityPanel)
 }
 
-/** PPN 2,2% di dalam nominal fee yang termasuk PPN, seperti brokerage. */
+/**
+ * PPN 2,2% di dalam nominal additional fee incl. VAT, mengikuti hitungan Team LCH (sheet "2 NOV"
+ * skenario D'Best 2026-2027, kolom TARIF EF; Agus, 23 November 2026): PPN = 2,2% × nominal fee,
+ * jadi fee bersih = 97,8% (EF 35% incl. VAT = 34,23%). Brokerage incl. VAT tetap ÷ 1,022.
+ */
 export function feeVatInside(fee: number, includeVat: boolean | undefined) {
   if (!includeVat) return 0
-  return roundCents(fee - fee / (1 + BROKERAGE_VAT_RATE))
+  return roundCents(fee * BROKERAGE_VAT_RATE)
+}
+
+/** PPN 2,2% di dalam brokerage incl. VAT: nominal − nominal ÷ 1,022 (15% incl. VAT = 14,6771%). */
+export function brokerageVatInside(amount: number, includeVat: boolean | undefined) {
+  if (!includeVat) return 0
+  return roundCents(amount - amount / (1 + BROKERAGE_VAT_RATE))
 }
 
 /**
@@ -791,10 +801,19 @@ export function sgCommissionShare(brokerage: number, sharePct: number | undefine
 }
 
 /**
- * Nominal brokerage atau fee sebelum PPN 2,2% untuk report (Agus dan Harry, 22 November 2026),
- * sama dengan placing: incl. VAT berarti PPN sudah di dalam persennya, jadi nominal ÷ 1,022
- * (15% incl. VAT = 14,6771%); excl. VAT apa adanya. PPN-nya = nominal sebelum PPN × 2,2%.
+ * Brokerage sebelum PPN 2,2% untuk report (Agus dan Harry, 22 November 2026), sama dengan placing:
+ * incl. VAT berarti PPN sudah di dalam persennya, jadi nominal ÷ 1,022 (15% incl. VAT =
+ * 14,6771%); excl. VAT apa adanya. PPN-nya = nominal sebelum PPN × 2,2%.
  */
 export function beforeVat(amount: number, includeVat: boolean | undefined) {
   return includeVat ? amount / (1 + BROKERAGE_VAT_RATE) : amount
+}
+
+/**
+ * Additional fee sebelum PPN untuk report, sama dengan placing: incl. VAT = nominal × 97,8%
+ * (sheet TARIF EF Team LCH, 23 November 2026); excl. VAT apa adanya. PPN-nya selalu 2,2% ×
+ * nominal fee, di dalam (incl.) atau ditambahkan (excl.).
+ */
+export function feeBeforeVat(amount: number, includeVat: boolean | undefined) {
+  return includeVat ? amount * (1 - BROKERAGE_VAT_RATE) : amount
 }

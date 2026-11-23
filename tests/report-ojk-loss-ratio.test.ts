@@ -265,7 +265,8 @@ test("loss ratio: brokerage dan EF incl. VAT ditulis sebelum PPN, net sama denga
     { insurer: "MAG", share: 100, additionalFeePct: 10, additionalFeeIncludeVat: true }
   )
   assert.equal(Math.round(share.brokerage * 100) / 100, 14_677_103.72)
-  assert.equal(Math.round(share.fee * 100) / 100, 9_784_735.81)
+  // EF incl. VAT × 97,8% (sheet TARIF EF Team LCH, 23 November 2026).
+  assert.equal(Math.round(share.fee * 100) / 100, 9_780_000)
   // Yang dipotong dari premi tetap 15% + 10% karena PPN sudah di dalam persennya.
   assert.equal(netPremium({ ...share, claim: 0 }), 75_000_000)
 })

@@ -89,10 +89,11 @@ test("the fee VAT is counted only for insurers whose fee includes VAT", () => {
     { insurer: "PT B", share: 40, additionalFeePct: 10, additionalFeeIncludeVat: false },
   ]
   const premium = 7_862_500
-  // Fee PT A = 7.862.500 × 60% × 12,5% = 589.687,50; PPN di dalamnya 12.693,86.
+  // Fee PT A = 7.862.500 × 60% × 12,5% = 589.687,50; PPN di dalamnya 2,2% × fee = 12.973,13
+  // (sheet TARIF EF Team LCH, 23 November 2026).
   assert.equal(insurerAdditionalFee(premium, rows[0]), 589_687.5)
   assert.equal(additionalFeeVatFor(premium, rows), feeVatInside(589_687.5, true))
-  assert.equal(additionalFeeVatFor(premium, rows), 12_693.86)
+  assert.equal(additionalFeeVatFor(premium, rows), 12_973.13)
   assert.equal(
     additionalFeeVatFor(premium, rows.map((r) => ({ ...r, additionalFeeIncludeVat: false }))),
     0
@@ -173,8 +174,10 @@ test("a refund premium gives a negative fee", () => {
   assert.equal(additionalFeeFor(-200_000, [{ share: 100, additionalFeePct: 15 }]), -30_000)
 })
 
-test("additional fee VAT uses the brokerage rate of 2.2% when included", () => {
-  assert.equal(feeVatInside(102_200, false), 0)
-  assert.equal(feeVatInside(102_200, true), 2_200)
+test("additional fee VAT is 2.2% of the fee when included, like the LCH TARIF EF sheet", () => {
+  // EF 35% incl. VAT = 34,23% bersih (35% × 97,8%), bukan 35% ÷ 1,022 (23 November 2026).
+  assert.equal(feeVatInside(100_000, false), 0)
+  assert.equal(feeVatInside(100_000, true), 2_200)
   assert.equal(feeVatInside(0, true), 0)
+  assert.equal(35_000_000 - feeVatInside(35_000_000, true), 34_230_000)
 })

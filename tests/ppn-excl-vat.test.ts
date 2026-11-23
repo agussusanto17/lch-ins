@@ -5,8 +5,10 @@ import {
   additionalFeeVatAddedFor,
   brokerageAmount,
   brokerageVatAdded,
+  feeBeforeVat,
   nettPremium,
   recalcSlip,
+  roundCents,
   vatAdded,
 } from "../lib/calc"
 import { closingSummary } from "../lib/closing-summary"
@@ -80,19 +82,19 @@ test("ringkasan penutupan: PPN excl. VAT ikut dipotong dari premi ke asuransi", 
   assert.equal(s.brokerage, 1_500_000)
   assert.equal(s.brokerageVat, 33_000)
   assert.equal(brokerageVatAdded(slip), 33_000)
-  // Fee A 10% incl. VAT (600.000 = 587.084,15 + PPN 12.915,85), fee B 12,5% excl. VAT
-  // (500.000 + PPN 11.000). Fee ditulis sebelum PPN (Agus, 22 November 2026).
-  assert.equal(s.fee, 1_087_084.15)
-  assert.equal(s.feeVat, 23_915.85)
+  // Fee A 10% incl. VAT (600.000 = 586.800 + PPN 2,2% × fee 13.200, sheet TARIF EF Team LCH),
+  // fee B 12,5% excl. VAT (500.000 + PPN 11.000). Fee ditulis sebelum PPN.
+  assert.equal(s.fee, 1_086_800)
+  assert.equal(s.feeVat, 24_200)
   assert.equal(s.net, 10_000_000 - 1_500_000 - 1_100_000 - 44_000)
   // Diterima LCH: brokerage + fee + PPN ditambahkan; PPN total = di dalam fee A + ditambahkan.
   assert.equal(s.income, 2_644_000)
-  assert.equal(s.incomeVat, 12_915.85 + 44_000)
+  assert.equal(s.incomeVat, 13_200 + 44_000)
 
   assert.deepEqual(
     s.insurers.map((r) => [r.insurer, r.premium, r.brokerage, r.fee, r.vat, r.net]),
     [
-      ["PT A", 6_000_000, 900_000, 587_084.15, 32_715.85, 4_480_200],
+      ["PT A", 6_000_000, 900_000, 586_800, 33_000, 4_480_200],
       ["PT B", 4_000_000, 600_000, 500_000, 24_200, 2_875_800],
     ]
   )
@@ -114,11 +116,12 @@ test("semua incl. VAT: PPN diambil dari dalam nominal, net sama dengan sebelumny
   assert.equal(s.brokerage, 1_467_710.37)
   assert.equal(s.brokerageVat, 32_289.63)
   assert.equal(brokerageVatAdded(slip), 0)
-  assert.equal(s.fee, 1_076_320.94)
-  assert.equal(s.feeVat, 23_679.06)
+  // Fee incl. VAT × 97,8%: 600.000 → 586.800 dan 500.000 → 489.000.
+  assert.equal(s.fee, 1_075_800)
+  assert.equal(s.feeVat, 24_200)
   assert.equal(s.net, 10_000_000 - 1_500_000 - 1_100_000)
   assert.equal(s.income, 2_600_000)
-  assert.deepEqual(s.insurers.map((r) => r.vat), [32_289.63, 23_679.06])
+  assert.deepEqual(s.insurers.map((r) => r.vat), [32_573.78, 23_915.85])
 })
 
 test("Nett Premium polis ikut dikurangi PPN excl. VAT", () => {
@@ -130,4 +133,19 @@ test("Nett Premium polis ikut dikurangi PPN excl. VAT", () => {
   const policy = { premium: 10_000_000, discountAmount: 0, brokeragePct: 15, additionalFee: 1_100_000 }
   assert.equal(nettPremium(policy), 7_400_000)
   assert.equal(nettPremium({ ...policy, vatAdded: 33_000 + 11_000 }), 7_356_000)
+})
+
+test("EF incl. VAT sama dengan sheet TARIF EF Team LCH: EF × 97,8%", () => {
+  // Sheet "2 NOV" skenario D'Best 2026-2027 (Agus, 23 November 2026): premi share × tarif EF.
+  const rows: [string, number, number, number][] = [
+    ["MERITZ KORINDO 35% → 34,23%", 781_671_861.725, 35, 267_566_278.27],
+    ["HARTA 30% → 29,34%", 687_871_238.318, 30, 201_821_421.32],
+    ["ETIQA 35,5% → 34,719%", 312_668_744.69, 35.5, 108_555_461.47],
+    ["ASTRA 25% → 24,45%", 312_668_744.69, 25, 76_447_508.08],
+  ]
+  for (const [label, premium, pct, ef] of rows) {
+    assert.equal(roundCents(feeBeforeVat((premium * pct) / 100, true)), ef, label)
+  }
+  // Excl. VAT: fee apa adanya, PPN 2,2% ditambahkan.
+  assert.equal(feeBeforeVat(1_000_000, false), 1_000_000)
 })

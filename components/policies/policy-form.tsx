@@ -29,7 +29,7 @@ import {
   brokerageCapFor,
   additionalFeeVatAddedFor,
   additionalFeeVatFor,
-  feeVatInside,
+  brokerageVatInside,
   grossPremium,
   nettPremium,
   slipPolicyParts,
@@ -409,8 +409,8 @@ export function PolicyForm({
   // Excl. VAT: PPN 2,2% ditambahkan di atas brokerage dan fee (Agus, 20 November 2026).
   const brokerageVatOnTop = vatAdded(brokerageNominal, draft.includeVat)
   const feeVatOnTop = additionalFeeVatAddedFor(draft.premium, feeRows)
-  // Nominal ditulis sebelum PPN (Agus, 22 November 2026): incl. VAT = nominal ÷ 1,022, misalnya
-  // 15% incl. VAT = 14,6771% + PPN; excl. VAT: PPN ditambahkan di atasnya.
+  // Nominal ditulis sebelum PPN: brokerage incl. VAT = nominal ÷ 1,022 (15% = 14,6771% + PPN), fee
+  // incl. VAT = nominal × 97,8% (sheet TARIF EF Team LCH); excl. VAT: PPN ditambahkan di atasnya.
   const chargeText = (amount: number, vat: number, added = 0) => {
     const totalVat = Math.round((vat + added) * 100) / 100
     if (!totalVat) return money(amount, draft.currency)
@@ -1206,7 +1206,7 @@ export function PolicyForm({
                     ? `Melebihi batas biaya akuisisi OJK ${brokerageCap}% untuk ${draft.cob}.`
                     : chargeText(
                         brokerageNominal,
-                        feeVatInside(brokerageNominal, draft.includeVat),
+                        brokerageVatInside(brokerageNominal, draft.includeVat),
                         brokerageVatOnTop
                       )
                 }
