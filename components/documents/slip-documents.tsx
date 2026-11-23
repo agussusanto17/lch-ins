@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, FileDown, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 import { recordPoliciesFromClosingAction } from "@/app/(app)/placement/actions"
 import { AttachmentContents } from "@/components/documents/attachment-contents"
@@ -400,6 +401,40 @@ export function QuotationSlipDocument({
   )
 }
 
+function SaveCoverNoteWordButton({ slip }: { slip: PlacingSlip }) {
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownload = async () => {
+    try {
+      setDownloading(true)
+      const { exportCoverNoteDocx } = await import("@/lib/cover-note-docx")
+      await exportCoverNoteDocx(slip)
+      toast.success("Dokumen Cover Note berhasil disimpan ke format Word (.docx)")
+    } catch (err) {
+      console.error(err)
+      toast.error("Gagal menyimpan dokumen ke format Word")
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={downloading}
+      onClick={handleDownload}
+    >
+      {downloading ? (
+        <Loader2 data-icon="inline-start" className="animate-spin" />
+      ) : (
+        <FileDown data-icon="inline-start" />
+      )}
+      {downloading ? "Menyiapkan Word…" : "Save Word"}
+    </Button>
+  )
+}
+
 export function CoverNoteDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
@@ -414,6 +449,7 @@ export function CoverNoteDocument(props: DocProps) {
       backHref={`/placement/closing/edit/${slip.id}`}
       letterhead={false}
       variant={letterheadFor(date)}
+      actions={<SaveCoverNoteWordButton slip={slip} />}
     >
       <DocTitle title="COVER NOTE" />
       <DetailTable slip={slip} />

@@ -31,6 +31,7 @@ export function DocumentShell({
   notice,
   slip = false,
   signatories,
+  actions,
 }: {
   backHref: string
   children: React.ReactNode
@@ -49,6 +50,8 @@ export function DocumentShell({
    * Instruction). Tanpa prop ini blok tanda tangan dicetak kosong seperti biasa.
    */
   signatories?: DocumentSignatory[]
+  /** Tombol aksi tambahan di toolbar dokumen (misal Simpan Word). */
+  actions?: React.ReactNode
 }) {
   // Server dan render pertama menganggap browser mendukung, jadi tidak ada
   // hydration mismatch; peringatan baru muncul setelah user agent terbaca.
@@ -102,6 +105,7 @@ export function DocumentShell({
               onValueChange={signature.setValue}
             />
           ) : null}
+          {actions}
           <Button size="sm" disabled={pendingContent > 0} onClick={() => window.print()}>
             {pendingContent > 0 ? (
               <Loader2 data-icon="inline-start" className="animate-spin" />
