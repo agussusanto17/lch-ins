@@ -528,7 +528,8 @@ export function InsurersAdjustersTab({
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   Sub akun pnl baris EF (additional fee) asuransi ini di Rekap Produksi. Daftarnya
-                  diatur di Master Data, kategori Sub Akun EF.
+                  diatur di Master Data, kategori Sub Akun EF. EF (MAG): EF incl. VAT dihitung
+                  seperti produksi MAG, yaitu fee dikurangi PPN komisi.
                 </p>
               </div>
             )}

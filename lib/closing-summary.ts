@@ -4,7 +4,7 @@
  */
 
 import {
-  additionalFeeAmount,
+  additionalFeeBeforeVatAmount,
   additionalFeeVatAddedAmount,
   additionalFeeVatAmount,
   brokerageAmount,
@@ -12,11 +12,14 @@ import {
   brokerageVatAmount,
   feeVatInside,
   insurerAdditionalFee,
+  insurerFeeBeforeVat,
+  magFeeRule,
   roundCents,
   sgCommissionShare,
   slipDiscountAmount,
   totalPremium,
   vatAdded,
+  withFeeSubAccounts,
 } from "@/lib/calc"
 import type { PlacingSlip, SecurityPanelRow } from "@/lib/data/types"
 import { usesAdditionalFee } from "@/components/underwriting/slip-model"
@@ -68,31 +71,51 @@ export interface ClosingSummary {
    * Beban komisi LCH Indonesia; tidak mengubah net ke asuransi.
    */
   sgShare: number
+  /** Ada asuransi EF (MAG) dengan fee incl. VAT: EF-nya dihitung seperti produksi MAG. */
+  magFee: boolean
   /** Rincian per asuransi untuk co-insurance; kosong bila hanya satu asuransi. */
   insurers: InsurerClosingSummary[]
 }
 
-/** Fee sebelum PPN dan PPN-nya untuk satu asuransi. */
-function feeParts(premium: number, r: SecurityPanelRow) {
+/**
+ * Fee sebelum PPN dan PPN-nya untuk satu asuransi. EF MAG tidak kena PPN sendiri: PPN komisinya
+ * sudah di kolom PPN brokerage, dan fee sebelum PPN = fee − PPN komisi itu.
+ */
+function feeParts(
+  premium: number,
+  r: SecurityPanelRow,
+  brokerage: { pct: number; includeVat?: boolean }
+) {
   const gross = insurerAdditionalFee(premium, r)
-  const inside = feeVatInside(gross, r.additionalFeeIncludeVat)
   return {
-    fee: roundCents(gross - inside),
-    vat: roundCents(inside + vatAdded(gross, r.additionalFeeIncludeVat)),
+    fee: insurerFeeBeforeVat(premium, r, brokerage),
+    vat: roundCents(
+      feeVatInside(gross, r.additionalFeeIncludeVat, magFeeRule(r)) +
+        vatAdded(gross, r.additionalFeeIncludeVat)
+    ),
   }
 }
 
-export function closingSummary(slip: PlacingSlip): ClosingSummary {
+/**
+ * `masterInsurers`: pilihan asuransi Master Data dengan kode Sub akun EF-nya, untuk aturan EF MAG
+ * (asuransi di panel dicocokkan lewat nama).
+ */
+export function closingSummary(
+  input: PlacingSlip,
+  masterInsurers: readonly { name: string; feeSubAccountCode?: string | null }[] = []
+): ClosingSummary {
+  const slip = { ...input, securityPanel: withFeeSubAccounts(input.securityPanel, masterInsurers) }
   const withFee = usesAdditionalFee(slip.cob)
   const premium = totalPremium(slip)
   const discount = slipDiscountAmount(slip)
   const brokerage = brokerageAmount(slip)
   const brokerageVat = roundCents(brokerageVatAmount(slip) + brokerageVatAdded(slip))
-  const feeGross = withFee ? additionalFeeAmount(slip) : 0
-  const feeInside = withFee ? additionalFeeVatAmount(slip) : 0
-  const fee = roundCents(feeGross - feeInside)
-  const feeVat = withFee ? roundCents(feeInside + additionalFeeVatAddedAmount(slip)) : 0
+  const fee = withFee ? additionalFeeBeforeVatAmount(slip) : 0
+  const feeVat = withFee
+    ? roundCents(additionalFeeVatAmount(slip) + additionalFeeVatAddedAmount(slip))
+    : 0
   const vat = roundCents(brokerageVat + feeVat)
+  const brokerageTerms = { pct: slip.brokeragePct, includeVat: slip.includeVat }
 
   // Co-insurance: bagian tiap asuransi sesuai share. Asuransi terakhir
   // menampung selisih pembulatan, supaya rinciannya sama dengan total.
@@ -107,7 +130,7 @@ export function closingSummary(slip: PlacingSlip): ClosingSummary {
     let feeVatLeft = feeVat
     rows.forEach((r, i) => {
       const last = i === rows.length - 1
-      const own = withFee ? feeParts(premium, r) : { fee: 0, vat: 0 }
+      const own = withFee ? feeParts(premium, r, brokerageTerms) : { fee: 0, vat: 0 }
       const brokeragePart = last ? brokerageLeft : roundCents((brokerage * r.share) / 100)
       const brokerageVatPart = last
         ? brokerageVatLeft
@@ -148,6 +171,7 @@ export function closingSummary(slip: PlacingSlip): ClosingSummary {
     income: roundCents(brokerage + fee + vat),
     incomeVat: vat,
     sgShare: sgCommissionShare(brokerage, slip.commissionShareSgPct),
+    magFee: withFee && slip.securityPanel.some((r) => (r.share || 0) > 0 && magFeeRule(r)),
     insurers,
   }
 }

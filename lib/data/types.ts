@@ -292,6 +292,11 @@ export interface SecurityPanelRow {
    * asuransi bisa berbeda (Harry, 12 November 2026).
    */
   additionalFeeIncludeVat?: boolean
+  /**
+   * Kode Sub akun EF asuransi dari Master Data, misalnya `ef_mag`; EF incl. VAT
+   * asuransi EF (MAG) dihitung seperti produksi MAG (lihat `magCommissionVat`).
+   */
+  feeSubAccountCode?: string | null
 }
 
 /**

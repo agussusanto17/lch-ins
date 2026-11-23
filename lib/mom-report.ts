@@ -11,15 +11,13 @@
  */
 import type { Workbook, Worksheet } from "exceljs"
 
-import { FX, roundCents } from "./calc"
+import { FX, MAG_FEE_SUB_ACCOUNT, roundCents } from "./calc"
 import { BRANCH_SOURCE_CODES } from "./form-options"
 import { dateShort } from "./format"
 import { recapIncome, type RecapPolicy } from "./production-recap"
 
 /** Source bisnis LCH Singapore (LCH Insurance Brokers Pte Ltd). */
 export const SG_SOURCE = BRANCH_SOURCE_CODES.Singapore
-/** Kode Sub akun EF "EF (MAG)" di Master Data; asuransinya dihitung sebagai MAG. */
-export const MAG_FEE_SUB_ACCOUNT = "ef_mag"
 
 /** Satu bulan bisnis LCH Indonesia. Kolom template yang belum dicatat sistem tidak ada di sini. */
 export interface MomIndonesiaMonth {

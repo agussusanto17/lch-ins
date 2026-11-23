@@ -13,7 +13,7 @@
  */
 import type { Workbook, Worksheet } from "exceljs"
 
-import { BROKERAGE_VAT_RATE, beforeVat, feeBeforeVat, FX, roundCents } from "./calc"
+import { BROKERAGE_VAT_RATE, beforeVat, feeBeforeVat, FX, magCommissionVat, roundCents } from "./calc"
 import type { ClaimStatus, PolicyType } from "./data/types"
 import { dateShort } from "./format"
 import { lossRatioClaimValue } from "./loss-ratio"
@@ -26,6 +26,8 @@ export interface LrInsurerShare {
   additionalFeePct: number
   /** EF asuransi ini sudah termasuk PPN 2,2%. */
   additionalFeeIncludeVat?: boolean
+  /** Kode Sub akun EF asuransi dari Master Data; `ef_mag` = EF seperti produksi MAG. */
+  feeSubAccountCode?: string | null
 }
 
 export interface LrPolicy {
@@ -128,14 +130,16 @@ export function policyShare(p: LrPolicy, ins: LrInsurerShare, fx: Record<string,
   // Brokerage dan EF sebelum PPN, PPN-nya terpisah (Agus dan Harry, 22 November 2026).
   const brokerage = beforeVat((part * p.brokeragePct) / 100, p.includeVat) * rate
   // EF incl. VAT = nominal × 97,8%; PPN EF = 2,2% × nominal, di dalam maupun ditambahkan
-  // (sheet TARIF EF Team LCH, 23 November 2026).
+  // (sheet TARIF EF Team LCH, 23 November 2026). EF MAG tidak kena PPN sendiri: EF = nominal − PPN
+  // komisi, dan PPN-nya hanya PPN komisi (outgo 42,5% = 15% + 27,17% + 0,33%).
   const feeGross = ((part * (ins.additionalFeePct || 0)) / 100) * rate
+  const commissionVat = magCommissionVat(ins, brokerage, p.includeVat)
   return {
     gross: part * rate,
     brokerage,
     discount: ((p.discount * ins.share) / 100) * rate,
-    fee: feeBeforeVat(feeGross, ins.additionalFeeIncludeVat),
-    vat: (brokerage + feeGross) * BROKERAGE_VAT_RATE,
+    fee: feeBeforeVat(feeGross, ins.additionalFeeIncludeVat, commissionVat),
+    vat: (brokerage + (commissionVat === undefined ? feeGross : 0)) * BROKERAGE_VAT_RATE,
   }
 }
 
@@ -454,7 +458,7 @@ export function fillInsurerCobLossRatio(
     title(ws, 1, r.insurer.toUpperCase(), 14)
     ws.getRow(2).getCell(1).value = `As of ${dateShort(period.end)}. Tahun = tahun mulai polis (polis Baru/Renewal beserta endorsement, pembatalan, dan deklarasinya), mulai ${dateShort(period.start)}.`
     ws.getRow(3).getCell(1).value =
-      "Bagian asuransi sesuai share, dalam IDR. Net premium = gross − brokerage − diskon − additional fee (EF) − PPN 2,2% atas brokerage dan EF; brokerage dan EF sebelum PPN (brokerage incl. VAT: persen ÷ 1,022; EF incl. VAT: × 97,8%), sama dengan Net ke asuransi di placing. Klaim = nilai disetujui/dibayar + adjuster fee − salvage, tanpa klaim Rejected."
+      "Bagian asuransi sesuai share, dalam IDR. Net premium = gross − brokerage − diskon − additional fee (EF) − PPN 2,2% atas brokerage dan EF; brokerage dan EF sebelum PPN (brokerage incl. VAT: persen ÷ 1,022; EF incl. VAT: × 97,8%; EF MAG incl. VAT: fee − PPN komisi, sesuai produksi MAG), sama dengan Net ke asuransi di placing. Klaim = nilai disetujui/dibayar + adjuster fee − salvage, tanpa klaim Rejected."
     ws.getRow(4).getCell(1).value = `Dibuat ${dateShort(printedOn)}.`
     let row = 6
     for (const table of [...r.cobs, r.all]) {
@@ -497,7 +501,7 @@ export function fillAccountLossRatio(
     title(ws, 1, heading, 14)
     ws.getRow(2).getCell(1).value = `Akun: ${result.account}. Tahun polis mulai ${dateShort(period.start)} s/d ${dateShort(period.end)}; nilai dalam IDR, bagian asuransi sesuai share.`
     ws.getRow(3).getCell(1).value =
-      "BF = brokerage dan EF = additional fee, keduanya sebelum PPN (BF incl. VAT: persen ÷ 1,022; EF incl. VAT: × 97,8%); PPN = 2,2% × BF sebelum PPN + 2,2% × nominal EF. Total Outgo = BF + diskon + EF + PPN, Net Premium = premi gross − total outgo (sama dengan Net ke asuransi di placing). Klaim = nilai disetujui/dibayar + adjuster fee − salvage (tanpa Rejected); Loss Ratio = klaim / net premium."
+      "BF = brokerage dan EF = additional fee, keduanya sebelum PPN (BF incl. VAT: persen ÷ 1,022; EF incl. VAT: × 97,8%); PPN = 2,2% × BF sebelum PPN + 2,2% × nominal EF. EF MAG incl. VAT sesuai produksi MAG: EF = nominal − PPN BF, tanpa PPN EF (outgo 42,5% = BF 15% + EF 27,17% + PPN 0,33%). Total Outgo = BF + diskon + EF + PPN, Net Premium = premi gross − total outgo (sama dengan Net ke asuransi di placing). Klaim = nilai disetujui/dibayar + adjuster fee − salvage (tanpa Rejected); Loss Ratio = klaim / net premium."
     ws.getRow(4).getCell(1).value = `Dibuat ${dateShort(printedOn)}.`
   }
   const widths = [{ width: 40 }, { width: 10 }, ...Array.from({ length: 9 }, () => ({ width: 19 }))]
