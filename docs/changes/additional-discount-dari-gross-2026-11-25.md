@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-25
 - **Branch:** `fix/additional-discount-dari-gross`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #318
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
