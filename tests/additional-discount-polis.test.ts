@@ -3,6 +3,8 @@ import test from "node:test"
 
 import ExcelJS from "exceljs"
 
+import { additionalDiscountIdr, breakdownByCob } from "../lib/data/analytics"
+import type { Policy } from "../lib/data/types"
 import { fillMomReport, momReport } from "../lib/mom-report"
 import {
   MARKETING_DISCOUNT,
@@ -130,3 +132,28 @@ test("Laporan MOM: kolom h MARKETING EXP-DISCOUNT dan NET setelah beban", () => 
   assert.deepEqual(ws.getCell("K18").value, { formula: "SUM(F18:J18)", result: 5_000_000 })
   assert.deepEqual(ws.getCell("L18").value, { formula: "E18-K18", result: 10_000_000 })
 })
+
+test("Report Operational: Additional Discount (IDR) per polis dan per COB", () => {
+  // USD 10.000 × 5% = USD 500 × kurs report 16.200.
+  assert.equal(additionalDiscountIdr({ premium: 10_000, currency: "USD", additionalDiscountPct: 5 }), 8_100_000)
+  assert.equal(additionalDiscountIdr({ premium: 10_000, currency: "USD" }), 0)
+  const policy = (over: Partial<Policy>) =>
+    ({
+      cob: "Property",
+      insurer: "PT Asuransi Multi Artha Guna Tbk",
+      insurers: [],
+      currency: "IDR",
+      sumInsured: 1_000_000_000,
+      premium: 100_000_000,
+      brokeragePct: 15,
+      additionalFee: 0,
+      ...over,
+    }) as Policy
+  const [property] = breakdownByCob([
+    policy({ additionalDiscountPct: 5 }),
+    policy({ premium: 50_000_000 }),
+  ])
+  assert.equal(property.additionalDiscount, 5_000_000)
+  assert.equal(property.premium, 150_000_000)
+})
+

@@ -37,6 +37,7 @@ import { grossPremium, toIdr } from "@/lib/calc"
 import {
   breakdownByCob,
   breakdownByInsurer,
+  additionalDiscountIdr,
   brokerageIdr,
   feeIdr,
   monthlyProduction,
@@ -113,6 +114,7 @@ type BreakdownRow = {
   premium: number
   brokerage: number
   fee: number
+  additionalDiscount: number
 }
 
 function breakdownColumns<T extends BreakdownRow>(
@@ -129,6 +131,12 @@ function breakdownColumns<T extends BreakdownRow>(
     { header: "Gross Premium (IDR)", value: (r) => r.premium, type: "money" },
     { header: "Brokerage (IDR)", value: (r) => r.brokerage, type: "money" },
     { header: "Additional Fee (IDR)", value: (r) => r.fee, type: "money" },
+    // Additional discount Quotation, beban LCH (Agus, 25 November 2026).
+    {
+      header: "Additional Discount (IDR)",
+      value: (r) => r.additionalDiscount,
+      type: "money",
+    },
   ]
 }
 
@@ -150,13 +158,14 @@ function BreakdownTable<T extends BreakdownRow>({
           <TableHead className="text-right">Total Sum Insured</TableHead>
           <TableHead className="text-right">Gross Premium</TableHead>
           <TableHead className="text-right">Brokerage</TableHead>
-          <TableHead className="pr-5 text-right">Additional Fee</TableHead>
+          <TableHead className="text-right">Additional Fee</TableHead>
+          <TableHead className="pr-5 text-right">Additional Discount</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows.length === 0 ? (
           <TableEmpty
-            colSpan={6}
+            colSpan={7}
             message="Tidak ada produksi pada periode ini"
           />
         ) : (
@@ -175,8 +184,11 @@ function BreakdownTable<T extends BreakdownRow>({
               <TableCell className="tabular text-right">
                 {rupiah(r.brokerage)}
               </TableCell>
-              <TableCell className="tabular pr-5 text-right">
+              <TableCell className="tabular text-right">
                 {rupiah(r.fee)}
+              </TableCell>
+              <TableCell className="tabular pr-5 text-right">
+                {rupiah(r.additionalDiscount)}
               </TableCell>
             </TableRow>
           ))
@@ -272,6 +284,7 @@ export function ReportView({
   const totalPremium = policies.reduce((a, p) => a + premiumIdr(p), 0)
   const totalBrokerage = policies.reduce((a, p) => a + brokerageIdr(p), 0)
   const totalFee = policies.reduce((a, p) => a + feeIdr(p), 0)
+  const totalAdditionalDiscount = policies.reduce((a, p) => a + additionalDiscountIdr(p), 0)
   const totalSumInsured = policies.reduce(
     (a, p) => a + toIdr(p.sumInsured, p.currency),
     0
@@ -289,6 +302,7 @@ export function ReportView({
     ["Total Brokerage", rupiah(totalBrokerage)],
     ["Total Additional Fee", rupiah(totalFee)],
     ["Pendapatan (Brokerage + Fee)", rupiah(totalBrokerage + totalFee)],
+    ["Total Additional Discount (beban LCH)", rupiah(totalAdditionalDiscount)],
     ["Total Sum Insured", rupiah(totalSumInsured)],
     ...(showClaims
       ? [
@@ -558,6 +572,18 @@ export function ReportView({
                   value: (p) => feeIdr(p),
                   type: "money",
                 },
+                // Additional discount Quotation, beban LCH (Agus, 25 November 2026).
+                {
+                  header: "Additional Discount (%)",
+                  value: (p) => (p.additionalDiscountPct ? p.additionalDiscountPct / 100 : null),
+                  type: "number",
+                  numFmt: "0.00%",
+                },
+                {
+                  header: "Additional Discount (IDR)",
+                  value: (p) => additionalDiscountIdr(p),
+                  type: "money",
+                },
                 {
                   header: "Status",
                   value: (p) => policyStatus(p, today),
@@ -586,13 +612,14 @@ export function ReportView({
                   <TableHead className="text-right">Gross Premium</TableHead>
                   <TableHead className="text-right">Brokerage</TableHead>
                   <TableHead className="text-right">Additional Fee</TableHead>
+                  <TableHead className="text-right">Additional Discount</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {policies.length === 0 ? (
                   <TableEmpty
-                    colSpan={8}
+                    colSpan={9}
                     message="Tidak ada polis pada periode ini"
                   />
                 ) : (
@@ -626,6 +653,9 @@ export function ReportView({
                       </TableCell>
                       <TableCell className="tabular text-right whitespace-nowrap">
                         {rupiah(feeIdr(p))}
+                      </TableCell>
+                      <TableCell className="tabular text-right whitespace-nowrap">
+                        {p.additionalDiscountPct ? rupiah(additionalDiscountIdr(p)) : "—"}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={policyStatus(p, today)} />
