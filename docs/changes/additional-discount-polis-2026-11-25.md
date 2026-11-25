@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-25
 - **Branch:** `feat/additional-discount-polis`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #319
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
