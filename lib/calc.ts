@@ -102,17 +102,27 @@ export function totalPayable(slip: PlacingSlip) {
 export const MAX_ADDITIONAL_DISCOUNT_PCT = 100
 
 /**
- * Additional discount Quotation: persen dari premi setelah discount utama (MoM review Phase 1,
- * poin 7). Hanya untuk cetakan Quotation Slip Internal LCH; Closing Instruction, polis, dan report
- * tetap memakai discount utama.
+ * Batas additional discount slip ini. Sejak dihitung dari gross premium (25 November 2026), discount
+ * + additional discount maksimal 100% supaya premi tidak negatif; discount 10% menyisakan 90%.
  */
-export function additionalDiscountFor(afterDiscount: number, pct: number | undefined) {
-  return roundCents((afterDiscount * (pct || 0)) / 100)
+export function maxAdditionalDiscountPct(slip: Pick<PlacingSlip, "discountPct">) {
+  return Math.max(0, MAX_ADDITIONAL_DISCOUNT_PCT - (slip.discountPct || 0))
+}
+
+/**
+ * Additional discount Quotation (MoM review Phase 1, poin 7): persen dari gross premium, yaitu premi
+ * sebelum discount utama (Agus, 25 November 2026; sebelumnya dari premi setelah discount). Hanya
+ * untuk cetakan Quotation Slip Internal LCH; Closing Instruction, polis, dan report tetap memakai
+ * discount utama.
+ */
+export function additionalDiscountFor(grossPremium: number, pct: number | undefined) {
+  return roundCents((grossPremium * (pct || 0)) / 100)
 }
 
 /**
  * Total Payable cetakan internal: premi setelah discount dan additional discount, ditambah biaya
- * polis. Slip PAR + EQVET menghitung additional discount per kelompok, seperti discount utama.
+ * polis. Additional discount dihitung dari gross premium. Slip PAR + EQVET menghitungnya per
+ * kelompok, seperti discount utama.
  */
 export function internalTotalPayable(slip: PlacingSlip) {
   const pct = slip.additionalDiscountPct || 0
@@ -120,15 +130,16 @@ export function internalTotalPayable(slip: PlacingSlip) {
     const { par, eqvet } = calculateParEqvet(slip)
     return roundCents(
       [par, eqvet].reduce(
-        (sum, g) => sum + g.total - additionalDiscountFor(g.afterDiscount, pct),
+        (sum, g) => sum + g.total - additionalDiscountFor(g.subtotal, pct),
         0
       )
     )
   }
-  const afterDiscount = roundCents(totalPremium(slip) - discountAmount(slip))
+  const gross = totalPremium(slip)
   return roundCents(
-    afterDiscount -
-      additionalDiscountFor(afterDiscount, pct) +
+    gross -
+      discountAmount(slip) -
+      additionalDiscountFor(gross, pct) +
       (slip.adminCost || 0) +
       (slip.stampDuty || 0)
   )

@@ -141,6 +141,7 @@ import {
   internalTotalPayable,
   isParEqvetSlip,
   MAX_ADDITIONAL_DISCOUNT_PCT,
+  maxAdditionalDiscountPct,
   parEqvetPolicyCharge,
   sumPercent,
   totalPayable,
@@ -611,9 +612,9 @@ function SlipEditor({
         toast.error("Premi installment belum lengkap", { description: installmentIssue })
         return false
       }
-      if (additionalPct > MAX_ADDITIONAL_DISCOUNT_PCT) {
+      if (additionalPct > additionalMax) {
         toast.error("Additional discount melebihi batas", {
-          description: `Maksimal ${MAX_ADDITIONAL_DISCOUNT_PCT}% dari premi setelah discount.`,
+          description: `Discount + additional discount maksimal ${MAX_ADDITIONAL_DISCOUNT_PCT}% dari gross premium; sisa ${percent(additionalMax)}.`,
         })
         return false
       }
@@ -766,6 +767,7 @@ function SlipEditor({
   const payable = totalPayable(slip)
   // Additional discount Quotation hanya untuk cetakan internal (MoM poin 7).
   const additionalPct = slip.additionalDiscountPct || 0
+  const additionalMax = maxAdditionalDiscountPct(slip)
   const internalPayable = internalTotalPayable(slip)
   // Premi installment (Agus, 20 November 2026): bukan untuk open cover dan slip perubahan.
   const installmentsEnabled = !usesOpenCover(slip) && !changeSlip
@@ -2416,12 +2418,9 @@ function SlipEditor({
                           preset="percent"
                           className={PANEL_INPUT}
                           min={0}
-                          max={MAX_ADDITIONAL_DISCOUNT_PCT}
+                          max={additionalMax}
                           disabled={locked}
-                          invalid={
-                            additionalPct < 0 ||
-                            additionalPct > MAX_ADDITIONAL_DISCOUNT_PCT
-                          }
+                          invalid={additionalPct < 0 || additionalPct > additionalMax}
                           value={slip.additionalDiscountPct || null}
                           onValueChange={(v) =>
                             set({ additionalDiscountPct: v ?? 0 })
@@ -2429,14 +2428,16 @@ function SlipEditor({
                         />
                       </Field>
                       <p className="text-xs text-muted-foreground sm:col-span-2 sm:pt-7">
-                        Dihitung dari premi setelah discount. Hanya dicetak di
-                        Quotation Slip Internal LCH; Closing Instruction, polis, dan
+                        Dihitung dari gross premium, sebelum discount. Hanya dicetak
+                        di Quotation Slip Internal LCH; Closing Instruction, polis, dan
                         report tetap memakai Discount di atas.
                       </p>
                     </div>
-                    {additionalPct > MAX_ADDITIONAL_DISCOUNT_PCT ? (
+                    {additionalPct > additionalMax ? (
                       <p className="text-xs text-destructive">
-                        Additional discount maksimal {MAX_ADDITIONAL_DISCOUNT_PCT}%.
+                        Discount + additional discount maksimal{" "}
+                        {MAX_ADDITIONAL_DISCOUNT_PCT}% dari gross premium; sisa{" "}
+                        {percent(additionalMax)}.
                       </p>
                     ) : additionalPct > 0 ? (
                       <>

@@ -1100,7 +1100,8 @@ export function PayableTable({
   internal?: boolean
 }) {
   const afterDiscount = roundCents(totalPremium(slip) - discountAmount(slip))
-  const additional = additionalDiscountFor(afterDiscount, slip.additionalDiscountPct)
+  // Additional discount dari gross premium, sebelum discount (Agus, 25 November 2026).
+  const additional = additionalDiscountFor(totalPremium(slip), slip.additionalDiscountPct)
   return (
     <table className="mt-4 w-full text-[12.5px]">
       <tbody>
@@ -1284,7 +1285,7 @@ function ParEqvetGroupSection({
   if (!group.lines.length) return null
   const lastIndex = group.lines.length - 1
   const internal = additionalPct != null
-  const additional = internal ? additionalDiscountFor(group.afterDiscount, additionalPct) : 0
+  const additional = internal ? additionalDiscountFor(group.subtotal, additionalPct) : 0
 
   return (
     <tbody>
@@ -1513,7 +1514,7 @@ function LocationScheduleTable({
   const additionalPct = slip.additionalDiscountPct || 0
   const additional = roundCents(
     [calc.par, calc.eqvet].reduce(
-      (sum, g) => sum + additionalDiscountFor(g.afterDiscount, additionalPct),
+      (sum, g) => sum + additionalDiscountFor(g.subtotal, additionalPct),
       0
     )
   )
@@ -1949,10 +1950,7 @@ export function VehicleScheduleAppendix({
               <td className="tabular py-1 text-right">
                 (
                 {moneyCents(
-                  additionalDiscountFor(
-                    roundCents(totalPremium(slip) - discountAmount(slip)),
-                    slip.additionalDiscountPct
-                  ),
+                  additionalDiscountFor(totalPremium(slip), slip.additionalDiscountPct),
                   currency
                 )}
                 )

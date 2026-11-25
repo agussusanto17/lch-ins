@@ -505,8 +505,9 @@ export interface PlacingSlip {
   rateExceptions?: Record<string, RateException>
   discountPct: number
   /**
-   * Additional discount Quotation dalam persen (MoM review Phase 1, poin 7), dari premi setelah
-   * discount. Hanya untuk Quotation Slip Internal LCH; CI, polis, dan report memakai discount saja.
+   * Additional discount Quotation dalam persen (MoM review Phase 1, poin 7), dari gross premium
+   * sebelum discount (Agus, 25 November 2026). Hanya untuk Quotation Slip Internal LCH; CI, polis,
+   * dan report memakai discount saja.
    */
   additionalDiscountPct?: number
   /**
