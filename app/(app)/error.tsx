@@ -1,10 +1,12 @@
 "use client" // Error boundary wajib Client Component
 
-import { useEffect } from "react"
+import { useEffect, useId, useRef } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Home, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { deterministicErrorRef, reportClientError } from "@/lib/client-error"
 
 export default function AppError({
   error,
@@ -13,11 +15,22 @@ export default function AppError({
   error: Error & { digest?: string }
   unstable_retry: () => void
 }) {
+  const pathname = usePathname()
+  const instanceId = useId()
+  const refCode = error.digest || deterministicErrorRef(error.message ?? "", `${pathname}:${instanceId}`)
+  const reportedKeyRef = useRef<string | null>(null)
+
   useEffect(() => {
-    // Nanti diteruskan ke layanan pelaporan error. Pesan ke pengguna tetap
-    // umum supaya detail teknis tidak bocor.
     console.error(error)
-  }, [error])
+    const key = `${refCode}:${pathname}:${error.message}`
+    if (reportedKeyRef.current === key) return
+    reportedKeyRef.current = key
+    reportClientError(error, {
+      source: "app-error",
+      clientRef: refCode,
+      pathname,
+    })
+  }, [error, pathname, refCode])
 
   return (
     <div className="flex min-h-[60svh] items-center justify-center p-6">
@@ -30,11 +43,9 @@ export default function AppError({
           Coba muat ulang. Bila masih gagal, laporkan ke tim IT beserta kode
           referensi di bawah.
         </p>
-        {error.digest ? (
-          <p className="tabular mt-3 text-xs text-muted-foreground">
-            Kode referensi: {error.digest}
-          </p>
-        ) : null}
+        <p className="tabular mt-3 text-xs text-muted-foreground">
+          Kode referensi: {refCode}
+        </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <Button onClick={() => unstable_retry()}>
             <RotateCcw data-icon="inline-start" />
