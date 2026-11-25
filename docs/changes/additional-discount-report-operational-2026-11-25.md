@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-25
 - **Branch:** `feat/additional-discount-report-operational`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #320
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
