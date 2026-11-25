@@ -1,4 +1,5 @@
 import {
+  additionalDiscountFor,
   additionalFeeVatFor,
   beforeVat,
   grossPremium,
@@ -33,6 +34,18 @@ export function brokerageIdr(p: {
   includeVat?: boolean
 }) {
   return beforeVat((toIdr(p.premium, p.currency) * p.brokeragePct) / 100, p.includeVat)
+}
+
+/**
+ * Additional discount Quotation polis dalam IDR: persen × gross premium, ditanggung LCH (Agus, 25
+ * November 2026). Tidak mengurangi premi ke asuransi; polis tanpa additional discount 0.
+ */
+export function additionalDiscountIdr(p: {
+  premium: number
+  currency: string
+  additionalDiscountPct?: number
+}) {
+  return toIdr(additionalDiscountFor(p.premium, p.additionalDiscountPct), p.currency)
 }
 
 /**
@@ -153,6 +166,8 @@ interface Breakdown {
   premium: number
   brokerage: number
   fee: number
+  /** Additional discount Quotation, beban LCH (IDR). */
+  additionalDiscount: number
   policies: number
   sumInsured: number
 }
@@ -165,12 +180,14 @@ function groupPolicies(policies: Policy[], keyOf: (p: Policy) => string) {
       premium: 0,
       brokerage: 0,
       fee: 0,
+      additionalDiscount: 0,
       policies: 0,
       sumInsured: 0,
     }
     cur.premium += premiumIdr(p)
     cur.brokerage += brokerageIdr(p)
     cur.fee += feeIdr(p)
+    cur.additionalDiscount += additionalDiscountIdr(p)
     cur.sumInsured += toIdr(p.sumInsured, p.currency)
     cur.policies += 1
     map.set(key, cur)
