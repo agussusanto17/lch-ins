@@ -271,7 +271,10 @@ const securityPanelRowSchema = z.object({
 })
 
 const placingSlipSchema = z.object({
-  clientId: z.string().trim().min(1, "Klien wajib dipilih."),
+  clientId: z.preprocess(
+    (v) => (typeof v === "string" ? v : ""),
+    z.string().trim().min(1, "Klien wajib dipilih.")
+  ),
   sourceId: z.uuid("Source tidak valid").nullish(),
   sppaId: z.string().nullish(),
   cob: z.string().trim().min(1, "Class of Business wajib dipilih."),

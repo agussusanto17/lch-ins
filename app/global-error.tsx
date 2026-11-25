@@ -1,6 +1,9 @@
 "use client" // Error boundary wajib Client Component
 
+import { useEffect, useId, useRef } from "react"
 import "./globals.css"
+
+import { deterministicErrorRef, reportClientError } from "@/lib/client-error"
 
 /**
  * Menangkap error di root layout. Menggantikan seluruh layout saat aktif,
@@ -13,6 +16,21 @@ export default function GlobalError({
   error: Error & { digest?: string }
   unstable_retry: () => void
 }) {
+  const instanceId = useId()
+  const refCode = error.digest || deterministicErrorRef(error.message ?? "", instanceId)
+  const reportedKeyRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    console.error(error)
+    const key = `${refCode}:${error.message}`
+    if (reportedKeyRef.current === key) return
+    reportedKeyRef.current = key
+    reportClientError(error, {
+      source: "global-error",
+      clientRef: refCode,
+    })
+  }, [error, refCode])
+
   return (
     <html lang="id">
       <body>
@@ -23,11 +41,9 @@ export default function GlobalError({
             <p className="mt-2 text-sm text-muted-foreground">
               Muat ulang halaman. Bila masih gagal, hubungi tim IT.
             </p>
-            {error.digest ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Kode referensi: {error.digest}
-              </p>
-            ) : null}
+            <p className="mt-3 text-xs text-muted-foreground">
+              Kode referensi: {refCode}
+            </p>
             <button
               type="button"
               onClick={() => unstable_retry()}

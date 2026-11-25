@@ -182,9 +182,38 @@ import {
   supportsObjectUpload,
 } from "@/lib/slip-items"
 import type { InsuredOption } from "@/lib/server/clients"
+import { reportClientError } from "@/lib/client-error"
 import { closingSummary } from "@/lib/closing-summary"
 import { newId, store, useRecord } from "@/lib/store"
 import { cn } from "@/lib/utils"
+
+function newSlipDraftKey(initial: PlacingSlip) {
+  return `lch:new-slip-draft:${initial.sppaId ?? initial.clientId ?? "blank"}`
+}
+
+function readNewSlipDraft(key: string): PlacingSlip | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.sessionStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<PlacingSlip> | null
+    if (!parsed || typeof parsed !== "object" || typeof parsed.cob !== "string") {
+      return null
+    }
+    return parsed as PlacingSlip
+  } catch {
+    return null
+  }
+}
+
+function clearNewSlipDraft(key: string | null) {
+  if (!key || typeof window === "undefined") return
+  try {
+    window.sessionStorage.removeItem(key)
+  } catch {
+    // Abaikan jika sessionStorage dibatasi browser.
+  }
+}
 
 const SECTION_KEYS = [
   "basic",
@@ -364,6 +393,47 @@ function SlipEditor({
   const dirty = JSON.stringify(slip) !== savedJson
   // Slip baru (termasuk yang terisi dari SPPA) selalu bisa disimpan sebagai draft.
   const canSave = dirty || mode === "new"
+  const draftKey = mode === "new" ? newSlipDraftKey(initial) : null
+  const draftCheckedRef = React.useRef(false)
+  const hasInteractedRef = React.useRef(false)
+
+  React.useEffect(() => {
+    if (!draftKey || draftCheckedRef.current) return
+    draftCheckedRef.current = true
+    const restored = readNewSlipDraft(draftKey)
+    if (!restored) return
+    const normalized = slipForForm(restored)
+    if (JSON.stringify(normalized) === savedJson) return
+    queueMicrotask(() => {
+      setSlip(normalized)
+      toast.info("Draft isian sebelumnya di tab ini dipulihkan", {
+        action: {
+          label: "Reset form",
+          onClick: () => {
+            clearNewSlipDraft(draftKey)
+            hasInteractedRef.current = false
+            setSlip(slipForForm(initial))
+          },
+        },
+      })
+    })
+  }, [draftKey, initial, savedJson])
+
+  React.useEffect(() => {
+    if (!draftKey || !draftCheckedRef.current) return
+    if (dirty) {
+      hasInteractedRef.current = true
+      try {
+        window.sessionStorage.setItem(draftKey, JSON.stringify(slip))
+      } catch {
+        // Abaikan quota / private mode error pada sessionStorage.
+      }
+      return
+    }
+    if (hasInteractedRef.current) {
+      clearNewSlipDraft(draftKey)
+    }
+  }, [draftKey, dirty, slip])
 
   const set = React.useCallback((patch: Partial<PlacingSlip>) => {
     setSlip((s) => recalc({ ...s, ...patch }))
@@ -505,24 +575,89 @@ function SlipEditor({
     set({ securityPanel: nextPanel })
   }
 
+  function buildSavePayload(statusOverride?: PlacingSlip["status"]): PlacingSlip {
+    const withBounds = rateLinesWithBounds(slip)
+    const exceptions = Object.fromEntries(
+      Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
+        withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
+      )
+    )
+    return {
+      ...slip,
+      ...(statusOverride ? { status: statusOverride } : {}),
+      rateLines: withBounds,
+      rateExceptions: exceptions,
+      securityPanel: prepareSecurityPanel(slip.securityPanel),
+      updatedAt: today,
+    }
+  }
+
+  function validateBeforeSave(fullChecks = false): boolean {
+    if (!slip.clientId?.trim()) {
+      toast.error("Klien wajib dipilih", {
+        description: "Pilih klien terlebih dahulu sebelum menyimpan.",
+      })
+      return false
+    }
+    if (!slip.insuredName?.trim()) {
+      toast.error("Nama tertanggung wajib diisi")
+      return false
+    }
+    if (fullChecks) {
+      const installmentIssue = installmentsEnabled
+        ? installmentsError(slip.premiumInstallments)
+        : null
+      if (installmentIssue) {
+        toast.error("Premi installment belum lengkap", { description: installmentIssue })
+        return false
+      }
+      if (additionalPct > MAX_ADDITIONAL_DISCOUNT_PCT) {
+        toast.error("Additional discount melebihi batas", {
+          description: `Maksimal ${MAX_ADDITIONAL_DISCOUNT_PCT}% dari premi setelah discount.`,
+        })
+        return false
+      }
+    }
+    if (sectionTitles) {
+      const clauseIssues = validateClauseUniquenessAcrossSections(
+        slip,
+        clauseTitleLookup
+      )
+      if (clauseIssues.length > 0) {
+        toast.error("Klausula tidak valid", { description: clauseIssues[0] })
+        return false
+      }
+    }
+    return true
+  }
+
+  async function runActionSafe<T>(
+    context: string,
+    errorTitle: string,
+    fn: () => Promise<T>
+  ): Promise<T | null> {
+    try {
+      return await fn()
+    } catch (err) {
+      const ref = reportClientError(err, { source: "action", context })
+      const detail = err instanceof Error && err.message ? err.message : "Koneksi ke server gagal."
+      toast.error(errorTitle, {
+        description: `${detail} (Ref: ${ref})`,
+      })
+      return null
+    }
+  }
+
   function issueClosing() {
     setConfirmClose(false)
     startTransition(async () => {
-      const withBounds = rateLinesWithBounds(slip)
-      const exceptions = Object.fromEntries(
-        Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
-          withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
-        )
+      const toSend = buildSavePayload("Closed")
+      const res = await runActionSafe(
+        "issueClosing",
+        "Gagal menerbitkan closing instruction",
+        () => savePlacingSlipAction(toSend, "edit")
       )
-      const toSend: PlacingSlip = {
-        ...slip,
-        status: "Closed",
-        rateLines: withBounds,
-        rateExceptions: exceptions,
-        securityPanel: prepareSecurityPanel(slip.securityPanel),
-        updatedAt: today,
-      }
-      const res = await savePlacingSlipAction(toSend, "edit")
+      if (!res) return
       if (!res.ok || !res.data) {
         toast.error("Gagal menerbitkan closing instruction", {
           description: res.error,
@@ -530,6 +665,7 @@ function SlipEditor({
         return
       }
       const record = res.data
+      clearNewSlipDraft(draftKey)
       store.upsert("slips", record)
       setSlip(record)
       setSavedJson(JSON.stringify(record))
@@ -711,58 +847,27 @@ function SlipEditor({
   }
 
   function handleSave() {
-    const installmentIssue = installmentsEnabled
-      ? installmentsError(slip.premiumInstallments)
-      : null
-    if (installmentIssue) {
-      toast.error("Premi installment belum lengkap", { description: installmentIssue })
-      return
-    }
-    if (additionalPct > MAX_ADDITIONAL_DISCOUNT_PCT) {
-      toast.error("Additional discount melebihi batas", {
-        description: `Maksimal ${MAX_ADDITIONAL_DISCOUNT_PCT}% dari premi setelah discount.`,
-      })
-      return
-    }
-    if (sectionTitles) {
-      const clauseIssues = validateClauseUniquenessAcrossSections(
-        slip,
-        clauseTitleLookup
-      )
-      if (clauseIssues.length > 0) {
-        toast.error("Klausula tidak valid", { description: clauseIssues[0] })
-        return
-      }
-    }
+    if (!validateBeforeSave(true)) return
     startTransition(async () => {
-      const withBounds = rateLinesWithBounds(slip)
-      const exceptions = Object.fromEntries(
-        Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
-          withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
-        )
-      )
       const status =
         isQuotation && slip.status === "Released" && panelValid
           ? "Quoted"
           : slip.status
 
-      const toSend: PlacingSlip = {
-        ...slip,
-        status,
-        rateLines: withBounds,
-        rateExceptions: exceptions,
-        securityPanel: prepareSecurityPanel(slip.securityPanel),
-        updatedAt: today,
-      }
-      const res = await savePlacingSlipAction(
-        toSend,
-        isQuotation || isClosing ? "edit" : mode
+      const toSend = buildSavePayload(status)
+      const res = await runActionSafe("handleSave", "Gagal menyimpan slip", () =>
+        savePlacingSlipAction(
+          toSend,
+          isQuotation || isClosing ? "edit" : mode
+        )
       )
+      if (!res) return
       if (!res.ok || !res.data) {
         toast.error("Gagal menyimpan slip", { description: res.error })
         return
       }
       const record = res.data
+      clearNewSlipDraft(draftKey)
       store.upsert("slips", record)
       setSlip(record)
       setSavedJson(JSON.stringify(record))
@@ -796,26 +901,19 @@ function SlipEditor({
   function closeChangeSlip() {
     setConfirmCloseChange(false)
     startTransition(async () => {
-      const withBounds = rateLinesWithBounds(slip)
-      const exceptions = Object.fromEntries(
-        Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
-          withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
-        )
+      const toSend = buildSavePayload("Closed")
+      const res = await runActionSafe(
+        "closeChangeSlip",
+        `Gagal menutup ${changeSlipLabel.toLowerCase()}`,
+        () => savePlacingSlipAction(toSend, "edit")
       )
-      const toSend: PlacingSlip = {
-        ...slip,
-        status: "Closed",
-        rateLines: withBounds,
-        rateExceptions: exceptions,
-        securityPanel: prepareSecurityPanel(slip.securityPanel),
-        updatedAt: today,
-      }
-      const res = await savePlacingSlipAction(toSend, "edit")
+      if (!res) return
       if (!res.ok || !res.data) {
         toast.error(`Gagal menutup ${changeSlipLabel.toLowerCase()}`, { description: res.error })
         return
       }
       const record = res.data
+      clearNewSlipDraft(draftKey)
       store.upsert("slips", record)
       setSlip(record)
       setSavedJson(JSON.stringify(record))
@@ -851,38 +949,39 @@ function SlipEditor({
     startTransition(async () => {
       let targetId = slip.id
       if (dirty || mode === "new" || targetId === "new" || targetId.startsWith("s-")) {
-        const withBounds = rateLinesWithBounds(slip)
-        const exceptions = Object.fromEntries(
-          Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
-            withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
-          )
+        const toSend = buildSavePayload()
+        const saveRes = await runActionSafe(
+          "doRelease:save",
+          "Gagal menyimpan slip sebelum rilis",
+          () =>
+            savePlacingSlipAction(
+              toSend,
+              isQuotation || isClosing ? "edit" : mode
+            )
         )
-        const toSend: PlacingSlip = {
-          ...slip,
-          rateLines: withBounds,
-          rateExceptions: exceptions,
-          securityPanel: prepareSecurityPanel(slip.securityPanel),
-          updatedAt: today,
-        }
-        const saveRes = await savePlacingSlipAction(
-          toSend,
-          isQuotation || isClosing ? "edit" : mode
-        )
+        if (!saveRes) return
         if (!saveRes.ok || !saveRes.data) {
           toast.error("Gagal menyimpan slip sebelum rilis", { description: saveRes.error })
           return
         }
         targetId = saveRes.data.id
+        clearNewSlipDraft(draftKey)
         store.upsert("slips", saveRes.data)
         setSlip(saveRes.data)
       }
 
-      const relRes = await releasePlacingSlipAction(targetId)
+      const relRes = await runActionSafe(
+        "doRelease:release",
+        "Gagal merilis slip",
+        () => releasePlacingSlipAction(targetId)
+      )
+      if (!relRes) return
       if (!relRes.ok || !relRes.data) {
         toast.error("Gagal merilis slip", { description: relRes.error })
         return
       }
       const record = relRes.data
+      clearNewSlipDraft(draftKey)
       setConfirmRelease(false)
       store.upsert("slips", record)
       setSlip(record)
@@ -904,18 +1003,29 @@ function SlipEditor({
     setConfirmDestroy(false)
     startTransition(async () => {
       if (slip.status === "Draft") {
-        store.remove("slips", slip.id)
-        setSavedJson(JSON.stringify(slip))
-        const delRes = await deletePlacingSlipAction(slip.id)
+        const delRes = await runActionSafe(
+          "doDestroy:delete",
+          "Gagal menghapus draft",
+          () => deletePlacingSlipAction(slip.id)
+        )
+        if (!delRes) return
         if (!delRes.ok && delRes.error) {
           toast.error("Gagal menghapus draft", { description: delRes.error })
           return
         }
+        clearNewSlipDraft(draftKey)
+        store.remove("slips", slip.id)
+        setSavedJson(JSON.stringify(slip))
         toast.success("Draft slip dihapus")
         router.push("/placement")
         return
       }
-      const cancelRes = await togglePlacingSlipStatusAction(slip.id, "Cancelled")
+      const cancelRes = await runActionSafe(
+        "doDestroy:cancel",
+        "Gagal membatalkan slip",
+        () => togglePlacingSlipStatusAction(slip.id, "Cancelled")
+      )
+      if (!cancelRes) return
       if (!cancelRes.ok && cancelRes.error) {
         toast.error("Gagal membatalkan slip", { description: cancelRes.error })
         return
@@ -934,41 +1044,23 @@ function SlipEditor({
   /** Buka dokumen atau quotation; perubahan disimpan dulu supaya dokumen sama dengan form. */
   function goTo(path: (id: string) => string) {
     if (dirty || mode === "new") {
-      if (sectionTitles) {
-        const clauseIssues = validateClauseUniquenessAcrossSections(
-          slip,
-          clauseTitleLookup
-        )
-        if (clauseIssues.length > 0) {
-          toast.error("Klausula tidak valid", { description: clauseIssues[0] })
-          return
-        }
-      }
+      if (!validateBeforeSave(false)) return
       startTransition(async () => {
-        const withBounds = rateLinesWithBounds(slip)
-        const exceptions = Object.fromEntries(
-          Object.entries(slip.rateExceptions ?? {}).filter(([lineId]) =>
-            withBounds.some((l) => l.id === lineId && isOutOfBounds(l))
-          )
-        )
         const status =
           isQuotation && slip.status === "Released" && panelValid
             ? "Quoted"
             : slip.status
 
-        const toSend: PlacingSlip = {
-          ...slip,
-          status,
-          rateLines: withBounds,
-          rateExceptions: exceptions,
-          securityPanel: prepareSecurityPanel(slip.securityPanel),
-          updatedAt: today,
-        }
-        const res = await savePlacingSlipAction(
-          toSend,
-          isQuotation || isClosing ? "edit" : mode
+        const toSend = buildSavePayload(status)
+        const res = await runActionSafe("goTo", "Gagal menyimpan slip", () =>
+          savePlacingSlipAction(
+            toSend,
+            isQuotation || isClosing ? "edit" : mode
+          )
         )
+        if (!res) return
         if (res.ok && res.data) {
+          clearNewSlipDraft(draftKey)
           store.upsert("slips", res.data)
           router.push(path(res.data.id))
         } else {
