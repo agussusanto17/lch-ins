@@ -634,6 +634,12 @@ export interface Policy {
    * Gross Premium = premi − diskon; brokerage dan additional fee tetap dari premi.
    */
   discountAmount?: number
+  /**
+   * Additional discount Quotation (%) dari gross premium, dari slip (Agus, 25 November 2026).
+   * Ditanggung LCH: tidak mengurangi premi ke asuransi, masuk report sebagai beban
+   * MARKETING-DISCOUNT BEBAN LCH. Hanya polis Baru dan Renewal.
+   */
+  additionalDiscountPct?: number
   brokeragePct: number
   /** Brokerage sudah termasuk PPN 2,2%, mengikuti slip. */
   includeVat?: boolean
