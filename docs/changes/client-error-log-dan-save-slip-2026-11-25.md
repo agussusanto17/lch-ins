@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-25
 - **Branch:** `fix/client-error-log-dan-save-slip`
-- **PR:** (belum dibuat)
+- **PR:** #317 (https://github.com/agussusanto17/lch-ins/pull/317)
 - **Dikerjakan oleh:** Zero dengan Antigravity
 
 ## Latar belakang
