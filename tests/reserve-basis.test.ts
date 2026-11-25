@@ -86,6 +86,7 @@ test("revenue per account per month: commission, interco commission, EF, and MOP
     commissionInterco: -3_000_000,
     fee: -100_000,
     margin: -150_000,
+    marketingDiscount: 0,
   })
   assert.equal(reserveRevenue(rukma), -19_750_000)
 })

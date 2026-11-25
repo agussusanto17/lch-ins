@@ -137,16 +137,19 @@ test("bisnis dipisah per Source; Indonesia: brokerage + EF, margin, sharing komi
     brokerage: 32_338_551.86,
     margin: 0,
     commissionExpense: 2_935_420.74,
+    marketingDiscount: 0,
   })
   assert.deepEqual(report.current.indonesia[3], {
     brokerage: 100_000,
     margin: 200_000,
     commissionExpense: 0,
+    marketingDiscount: 0,
   })
   assert.deepEqual(report.previous.indonesia[2], {
     brokerage: 10_000_000,
     margin: 0,
     commissionExpense: 0,
+    marketingDiscount: 0,
   })
   // Bulan lain kosong; Desember tidak ikut.
   const totals = (y: typeof report.current) =>

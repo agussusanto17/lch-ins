@@ -27,6 +27,8 @@ export interface MomIndonesiaMonth {
   margin: number
   /** e: sharing komisi ke LCH Singapore. */
   commissionExpense: number
+  /** h: additional discount Quotation polis, ditanggung LCH (Agus, 25 November 2026). */
+  marketingDiscount: number
 }
 
 /** Satu bulan bisnis LCH Singapore: hanya brokerage (komisi + EF). */
@@ -72,7 +74,12 @@ function momYear(
   policies: RecapPolicy[],
   fx: Record<string, number>
 ): MomYear {
-  const indonesia = months.map(() => ({ brokerage: 0, margin: 0, commissionExpense: 0 }))
+  const indonesia = months.map(() => ({
+    brokerage: 0,
+    margin: 0,
+    commissionExpense: 0,
+    marketingDiscount: 0,
+  }))
   const singapore = months.map(() => ({ magCommission: 0, magFee: 0, others: 0 }))
   // Rekap Produksi menulis pendapatan negatif; di sini dibalik menjadi positif.
   for (const line of recapIncome(policies, fx)) {
@@ -91,6 +98,7 @@ function momYear(
       id.brokerage -= line.commission + line.fee
       id.margin -= line.margin
       id.commissionExpense += line.sgShare
+      id.marketingDiscount += line.marketingDiscount
     }
   }
   return {
@@ -99,6 +107,7 @@ function momYear(
       brokerage: roundCents(m.brokerage),
       margin: roundCents(m.margin),
       commissionExpense: roundCents(m.commissionExpense),
+      marketingDiscount: roundCents(m.marketingDiscount),
     })),
     singapore: singapore.map((m) => ({
       magCommission: roundCents(m.magCommission),
@@ -242,18 +251,20 @@ function writeIndonesia(ws: Worksheet, startCol: number, months: MomIndonesiaMon
   months.forEach((m, i) => {
     const r = first + i
     const income = roundCents(m.brokerage + m.margin)
+    const expenses = roundCents(m.commissionExpense + m.marketingDiscount)
     const values: MoneyValue[] = [
       m.brokerage,
       m.margin,
       null, // c: O/I SPONSORSHIP belum dicatat di sistem.
       { formula: `SUM(${c(0)}${r}:${c(2)}${r})`, result: income },
       m.commissionExpense,
-      null, // f–i: beban marketing belum dicatat di sistem.
+      null, // f, g, i: beban marketing lain belum dicatat di sistem.
       null,
+      // h: additional discount Quotation polis; kosong tetap bisa diisi manual.
+      m.marketingDiscount || null,
       null,
-      null,
-      { formula: `SUM(${c(4)}${r}:${c(8)}${r})`, result: m.commissionExpense },
-      { formula: `${c(3)}${r}-${c(9)}${r}`, result: roundCents(income - m.commissionExpense) },
+      { formula: `SUM(${c(4)}${r}:${c(8)}${r})`, result: expenses },
+      { formula: `${c(3)}${r}-${c(9)}${r}`, result: roundCents(income - expenses) },
     ]
     values.forEach((v, j) => {
       money(ws, `${c(j)}${r}`, v)
@@ -313,7 +324,8 @@ export const MOM_NOTES = [
   "LCH Indonesia, a (COMM+EF(MAG) + COMM VIA INTERCO): komisi dan EF semua asuransi (sub akun EF dan EF (MAG)). Komisi dari LCH Singapore lewat interco yang tidak dicatat sebagai polis di sistem perlu ditambahkan di sel ini.",
   "b (O/I MARGIN): margin deklarasi MOP, yaitu premi tagihan ke klien − premi ke asuransi.",
   "e (COMM EXPENSES): sharing komisi ke LCH Singapore (isian Sharing Komisi LCH Singapore di placing slip atau polis). Beban komisi lain belum dicatat di sistem; tambahkan di sel ini.",
-  "c (O/I SPONSORSHIP), f (CASHBACK), g (REFERRAL FEE), h (DISCOUNT), dan i (PREMI BEBAN LCH) belum dicatat di sistem, jadi kosong. Isi langsung di file ini; TOTAL INCOME, TOTAL EXPENSES, NET, TOTAL, dan tabel comparative ikut terhitung ulang.",
+  "h (MARKETING EXP-DISCOUNT): additional discount Quotation di polis (persen dari gross premium), ditanggung LCH.",
+  "c (O/I SPONSORSHIP), f (CASHBACK), g (REFERRAL FEE), dan i (PREMI BEBAN LCH) belum dicatat di sistem, jadi kosong. Isi langsung di file ini; TOTAL INCOME, TOTAL EXPENSES, NET, TOTAL, dan tabel comparative ikut terhitung ulang.",
   "LCH Singapore: hanya brokerage (komisi + EF). MAG = asuransi dengan Sub akun EF \"EF (MAG)\" di Master Data > Asuransi & Adjuster (Multi Artha Guna). a = komisi asuransi MAG, b = EF asuransi MAG, c (OTHERS) = komisi + EF asuransi lain. Margin deklarasi MOP dan sharing komisi bisnis Singapore tidak ditulis.",
   "Bisnis yang hanya dicatat di sistem LCH Singapore tidak ada di laporan ini; tambahkan angkanya di bagian LCH SINGAPORE BUSINESS.",
   "Tahun pembanding memakai tanggal yang sama tahun sebelumnya, dan hanya berisi polis yang sudah dicatat di sistem.",
@@ -403,12 +415,10 @@ export function fillMomReport(
   monthLabels(ws, months, cmpFirst)
   for (let i = 0; i <= n; i++) {
     const source = idFirst + i
+    const net = (m: MomIndonesiaMonth) =>
+      m.brokerage + m.margin - m.commissionExpense - m.marketingDiscount
     const pick = (y: MomYear) =>
-      i < n
-        ? roundCents(y.indonesia[i].brokerage + y.indonesia[i].margin - y.indonesia[i].commissionExpense)
-        : roundCents(
-            y.indonesia.reduce((s, m) => s + m.brokerage + m.margin - m.commissionExpense, 0)
-          )
+      roundCents(i < n ? net(y.indonesia[i]) : y.indonesia.reduce((s, m) => s + net(m), 0))
     money(ws, `B${cmpFirst + i}`, { formula: `${netCurrent}${source}`, result: pick(current) })
     money(ws, `C${cmpFirst + i}`, { formula: `${netPrevious}${source}`, result: pick(previous) })
   }

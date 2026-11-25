@@ -24,6 +24,8 @@ export interface ReserveRow {
   commissionInterco: number
   fee: number
   margin: number
+  /** MARKETING EXP-DISCOUNT: additional discount Quotation polis, beban LCH (positif). */
+  marketingDiscount: number
 }
 
 export interface ReserveMonth {
@@ -39,6 +41,19 @@ export const reserveRevenue = (r: ReserveRow) =>
 /** Reserve dibulatkan ke juta ke arah nol, seperti kolom ROUNDING template (ROUNDDOWN(x, -6)). */
 export const reserveRounding = (reserve: number) => Math.trunc(reserve / 1_000_000) * 1_000_000 || 0
 
+/**
+ * Nilai turunan satu baris, sama dengan rumus sel: TOTAL expenses (yang tercatat sistem baru
+ * MARKETING EXP-DISCOUNT), RESERVE = revenue × 40% + expenses, ROUNDING, dan TOTAL BEBAN + RESERVE
+ * = ROUNDING − expenses. Pendapatan negatif dan beban positif.
+ */
+export function reserveFigures(r: ReserveRow) {
+  const revenue = reserveRevenue(r)
+  const expenses = roundCents(r.marketingDiscount)
+  const reserve = roundCents(revenue * RESERVE_PCT + expenses)
+  const rounding = reserveRounding(reserve)
+  return { revenue, expenses, reserve, rounding, total: roundCents(rounding - expenses) }
+}
+
 /** Pendapatan per bulan produksi per akun; bulan urut naik, akun urut nama. */
 export function reserveBasis(
   policies: RecapPolicy[],
@@ -53,13 +68,21 @@ export function reserveBasis(
     }
     let row = accounts.get(income.account)
     if (!row) {
-      row = { account: income.account, commission: 0, commissionInterco: 0, fee: 0, margin: 0 }
+      row = {
+        account: income.account,
+        commission: 0,
+        commissionInterco: 0,
+        fee: 0,
+        margin: 0,
+        marketingDiscount: 0,
+      }
       accounts.set(income.account, row)
     }
     if (income.sourceCode === INTERCO_SOURCE) row.commissionInterco += income.commission
     else row.commission += income.commission
     row.fee += income.fee
     row.margin += income.margin
+    row.marketingDiscount += income.marketingDiscount
   }
   return [...months]
     .sort(([a], [b]) => a.localeCompare(b))
@@ -72,6 +95,7 @@ export function reserveBasis(
           commissionInterco: roundCents(r.commissionInterco),
           fee: roundCents(r.fee),
           margin: roundCents(r.margin),
+          marketingDiscount: roundCents(r.marketingDiscount),
         }))
         .sort((a, b) => a.account.localeCompare(b.account)),
     }))
@@ -131,7 +155,7 @@ const COL = (i: number) => String.fromCharCode("B".charCodeAt(0) + i)
 export const RESERVE_NOTES = [
   "Pendapatan dari Rekap Produksi bulan ini (tanggal mulai polis), dikelompokkan per Grouping Insured, dalam IDR dengan kurs tetap report. Pendapatan ditulis negatif dan beban positif.",
   "COMM VIA INTERCO: komisi polis dengan Source LCH-SG (LCH Insurance Brokers Pte Ltd). O/I-MARGIN: margin rate deklarasi MOP, nilai gross sebelum cashback.",
-  "O/I-SPONSORSHIP dan kolom EXPENSES belum dicatat di sistem. Isi langsung di file ini; TOTAL, %, RESERVE, ROUNDING, dan TOTAL BEBAN + RESERVE ikut terhitung ulang.",
+  "MARKETING EXP-DISCOUNT: additional discount Quotation polis (persen dari gross premium), ditanggung LCH. O/I-SPONSORSHIP dan kolom EXPENSES lain belum dicatat di sistem. Isi langsung di file ini; TOTAL, %, RESERVE, ROUNDING, dan TOTAL BEBAN + RESERVE ikut terhitung ulang.",
   "RESERVE = 40% TOTAL revenue − TOTAL expenses (rumus sel: H×40% + N karena pendapatan negatif). Template Team LCH menulis + M (premi beban LCH), tetapi angka ROUNDING di contohnya cocok dengan TOTAL expenses (N), jadi rumus memakai N.",
   "ROUNDING: RESERVE dibulatkan ke juta ke arah nol. TOTAL BEBAN + RESERVE = ROUNDING + TOTAL expenses; persentasenya maksimal 40% dari revenue.",
 ] as const
@@ -179,9 +203,7 @@ function writeMonth(ws: Worksheet, data: ReserveMonth, printedOn: string) {
   const first = 9
   data.rows.forEach((r, i) => {
     const n = first + i
-    const revenue = reserveRevenue(r)
-    const reserve = roundCents(revenue * RESERVE_PCT)
-    const rounding = reserveRounding(reserve)
+    const { revenue, expenses, reserve, rounding, total: bebanReserve } = reserveFigures(r)
     const row = ws.getRow(n)
     row.getCell("B").value = r.account
     row.getCell("C").value = r.commission
@@ -189,14 +211,19 @@ function writeMonth(ws: Worksheet, data: ReserveMonth, printedOn: string) {
     row.getCell("E").value = r.fee
     row.getCell("F").value = r.margin
     row.getCell("H").value = { formula: `SUM(C${n}:G${n})`, result: revenue }
-    row.getCell("N").value = { formula: `SUM(I${n}:M${n})`, result: 0 }
-    row.getCell("O").value = { formula: `IF(H${n}=0,0,N${n}/H${n})`, result: 0 }
+    // MARKETING EXP-DISCOUNT dari additional discount polis; kosong tetap bisa diisi manual.
+    if (r.marketingDiscount) row.getCell("K").value = r.marketingDiscount
+    row.getCell("N").value = { formula: `SUM(I${n}:M${n})`, result: expenses }
+    row.getCell("O").value = {
+      formula: `IF(H${n}=0,0,N${n}/H${n})`,
+      result: revenue ? expenses / revenue : 0,
+    }
     row.getCell("P").value = { formula: `H${n}*40%+N${n}`, result: reserve }
     row.getCell("Q").value = { formula: `ROUNDDOWN(P${n},-6)`, result: rounding }
-    row.getCell("R").value = { formula: `Q${n}-N${n}`, result: rounding }
+    row.getCell("R").value = { formula: `Q${n}-N${n}`, result: bebanReserve }
     row.getCell("S").value = {
       formula: `IF(H${n}=0,0,R${n}/H${n})`,
-      result: revenue ? rounding / revenue : 0,
+      result: revenue ? bebanReserve / revenue : 0,
     }
   })
 
@@ -206,11 +233,12 @@ function writeMonth(ws: Worksheet, data: ReserveMonth, printedOn: string) {
   totals.getCell("B").value = "TOTAL"
   const sum = (key: keyof Omit<ReserveRow, "account">) =>
     roundCents(data.rows.reduce((s, r) => s + r[key], 0))
-  const totalRevenue = roundCents(data.rows.reduce((s, r) => s + reserveRevenue(r), 0))
-  const totalRounding = data.rows.reduce(
-    (s, r) => s + reserveRounding(roundCents(reserveRevenue(r) * RESERVE_PCT)),
-    0
-  )
+  const figures = data.rows.map(reserveFigures)
+  const add = (key: keyof ReturnType<typeof reserveFigures>) =>
+    roundCents(figures.reduce((s, f) => s + f[key], 0))
+  const totalRevenue = add("revenue")
+  const totalExpenses = add("expenses")
+  const totalBebanReserve = add("total")
   const results: Record<string, number> = {
     C: sum("commission"),
     D: sum("commissionInterco"),
@@ -220,21 +248,24 @@ function writeMonth(ws: Worksheet, data: ReserveMonth, printedOn: string) {
     H: totalRevenue,
     I: 0,
     J: 0,
-    K: 0,
+    K: sum("marketingDiscount"),
     L: 0,
     M: 0,
-    N: 0,
-    P: roundCents(totalRevenue * RESERVE_PCT),
-    Q: totalRounding,
-    R: totalRounding,
+    N: totalExpenses,
+    P: add("reserve"),
+    Q: add("rounding"),
+    R: totalBebanReserve,
   }
   for (const [col, result] of Object.entries(results)) {
     totals.getCell(col).value = { formula: `SUM(${col}${first}:${col}${last})`, result }
   }
-  totals.getCell("O").value = { formula: `IF(H${total}=0,0,N${total}/H${total})`, result: 0 }
+  totals.getCell("O").value = {
+    formula: `IF(H${total}=0,0,N${total}/H${total})`,
+    result: totalRevenue ? totalExpenses / totalRevenue : 0,
+  }
   totals.getCell("S").value = {
     formula: `IF(H${total}=0,0,R${total}/H${total})`,
-    result: totalRevenue ? totalRounding / totalRevenue : 0,
+    result: totalRevenue ? totalBebanReserve / totalRevenue : 0,
   }
   totals.font = { bold: true }
 

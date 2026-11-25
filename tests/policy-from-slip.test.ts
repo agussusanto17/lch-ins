@@ -81,3 +81,12 @@ test("provisional policy numbers come from the Closing Instruction number", () =
   assert.equal(isProvisionalPolicyNo(`${ci} (PAR)`), true)
   assert.equal(isProvisionalPolicyNo("PAR/2025/JKT/0871"), false)
 })
+
+test("additional discount Quotation ikut ke polis, kecuali open cover", () => {
+  const slip = { ...closedSlip(), additionalDiscountPct: 5 }
+  assert.equal(policyFieldsFromSlip(slip, null).additionalDiscountPct, 5)
+  assert.equal(policyFieldsFromSlip(closedSlip(), null).additionalDiscountPct, 0)
+  // Polis induk MOP tanpa premi: additional discount tidak dipakai.
+  assert.equal(policyFieldsFromSlip({ ...slip, openCover: true }, null).additionalDiscountPct, 0)
+})
+

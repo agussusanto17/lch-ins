@@ -67,6 +67,12 @@ const policyInputSchema = z
     discountAmount: z.number().optional(),
     // Deklarasi MOP: premi tagihan ke klien, untuk margin (Agus, 22 November 2026).
     clientPremium: z.number().min(0, "Premi tagihan ke klien tidak boleh negatif").nullable().optional(),
+    // Additional discount Quotation (%), beban LCH (Agus, 25 November 2026).
+    additionalDiscountPct: z
+      .number()
+      .min(0, "Additional discount tidak boleh negatif")
+      .max(100, "Additional discount maksimal 100%")
+      .optional(),
     // Deklarasi MOP: ETD dari General Marine Report (Agus, 23 November 2026).
     etdDate: isoDate.nullable().optional(),
     brokeragePct: z.number().min(0).max(100),

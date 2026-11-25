@@ -71,7 +71,7 @@ import {
 } from "@/lib/data"
 import { addMonths } from "@/lib/date"
 import type { ExportSpec } from "@/lib/export"
-import { grossPremium } from "@/lib/calc"
+import { additionalDiscountFor, grossPremium } from "@/lib/calc"
 import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
 import { MAIN_POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
@@ -388,6 +388,19 @@ export function PolicyDatabase({
       { header: "Sum Insured", value: (p) => p.sumInsured, type: "money" },
       { header: "Gross Premium", value: (p) => grossPremium(p), type: "money" },
       { header: "Diskon", value: (p) => p.discountAmount ?? 0, type: "money" },
+      // Additional discount Quotation, beban LCH (Agus, 25 November 2026).
+      {
+        header: "Additional Discount (%)",
+        value: (p) => (p.additionalDiscountPct ? p.additionalDiscountPct / 100 : null),
+        type: "number",
+        numFmt: "0.00%",
+      },
+      {
+        header: "Additional Discount",
+        value: (p) =>
+          p.additionalDiscountPct ? additionalDiscountFor(p.premium, p.additionalDiscountPct) : null,
+        type: "money",
+      },
       // Premi installment (Agus, 20 November 2026).
       { header: "Pembayaran Premi", value: (p) => installmentLabel(p.premiumInstallments) },
       {

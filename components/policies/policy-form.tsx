@@ -25,6 +25,7 @@ import { Field, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/f
 import { Switch } from "@/components/ui/switch"
 import { EndorsementParticipants } from "@/components/policies/endorsement-participants"
 import {
+  additionalDiscountFor,
   additionalFeeBeforeVatFor,
   additionalFeeFor,
   brokerageCapFor,
@@ -179,6 +180,12 @@ const schema = z
     sumInsured: z.number(),
     premium: z.number(),
     discountAmount: z.number().optional(),
+    // Additional discount Quotation (%), beban LCH (Agus, 25 November 2026).
+    additionalDiscountPct: z
+      .number()
+      .min(0, "Additional discount tidak boleh negatif")
+      .max(100, "Additional discount maksimal 100%")
+      .optional(),
     brokeragePct: z
       .number()
       .min(0, "Brokerage tidak boleh negatif")
@@ -1123,6 +1130,27 @@ export function PolicyForm({
                 }).`}
               />
             )}
+            {draft.type === "Baru" || draft.type === "Renewal" ? (
+              // Additional discount Quotation ikut dari slip, ditanggung LCH: tidak mengurangi
+              // Nett Premium ke asuransi (Agus, 25 November 2026).
+              <NumberField
+                label="Additional Discount (%)"
+                preset="percent"
+                min={0}
+                max={100}
+                value={draft.additionalDiscountPct || null}
+                onValueChange={(v) => set({ additionalDiscountPct: v ?? 0 })}
+                error={errors.additionalDiscountPct}
+                description={
+                  draft.additionalDiscountPct
+                    ? `${money(
+                        additionalDiscountFor(draft.premium, draft.additionalDiscountPct),
+                        draft.currency
+                      )} dari Gross Premium. Ditanggung LCH, tidak mengurangi Nett Premium ke asuransi.`
+                    : "Diskon tambahan LCH dari Quotation Internal, persen dari Gross Premium. Ditanggung LCH, tidak mengurangi Nett Premium ke asuransi."
+                }
+              />
+            ) : null}
             {isEndorsement ? (
               <>
                 <NumberField

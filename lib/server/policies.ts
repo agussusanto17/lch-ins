@@ -117,6 +117,7 @@ function toPolicyRecord(
     sumInsured: Number(row.sumInsured),
     premium: Number(row.premium),
     discountAmount: Number(row.discountAmount),
+    additionalDiscountPct: Number(row.additionalDiscountPct),
     brokeragePct: Number(row.brokeragePct),
     includeVat: row.includeVat,
     commissionShareSgPct: Number(row.commissionShareSgPct),
@@ -165,6 +166,7 @@ function auditSnapshot(p: PolicyRecord) {
     sumInsured: p.sumInsured,
     premium: p.premium,
     discountAmount: p.discountAmount ?? 0,
+    additionalDiscountPct: p.additionalDiscountPct ?? 0,
     brokeragePct: p.brokeragePct,
     commissionShareSgPct: p.commissionShareSgPct ?? 0,
     additionalFee: p.additionalFee ?? 0,
@@ -337,6 +339,9 @@ async function policyData(tx: Tx, input: PolicyInput) {
     sumInsured: input.sumInsured,
     premium,
     discountAmount,
+    // Additional discount Quotation, beban LCH; hanya polis Baru dan Renewal (Agus, 25 November 2026).
+    additionalDiscountPct:
+      input.type === "Baru" || input.type === "Renewal" ? (input.additionalDiscountPct ?? 0) : 0,
     brokeragePct: input.brokeragePct,
     includeVat: input.includeVat ?? false,
     // Sharing brokerage ke LCH Singapore, persen dari brokerage (Agus, 22 November 2026).
