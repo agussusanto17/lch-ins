@@ -5,6 +5,7 @@ import {
   additionalDiscountFor,
   calculateParEqvet,
   internalTotalPayable,
+  maxAdditionalDiscountPct,
   recalcSlip,
   totalPayable,
 } from "../lib/calc"
@@ -45,9 +46,9 @@ function propertySlip(additionalDiscountPct?: number): PlacingSlip {
   })
 }
 
-test("additional discount dihitung dari premi setelah discount utama", () => {
-  assert.equal(additionalDiscountFor(9_000_000, 5), 450_000)
-  assert.equal(additionalDiscountFor(9_000_000, undefined), 0)
+test("additional discount dihitung dari gross premium, sebelum discount utama", () => {
+  assert.equal(additionalDiscountFor(10_000_000, 5), 500_000)
+  assert.equal(additionalDiscountFor(10_000_000, undefined), 0)
   assert.equal(additionalDiscountFor(1_000_000.55, 15), 150_000.08)
 })
 
@@ -55,8 +56,9 @@ test("slip biasa: Total Payable internal = premi − discount − additional + b
   const slip = liabilitySlip(5)
   // Total Payable resmi tetap memakai discount utama saja.
   assert.equal(totalPayable(slip), 9_060_000)
-  // 10.000.000 − 1.000.000 = 9.000.000; − 5% = 8.550.000; + 60.000.
-  assert.equal(internalTotalPayable(slip), 8_610_000)
+  // 10.000.000 − discount 1.000.000 − additional 5% × 10.000.000 (500.000) + 60.000
+  // (Agus, 25 November 2026: additional discount dari gross premium).
+  assert.equal(internalTotalPayable(slip), 8_560_000)
   assert.equal(internalTotalPayable(liabilitySlip()), totalPayable(liabilitySlip()))
 })
 
@@ -68,7 +70,16 @@ test("slip PAR + EQVET: additional discount per kelompok polis", () => {
   assert.equal(eqvet.subtotal, 6_000_000)
   assert.equal(eqvet.afterDiscount, 5_400_000)
   assert.equal(grandTotal, totalPayable(slip))
-  // PAR: 17.787.600 − 889.380 + 50.000; EQVET: 5.400.000 − 270.000 + 50.000.
-  assert.equal(internalTotalPayable(slip), 16_948_220 + 5_180_000)
+  // Additional 5% dari gross per kelompok. PAR: 17.787.600 − 988.200 (5% × 19.764.000) + 50.000;
+  // EQVET: 5.400.000 − 300.000 (5% × 6.000.000) + 50.000.
+  assert.equal(internalTotalPayable(slip), 16_849_400 + 5_150_000)
   assert.equal(internalTotalPayable(propertySlip()), grandTotal)
+})
+
+test("discount + additional discount maksimal 100% dari gross premium", () => {
+  assert.equal(maxAdditionalDiscountPct({ discountPct: 0 }), 100)
+  assert.equal(maxAdditionalDiscountPct({ discountPct: 10 }), 90)
+  assert.equal(maxAdditionalDiscountPct({ discountPct: 100 }), 0)
+  // Batas tertinggi: premi internal tinggal biaya polis, tidak negatif.
+  assert.equal(internalTotalPayable(liabilitySlip(90)), 60_000)
 })
