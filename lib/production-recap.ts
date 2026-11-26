@@ -13,6 +13,7 @@ import {
   feeBeforeVat,
   FX,
   magCommissionVat,
+  policyAdditionalDiscount,
   roundCents,
 } from "@/lib/calc"
 import { addExportSheet, type ExportColumn } from "@/lib/export"
@@ -62,6 +63,9 @@ export interface RecapPolicy {
    * 2026). Beban MARKETING-DISCOUNT BEBAN LCH; tidak mengurangi premi ke asuransi.
    */
   additionalDiscountPct?: number
+  /** Admin cost dan stamp duty polis; ikut beban LCH bila polis dibayar penuh LCH. */
+  adminCost?: number
+  stampDuty?: number
   /**
    * Deklarasi MOP: premi tagihan ke klien menurut rate yang diupload. Premi deklarasi adalah premi
    * ke asuransi menurut rate MOP; selisihnya margin LCH (Agus, 22 November 2026).
@@ -285,8 +289,18 @@ function insurerLines(policies: readonly RecapPolicy[], fx: Record<string, numbe
           ((gross * policy.brokeragePct) / 100 / (policy.includeVat ? 1 + BROKERAGE_VAT_RATE : 1)) *
           ((policy.commissionShareSgPct || 0) / 100),
         // Additional discount Quotation dari gross premium bagian asuransi ini (Agus, 25 November
+        // 2026), ditambah admin cost dan stamp duty bila polis dibayar penuh LCH (Harry, 26 November
         // 2026).
-        marketingDiscount: (gross * (policy.additionalDiscountPct || 0)) / 100,
+        marketingDiscount:
+          (policyAdditionalDiscount({
+            premium: policy.premium,
+            discountAmount: policy.discount,
+            additionalDiscountPct: policy.additionalDiscountPct,
+            adminCost: policy.adminCost,
+            stampDuty: policy.stampDuty,
+          }) *
+            insurer.share) /
+          100,
       }
     })
   })
@@ -659,7 +673,7 @@ export const RECAP_NOTES = [
   "Object: objek pertanggungan dari baris Interest slip (kendaraan, barang, alat), atau lokasi risiko polis bila tidak ada.",
   "Per Polis: format alternatif Team LCH, satu baris per polis per asuransi dengan kolom nilai per sub akun.",
   "Beban komisi: sharing brokerage ke LCH Singapore (isian Sharing Komisi LCH Singapore di placing slip/polis) ditulis sebagai baris EXPENSE / COMM EXPENSE dengan sub akun comm exp LCH Insurance Brokers Pte Ltd, dan kolom EXPENSE-COMMISIONS di sheet Per Polis.",
-  "MARKETING-DISCOUNT BEBAN LCH: additional discount Quotation di polis (persen dari gross premium), ditanggung LCH dan tidak mengurangi premi ke asuransi. Ditulis sebagai baris EXPENSE dan kolom MARKETING-DISCOUNT BEBAN LCH di sheet Per Polis.",
+  "MARKETING-DISCOUNT BEBAN LCH: additional discount Quotation di polis (persen dari gross premium), ditanggung LCH dan tidak mengurangi premi ke asuransi. Polis yang dibayar penuh LCH (discount + additional discount 100%) juga memasukkan admin cost dan stamp duty. Ditulis sebagai baris EXPENSE dan kolom MARKETING-DISCOUNT BEBAN LCH di sheet Per Polis.",
   "Beban lain (MARKETING-CASHBACK, REFERRAL FEE, PREMI BEBAN LCH) dan O/I-SPONSORSHIP belum dicatat di sistem, jadi berisi 0. Kolomnya bisa diisi langsung di file ini.",
 ] as const
 

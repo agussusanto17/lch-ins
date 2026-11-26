@@ -142,6 +142,7 @@ import {
   isParEqvetSlip,
   MAX_ADDITIONAL_DISCOUNT_PCT,
   maxAdditionalDiscountPct,
+  slipChargesPaidByLch,
   parEqvetPolicyCharge,
   sumPercent,
   totalPayable,
@@ -769,6 +770,8 @@ function SlipEditor({
   const additionalPct = slip.additionalDiscountPct || 0
   const additionalMax = maxAdditionalDiscountPct(slip)
   const internalPayable = internalTotalPayable(slip)
+  // Polis dibayar penuh LCH: admin cost dan stamp duty ikut ditanggung LCH (Harry, 26 November 2026).
+  const lchCharges = slipChargesPaidByLch(slip)
   // Premi installment (Agus, 20 November 2026): bukan untuk open cover dan slip perubahan.
   const installmentsEnabled = !usesOpenCover(slip) && !changeSlip
   // Slip PAR + EQVET: Admin Cost dan Stamp Duty dikenakan per polis yang
@@ -2430,7 +2433,9 @@ function SlipEditor({
                       <p className="text-xs text-muted-foreground sm:col-span-2 sm:pt-7">
                         Dihitung dari gross premium, sebelum discount. Hanya dicetak
                         di Quotation Slip Internal LCH; Closing Instruction, polis, dan
-                        report tetap memakai Discount di atas.
+                        report tetap memakai Discount di atas. Discount + additional
+                        discount 100% berarti polis dibayar LCH: admin cost dan stamp duty
+                        ikut ditanggung LCH.
                       </p>
                     </div>
                     {additionalPct > additionalMax ? (
@@ -2444,9 +2449,17 @@ function SlipEditor({
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>Additional Discount {percent(additionalPct)}</span>
                           <span className="tabular">
-                            ({money(payable - internalPayable, slip.currency)})
+                            ({money(payable - internalPayable - lchCharges, slip.currency)})
                           </span>
                         </div>
+                        {lchCharges ? (
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Admin cost & stamp duty ditanggung LCH</span>
+                            <span className="tabular">
+                              ({money(lchCharges, slip.currency)})
+                            </span>
+                          </div>
+                        ) : null}
                         <div className="flex items-center justify-between text-sm font-semibold">
                           <span>Total Payable internal LCH</span>
                           <span className="tabular">

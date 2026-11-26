@@ -324,7 +324,7 @@ export const MOM_NOTES = [
   "LCH Indonesia, a (COMM+EF(MAG) + COMM VIA INTERCO): komisi dan EF semua asuransi (sub akun EF dan EF (MAG)). Komisi dari LCH Singapore lewat interco yang tidak dicatat sebagai polis di sistem perlu ditambahkan di sel ini.",
   "b (O/I MARGIN): margin deklarasi MOP, yaitu premi tagihan ke klien − premi ke asuransi.",
   "e (COMM EXPENSES): sharing komisi ke LCH Singapore (isian Sharing Komisi LCH Singapore di placing slip atau polis). Beban komisi lain belum dicatat di sistem; tambahkan di sel ini.",
-  "h (MARKETING EXP-DISCOUNT): additional discount Quotation di polis (persen dari gross premium), ditanggung LCH.",
+  "h (MARKETING EXP-DISCOUNT): additional discount Quotation di polis (persen dari gross premium), ditanggung LCH; polis yang dibayar penuh LCH (discount + additional discount 100%) juga memasukkan admin cost dan stamp duty.",
   "c (O/I SPONSORSHIP), f (CASHBACK), g (REFERRAL FEE), dan i (PREMI BEBAN LCH) belum dicatat di sistem, jadi kosong. Isi langsung di file ini; TOTAL INCOME, TOTAL EXPENSES, NET, TOTAL, dan tabel comparative ikut terhitung ulang.",
   "LCH Singapore: hanya brokerage (komisi + EF). MAG = asuransi dengan Sub akun EF \"EF (MAG)\" di Master Data > Asuransi & Adjuster (Multi Artha Guna). a = komisi asuransi MAG, b = EF asuransi MAG, c (OTHERS) = komisi + EF asuransi lain. Margin deklarasi MOP dan sharing komisi bisnis Singapore tidak ditulis.",
   "Bisnis yang hanya dicatat di sistem LCH Singapore tidak ada di laporan ini; tambahkan angkanya di bagian LCH SINGAPORE BUSINESS.",

@@ -17,6 +17,8 @@ import {
   calculateParEqvet,
   discountAmount,
   internalTotalPayable,
+  parEqvetGroupPaidByLch,
+  slipChargesPaidByLch,
   isParEqvetSlip,
   ratePermilText,
   roundCents,
@@ -1153,6 +1155,15 @@ export function PayableTable({
             </td>
           </tr>
         ) : null}
+        {internal && slipChargesPaidByLch(slip) ? (
+          // Polis dibayar penuh LCH (Harry, 26 November 2026).
+          <tr className="border-b">
+            <td className="py-2">Admin Cost + Stamp Duty borne by LCH</td>
+            <td className="tabular py-2 text-right">
+              ({moneyCents(slipChargesPaidByLch(slip), slip.currency)})
+            </td>
+          </tr>
+        ) : null}
         <tr className="bg-primary/8 text-primary">
           <td className="px-2 py-2.5 font-bold">Total Payable</td>
           <td className="tabular px-2 py-2.5 text-right font-bold">
@@ -1286,6 +1297,9 @@ function ParEqvetGroupSection({
   const lastIndex = group.lines.length - 1
   const internal = additionalPct != null
   const additional = internal ? additionalDiscountFor(group.subtotal, additionalPct) : 0
+  // Kelompok yang dibayar penuh LCH: biaya polisnya juga ditanggung LCH (Harry, 26 November 2026).
+  const lchCharges =
+    internal && parEqvetGroupPaidByLch(group, additionalPct ?? 0) ? group.policyCost : 0
 
   return (
     <tbody>
@@ -1361,10 +1375,21 @@ function ParEqvetGroupSection({
         sign="+"
       />
 
+      {lchCharges ? (
+        <SummaryRow
+          label="Policy Cost + Stamp Duty borne by LCH"
+          className="text-muted-foreground"
+          value={lchCharges}
+          currency={currency}
+          negative
+          sign="-"
+        />
+      ) : null}
+
       <SummaryRow
         label={`Total Premium ${group.name}`}
         className="border-t border-b font-bold"
-        value={roundCents(group.total - additional)}
+        value={roundCents(group.total - additional - lchCharges)}
         currency={currency}
       />
     </tbody>
@@ -1622,6 +1647,17 @@ function LocationScheduleTable({
               {amount(roundCents((slip.stampDuty || 0) * policies))}
             </td>
           </tr>
+          {internal && slipChargesPaidByLch(slip) ? (
+            // Polis dibayar penuh LCH (Harry, 26 November 2026).
+            <tr className="avoid-break border-b">
+              <td colSpan={5} className="py-1.5 pr-2">
+                Policy Cost + Stamp Duty borne by LCH
+              </td>
+              <td className="tabular py-1.5 text-right whitespace-nowrap">
+                ({amount(slipChargesPaidByLch(slip))})
+              </td>
+            </tr>
+          ) : null}
           <tr className="avoid-break bg-primary/8 font-bold text-primary">
             <td colSpan={5} className="px-2 py-2">
               Grand Total Premium (PAR+EQVET)
@@ -1967,6 +2003,15 @@ export function VehicleScheduleAppendix({
             <tr className="border-b">
               <td className="py-1">Stamp Duty</td>
               <td className="tabular py-1 text-right">{moneyCents(slip.stampDuty, currency)}</td>
+            </tr>
+          ) : null}
+          {internal && slipChargesPaidByLch(slip) ? (
+            // Polis dibayar penuh LCH (Harry, 26 November 2026).
+            <tr className="border-b">
+              <td className="py-1">Admin Cost + Stamp Duty borne by LCH</td>
+              <td className="tabular py-1 text-right">
+                ({moneyCents(slipChargesPaidByLch(slip), currency)})
+              </td>
             </tr>
           ) : null}
           <tr className="font-bold">

@@ -155,7 +155,7 @@ const COL = (i: number) => String.fromCharCode("B".charCodeAt(0) + i)
 export const RESERVE_NOTES = [
   "Pendapatan dari Rekap Produksi bulan ini (tanggal mulai polis), dikelompokkan per Grouping Insured, dalam IDR dengan kurs tetap report. Pendapatan ditulis negatif dan beban positif.",
   "COMM VIA INTERCO: komisi polis dengan Source LCH-SG (LCH Insurance Brokers Pte Ltd). O/I-MARGIN: margin rate deklarasi MOP, nilai gross sebelum cashback.",
-  "MARKETING EXP-DISCOUNT: additional discount Quotation polis (persen dari gross premium), ditanggung LCH. O/I-SPONSORSHIP dan kolom EXPENSES lain belum dicatat di sistem. Isi langsung di file ini; TOTAL, %, RESERVE, ROUNDING, dan TOTAL BEBAN + RESERVE ikut terhitung ulang.",
+  "MARKETING EXP-DISCOUNT: additional discount Quotation polis (persen dari gross premium), ditanggung LCH; polis yang dibayar penuh LCH juga memasukkan admin cost dan stamp duty. O/I-SPONSORSHIP dan kolom EXPENSES lain belum dicatat di sistem. Isi langsung di file ini; TOTAL, %, RESERVE, ROUNDING, dan TOTAL BEBAN + RESERVE ikut terhitung ulang.",
   "RESERVE = 40% TOTAL revenue − TOTAL expenses (rumus sel: H×40% + N karena pendapatan negatif). Template Team LCH menulis + M (premi beban LCH), tetapi angka ROUNDING di contohnya cocok dengan TOTAL expenses (N), jadi rumus memakai N.",
   "ROUNDING: RESERVE dibulatkan ke juta ke arah nol. TOTAL BEBAN + RESERVE = ROUNDING + TOTAL expenses; persentasenya maksimal 40% dari revenue.",
 ] as const

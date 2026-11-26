@@ -1,9 +1,9 @@
 import {
-  additionalDiscountFor,
   additionalFeeVatFor,
   beforeVat,
   grossPremium,
   magCommissionVatFor,
+  policyAdditionalDiscount,
   toIdr,
 } from "../calc"
 import { policyStatus } from "./policy-status"
@@ -38,14 +38,18 @@ export function brokerageIdr(p: {
 
 /**
  * Additional discount Quotation polis dalam IDR: persen × gross premium, ditanggung LCH (Agus, 25
- * November 2026). Tidak mengurangi premi ke asuransi; polis tanpa additional discount 0.
+ * November 2026), ditambah admin cost dan stamp duty bila polis dibayar penuh LCH. Tidak
+ * mengurangi premi ke asuransi; polis tanpa additional discount 0.
  */
 export function additionalDiscountIdr(p: {
   premium: number
   currency: string
+  discountAmount?: number
   additionalDiscountPct?: number
+  adminCost?: number
+  stampDuty?: number
 }) {
-  return toIdr(additionalDiscountFor(p.premium, p.additionalDiscountPct), p.currency)
+  return toIdr(policyAdditionalDiscount(p), p.currency)
 }
 
 /**

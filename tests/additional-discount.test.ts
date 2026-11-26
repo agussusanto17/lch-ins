@@ -6,7 +6,9 @@ import {
   calculateParEqvet,
   internalTotalPayable,
   maxAdditionalDiscountPct,
+  paidByLch,
   recalcSlip,
+  slipChargesPaidByLch,
   totalPayable,
 } from "../lib/calc"
 import { emptySlip, switchCob } from "../components/underwriting/slip-model"
@@ -80,6 +82,20 @@ test("discount + additional discount maksimal 100% dari gross premium", () => {
   assert.equal(maxAdditionalDiscountPct({ discountPct: 0 }), 100)
   assert.equal(maxAdditionalDiscountPct({ discountPct: 10 }), 90)
   assert.equal(maxAdditionalDiscountPct({ discountPct: 100 }), 0)
-  // Batas tertinggi: premi internal tinggal biaya polis, tidak negatif.
-  assert.equal(internalTotalPayable(liabilitySlip(90)), 60_000)
+  // Batas tertinggi berarti polis dibayar LCH: biaya polis ikut ditanggung, premi internal 0.
+  assert.equal(internalTotalPayable(liabilitySlip(90)), 0)
+})
+
+test("polis dibayar LCH: discount + additional 100%, admin cost dan stamp duty ikut ditanggung", () => {
+  assert.equal(paidByLch(10_000_000, 1_000_000, 9_000_000), true)
+  assert.equal(paidByLch(10_000_000, 1_000_000, 8_999_999), false)
+  assert.equal(paidByLch(10_000_000, 0, 0), false)
+  // Slip biasa: admin 50.000 + meterai 10.000 ditanggung LCH.
+  assert.equal(slipChargesPaidByLch(liabilitySlip(90)), 60_000)
+  assert.equal(slipChargesPaidByLch(liabilitySlip(5)), 0)
+  assert.equal(internalTotalPayable({ ...liabilitySlip(100), discountPct: 0 }), 0)
+  // PAR + EQVET: kedua kelompok dibayar LCH, biaya polis 2 × 50.000.
+  assert.equal(slipChargesPaidByLch(propertySlip(90)), 100_000)
+  assert.equal(internalTotalPayable(propertySlip(90)), 0)
+  assert.equal(slipChargesPaidByLch(propertySlip(5)), 0)
 })

@@ -120,9 +120,52 @@ export function additionalDiscountFor(grossPremium: number, pct: number | undefi
 }
 
 /**
+ * Polis dibayar penuh oleh LCH (Harry lewat Agus, 26 November 2026): discount + additional discount
+ * menutup seluruh gross premium. Admin cost dan stamp duty ikut ditanggung LCH, jadi klien tidak
+ * membayar apa pun.
+ */
+export function paidByLch(gross: number, discount: number, additional: number) {
+  return additional > 0 && gross > 0 && roundCents(gross - discount - additional) <= 0
+}
+
+/** Kelompok PAR atau EQVET yang dibayar penuh LCH, lihat `paidByLch`. */
+export function parEqvetGroupPaidByLch(
+  group: Pick<ParEqvetGroup, "subtotal" | "discountAmount">,
+  additionalPct: number | undefined
+) {
+  return paidByLch(
+    group.subtotal,
+    group.discountAmount,
+    additionalDiscountFor(group.subtotal, additionalPct)
+  )
+}
+
+/**
+ * Admin cost + stamp duty slip yang ditanggung LCH karena slip (atau kelompok PAR/EQVET-nya)
+ * dibayar penuh LCH; 0 bila klien masih membayar sebagian premi.
+ */
+export function slipChargesPaidByLch(slip: PlacingSlip) {
+  const pct = slip.additionalDiscountPct || 0
+  if (isParEqvetSlip(slip)) {
+    const { par, eqvet } = calculateParEqvet(slip)
+    return roundCents(
+      [par, eqvet].reduce(
+        (sum, g) => sum + (parEqvetGroupPaidByLch(g, pct) ? g.policyCost : 0),
+        0
+      )
+    )
+  }
+  const gross = totalPremium(slip)
+  return paidByLch(gross, discountAmount(slip), additionalDiscountFor(gross, pct))
+    ? roundCents((slip.adminCost || 0) + (slip.stampDuty || 0))
+    : 0
+}
+
+/**
  * Total Payable cetakan internal: premi setelah discount dan additional discount, ditambah biaya
  * polis. Additional discount dihitung dari gross premium. Slip PAR + EQVET menghitungnya per
- * kelompok, seperti discount utama.
+ * kelompok, seperti discount utama. Polis yang dibayar penuh LCH: 0, karena biaya polisnya juga
+ * ditanggung LCH.
  */
 export function internalTotalPayable(slip: PlacingSlip) {
   const pct = slip.additionalDiscountPct || 0
@@ -130,19 +173,38 @@ export function internalTotalPayable(slip: PlacingSlip) {
     const { par, eqvet } = calculateParEqvet(slip)
     return roundCents(
       [par, eqvet].reduce(
-        (sum, g) => sum + g.total - additionalDiscountFor(g.subtotal, pct),
+        (sum, g) =>
+          sum +
+          (parEqvetGroupPaidByLch(g, pct) ? 0 : g.total - additionalDiscountFor(g.subtotal, pct)),
         0
       )
     )
   }
   const gross = totalPremium(slip)
+  const discount = discountAmount(slip)
+  const additional = additionalDiscountFor(gross, pct)
+  if (paidByLch(gross, discount, additional)) return 0
   return roundCents(
-    gross -
-      discountAmount(slip) -
-      additionalDiscountFor(gross, pct) +
-      (slip.adminCost || 0) +
-      (slip.stampDuty || 0)
+    gross - discount - additional + (slip.adminCost || 0) + (slip.stampDuty || 0)
   )
+}
+
+/**
+ * Beban LCH dari additional discount satu polis: persen × gross premium, ditambah admin cost dan
+ * stamp duty bila polis dibayar penuh LCH (Harry, 26 November 2026). Bertanda sama dengan premi.
+ */
+export function policyAdditionalDiscount(p: {
+  premium: number
+  discountAmount?: number
+  additionalDiscountPct?: number
+  adminCost?: number
+  stampDuty?: number
+}) {
+  const additional = additionalDiscountFor(p.premium, p.additionalDiscountPct)
+  const charges = paidByLch(p.premium, p.discountAmount ?? 0, additional)
+    ? (p.adminCost || 0) + (p.stampDuty || 0)
+    : 0
+  return roundCents(additional + charges)
 }
 
 /**
