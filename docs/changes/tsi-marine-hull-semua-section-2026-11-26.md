@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-26
 - **Branch:** `fix/marine-hull-tsi-semua-section`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #326
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
