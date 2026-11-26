@@ -19,7 +19,7 @@ import {
 import { addExportSheet, type ExportColumn } from "@/lib/export"
 import { duplicateFlags } from "@/lib/production-duplicates"
 import { dateShort } from "@/lib/format"
-import type { PolicyType } from "@/lib/data/types"
+import type { PolicyType, PremiumInstallment } from "@/lib/data/types"
 
 /** Data polis yang dibutuhkan rekap, disiapkan server. */
 export interface RecapPolicy {
@@ -66,6 +66,8 @@ export interface RecapPolicy {
   /** Admin cost dan stamp duty polis; ikut beban LCH bila polis dibayar penuh LCH. */
   adminCost?: number
   stampDuty?: number
+  /** Jadwal premi installment polis (persen dan jatuh tempo); kosong = dibayar sekaligus. */
+  premiumInstallments?: PremiumInstallment[]
   /**
    * Deklarasi MOP: premi tagihan ke klien menurut rate yang diupload. Premi deklarasi adalah premi
    * ke asuransi menurut rate MOP; selisihnya margin LCH (Agus, 22 November 2026).
@@ -156,6 +158,8 @@ export const RECAP_HEADERS = [
   // Tambahan sistem di luar contoh LCH: margin rate deklarasi MOP (Agus, 20 November 2026).
   "Margin_Rate_OC",
   "Margin_Rate",
+  // Jatuh tempo cicilan baris ini untuk polis dengan premi installment (Agus, 26 November 2026).
+  "Jatuh Tempo Cicilan",
   // Tanda data produksi yang kemungkinan dobel; datanya tetap ditulis (Agus, 22 November 2026).
   "Cek Dobel",
 ] as const
@@ -368,6 +372,7 @@ function baseRow(line: InsurerLine): RecapRow {
     "Perusahaan/Perorangan": p.clientType === "Korporasi" ? "Perusahaan" : (p.clientType ?? ""),
     Margin_Rate_OC: 0,
     Margin_Rate: 0,
+    "Jatuh Tempo Cicilan": "",
     "Cek Dobel": "",
   }
 }
@@ -466,7 +471,42 @@ export function recapRows(policies: RecapPolicy[], fx: Record<string, number> = 
         "sub akun pnl": MARKETING_DISCOUNT,
       })
     }
-    return rows
+    return splitInstallments(rows, p.premiumInstallments ?? [])
+  })
+}
+
+/**
+ * Polis dengan premi installment ditulis satu baris per cicilan (Agus, 26 November 2026), seperti
+ * nota per cicilan di sistem LCH: Instl = cicilan ke-, Jatuh Tempo Cicilan dari jadwal polis, dan
+ * nilai uang dibagi sesuai persen cicilan. Cicilan terakhir menampung pembulatan, jadi jumlah semua
+ * cicilan sama dengan nilai polis. Baris diurutkan per cicilan. Polis tanpa installment: Instl 0.
+ */
+function splitInstallments(
+  rows: readonly RecapRow[],
+  installments: readonly PremiumInstallment[]
+): RecapRow[] {
+  if (installments.length < 2) return [...rows]
+  const allocated = rows.map(() => new Map<string, number>())
+  return installments.flatMap((inst, i) => {
+    const last = i === installments.length - 1
+    return rows.map((row, r) => {
+      const part: RecapRow = {
+        ...row,
+        Instl: inst.no,
+        "Jatuh Tempo Cicilan": recapDate(inst.dueDate),
+      }
+      for (const key of MONEY) {
+        const column = key as keyof RecapRow
+        const value = Number(row[column]) || 0
+        const before = allocated[r].get(key) ?? 0
+        const share = last
+          ? roundCents(value - before)
+          : roundCents((value * (inst.pct || 0)) / 100)
+        allocated[r].set(key, roundCents(before + share))
+        part[column] = share
+      }
+      return part
+    })
   })
 }
 
@@ -666,6 +706,7 @@ export function recapIncome(
 export const RECAP_NOTES = [
   "Rekap Produksi: satu baris per polis per asuransi per unsur pendapatan. Premi dan diskon hanya ditulis di baris COMM, jadi jumlah premi tidak dobel.",
   "akun pnl: INCOME untuk pendapatan dan EXPENSE untuk beban. Pendapatan ditulis negatif dan beban positif, seperti kolom (Income)/Beban contoh LCH.",
+  "Instl: cicilan ke- untuk polis dengan premi installment; 0 = premi dibayar sekaligus. Polis installment ditulis satu baris per cicilan: premi, diskon, komisi, EF, margin, dan beban dibagi sesuai persen cicilan (cicilan terakhir menampung pembulatan), dan Jatuh Tempo Cicilan dari jadwal polis. Admin cost dan stamp duty yang ikut cicilan pertama tidak ditulis di rekap. Sheet Per Polis tetap satu baris per polis.",
   "Cek Dobel: tanda polis yang kemungkinan tercatat dua kali, barisnya berwarna oranye. Datanya tetap ditulis dan ikut dijumlah; cek di Policy Database lalu hapus atau perbaiki yang dobel. Aturannya: no. polis sama dipakai lebih dari satu data, atau tipe, tertanggung, COB, tanggal mulai dan berakhir, mata uang, dan premi sama dengan nomor polis berbeda (misalnya polis sementara dari CI yang juga diinput manual).",
   "sub akun pnl: COMM = brokerage; baris EF = additional fee, sub akunnya mengikuti Sub akun EF asuransi di Master Data > Asuransi & Adjuster (Multi Artha Guna: EF (MAG); belum diatur: EF); nilai EF sebelum PPN (incl. VAT × 97,8%; EF MAG incl. VAT = fee − PPN komisi, sesuai produksi MAG); O/I-MARGIN = margin deklarasi MOP (premi tagihan ke klien − premi ke asuransi menurut rate MOP).",
   "spil/non spil: SPIL bila klien polis ditandai SPIL Program di Database Klien; selain itu Non SPIL.",

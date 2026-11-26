@@ -8,6 +8,7 @@ import {
   systemValueFromRow,
 } from "@/lib/form-options"
 import { prisma } from "@/lib/prisma"
+import { cleanInstallments } from "@/lib/premium-installments"
 import { recapObject, type RecapPolicy } from "@/lib/production-recap"
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10)
@@ -124,6 +125,7 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       additionalDiscountPct: Number(row.additionalDiscountPct),
       adminCost: Number(row.adminCost),
       stampDuty: Number(row.stampDuty),
+      premiumInstallments: cleanInstallments(row.premiumInstallments),
       clientPremium: row.clientPremium == null ? null : Number(row.clientPremium),
       brokeragePct: Number(row.brokeragePct),
       remarks: row.remarks,

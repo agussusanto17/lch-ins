@@ -54,15 +54,20 @@ function policy(over: Partial<RecapPolicy> = {}): RecapPolicy {
 }
 
 test("the recap has the 49 headers of the LCH sample, in order, then the MOP rate margin", () => {
-  // 49 kolom contoh LCH, lalu dua kolom margin rate deklarasi MOP (Agus, 20 November 2026) dan
-  // kolom Cek Dobel (Agus, 22 November 2026).
-  assert.equal(RECAP_HEADERS.length, 52)
-  assert.equal(RECAP_COLUMNS.length, 52)
+  // 49 kolom contoh LCH, lalu dua kolom margin rate deklarasi MOP (Agus, 20 November 2026), kolom
+  // Jatuh Tempo Cicilan (Agus, 26 November 2026), dan kolom Cek Dobel (Agus, 22 November 2026).
+  assert.equal(RECAP_HEADERS.length, 53)
+  assert.equal(RECAP_COLUMNS.length, 53)
   assert.equal(RECAP_HEADERS.at(-1), "Cek Dobel")
   assert.deepEqual(RECAP_HEADERS.slice(0, 5), ["refno", "voucher", "thn", "mth", "insured"])
   assert.equal(RECAP_HEADERS[30], "RM_Fee_OC")
   assert.equal(RECAP_HEADERS[48], "Perusahaan/Perorangan")
-  assert.deepEqual(RECAP_HEADERS.slice(49), ["Margin_Rate_OC", "Margin_Rate", "Cek Dobel"])
+  assert.deepEqual(RECAP_HEADERS.slice(49), [
+    "Margin_Rate_OC",
+    "Margin_Rate",
+    "Jatuh Tempo Cicilan",
+    "Cek Dobel",
+  ])
 })
 
 test("dates follow the sample format MM/DD/YYYY", () => {
@@ -447,3 +452,42 @@ test("Report Operational: brokerage dan fee IDR sebelum PPN", () => {
   assert.equal(Math.round(feeIdr(p) * 100) / 100, 978_000)
   assert.equal(brokerageIdr({ ...p, includeVat: false }), 1_500_000)
 })
+
+test("premi installment: satu baris per cicilan, nilai dibagi sesuai persen", () => {
+  // Premi 1.000.000, brokerage 15%, 3 cicilan 33,33% / 33,33% / 33,34% (Agus, 26 November 2026).
+  const p = policy({
+    premiumInstallments: [
+      { no: 1, dueDate: "2026-11-01", pct: 33.33 },
+      { no: 2, dueDate: "2027-03-01", pct: 33.33 },
+      { no: 3, dueDate: "2027-07-01", pct: 33.34 },
+    ],
+  })
+  const rows = recapRows([p])
+  assert.deepEqual(
+    rows.map((r) => [
+      r.Instl,
+      r["Jatuh Tempo Cicilan"],
+      r.Premium_Gross_OC,
+      r.Premium_Commission,
+      r["(Income)/Beban"],
+    ]),
+    [
+      [1, "11/01/2026", 333_300, -49_995, -49_995],
+      [2, "03/01/2027", 333_300, -49_995, -49_995],
+      // Cicilan terakhir menampung pembulatan: jumlahnya tepat premi dan komisi polis.
+      [3, "07/01/2027", 333_400, -50_010, -50_010],
+    ]
+  )
+  assert.equal(
+    rows.reduce((s, r) => s + (r.Premium_Gross_OC as number), 0),
+    1_000_000
+  )
+  // Polis tanpa installment tetap satu baris, Instl 0.
+  assert.deepEqual(
+    recapRows([policy()]).map((r) => [r.Instl, r["Jatuh Tempo Cicilan"]]),
+    [[0, ""]]
+  )
+  // Sheet Per Polis tetap satu baris per polis per asuransi.
+  assert.equal(recapPolicyRows([p]).length, 1)
+})
+
