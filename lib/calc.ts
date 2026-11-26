@@ -5,6 +5,7 @@ import {
 import { BI_SCALE_OJK } from "./data/ojk-tariff"
 import type { PlacingSlip, RateLine, SecurityPanelRow, SlipPart } from "./data/types"
 import { num } from "./format"
+import { hullSlipRows, usesHullSchedule } from "./marine-hull"
 import { multiYearPremium, policyYears, yearlySumInsured } from "./multi-year"
 import { usesOpenCover } from "./open-cover"
 import { locationGroups, locationOwner, withLocations } from "./slip-locations"
@@ -815,6 +816,8 @@ export function brokerageLimitIssue(slip: PlacingSlip) {
  * Section 2); other COBs the interest item value × rate, TPL and PA their liability limits.
  */
 export function recalcSlip(input: PlacingSlip): PlacingSlip {
+  // Jadwal kapal Marine Hull: interest dan premi per section dihitung dari jadwal.
+  if (usesHullSchedule(input)) return { ...input, ...hullSlipRows(input, input.hullSchedule) }
   const slip = withItemRates(withLocations(input))
   const mode = rateModeFor(slip.cob)
   const property = slip.cob === "Property"

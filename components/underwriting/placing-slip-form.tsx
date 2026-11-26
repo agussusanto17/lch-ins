@@ -62,10 +62,19 @@ import { effectivePaBenefitLimits } from "@/lib/pa-benefits"
 import { participantsInterestItem, usesParticipants } from "@/lib/slip-participants"
 import { SlipDetailRows } from "@/components/underwriting/slip-detail-rows"
 import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
+import { SlipHullSchedule } from "@/components/underwriting/slip-hull-schedule"
+import {
+  HULL_COB,
+  HULL_SLIP_SECTIONS,
+  hullSectionTotals,
+  usesHullSchedule,
+  vesselSummaryText,
+} from "@/lib/marine-hull"
 import { VehicleUpload } from "@/components/underwriting/vehicle-upload"
 import { ObjectUpload } from "@/components/underwriting/object-upload"
 import { type RateBounds } from "@/components/underwriting/ojk-reference"
 import {
+  hullScheduleFromItems,
   coverCodeFor,
   DEFAULT_PERIOD_LABEL,
   DEFAULT_PERIOD_NOTE,
@@ -696,6 +705,9 @@ function SlipEditor({
   const locked = slip.status === "Cancelled" || Boolean(changeLock)
   const isProperty = slip.cob === "Property"
   const isMotor = slip.cob === "Motor Vehicle"
+  // Jadwal kapal Marine Hull (Harry, 26 November 2026): interest dan premi dari jadwal.
+  const hull = usesHullSchedule(slip)
+  const hullValues = slip.hullSchedule ? hullSectionTotals(slip.hullSchedule.vessels).value : null
   // Polis multi tahun Motor Vehicle: premi per tahun polis (contoh polis MAG PT Diraja Traillindo).
   const multiYears = isMotor ? policyYears(slip) : []
   const lastYear = multiYears[multiYears.length - 1]
@@ -1824,7 +1836,30 @@ function SlipEditor({
                  * CAR dan EAR LCH dibagi Section 1 Material Damage dan Section 2
                  * Third Party Liability. Nilai awalnya dari type of cover.
                  */}
-                {allowsFlatPremium(slip.cob) ? (
+                {slip.cob === HULL_COB ? (
+                  <Field orientation="horizontal">
+                    <Switch
+                      id="hull-schedule"
+                      checked={hull}
+                      disabled={locked}
+                      onCheckedChange={(on) =>
+                        set(
+                          on
+                            ? {
+                                hullSchedule: hullScheduleFromItems(slip),
+                                openCover: false,
+                                usesSections: false,
+                              }
+                            : { hullSchedule: null }
+                        )
+                      }
+                    />
+                    <FieldLabel htmlFor="hull-schedule">
+                      Pakai jadwal kapal: nilai dan rate per kapal per section (H&amp;M, IV, War)
+                    </FieldLabel>
+                  </Field>
+                ) : null}
+                {allowsFlatPremium(slip.cob) && !hull ? (
                   <Field orientation="horizontal">
                     <Switch
                       id="uses-sections"
@@ -1838,7 +1873,31 @@ function SlipEditor({
                     </FieldLabel>
                   </Field>
                 ) : null}
-                {sectionTitles && !isProperty ? (
+                {hull && slip.hullSchedule ? (
+                  <div className="flex flex-col gap-2 rounded-lg bg-muted/60 px-3 py-2 text-sm">
+                    <p>
+                      Interest diisi dari jadwal kapal di Rate &amp; Premium:{" "}
+                      <span className="font-medium">
+                        {vesselSummaryText(slip.hullSchedule.vessels) || "belum ada kapal"}
+                      </span>
+                    </p>
+                    <ul className="flex flex-col gap-1">
+                      {HULL_SLIP_SECTIONS[slip.hullSchedule.format].map((section) => (
+                        <li key={section.key} className="flex justify-between gap-3">
+                          <span>
+                            Section {section.code} {section.title}
+                          </span>
+                          <span className="tabular-nums">
+                            {money(hullValues?.[section.key] ?? 0, slip.currency)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-muted-foreground">
+                      Total Interest Insured = H&amp;M + IV; War menjamin kapal yang sama.
+                    </p>
+                  </div>
+                ) : sectionTitles && !isProperty ? (
                   ([1, 2] as const).map((section) => (
                     <div key={section} className="flex flex-col gap-2">
                       <p className="text-sm font-medium">
@@ -2256,6 +2315,15 @@ function SlipEditor({
                 </p>
               ) : null}
 
+              {hull && slip.hullSchedule ? (
+                <SlipHullSchedule
+                  slip={slip}
+                  schedule={slip.hullSchedule}
+                  locked={locked}
+                  onChange={(hullSchedule) => set({ hullSchedule })}
+                />
+              ) : null}
+
               {isMotor ? (
                 <SlipVehicles
                   key={vehicleListKey}
@@ -2294,7 +2362,7 @@ function SlipEditor({
                * Open cover (MOP, container): rate per kategori tanpa TSI dan
                * premi; premi dicatat per deklarasi di polis.
                */}
-              {!isProperty && !isMotor ? (
+              {!isProperty && !isMotor && !hull ? (
                 <Field orientation="horizontal">
                   <Switch
                     id="open-cover"
@@ -2318,7 +2386,7 @@ function SlipEditor({
                 />
               ) : null}
 
-              {!isProperty && !isMotor && !usesOpenCover(slip) ? (
+              {!isProperty && !isMotor && !hull && !usesOpenCover(slip) ? (
                 <SlipItemRates slip={slip} locked={locked} onChange={set} />
               ) : null}
 

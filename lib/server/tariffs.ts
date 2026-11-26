@@ -29,6 +29,7 @@ import {
   findMotorExtensionBounds,
   findMotorPaBounds,
 } from "@/lib/data/ojk-motor"
+import { hullScheduleIssues, usesHullSchedule } from "@/lib/marine-hull"
 
 // Batas Property dipakai bersama form dan server (lib/property-rate-bounds.ts).
 export { getOccupationBounds, getPropertyRateBounds, type RateBounds }
@@ -115,6 +116,7 @@ export async function validatePlacingSlipForRelease(
     }
   }
   releaseIssues.push(...locationIssues(slip), ...vehicleIssues(slip))
+  if (usesHullSchedule(slip)) releaseIssues.push(...hullScheduleIssues(slip.hullSchedule))
   if (slipSectionTitles(slip)) {
     const clauseIssues = validateClauseUniquenessAcrossSections(slip)
     if (clauseIssues.length) releaseIssues.push(...clauseIssues)

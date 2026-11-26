@@ -131,6 +131,7 @@ const FIELD_LABELS: Record<string, string> = {
   multiYearDepreciationPct: "Penyusutan nilai per tahun polis (%)",
   multiYearValues: "Nilai casco manual per tahun polis",
   premiumInstallments: "Premi installment",
+  hullSchedule: "Jadwal kapal",
   settledUnlockReason: "Alasan buka kunci klaim Settled",
   subjectivity: "Subjectivity",
   closingInstruction: "Catatan Closing Instruction",

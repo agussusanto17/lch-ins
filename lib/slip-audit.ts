@@ -6,7 +6,16 @@
 import { slipSectionTitles } from "@/components/underwriting/slip-model"
 import { totalPremium, totalSumInsured } from "@/lib/calc"
 import type { PlacingSlip } from "@/lib/data/types"
-import { money } from "@/lib/format"
+import { money, num } from "@/lib/format"
+import {
+  HULL_FORMAT_LABELS,
+  HULL_SECTION_LABELS,
+  HULL_SECTIONS,
+  hullSectionRate,
+  hullSectionValue,
+  type HullSchedule,
+  type HullYearValues,
+} from "@/lib/marine-hull"
 import { installmentAuditLines } from "@/lib/premium-installments"
 import { deductibleGroups, deductiblesByUnit } from "@/lib/slip-deductibles"
 import { printedDetailRows } from "@/lib/slip-details"
@@ -155,10 +164,26 @@ export function slipAuditSummary(
       .join("\n"),
     commissionShareSgPct: slip.commissionShareSgPct ?? 0,
     premiumInstallments: installmentAuditLines(slip.premiumInstallments).join("\n"),
+    hullSchedule: slip.hullSchedule ? hullAuditLines(slip.hullSchedule, slip.currency) : "",
     adminCost: slip.adminCost,
     stampDuty: slip.stampDuty,
     subjectivity: text(slip.subjectivity),
     closingInstruction: text(slip.closingInstruction),
     coverNoteRemarks: text(slip.coverNoteRemarks),
   }
+}
+
+/** Jadwal kapal di audit: format, lalu nilai × rate per section per kapal. */
+function hullAuditLines(schedule: HullSchedule, currency: string) {
+  const sections = (v: HullYearValues) =>
+    HULL_SECTIONS.filter((s) => hullSectionValue(v, s) > 0 || hullSectionRate(v, s) > 0)
+      .map(
+        (s) =>
+          `${HULL_SECTION_LABELS[s]} ${money(hullSectionValue(v, s), currency)} × ${num(hullSectionRate(v, s), 0, 6)}%`
+      )
+      .join(", ")
+  return [
+    `Format ${HULL_FORMAT_LABELS[schedule.format]}`,
+    ...schedule.vessels.map((v, i) => `${v.name.trim() || `Kapal ${i + 1}`}: ${sections(v) || "-"}`),
+  ].join("\n")
 }

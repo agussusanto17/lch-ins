@@ -1,3 +1,5 @@
+import type { HullSchedule } from "../marine-hull"
+
 /** Nama COB yang dipakai data contoh dan logika khusus (Property, Motor Vehicle). */
 export type KnownClassOfBusiness =
   | "Property"
@@ -520,6 +522,11 @@ export interface PlacingSlip {
    * dan jatuh tempo per cicilan. Kosong berarti premi dibayar sekaligus.
    */
   premiumInstallments?: PremiumInstallment[]
+  /**
+   * Jadwal kapal Marine Hull format Patria atau MHL (Harry, 26 November 2026). Terisi berarti
+   * interest dan rate slip diturunkan dari jadwal: satu objek dan premi flat per section.
+   */
+  hullSchedule?: HullSchedule | null
   adminCost: number
   stampDuty: number
   brokeragePct: number
