@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-26
 - **Branch:** `feat/marine-hull-jadwal-kapal`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #323
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
