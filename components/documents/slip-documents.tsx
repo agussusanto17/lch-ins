@@ -3,12 +3,13 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, FileDown, Loader2 } from "lucide-react"
+import { ArrowLeft, FileDown, Loader2, Ship } from "lucide-react"
 import { toast } from "sonner"
 
 import { recordPoliciesFromClosingAction } from "@/app/(app)/placement/actions"
 import { AttachmentContents } from "@/components/documents/attachment-contents"
 import { DocumentShell } from "@/components/documents/document-shell"
+import { HullInterestBlock, HullPremiumAttached } from "@/components/documents/hull-documents"
 import {
   BrokerageBlock,
   ClauseWordingAppendix,
@@ -47,6 +48,7 @@ import { Button } from "@/components/ui/button"
 import { rateUnitFor } from "@/lib/calc"
 import type { AttachmentPrints } from "@/lib/attachment-print"
 import type { PlacingSlip } from "@/lib/data"
+import { usesHullSchedule } from "@/lib/marine-hull"
 import type { DocumentSignatory } from "@/lib/document-signatories"
 import {
   LETTERHEAD_COMPANY,
@@ -234,6 +236,9 @@ function SlipPremiumCalculation({
 }) {
   // Open cover: rate per kategori, premi per deklarasi.
   if (usesOpenCover(slip)) return <OpenCoverRateBlock slip={slip} />
+  // Marine Hull jadwal kapal: rate "as per schedule attached", premi per section.
+  if (usesHullSchedule(slip))
+    return <HullPremiumAttached slip={slip} schedule={slip.hullSchedule} internal={internal} />
   // Multi lokasi atau kendaraan: badan dokumen menulis "As Attached" (Opsi B), jadwal premi
   // dicetak di lampiran DAFTAR LOKASI atau DAFTAR UNIT KENDARAAN.
   if (isMultiLocation(slip)) return <LocationPremiumAttached slip={slip} internal={internal} />
@@ -273,6 +278,28 @@ function SlipPremiumCalculation({
   )
 }
 
+/** Interest slip; Marine Hull dengan jadwal kapal memakai kata-kata format Patria atau MHL. */
+function SlipInterest({ slip }: { slip: PlacingSlip }) {
+  if (usesHullSchedule(slip)) return <HullInterestBlock slip={slip} schedule={slip.hullSchedule} />
+  return <InterestBlock slip={slip} />
+}
+
+/** Tombol ke dokumen Jadwal Kapal (lampiran landscape) untuk slip Marine Hull dengan jadwal. */
+function VesselScheduleLink({ slip }: { slip: PlacingSlip }) {
+  if (!usesHullSchedule(slip)) return null
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      render={<Link href={`/placement/vessel-schedule/${slip.id}`} />}
+      nativeButton={false}
+    >
+      <Ship data-icon="inline-start" />
+      Jadwal Kapal
+    </Button>
+  )
+}
+
 export function PlacingSlipDocument(props: DocProps) {
   const slip = useSlip(props)
   if (!slip) return <Missing />
@@ -285,6 +312,7 @@ export function PlacingSlipDocument(props: DocProps) {
       backHref={`/placement/edit/${slip.id}`}
       variant={kop}
       signatories={props.signatories}
+      actions={<VesselScheduleLink slip={slip} />}
     >
       <Letterhead variant={kop} />
       <DocTitle
@@ -300,7 +328,7 @@ export function PlacingSlipDocument(props: DocProps) {
       />
       <DetailTable slip={slip} />
       <CoverageBlock slip={slip} />
-      <InterestBlock slip={slip} />
+      <SlipInterest slip={slip} />
       <DeductibleBlock slip={slip} />
       <ClausesBlock slip={slip} />
       <ExclusionsBlock slip={slip} />
@@ -355,6 +383,7 @@ export function QuotationSlipDocument({
       backHref={`/placement/quotation/edit/${slip.id}`}
       variant={kop}
       signatories={props.signatories}
+      actions={<VesselScheduleLink slip={slip} />}
     >
       <Letterhead variant={kop} />
       <DocTitle
@@ -364,7 +393,7 @@ export function QuotationSlipDocument({
       />
       <DetailTable slip={slip} />
       <CoverageBlock slip={slip} />
-      <InterestBlock slip={slip} />
+      <SlipInterest slip={slip} />
       <DeductibleBlock slip={slip} />
 
       {/* Same layout as Placing Slip: titles here, full wording in the appendix. */}
@@ -449,12 +478,17 @@ export function CoverNoteDocument(props: DocProps) {
       backHref={`/placement/closing/edit/${slip.id}`}
       letterhead={false}
       variant={letterheadFor(date)}
-      actions={<SaveCoverNoteWordButton slip={slip} />}
+      actions={
+        <>
+          <VesselScheduleLink slip={slip} />
+          <SaveCoverNoteWordButton slip={slip} />
+        </>
+      }
     >
       <DocTitle title="COVER NOTE" />
       <DetailTable slip={slip} />
       <CoverageBlock slip={slip} />
-      <InterestBlock slip={slip} />
+      <SlipInterest slip={slip} />
       <DeductibleBlock slip={slip} />
 
       <ClausesBlock slip={slip} />
@@ -509,6 +543,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       backHref={`/placement/closing/edit/${slip.id}`}
       variant={kop}
       signatories={props.signatories}
+      actions={<VesselScheduleLink slip={slip} />}
       notice={
         slip.status === "Closed" && props.linkedPolicies ? (
           <LinkedPoliciesNotice
@@ -528,7 +563,7 @@ export function ClosingInstructionDocument(props: DocProps) {
       />
       <DetailTable slip={slip} />
       <CoverageBlock slip={slip} />
-      <InterestBlock slip={slip} />
+      <SlipInterest slip={slip} />
       <DeductibleBlock slip={slip} />
 
       <ClausesBlock slip={slip} />

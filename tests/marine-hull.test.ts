@@ -247,3 +247,38 @@ test("jadwal kapal tersimpan dibersihkan, release memeriksa nama, nilai, dan rat
   ])
   assert.deepEqual(hullScheduleIssues({ format: "patria", vessels: patria() }), [])
 })
+
+test("teks VESSEL format MHL dan section yang dicetak hanya yang dipakai", async () => {
+  const { activeHullSections } = await import("../lib/marine-hull")
+  const { recalcSlip } = await import("../lib/calc")
+  const { emptySlip } = await import("../components/underwriting/slip-model")
+  const vessels = patria()
+  assert.equal(
+    vesselSummaryText(vessels, "mhl"),
+    "BULK CARRIER “PATRIA NAWASENA 1” AND 3 OTHERS, DETAILS AS PER SCHEDULE ATTACHED."
+  )
+  assert.equal(vesselSummaryText(vessels.slice(0, 1), "mhl"), "BULK CARRIER “PATRIA NAWASENA 1”")
+  assert.deepEqual(
+    activeHullSections({ format: "mhl", vessels }).map((s) => s.code),
+    ["1", "2", "3"]
+  )
+  // Polis War saja (Hull War Risks): hanya section War yang dicetak dan dihitung.
+  const warOnly = vessels.map((v) => ({ ...v, hmValue: null, hmRate: null, ivValue: null, ivRate: null }))
+  assert.deepEqual(
+    activeHullSections({ format: "patria", vessels: warOnly }).map((s) => s.key),
+    ["war"]
+  )
+  const slip = recalcSlip({
+    ...emptySlip(),
+    cob: "Marine Hull",
+    hullSchedule: { format: "patria", vessels: warOnly },
+  })
+  assert.deepEqual(
+    slip.rateLines.map((l) => [l.label, l.premium]),
+    [["War Risks", 102_344_356.42]]
+  )
+  // TSI polis War saja = nilai War.
+  assert.equal(slip.interestItems[0].amount, 1_023_443_564_216)
+  // Jadwal tanpa angka: ketiga section tetap tampil.
+  assert.equal(activeHullSections({ format: "patria", vessels: [emptyVessel("x")] }).length, 3)
+})

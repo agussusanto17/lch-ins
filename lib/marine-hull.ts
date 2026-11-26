@@ -179,16 +179,20 @@ export function vesselLabel(v: Pick<Vessel, "type" | "name">) {
 }
 
 /**
- * Teks VESSEL di badan slip: satu kapal ditulis langsung, lebih dari satu seperti contoh Patria
- * ("BULK CARRIER “PATRIA NAWASENA 1” & 3 OTHERS (AS PER SCHEDULE ATTACHED)").
+ * Teks VESSEL di badan slip. Satu kapal ditulis langsung; lebih dari satu mengikuti contoh format:
+ * - Patria: BULK CARRIER “PATRIA NAWASENA 1” & 3 OTHERS (AS PER SCHEDULE ATTACHED)
+ * - MHL: CONTAINER VESSEL “PRATIWI SATU” AND 106 OTHERS, DETAILS AS PER SCHEDULE ATTACHED.
  */
-export function vesselSummaryText(vessels: readonly Vessel[]) {
+export function vesselSummaryText(vessels: readonly Vessel[], format: HullScheduleFormat = "patria") {
   const named = vessels.filter((v) => v.name.trim())
   if (!named.length) return ""
   const lead = vesselLabel(named[0])
   if (named.length === 1) return lead
   const others = named.length - 1
-  return `${lead} & ${others} ${others === 1 ? "OTHER" : "OTHERS"} (AS PER SCHEDULE ATTACHED)`
+  const word = others === 1 ? "OTHER" : "OTHERS"
+  return format === "mhl"
+    ? `${lead} AND ${others} ${word}, DETAILS AS PER SCHEDULE ATTACHED.`
+    : `${lead} & ${others} ${word} (AS PER SCHEDULE ATTACHED)`
 }
 
 export type HullColumnKey =
@@ -353,20 +357,79 @@ export interface HullSlipSection {
   /** Penanda section di slip: (A)/(B)/(C) Patria, 1/2/3 MHL. */
   code: string
   title: string
+  /** Kata-kata INTEREST di slip cetak, persis contoh format. */
+  wording: string
 }
 
 /** Urutan section per format: Patria (A) H&M, (B) IV, (C) War; MHL 1 H&M, 2 War, 3 IV/AOI. */
 export const HULL_SLIP_SECTIONS: Record<HullScheduleFormat, readonly HullSlipSection[]> = {
   patria: [
-    { key: "hm", code: "(A)", title: "Hull, Materials & Machinery" },
-    { key: "iv", code: "(B)", title: "Increased Value and/or Disbursements" },
-    { key: "war", code: "(C)", title: "War Risks" },
+    {
+      key: "hm",
+      code: "(A)",
+      title: "Hull, Materials & Machinery",
+      wording: "HULL, MATERIALS & MACHINERY OUTFITS ETC AND EVERYTHING CONNECTED HEREWITH.",
+    },
+    {
+      key: "iv",
+      code: "(B)",
+      title: "Increased Value and/or Disbursements",
+      wording: "INCREASED VALUE AND/OR DISBURSEMENTS INCLUDING EXCESS LIABILITIES",
+    },
+    { key: "war", code: "(C)", title: "War Risks", wording: "WAR RISKS INSURANCE" },
   ],
   mhl: [
-    { key: "hm", code: "1", title: "Hull, Materials & Machinery" },
-    { key: "war", code: "2", title: "War Risks" },
-    { key: "iv", code: "3", title: "Increased Value / Anticipated Owner's Interest" },
+    {
+      key: "hm",
+      code: "1",
+      title: "Hull, Materials & Machinery",
+      wording: "HULL, MATERIALS & MACHINERY OUTFITS ETC AND EVERYTHING CONNECTED THEREWITH.",
+    },
+    { key: "war", code: "2", title: "War Risks", wording: "WAR RISKS INSURANCE." },
+    {
+      key: "iv",
+      code: "3",
+      title: "Increased Value / Anticipated Owner's Interest",
+      wording:
+        "1) INCREASED VALUE AND/OR DISBURSEMENT INCLUDING EXCESS LIABILITIES. (WHERE APPLICABLE)\n2) ANTICIPATED OWNER’S INTEREST. (WHERE APPLICABLE)",
+    },
   ],
+}
+
+/** Label dan kalimat badan slip cetak per format, persis contoh CI Patria dan signed slip MHL. */
+export const HULL_PRINT_TEXT: Record<
+  HullScheduleFormat,
+  { interest: string; vessel: string; insuredValue: string; rate: string }
+> = {
+  patria: {
+    interest: "Interest",
+    vessel: "Vessel",
+    insuredValue: "AS PER SCHEDULE ATTACHED",
+    rate: "AS PER SCHEDULE ATTACHED",
+  },
+  mhl: {
+    interest: "Interests",
+    vessel: "Vessels",
+    insuredValue: "100% AS PER SCHEDULE ATTACHED FOR ALL SECTIONS.",
+    rate: "100% AS PER SCHEDULE ATTACHED FOR ALL SECTIONS.\nPER ANNUM PRO RATA. (NOT INCLUSIVE OF ADMINISTRATIVE COSTS AND TAXES IF APPLICABLE).",
+  },
+}
+
+/** Baris Detail Tambahan "Vessel(s)": dicetak di bawah teks VESSEL slip jadwal kapal. */
+export function isVesselDetailLabel(label: string) {
+  return /^vessels?$/i.test(label.trim())
+}
+
+/**
+ * Section yang dipakai jadwal: punya nilai atau rate di salah satu kapal, urut sesuai format.
+ * Jadwal yang belum berisi angka memakai ketiganya.
+ */
+export function activeHullSections(schedule: HullSchedule): readonly HullSlipSection[] {
+  const all = HULL_SLIP_SECTIONS[schedule.format]
+  const used = all.filter((s) =>
+    schedule.vessels.some((v) => hullSectionValue(v, s.key) > 0 || hullSectionRate(v, s.key) > 0)
+  )
+  return used.length ? used : all
 }
 
 /** Nama cover baris rate per section. Sama di kedua format supaya baris lama tetap dikenali. */
@@ -385,10 +448,18 @@ export function hullSectionTotals(vessels: readonly Vessel[]) {
   } satisfies Record<string, Record<HullSection, number>>
 }
 
-/** TSI jadwal kapal: H&M + IV + AOI. War menjamin kapal yang sama, jadi tidak ditambahkan. */
+/**
+ * TSI jadwal kapal, per kapal: H&M + IV + AOI. War menjamin kapal yang sama, jadi tidak ditambahkan;
+ * nilai War dipakai bila lebih besar, misalnya polis War saja (Hull War Risks).
+ */
 export function hullSumInsured(vessels: readonly Vessel[]) {
-  const { value } = hullSectionTotals(vessels)
-  return roundCents(value.hm + value.iv)
+  return roundCents(
+    vessels.reduce(
+      (sum, v) =>
+        sum + Math.max(hullSectionValue(v, "hm") + hullSectionValue(v, "iv"), hullSectionValue(v, "war")),
+      0
+    )
+  )
 }
 
 /** Teks interest slip bila jadwal belum punya kapal bernama. */
@@ -396,7 +467,7 @@ export const HULL_INTEREST_FALLBACK = "VESSELS AS PER SCHEDULE ATTACHED"
 
 /**
  * Interest dan rate slip dari jadwal kapal: satu objek (armada) senilai TSI jadwal, dengan satu
- * baris premi flat per section sesuai urutan format. Diskon, brokerage, installment, polis, dan
+ * baris premi flat per section yang dipakai, sesuai urutan format. Diskon, brokerage, installment, polis, dan
  * report memakai premi jadwal; deductible diisi per cover. Id dan deductible baris dengan nama
  * cover yang sama dipertahankan.
  */
@@ -408,11 +479,11 @@ export function hullSlipRows(
   const itemId = slip.interestItems.length === 1 ? slip.interestItems[0].id : "hull-fleet"
   const item: LineItem = {
     id: itemId,
-    description: vesselSummaryText(schedule.vessels) || HULL_INTEREST_FALLBACK,
+    description: vesselSummaryText(schedule.vessels, schedule.format) || HULL_INTEREST_FALLBACK,
     amount: hullSumInsured(schedule.vessels),
   }
   const used = new Set<string>()
-  const rateLines = HULL_SLIP_SECTIONS[schedule.format].map((section): RateLine => {
+  const rateLines = activeHullSections(schedule).map((section): RateLine => {
     const label = HULL_LINE_LABELS[section.key]
     const prev = slip.rateLines.find((l) => l.label === label)
     const id = prev && !used.has(prev.id) ? prev.id : `${itemId}-${section.key}`

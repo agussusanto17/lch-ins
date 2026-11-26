@@ -1,6 +1,7 @@
 import { Fragment } from "react"
 
 import { SignatureSlot } from "@/components/documents/signature"
+import { isVesselDetailLabel, usesHullSchedule } from "@/lib/marine-hull"
 import {
   coverLabel,
   exclusionItems,
@@ -208,8 +209,11 @@ export function DetailTable({ slip }: { slip: PlacingSlip }) {
   }
   if (slip.cob === "Property" && slip.indemnityPeriod)
     rows.push(["Indemnity Period", slip.indemnityPeriod])
+  // Slip jadwal kapal: baris "Vessels" dicetak di bawah teks VESSEL pada blok Interest.
+  const hull = usesHullSchedule(slip)
   for (const r of details)
-    if (r !== existing && !business.includes(r)) rows.push([r.label || "—", r.value])
+    if (r !== existing && !business.includes(r) && !(hull && isVesselDetailLabel(r.label)))
+      rows.push([r.label || "—", r.value])
 
   return (
     <>

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { FileSpreadsheet, Plus, Trash2 } from "lucide-react"
+import { FileSpreadsheet, Plus, Printer, Trash2 } from "lucide-react"
 
 import { FormDrawer } from "@/components/shared/form-drawer"
 import { HullUpload } from "@/components/underwriting/hull-upload"
@@ -62,11 +62,14 @@ export function SlipHullSchedule({
   schedule,
   locked,
   onChange,
+  onPrint,
 }: {
   slip: PlacingSlip
   schedule: HullSchedule
   locked: boolean
   onChange: (schedule: HullSchedule) => void
+  /** Buka dokumen Jadwal Kapal; form menyimpan perubahan dulu bila ada. */
+  onPrint: () => void
 }) {
   const [editing, setEditing] = React.useState<{ vessel: Vessel; index: number | null } | null>(null)
   const [uploadOpen, setUploadOpen] = React.useState(false)
@@ -230,27 +233,35 @@ export function SlipHullSchedule({
         </p>
       ) : null}
 
-      {locked ? null : (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setEditing({ vessel: emptyVessel(uid("vessel")), index: null })}
-          >
-            <Plus data-icon="inline-start" />
-            Tambah kapal
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => setUploadOpen(true)}>
-            <FileSpreadsheet data-icon="inline-start" />
-            Upload Excel
-          </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        {locked ? null : (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setEditing({ vessel: emptyVessel(uid("vessel")), index: null })}
+            >
+              <Plus data-icon="inline-start" />
+              Tambah kapal
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setUploadOpen(true)}>
+              <FileSpreadsheet data-icon="inline-start" />
+              Upload Excel
+            </Button>
+          </>
+        )}
+        <Button type="button" variant="outline" size="sm" disabled={!vessels.length} onClick={onPrint}>
+          <Printer data-icon="inline-start" />
+          Cetak jadwal kapal
+        </Button>
+        {locked ? null : (
           <span className="text-xs text-muted-foreground">
-            Premi per section = nilai × rate. TSI = H&amp;M + IV{format === "mhl" ? " + AOI" : ""}; War menjamin
-            kapal yang sama, jadi tidak ditambahkan.
+            Premi per section = nilai × rate. TSI per kapal = H&amp;M + IV{format === "mhl" ? " + AOI" : ""}; War
+            menjamin kapal yang sama, jadi hanya dipakai bila nilainya lebih besar (polis War saja).
           </span>
-        </div>
-      )}
+        )}
+      </div>
 
       {editing ? (
         <VesselDrawer
