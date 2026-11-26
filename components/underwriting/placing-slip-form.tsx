@@ -65,7 +65,7 @@ import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
 import { SlipHullSchedule } from "@/components/underwriting/slip-hull-schedule"
 import {
   HULL_COB,
-  HULL_SLIP_SECTIONS,
+  activeHullSections,
   hullSectionTotals,
   usesHullSchedule,
   vesselSummaryText,
@@ -1878,11 +1878,12 @@ function SlipEditor({
                     <p>
                       Interest diisi dari jadwal kapal di Rate &amp; Premium:{" "}
                       <span className="font-medium">
-                        {vesselSummaryText(slip.hullSchedule.vessels) || "belum ada kapal"}
+                        {vesselSummaryText(slip.hullSchedule.vessels, slip.hullSchedule.format) ||
+                          "belum ada kapal"}
                       </span>
                     </p>
                     <ul className="flex flex-col gap-1">
-                      {HULL_SLIP_SECTIONS[slip.hullSchedule.format].map((section) => (
+                      {activeHullSections(slip.hullSchedule).map((section) => (
                         <li key={section.key} className="flex justify-between gap-3">
                           <span>
                             Section {section.code} {section.title}
@@ -1894,7 +1895,8 @@ function SlipEditor({
                       ))}
                     </ul>
                     <p className="text-xs text-muted-foreground">
-                      Total Interest Insured = H&amp;M + IV; War menjamin kapal yang sama.
+                      Total Interest Insured per kapal = H&amp;M + IV; War menjamin kapal yang sama,
+                      jadi hanya dipakai bila nilainya lebih besar (polis War saja).
                     </p>
                   </div>
                 ) : sectionTitles && !isProperty ? (
@@ -2321,6 +2323,7 @@ function SlipEditor({
                   schedule={slip.hullSchedule}
                   locked={locked}
                   onChange={(hullSchedule) => set({ hullSchedule })}
+                  onPrint={() => goTo((id) => `/placement/vessel-schedule/${id}`)}
                 />
               ) : null}
 
