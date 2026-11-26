@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-26
 - **Branch:** `feat/polis-dibayar-lch`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #321
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
