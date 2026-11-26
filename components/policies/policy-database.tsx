@@ -71,7 +71,7 @@ import {
 } from "@/lib/data"
 import { addMonths } from "@/lib/date"
 import type { ExportSpec } from "@/lib/export"
-import { additionalDiscountFor, grossPremium } from "@/lib/calc"
+import { grossPremium, policyAdditionalDiscount } from "@/lib/calc"
 import { dateShort, money, rupiah } from "@/lib/format"
 import type { ClientOption } from "@/lib/server/clients"
 import { MAIN_POLICY_FILE_KINDS, latestPolicyFile } from "@/lib/policy-files"
@@ -397,8 +397,8 @@ export function PolicyDatabase({
       },
       {
         header: "Additional Discount",
-        value: (p) =>
-          p.additionalDiscountPct ? additionalDiscountFor(p.premium, p.additionalDiscountPct) : null,
+        // Termasuk admin cost dan stamp duty bila polis dibayar penuh LCH (26 November 2026).
+        value: (p) => (p.additionalDiscountPct ? policyAdditionalDiscount(p) : null),
         type: "money",
       },
       // Premi installment (Agus, 20 November 2026).

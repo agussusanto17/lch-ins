@@ -122,6 +122,8 @@ export async function listProductionRecap(start: string, end: string): Promise<R
       premium: Number(row.premium),
       discount: Number(row.discountAmount),
       additionalDiscountPct: Number(row.additionalDiscountPct),
+      adminCost: Number(row.adminCost),
+      stampDuty: Number(row.stampDuty),
       clientPremium: row.clientPremium == null ? null : Number(row.clientPremium),
       brokeragePct: Number(row.brokeragePct),
       remarks: row.remarks,

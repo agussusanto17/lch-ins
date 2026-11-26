@@ -35,6 +35,8 @@ import {
   grossPremium,
   magCommissionVatFor,
   nettPremium,
+  policyAdditionalDiscount,
+  roundCents,
   slipPolicyParts,
   sumPercent,
   sgCommissionShare,
@@ -436,6 +438,11 @@ export function PolicyForm({
   const brokerageTerms = { pct: draft.brokeragePct, includeVat: draft.includeVat }
   const magVat = magCommissionVatFor(draft.premium, feeRows, brokerageTerms)
   const feeBeforeVatTotal = additionalFeeBeforeVatFor(draft.premium, feeRows, brokerageTerms)
+  // Polis dibayar penuh LCH: admin cost dan stamp duty ikut beban LCH (Harry, 26 November 2026).
+  const lchCharges = roundCents(
+    policyAdditionalDiscount(draft) -
+      additionalDiscountFor(draft.premium, draft.additionalDiscountPct)
+  )
   // Nominal ditulis sebelum PPN: brokerage incl. VAT = nominal ÷ 1,022 (15% = 14,6771% + PPN), fee
   // incl. VAT = nominal × 97,8% (sheet TARIF EF Team LCH); excl. VAT: PPN ditambahkan di atasnya.
   const chargeText = (amount: number, vat: number, added = 0) => {
@@ -1146,7 +1153,11 @@ export function PolicyForm({
                     ? `${money(
                         additionalDiscountFor(draft.premium, draft.additionalDiscountPct),
                         draft.currency
-                      )} dari Gross Premium. Ditanggung LCH, tidak mengurangi Nett Premium ke asuransi.`
+                      )} dari Gross Premium${
+                        lchCharges
+                          ? ` + admin cost dan stamp duty ${money(lchCharges, draft.currency)} (polis dibayar penuh LCH)`
+                          : ""
+                      }. Ditanggung LCH, tidak mengurangi Nett Premium ke asuransi.`
                     : "Diskon tambahan LCH dari Quotation Internal, persen dari Gross Premium. Ditanggung LCH, tidak mengurangi Nett Premium ke asuransi."
                 }
               />

@@ -3,6 +3,7 @@ import test from "node:test"
 
 import ExcelJS from "exceljs"
 
+import { policyAdditionalDiscount } from "../lib/calc"
 import { additionalDiscountIdr, breakdownByCob } from "../lib/data/analytics"
 import type { Policy } from "../lib/data/types"
 import { fillMomReport, momReport } from "../lib/mom-report"
@@ -155,5 +156,26 @@ test("Report Operational: Additional Discount (IDR) per polis dan per COB", () =
   ])
   assert.equal(property.additionalDiscount, 5_000_000)
   assert.equal(property.premium, 150_000_000)
+})
+
+test("polis dibayar penuh LCH: beban termasuk admin cost dan stamp duty", () => {
+  // Contoh Harry: additional discount 100%, admin cost 30.000, stamp duty 30.000.
+  const paid = { premium: 100_000_000, additionalDiscountPct: 100, adminCost: 30_000, stampDuty: 30_000 }
+  assert.equal(policyAdditionalDiscount(paid), 100_060_000)
+  // Klien masih membayar sebagian: biaya polis tidak ikut.
+  assert.equal(policyAdditionalDiscount({ ...paid, additionalDiscountPct: 50 }), 50_000_000)
+  // Discount 15% + additional 85% juga dibayar penuh LCH.
+  assert.equal(
+    policyAdditionalDiscount({ ...paid, discountAmount: 15_000_000, additionalDiscountPct: 85 }),
+    85_060_000
+  )
+  assert.equal(additionalDiscountIdr({ ...paid, currency: "IDR" }), 100_060_000)
+
+  // Rekap: beban dibagi sesuai share 60/40.
+  const rows = recapRows([policy({ additionalDiscountPct: 100, adminCost: 30_000, stampDuty: 30_000 })])
+  assert.deepEqual(
+    rows.filter((r) => r["sub akun pnl"] === MARKETING_DISCOUNT).map((r) => r["(Income)/Beban"]),
+    [60_036_000, 40_024_000]
+  )
 })
 
