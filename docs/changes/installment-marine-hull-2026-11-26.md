@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-26
 - **Branch:** `feat/marine-hull-installment`
-- **PR:** (diisi setelah PR dibuat)
+- **PR:** #325
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
