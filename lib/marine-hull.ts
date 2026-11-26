@@ -454,17 +454,12 @@ export function hullSectionTotals(vessels: readonly Vessel[]) {
 }
 
 /**
- * TSI jadwal kapal, per kapal: H&M + IV + AOI. War menjamin kapal yang sama, jadi tidak ditambahkan;
- * nilai War dipakai bila lebih besar, misalnya polis War saja (Hull War Risks).
+ * TSI jadwal kapal: jumlah nilai semua section, H&M + IV (+AOI) + War, karena tiap section punya rate
+ * dan premi sendiri (Agus, 26 November 2026).
  */
 export function hullSumInsured(vessels: readonly Vessel[]) {
-  return roundCents(
-    vessels.reduce(
-      (sum, v) =>
-        sum + Math.max(hullSectionValue(v, "hm") + hullSectionValue(v, "iv"), hullSectionValue(v, "war")),
-      0
-    )
-  )
+  const { value } = hullSectionTotals(vessels)
+  return roundCents(value.hm + value.iv + value.war)
 }
 
 /** Teks interest slip bila jadwal belum punya kapal bernama. */
