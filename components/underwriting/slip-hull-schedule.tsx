@@ -91,7 +91,7 @@ export function SlipHullSchedule({
     const next = [...vessels]
     if (index == null) next.push(vessel)
     else next[index] = vessel
-    onChange({ format, vessels: next })
+    onChange({ ...schedule, vessels: next })
   }
 
   return (
@@ -112,7 +112,7 @@ export function SlipHullSchedule({
           aria-label="Format jadwal kapal"
           onValueChange={(v) => {
             const next = (v as string[])[0] as HullScheduleFormat | undefined
-            if (next && next !== format) onChange({ format: next, vessels })
+            if (next && next !== format) onChange({ ...schedule, format: next })
           }}
         >
           {(["patria", "mhl"] as const).map((f) => (
@@ -276,7 +276,7 @@ export function SlipHullSchedule({
           onDelete={
             editing.index == null
               ? undefined
-              : () => onChange({ format, vessels: vessels.filter((_, j) => j !== editing.index) })
+              : () => onChange({ ...schedule, vessels: vessels.filter((_, j) => j !== editing.index) })
           }
         />
       ) : null}

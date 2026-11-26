@@ -150,7 +150,7 @@ export function HullUpload({
       return false
     }
     const vessels = replacing ? result.vessels : [...current, ...result.vessels]
-    onImport({ format: result.format, vessels })
+    onImport({ ...schedule, format: result.format, vessels })
     const n = result.vessels.length
     toast.success(
       replacing ? `${count(n)} kapal menggantikan jadwal sebelumnya` : `${count(n)} kapal ditambahkan`,

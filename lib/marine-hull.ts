@@ -63,6 +63,11 @@ export interface Vessel extends HullYearValues {
 export interface HullSchedule {
   format: HullScheduleFormat
   vessels: Vessel[]
+  /**
+   * Pola CI Patria "H&M payable quarterly, IV & War in advance": premi IV dan War dibayar penuh di
+   * cicilan pertama, persen cicilan berlaku untuk H&M (Harry, 26 November 2026).
+   */
+  ivWarInAdvance?: boolean
 }
 
 export const EMPTY_YEAR_VALUES: HullYearValues = {
@@ -349,7 +354,7 @@ export function hullPolicyYear(inceptionDate: string | null | undefined) {
 }
 
 export function newHullSchedule(vesselId: string): HullSchedule {
-  return { format: "patria", vessels: [emptyVessel(vesselId)] }
+  return { format: "patria", vessels: [emptyVessel(vesselId)], ivWarInAdvance: true }
 }
 
 export interface HullSlipSection {
@@ -584,5 +589,9 @@ export function cleanHullSchedule(raw: unknown): HullSchedule | null {
     for (const key of TEXT_KEYS) vessel[key] = cleanText(v[key])
     return vessel
   })
-  return { format: r.format === "mhl" ? "mhl" : "patria", vessels }
+  return {
+    format: r.format === "mhl" ? "mhl" : "patria",
+    vessels,
+    ...((raw as { ivWarInAdvance?: unknown }).ivWarInAdvance === true ? { ivWarInAdvance: true } : {}),
+  }
 }
