@@ -2,7 +2,7 @@
 
 - **Tanggal:** 2026-11-26
 - **Branch:** `feat/rekap-cicilan`
-- **PR:** (isi setelah PR dibuka)
+- **PR:** #322
 - **Dikerjakan oleh:** Agus Susanto dengan Claude Code
 
 ## Latar belakang
