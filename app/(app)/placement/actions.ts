@@ -453,6 +453,14 @@ const placingSlipSchema = z.object({
     )
     .max(10, "Cicilan premi maksimal 10 kali")
     .optional(),
+  // Jadwal kapal Marine Hull (Harry, 26 November 2026); isinya dibersihkan cleanHullSchedule di server.
+  hullSchedule: z
+    .object({
+      format: z.enum(["patria", "mhl"]),
+      vessels: z.array(z.record(z.string(), z.unknown())).max(500, "Jadwal kapal maksimal 500 kapal"),
+    })
+    .nullable()
+    .optional(),
   adminCost: z.coerce.number().optional(),
   stampDuty: z.coerce.number().optional(),
   brokeragePct: z.coerce.number().optional(),

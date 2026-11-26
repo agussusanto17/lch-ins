@@ -69,6 +69,7 @@ import {
   type SlipDocumentDates,
 } from "@/lib/document-dates"
 import { shouldSeedMockData } from "@/lib/server/mock-seed"
+import { cleanHullSchedule, HULL_COB, hullSlipRows, type HullSchedule } from "@/lib/marine-hull"
 
 const SLIP_ITEM_VEHICLE = {
   vehicleBrand: { select: { name: true } },
@@ -189,6 +190,8 @@ export interface PlacingSlipInput {
   commissionShareSgPct?: number
   /** Jadwal premi installment; undefined berarti tidak diubah. */
   premiumInstallments?: PremiumInstallment[]
+  /** Jadwal kapal Marine Hull; null berarti tanpa jadwal, undefined berarti tidak diubah. */
+  hullSchedule?: HullSchedule | null
   adminCost?: number
   stampDuty?: number
   brokeragePct?: number
@@ -768,6 +771,7 @@ function toPlacingSlipRecord(
     multiYearDepreciationPct: Number(raw.multiYearDepreciationPct) || undefined,
     commissionShareSgPct: Number(raw.commissionShareSgPct) || undefined,
     premiumInstallments: cleanInstallments(raw.premiumInstallments),
+    hullSchedule: normCob === HULL_COB ? cleanHullSchedule(raw.hullSchedule) : null,
     adminCost: Number(raw.adminCost),
     stampDuty: Number(raw.stampDuty),
     brokeragePct: Number(raw.brokeragePct),
@@ -918,6 +922,7 @@ export function copySlipInput(source: PlacingSlipRecord): PlacingSlipInput {
     multiYearDepreciationPct: source.multiYearDepreciationPct,
     commissionShareSgPct: source.commissionShareSgPct,
     premiumInstallments: source.premiumInstallments,
+    hullSchedule: source.hullSchedule,
     adminCost: source.adminCost,
     stampDuty: source.stampDuty,
     brokeragePct: source.brokeragePct,
@@ -1065,6 +1070,27 @@ function installmentsData(
   const error = installmentsError(clean)
   if (error) throw new Error(error)
   return clean.map((r) => ({ no: r.no, dueDate: r.dueDate, pct: r.pct }))
+}
+
+/** Jadwal kapal untuk kolom JSON: undefined tidak diubah; slip selain Marine Hull disimpan NULL. */
+function hullScheduleData(schedule: HullSchedule | null | undefined, cobName: string) {
+  if (schedule === undefined) return undefined
+  const clean = normalizeCob(cobName) === HULL_COB ? cleanHullSchedule(schedule) : null
+  return clean ? (clean as unknown as Prisma.InputJsonValue) : Prisma.DbNull
+}
+
+/**
+ * Slip jadwal kapal: interest dan rate disusun ulang dari jadwal yang sudah dibersihkan, supaya
+ * premi yang tersimpan selalu sama dengan jadwal.
+ */
+function withHullRows(input: PlacingSlipInput, cobName: string): PlacingSlipInput {
+  const schedule = normalizeCob(cobName) === HULL_COB ? cleanHullSchedule(input.hullSchedule) : null
+  if (!schedule) return input
+  const rows = hullSlipRows(
+    { interestItems: input.interestItems ?? [], rateLines: input.rateLines ?? [] },
+    schedule
+  )
+  return { ...input, hullSchedule: schedule, ...rows }
 }
 
 /** Limit manfaat PA yang valid; kosong disimpan sebagai NULL (memakai bawaan). */
@@ -1382,6 +1408,7 @@ export async function createPlacingSlip(
   const resolvedClientId = await resolveClientId(input.clientId, input.insuredName)
   const resolvedSourceId = await resolveSourceId(input.sourceId, resolvedClientId)
   const resolvedCob = await resolveCob(input.cob)
+  input = withHullRows(input, resolvedCob.name)
   const resolvedCoverType = await resolveCoverType(resolvedCob.id, input.typeOfCover)
   const coverType2 = await slipCoverType2(resolvedCob, input.typeOfCover2)
 
@@ -1471,6 +1498,7 @@ export async function createPlacingSlip(
         multiYearDepreciationPct: new Prisma.Decimal(input.multiYearDepreciationPct ?? 0),
         commissionShareSgPct: new Prisma.Decimal(input.commissionShareSgPct ?? 0),
         premiumInstallments: installmentsData(input.premiumInstallments, { openCover: input.openCover }),
+        hullSchedule: hullScheduleData(input.hullSchedule, resolvedCob.name),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),
@@ -1802,6 +1830,7 @@ export async function updatePlacingSlip(
       ? (existing.sourceId ?? (await resolveSourceId(null, resolvedClientId)))
       : await resolveSourceId(input.sourceId, resolvedClientId)
   const resolvedCob = await resolveCob(input.cob)
+  input = withHullRows(input, resolvedCob.name)
   const resolvedCoverType = await resolveCoverType(resolvedCob.id, input.typeOfCover)
   const coverType2 = await slipCoverType2(resolvedCob, input.typeOfCover2)
 
@@ -1913,6 +1942,7 @@ export async function updatePlacingSlip(
           openCover: input.openCover ?? before.openCover,
           changeSlip: Boolean(before.kind && before.kind !== "Placing"),
         }),
+        hullSchedule: hullScheduleData(input.hullSchedule, resolvedCob.name),
         adminCost: new Prisma.Decimal(input.adminCost ?? 0),
         stampDuty: new Prisma.Decimal(input.stampDuty ?? 0),
         brokeragePct: new Prisma.Decimal(input.brokeragePct ?? 0),

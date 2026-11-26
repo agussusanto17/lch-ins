@@ -1166,6 +1166,9 @@ model PlacingSlip {
   /// Premi installment 2 sampai 10 kali: [{ no, dueDate, pct }] dari premi setelah diskon
   /// (Agus, 20 November 2026). Daftar kosong berarti premi dibayar sekaligus.
   premiumInstallments Json @default("[]") @map("premium_installments") @db.JsonB
+  /// Jadwal kapal Marine Hull { format: "patria" | "mhl", vessels } (Harry, 26 November 2026). NULL
+  /// berarti slip tanpa jadwal; terisi berarti interest dan rate per section diturunkan dari jadwal.
+  hullSchedule Json? @map("hull_schedule") @db.JsonB
   adminCost    Decimal @default(0) @map("admin_cost") @db.Decimal(18, 2)
   stampDuty    Decimal @default(0) @map("stamp_duty") @db.Decimal(18, 2)
   /// Dibatasi biaya akuisisi OJK: maksimal 15% harta benda, 25% kendaraan

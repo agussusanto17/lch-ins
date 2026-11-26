@@ -59,6 +59,14 @@ import type { VehicleImportRow } from "@/lib/vehicle-import"
 import type { ObjectImportRow } from "@/lib/object-import"
 import { openCoverIssues, usesOpenCover } from "@/lib/open-cover"
 import {
+  HULL_COB,
+  emptyVessel,
+  hullScheduleIssues,
+  newHullSchedule,
+  usesHullSchedule,
+  type HullSchedule,
+} from "@/lib/marine-hull"
+import {
   hasMixedCasco,
   isMultiVehicle,
   motorRateLinesWithBounds,
@@ -542,6 +550,9 @@ export function switchCob(
     multiYearDepreciationPct: undefined,
     rateLines: makeRateLines(normCob),
     ...sub,
+    // Slip Marine Hull baru langsung memakai jadwal kapal (Harry, 26 November 2026).
+    hullSchedule: normCob === HULL_COB ? newHullSchedule(uid("vessel")) : null,
+    ...(normCob === HULL_COB ? { interestItems: [], openCover: false } : {}),
   })
 }
 
@@ -1044,6 +1055,24 @@ export function importReplacesObjects(slip: PlacingSlip, replace: boolean) {
  * section di objek pertama section itu, jadi saat objek diganti deductible-nya pindah ke objek
  * baru pertama. Limit Section 2 tidak ikut diganti.
  */
+/**
+ * Jadwal kapal untuk slip Marine Hull yang sebelumnya diisi per objek: satu kapal per objek, nilai
+ * dan rate pertamanya menjadi H&M. Slip tanpa objek mulai dengan satu kapal kosong.
+ */
+export function hullScheduleFromItems(slip: PlacingSlip): HullSchedule {
+  const groups = itemGroups(slip).filter((g) => g.item.description.trim() || g.item.amount)
+  if (!groups.length) return newHullSchedule(uid("vessel"))
+  return {
+    format: "patria",
+    vessels: groups.map((g) => ({
+      ...emptyVessel(uid("vessel")),
+      name: g.item.description.split("\n")[0].trim().slice(0, 200),
+      hmValue: g.item.amount || null,
+      hmRate: g.rateLines.find((l) => l.rate != null)?.rate ?? null,
+    })),
+  }
+}
+
 export function importObjectsPatch(
   slip: PlacingSlip,
   rows: readonly ObjectImportRow[],
@@ -1296,6 +1325,7 @@ export function releaseIssues(slip: PlacingSlip) {
     }
   }
   issues.push(...locationIssues(slip), ...vehicleIssues(slip))
+  if (usesHullSchedule(slip)) issues.push(...hullScheduleIssues(slip.hullSchedule))
   if (slipSectionTitles(slip)) {
     const clauseIssues = validateClauseUniquenessAcrossSections(slip)
     if (clauseIssues.length) issues.push(...clauseIssues)
