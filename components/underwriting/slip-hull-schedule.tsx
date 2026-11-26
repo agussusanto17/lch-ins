@@ -257,8 +257,8 @@ export function SlipHullSchedule({
         </Button>
         {locked ? null : (
           <span className="text-xs text-muted-foreground">
-            Premi per section = nilai × rate. TSI per kapal = H&amp;M + IV{format === "mhl" ? " + AOI" : ""}; War
-            menjamin kapal yang sama, jadi hanya dipakai bila nilainya lebih besar (polis War saja).
+            Premi per section = nilai × rate. TSI = jumlah nilai H&amp;M, IV{format === "mhl" ? " (+AOI)" : ""}, dan
+            War.
           </span>
         )}
       </div>

@@ -170,7 +170,7 @@ test("upload: tanpa kolom VESSEL, nilai tanpa rate, dan nomor tanpa nama kapal d
   assert.equal(vessels.length, 2)
 })
 
-test("slip jadwal kapal: satu objek senilai TSI tanpa War, premi flat per section", async () => {
+test("slip jadwal kapal: satu objek senilai TSI semua section, premi flat per section", async () => {
   const { recalcSlip, totalPremium, totalSumInsured } = await import("../lib/calc")
   const { emptySlip } = await import("../components/underwriting/slip-model")
   const slip = recalcSlip({
@@ -193,8 +193,8 @@ test("slip jadwal kapal: satu objek senilai TSI tanpa War, premi flat per sectio
     ]
   )
   assert.equal(totalPremium(slip), 5_096_748_949.8)
-  // War menjamin kapal yang sama: TSI = H&M + IV.
-  assert.equal(totalSumInsured(slip), 1_023_443_564_216)
+  // TSI = H&M + IV + War: tiap section punya rate dan premi sendiri.
+  assert.equal(totalSumInsured(slip), 2_046_887_128_432)
 })
 
 test("slip jadwal kapal: format MHL mengurutkan cover H&M, War, IV; id dan deductible baris tetap", async () => {

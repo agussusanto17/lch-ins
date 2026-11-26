@@ -1897,8 +1897,8 @@ function SlipEditor({
                       ))}
                     </ul>
                     <p className="text-xs text-muted-foreground">
-                      Total Interest Insured per kapal = H&amp;M + IV; War menjamin kapal yang sama,
-                      jadi hanya dipakai bila nilainya lebih besar (polis War saja).
+                      Total Interest Insured = jumlah nilai semua section; tiap section punya rate
+                      dan premi sendiri.
                     </p>
                   </div>
                 ) : sectionTitles && !isProperty ? (
