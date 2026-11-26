@@ -183,7 +183,7 @@ function hullAuditLines(schedule: HullSchedule, currency: string) {
       )
       .join(", ")
   return [
-    `Format ${HULL_FORMAT_LABELS[schedule.format]}`,
+    `Format ${HULL_FORMAT_LABELS[schedule.format]}${schedule.ivWarInAdvance ? ", IV & War dibayar di cicilan 1" : ""}`,
     ...schedule.vessels.map((v, i) => `${v.name.trim() || `Kapal ${i + 1}`}: ${sections(v) || "-"}`),
   ].join("\n")
 }

@@ -63,6 +63,8 @@ import { participantsInterestItem, usesParticipants } from "@/lib/slip-participa
 import { SlipDetailRows } from "@/components/underwriting/slip-detail-rows"
 import { SlipVehicles } from "@/components/underwriting/slip-vehicles"
 import { SlipHullSchedule } from "@/components/underwriting/slip-hull-schedule"
+import { HullInstallments } from "@/components/underwriting/hull-installments"
+import { hullSchedulePatch } from "@/lib/hull-installments"
 import {
   HULL_COB,
   activeHullSections,
@@ -2322,7 +2324,7 @@ function SlipEditor({
                   slip={slip}
                   schedule={slip.hullSchedule}
                   locked={locked}
-                  onChange={(hullSchedule) => set({ hullSchedule })}
+                  onChange={(hullSchedule) => set(hullSchedulePatch(slip, hullSchedule))}
                   onPrint={() => goTo((id) => `/placement/vessel-schedule/${id}`)}
                 />
               ) : null}
@@ -2463,17 +2465,21 @@ function SlipEditor({
                 </div>
                 {installmentsEnabled ? (
                   <div className="border-t border-dashed pt-3">
-                    <InstallmentEditor
-                      value={slip.premiumInstallments}
-                      onChange={(rows) => set({ premiumInstallments: rows })}
-                      base={slipInstallmentBase(slip)}
-                      charges={slipInstallmentCharges(slip)}
-                      currency={slip.currency}
-                      inceptionDate={slip.periodTba ? null : slip.inceptionDate}
-                      expiryDate={slip.periodTba ? null : slip.expiryDate}
-                      disabled={locked}
-                      hint="Tidak dicetak di slip; jadwalnya ikut ke Policy Database saat polis dicatat dari CI."
-                    />
+                    {hull ? (
+                      <HullInstallments slip={slip} locked={locked} onChange={set} />
+                    ) : (
+                      <InstallmentEditor
+                        value={slip.premiumInstallments}
+                        onChange={(rows) => set({ premiumInstallments: rows })}
+                        base={slipInstallmentBase(slip)}
+                        charges={slipInstallmentCharges(slip)}
+                        currency={slip.currency}
+                        inceptionDate={slip.periodTba ? null : slip.inceptionDate}
+                        expiryDate={slip.periodTba ? null : slip.expiryDate}
+                        disabled={locked}
+                        hint="Tidak dicetak di slip; jadwalnya ikut ke Policy Database saat polis dicatat dari CI."
+                      />
+                    )}
                   </div>
                 ) : null}
                 {/*

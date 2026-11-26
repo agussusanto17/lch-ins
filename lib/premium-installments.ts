@@ -62,7 +62,7 @@ export function defaultInstallments(
 }
 
 /**
- * Jadwal bersih dari form atau kolom JSON: nomor urut ulang, persen 4 desimal, tanggal ISO atau
+ * Jadwal bersih dari form atau kolom JSON: nomor urut ulang, persen 10 desimal, tanggal ISO atau
  * kosong. Kurang dari dua baris berarti premi dibayar sekaligus, disimpan sebagai daftar kosong.
  */
 export function cleanInstallments(raw: unknown): PremiumInstallment[] {
@@ -76,7 +76,9 @@ export function cleanInstallments(raw: unknown): PremiumInstallment[] {
       return {
         no: i + 1,
         dueDate,
-        pct: Number.isFinite(pct) ? Math.round(pct * 10_000) / 10_000 : 0,
+        // 10 desimal: persen turunan rincian Marine Hull (IV & War di cicilan 1) tetap memberi
+        // nominal tepat sampai sen, juga untuk premi miliaran.
+        pct: Number.isFinite(pct) ? Math.round(pct * 1e10) / 1e10 : 0,
       }
     })
   return rows.length >= MIN_INSTALLMENTS ? rows : []

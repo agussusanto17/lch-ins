@@ -58,11 +58,12 @@ test("jadwal dari form dan JSON dibersihkan", () => {
   assert.deepEqual(
     cleanInstallments([
       { no: 7, pct: "40", dueDate: "2026-12-01" },
-      { pct: 60.123456, dueDate: "01/02/2027" },
+      { pct: 60.123456789012345, dueDate: "01/02/2027" },
     ]),
     [
       { no: 1, dueDate: "2026-12-01", pct: 40 },
-      { no: 2, dueDate: null, pct: 60.1235 },
+      // 10 desimal: persen turunan rincian Marine Hull tetap tepat sampai sen.
+      { no: 2, dueDate: null, pct: 60.123456789 },
     ]
   )
   // Satu baris atau bukan daftar berarti sekaligus.
